@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "Baga nagaan dhufte",
+     "subtitle": "Naannoo Misooma Magaalaa fi Bulchiinsa Magaalaa",
+     "prompt": "Maaloo ibsa herrega keessanii galchaa",
+     "username_label": "Maqaa fayyadamaa",
+     "username_placeholder": "Maqaa Fayyadamaa Galchi",
+     "password_label": "Jecha icciitii",
+     "password_placeholder": "Jecha darbii",
+     "remember_label": "Na seenee na eegi",
+     "forgot_password": "Jecha darbii dagattee ?",
+     "button_signin": "Galmaa", 
+     "error_default": "dogongora durtii",
+     "language_label": "Afaanota",
+     "lang_en": "Afaan Ingilizii",
+     "lang_am": "Afaan Amaaraa",
+     "lang_or": "Afaan Oromoo",
+     "lang_hr": "Afaan Haraarii"   
+  }
+}

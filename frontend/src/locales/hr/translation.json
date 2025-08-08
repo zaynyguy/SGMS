@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "ሰለጥኹ ሐምበይሌ ዲጅኹ",
+    "subtitle": "አሲማ ኔሮት ዋ ሒስኒ አትሒዳደሮት",
+    "prompt": "ሒሳብ ዙርዙርኾው ኤስቡ",
+    "username_label": "ዚተናፈኢ ሱም",
+    "username_placeholder": "ዚተናፈኢ ሱም ኤስቡ",
+    "password_label": "ሲርሪ ጩቅቲ",
+    "password_placeholder": "ሲርሪ ጩቅቲ ኤስቡ",
+    "remember_label": "ዚቦኹቦ ኩትቤ የንበር",
+    "forgot_password": "ሲርሪ ጩቅቲው ረሰኾ ?",
+    "button_signin": "ኤስበኝ",
+    "error_default": "መቦአ ከሸፈ",
+    "language_label": "ሲናን",
+    "lang_en": "ኢንጊሊዝ ሲናን",
+    "lang_am": "አሕመራ ሲናን",
+    "lang_or": "ኦሮሞ ሲናን",
+    "lang_hr": "ሐረሪ ሲናን"
+  }
+}
