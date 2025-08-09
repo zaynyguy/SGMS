@@ -1,0 +1,20 @@
+{
+  "login": {
+    "title": "Welcome back",
+    "subtitle": "Urban Development and Management Region",
+    "prompt": "Please enter your account details",
+    "username_label": "Username",
+    "username_placeholder": "Enter Username",
+    "password_label": "Password",
+    "password_placeholder": "Password",
+    "remember_label": "Keep me logged in",
+    "forgot_password": "Forgot Password ?",
+    "button_signin": "Sign in",
+    "error_default": "Login failed",
+    "language_label": "Languages",
+    "lang_en": "English",
+    "lang_am": "Amharic",
+    "lang_or": "Oromo",
+    "lang_hr": "Harari"
+  }
+}
