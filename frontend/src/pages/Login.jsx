@@ -20,7 +20,7 @@ const handleSubmit = async (e) => {
 
 
   try {
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username , password }), // ✅ key fixed
@@ -102,9 +102,6 @@ const handleSubmit = async (e) => {
                   {t('login.remember_label')}
                 </label>
               </div>
-              <a href="#" className="font-medium text-white/80 hover:text-white transition-colors">
-                {t('login.forgot_password')}
-              </a>
             </div>
             {error && <p className="text-red-400">{error}</p>}
             <div>
@@ -142,7 +139,7 @@ const handleSubmit = async (e) => {
           </div>
         </div>
 
-        <div className="hidden md:flex flex-col justify-between relative text-white p-8 md:pr-0 md:p-12">
+        <div className="hidden md:flex flex-col justify-between relative text-white md:pr-0 ">
           <div className="relative bg-gray-300 rounded-l-3xl h-full flex flex-col justify-center">
             <img src={companyLogo} alt="Company Logo" className="mx-auto" />
           </div>
