@@ -39,7 +39,7 @@ const handleSubmit = async (e) => {
       localStorage.removeItem('remember');
     }
 
-    navigate('/admin');
+    navigate('/dashboard');
   } 
   catch (err) {
     setError(err.message);
