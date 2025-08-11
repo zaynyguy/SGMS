@@ -47,8 +47,8 @@ const handleSubmit = async (e) => {
 };
 
   return (
-    <div className="min-h-screen w-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-sans p-4">
-      <div className="w-full max-w-6xl grid md:grid-cols-2 rounded-3xl overflow-hidden shadow-2xl relative">
+    <div className="h-screen w-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-sans p-4">
+      <div className="w-full max-w-5xl grid md:grid-cols-2 rounded-3xl overflow-hidden shadow-2xl relative">
         <div className="absolute inset-0 bg-white/10 backdrop-blur-xl z-0"></div>
         <div className="w-full p-4 sm:p-8 md:p-12 flex flex-col justify-center text-slate-800 dark:text-white relative z-10">
           <div className='flex justify-between items-center'>
@@ -62,7 +62,7 @@ const handleSubmit = async (e) => {
             </div>
           </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-3" onSubmit={handleSubmit}>
             <div>
               <label className="flex gap-1 items-end text-sm text-slate-800 dark:text-white/80">
                <User/> {t('login.username_label')}
@@ -70,7 +70,7 @@ const handleSubmit = async (e) => {
               <input
                 type="text"
                 placeholder={t('login.username_placeholder')}
-                className="w-full mt-2 px-4 py-3 bg-black/30 dark:bg-slate-200 rounded-lg border border-white/20 focus:outline-none transition-all duration-300 placeholder:text-slate-200 placeholder:dark:text-slate-800"
+                className="w-full mt-2 px-4 py-3 bg-black/30 dark:bg-slate-200 rounded-lg border border-white/20 focus:outline-none transition-all duration-300 text-white dark:text-slate-800  placeholder:text-slate-200 placeholder:dark:text-slate-800"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -83,7 +83,7 @@ const handleSubmit = async (e) => {
               <input
                 type="password"
                 placeholder={t('login.password_placeholder')}
-                className="w-full mt-2 px-4 py-3 bg-black/30 dark:bg-slate-200 rounded-lg border border-white/20 focus:outline-none transition-all duration-300 placeholder:text-slate-200 placeholder:dark:text-slate-800"
+                className="w-full mt-2 px-4 py-3 bg-black/30 dark:bg-slate-200 rounded-lg border border-white/20 focus:outline-none transition-all duration-300 text-white dark:text-slate-800  placeholder:text-slate-200 placeholder:dark:text-slate-800"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
