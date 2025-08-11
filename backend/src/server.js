@@ -1,21 +1,25 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const db = require("./db");
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const db = require('./db');
 
-// --- Import Routes & Controllers ---
-const authRoutes = require("./routes/authRoutes");
+// --- Import Routes ---
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
+const roleRoutes = require('./routes/roleRoutes');
+const permissionRoutes = require('./routes/permissionRoutes');
+// const settingsRoutes = require('./routes/settingsRoutes');
 
 const app = express();
-
-// --- Middleware ---
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // --- Routes ---
-app.get("/", (req, res) => res.send("SGMS API is running..."));
-app.use("/api/auth", authRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/roles', roleRoutes);
+app.use('/api/permissions', permissionRoutes);
+// app.use('/api/settings', settingsRoutes);
 
 // --- Server Initialization ---
 const PORT = process.env.PORT || 5000;
