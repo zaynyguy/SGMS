@@ -4,6 +4,7 @@ const permissionController = require('../controllers/permissionController');
 const { authenticateJWT, authorizePermissions } = require('../middleware/authMiddleware');
 
 router.use(authenticateJWT, authorizePermissions(['manage_roles']));
+
 router.route('/').get(permissionController.getAllPermissions);
 
 module.exports = router;
