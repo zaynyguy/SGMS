@@ -1,4 +1,3 @@
-// File: backend/src/middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
@@ -16,27 +15,25 @@ exports.authenticateJWT = (req, res, next) => {
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Your session has expired. Please log in again.' });
+        return res.status(401).json({ message: 'Session expired. Please log in again.' });
       }
       return res.status(403).json({ message: 'Forbidden: Invalid token.' });
     }
-    req.user = user; // This payload contains { id, username, name, role, permissions }
+
+    req.user = user; // Contains { id, username, name, role, permissions }
     next();
   });
 };
 
-exports.authorizePermissions = (requiredPermissions) => {
-  return (req, res, next) => {
-    const userPermissions = req.user?.permissions || [];
-    const hasPermission = requiredPermissions.some(requiredPerm => userPermissions.includes(requiredPerm));
+exports.authorizePermissions = (requiredPermissions) => (req, res, next) => {
+  const userPermissions = req.user?.permissions || [];
+  const isSuperAdmin = userPermissions.includes('manage:all');
 
-    // A simplified check for a 'super admin' permission, if you have one
-    const isSuperAdmin = userPermissions.includes('manage:all');
+  const hasPermission = requiredPermissions.some(perm => userPermissions.includes(perm));
 
-    if (hasPermission || isSuperAdmin) {
-      next();
-    } else {
-      res.status(403).json({ message: 'Forbidden: You do not have the necessary permissions to perform this action.' });
-    }
-  };
+  if (hasPermission || isSuperAdmin) {
+    return next();
+  }
+
+  res.status(403).json({ message: 'Forbidden: You lack necessary permissions.' });
 };
