@@ -4,13 +4,17 @@ const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 exports.login = async (req, res) => {
-  const { username, password } = req.body;
+  let { username, password } = req.body;
 
   if (!username || !password) {
     return res.status(400).json({ message: 'Username and password are required.' });
   }
 
+  username = username.trim();
+  password = password.trim();
+
   try {
+    // Fetch user with role info
     const query = `
       SELECT u.id, u.username, u.name, u.password, u."roleId", r.name AS "roleName"
       FROM "Users" u
@@ -30,15 +34,17 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid username or password.' });
     }
 
+    // Fetch permissions for user's role
     const permsQuery = `
-      SELECT p.name AS permission 
+      SELECT p.name AS permission
       FROM "Permissions" p
       JOIN "RolePermissions" rp ON p.id = rp."permissionId"
       WHERE rp."roleId" = $1;
     `;
     const permsResult = await db.query(permsQuery, [user.roleId]);
-    const permissions = permsResult.rows.map(row => row.permission);
+    const permissions = permsResult.rows.map(r => r.permission);
 
+    // JWT payload
     const payload = {
       id: user.id,
       username: user.username,

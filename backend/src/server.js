@@ -22,6 +22,10 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/permissions', permissionRoutes);
 // app.use('/api/settings', settingsRoutes);
 
+app.get('/', (req, res) => {
+  res.send('The api server is running ..')
+})
+
 // --- Start Server ---
 const PORT = process.env.PORT || 5000;
 
@@ -29,7 +33,8 @@ app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
 
   try {
-    await db.query('SELECT NOW()');
+    const current_time = await db.query('SELECT NOW()');
+    console.log(`Current time: ${current_time.rows[0].now}`);
     console.log('Database connection established successfully.');
   } catch (error) {
     console.error('Unable to connect to the database:', error);
