@@ -17,13 +17,6 @@ class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
-    this.setState({ error: error, errorInfo: errorInfo });
-  }
-
-  render() {
-    if (this.state.hasError) {
       // You can render any custom fallback UI
       return (
         <div className="min-h-screen flex items-center justify-center bg-red-100 text-red-800 p-4">
