@@ -1,13 +1,13 @@
 const db = require('../db');
 const bcrypt = require('bcrypt');
 
-// Fetch all users with role names and optionally permissions
+// -------------------- GET ALL USERS --------------------
 exports.getAllUsers = async (req, res) => {
   try {
     const query = `
       SELECT u.id, u.username, u.name, r.name AS "roleName",
              COALESCE(json_agg(p.name) FILTER (WHERE p.name IS NOT NULL), '[]'::json) AS permissions,
-             u."createdAt"
+             u.language, u."darkMode", u."createdAt"
       FROM "Users" u
       LEFT JOIN "Roles" r ON u."roleId" = r.id
       LEFT JOIN "RolePermissions" rp ON r.id = rp."roleId"
@@ -23,7 +23,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// Create a user with hashed password and return permissions
+// -------------------- CREATE USER --------------------
 exports.createUser = async (req, res) => {
   const { username, name, password, roleId } = req.body;
   if (!username || !name || !password || !roleId) {
@@ -34,12 +34,19 @@ exports.createUser = async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // Check if username exists
+    const existingUser = await client.query('SELECT id FROM "Users" WHERE username = $1', [username.trim()]);
+    if (existingUser.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'A user with that username already exists.' });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const userResult = await client.query(
-      `INSERT INTO "Users" (username, name, password, "roleId")
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, username, name, "roleId";`,
+      `INSERT INTO "Users" (username, name, password, "roleId", language, "darkMode")
+       VALUES ($1, $2, $3, $4, 'en', false)
+       RETURNING id, username, name, "roleId", language, "darkMode";`,
       [username.trim(), name.trim(), hashedPassword, roleId]
     );
 
@@ -55,16 +62,13 @@ exports.createUser = async (req, res) => {
 
     res.status(201).json({
       message: 'User created successfully.',
-      user: {
+      user: { 
         ...userResult.rows[0],
         permissions: permsResult.rows.map(r => r.permission),
       },
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    if (error.code === '23505') {
-      return res.status(409).json({ message: 'A user with that username already exists.' });
-    }
     console.error('Error creating user:', error);
     res.status(500).json({ message: 'Internal server error.' });
   } finally {
@@ -72,7 +76,7 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// Update a user with optional password change
+// -------------------- UPDATE USER --------------------
 exports.updateUser = async (req, res) => {
   const { id } = req.params;
   const { username, name, roleId, password } = req.body;
@@ -89,6 +93,13 @@ exports.updateUser = async (req, res) => {
     if (userCheck.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Check if username is taken by another user
+    const usernameCheck = await client.query('SELECT id FROM "Users" WHERE username = $1 AND id <> $2', [username.trim(), id]);
+    if (usernameCheck.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ message: 'A user with that username already exists.' });
     }
 
     let query, params;
@@ -129,9 +140,6 @@ exports.updateUser = async (req, res) => {
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    if (error.code === '23505') {
-      return res.status(409).json({ message: 'A user with that username already exists.' });
-    }
     console.error('Error updating user:', error);
     res.status(500).json({ message: 'Internal server error.' });
   } finally {
@@ -139,15 +147,27 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// Delete user safely
+// -------------------- DELETE USER --------------------
 exports.deleteUser = async (req, res) => {
   const { id } = req.params;
+  const client = await db.pool.connect();
   try {
-    const { rowCount } = await db.query('DELETE FROM "Users" WHERE id = $1', [id]);
-    if (rowCount === 0) return res.status(404).json({ message: 'User not found.' });
+    await client.query('BEGIN');
+
+    const userCheck = await client.query('SELECT id FROM "Users" WHERE id = $1', [id]);
+    if (userCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    await client.query('DELETE FROM "Users" WHERE id = $1', [id]);
+    await client.query('COMMIT');
     res.status(200).json({ message: 'User deleted successfully.' });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error deleting user:', error);
     res.status(500).json({ message: 'Internal server error.' });
+  } finally {
+    client.release();
   }
 };
