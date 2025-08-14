@@ -3,6 +3,46 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+// Shared helper to create JWT + user payload
+const generateToken = async (userId) => {
+  // Get user info with role
+  const query = `
+    SELECT u.id, u.username, u.name, u.password, u."roleId", u.language, u."darkMode", r.name AS "roleName"
+    FROM "Users" u
+    LEFT JOIN "Roles" r ON u."roleId" = r.id
+    WHERE u.id = $1;
+  `;
+  const { rows } = await db.query(query, [userId]);
+  const user = rows[0];
+
+  // Fetch permissions for user's role
+  const permsQuery = `
+    SELECT p.name AS permission
+    FROM "Permissions" p
+    JOIN "RolePermissions" rp ON p.id = rp."permissionId"
+    WHERE rp."roleId" = $1;
+  `;
+  const permsResult = await db.query(permsQuery, [user.roleId]);
+  const permissions = permsResult.rows.map(r => r.permission);
+
+  // JWT payload
+  const payload = {
+    id: user.id,
+    username: user.username,
+    name: user.name,
+    role: user.roleName,
+    permissions,
+    language: user.language,
+    darkMode: user.darkMode,
+  };
+
+  const token = jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '1d',
+  });
+
+  return { token, user: payload };
+};
+
 exports.login = async (req, res) => {
   let { username, password } = req.body;
 
@@ -14,12 +54,11 @@ exports.login = async (req, res) => {
   password = password.trim();
 
   try {
-    // Fetch user with role info
+    // Fetch user by username
     const query = `
-      SELECT u.id, u.username, u.name, u.password, u."roleId", r.name AS "roleName"
-      FROM "Users" u
-      LEFT JOIN "Roles" r ON u."roleId" = r.id
-      WHERE u.username = $1;
+      SELECT id, username, password
+      FROM "Users"
+      WHERE username = $1;
     `;
     const { rows } = await db.query(query, [username]);
 
@@ -34,41 +73,20 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid username or password.' });
     }
 
-    // Fetch permissions for user's role
-    const permsQuery = `
-      SELECT p.name AS permission
-      FROM "Permissions" p
-      JOIN "RolePermissions" rp ON p.id = rp."permissionId"
-      WHERE rp."roleId" = $1;
-    `;
-    const permsResult = await db.query(permsQuery, [user.roleId]);
-    const permissions = permsResult.rows.map(r => r.permission);
-
-    // JWT payload
-    const payload = {
-      id: user.id,
-      username: user.username,
-      role: user.roleName,
-      permissions,
-    };
-
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN || '1d',
-    });
+    // Generate token & payload
+    const { token, user: payload } = await generateToken(user.id);
 
     res.status(200).json({
       message: 'Login successful.',
       token,
-      user: {
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        role: user.roleName,
-        permissions,
-      },
+      user: payload
     });
+
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Internal server error.' });
   }
 };
+
+// Export token generator so settingsController can use it
+exports.generateToken = generateToken;
