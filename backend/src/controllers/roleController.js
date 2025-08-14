@@ -1,135 +1,148 @@
 const db = require('../db');
 
+// -------------------- GET ALL ROLES --------------------
 exports.getAllRoles = async (req, res) => {
   try {
     const query = `
       SELECT r.id, r.name, r.description,
-        COALESCE(
-          (SELECT json_agg(p.name)
-           FROM "Permissions" p
-           JOIN "RolePermissions" rp ON p.id = rp."permissionId"
-           WHERE rp."roleId" = r.id),
-          '[]'::json
-        ) AS permissions
+             COALESCE(json_agg(p.name) FILTER (WHERE p.name IS NOT NULL), '[]'::json) AS permissions
       FROM "Roles" r
+      LEFT JOIN "RolePermissions" rp ON r.id = rp."roleId"
+      LEFT JOIN "Permissions" p ON rp."permissionId" = p.id
+      GROUP BY r.id
       ORDER BY r.id;
     `;
     const { rows } = await db.query(query);
     res.status(200).json(rows);
   } catch (error) {
-    console.error('Error fetching roles:', error);
-    res.status(500).json({ message: 'Internal server error.' });
+    console.error("Error fetching roles:", error);
+    res.status(500).json({ message: "Internal server error." });
   }
 };
 
+// -------------------- CREATE ROLE --------------------
 exports.createRole = async (req, res) => {
   const { name, description, permissions } = req.body;
-
   if (!name || !Array.isArray(permissions)) {
-    return res.status(400).json({ message: 'Role name and permissions are required.' });
+    return res.status(400).json({ message: "Role name and permissions array are required." });
   }
 
+  const client = await db.connect();
   try {
-    await db.query('BEGIN');
+    await client.query('BEGIN');
 
-    const roleResult = await db.query(
+    const roleResult = await client.query(
       'INSERT INTO "Roles" (name, description) VALUES ($1, $2) RETURNING id;',
-      [name, description]
+      [name.trim(), description]
     );
     const newRoleId = roleResult.rows[0].id;
 
     if (permissions.length > 0) {
-      const insertPermPromises = permissions.map(permId =>
-        db.query(
+      const permPromises = permissions.map(permId =>
+        client.query(
           'INSERT INTO "RolePermissions" ("roleId", "permissionId") VALUES ($1, $2);',
           [newRoleId, permId]
         )
       );
-      await Promise.all(insertPermPromises);
+      await Promise.all(permPromises);
     }
 
-    await db.query('COMMIT');
-
+    await client.query('COMMIT');
     res.status(201).json({
-      message: 'Role created successfully.',
-      role: { id: newRoleId, name },
+      message: "Role created successfully.",
+      role: { id: newRoleId, name: name.trim() },
     });
   } catch (error) {
-    await db.query('ROLLBACK');
-    if (error.code === '23505') {
-      return res.status(409).json({ message: 'A role with that name already exists.' });
+    await client.query('ROLLBACK');
+    if (error.code === "23505") {
+      return res.status(409).json({ message: "A role with that name already exists." });
     }
-    console.error('Error creating role:', error);
-    res.status(500).json({ message: 'Internal server error.' });
+    console.error("Error creating role:", error);
+    res.status(500).json({ message: "Internal server error." });
+  } finally {
+    client.release();
   }
 };
 
+// -------------------- UPDATE ROLE --------------------
 exports.updateRole = async (req, res) => {
   const { id } = req.params;
   const { name, description, permissions } = req.body;
-
   if (!name || !Array.isArray(permissions)) {
-    return res.status(400).json({ message: 'Role name and permissions are required.' });
+    return res.status(400).json({ message: "Role name and permissions array are required." });
   }
 
+  const client = await db.connect();
   try {
-    const roleCheck = await db.query('SELECT name FROM "Roles" WHERE id = $1', [id]);
+    await client.query('BEGIN');
 
-    if (roleCheck.rows[0]?.name === 'Admin' && name !== 'Admin') {
+    const roleCheck = await client.query('SELECT name FROM "Roles" WHERE id = $1', [id]);
+    if (roleCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: "Role not found." });
+    }
+
+    if (roleCheck.rows[0].name === 'Admin' && name.trim() !== 'Admin') {
+      await client.query('ROLLBACK');
       return res.status(403).json({ message: "The 'Admin' role cannot be renamed." });
     }
 
-    await db.query('BEGIN');
-
-    await db.query(
+    await client.query(
       'UPDATE "Roles" SET name = $1, description = $2, "updatedAt" = NOW() WHERE id = $3;',
-      [name, description, id]
+      [name.trim(), description, id]
     );
 
-    await db.query('DELETE FROM "RolePermissions" WHERE "roleId" = $1;', [id]);
+    await client.query('DELETE FROM "RolePermissions" WHERE "roleId" = $1;', [id]);
 
     if (permissions.length > 0) {
-      const insertPermPromises = permissions.map(permId =>
-        db.query(
+      const permPromises = permissions.map(permId =>
+        client.query(
           'INSERT INTO "RolePermissions" ("roleId", "permissionId") VALUES ($1, $2);',
           [id, permId]
         )
       );
-      await Promise.all(insertPermPromises);
+      await Promise.all(permPromises);
     }
 
-    await db.query('COMMIT');
-
-    res.status(200).json({ message: 'Role updated successfully.' });
+    await client.query('COMMIT');
+    res.status(200).json({ message: "Role updated successfully." });
   } catch (error) {
-    await db.query('ROLLBACK');
-    if (error.code === '23505') {
+    await client.query('ROLLBACK');
+    if (error.code === "23505") {
       return res.status(409).json({ message: `A role with the name '${name}' already exists.` });
     }
-    console.error('Error updating role:', error);
-    res.status(500).json({ message: 'Internal server error.' });
+    console.error("Error updating role:", error);
+    res.status(500).json({ message: "Internal server error." });
+  } finally {
+    client.release();
   }
 };
 
+// -------------------- DELETE ROLE --------------------
 exports.deleteRole = async (req, res) => {
   const { id } = req.params;
-
+  const client = await db.connect();
   try {
-    const roleResult = await db.query('SELECT name FROM "Roles" WHERE id = $1', [id]);
+    await client.query('BEGIN');
 
-    if (roleResult.rows[0]?.name === 'Admin') {
+    const roleResult = await client.query('SELECT name FROM "Roles" WHERE id = $1', [id]);
+    if (roleResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: "Role not found." });
+    }
+    if (roleResult.rows[0].name === 'Admin') {
+      await client.query('ROLLBACK');
       return res.status(403).json({ message: "The 'Admin' role cannot be deleted." });
     }
 
-    const { rowCount } = await db.query('DELETE FROM "Roles" WHERE id = $1', [id]);
-
-    if (rowCount === 0) {
-      return res.status(404).json({ message: 'Role not found.' });
-    }
-
-    res.status(200).json({ message: 'Role deleted successfully.' });
+    await client.query('DELETE FROM "Roles" WHERE id = $1', [id]);
+    await client.query('COMMIT');
+    res.status(200).json({ message: "Role deleted successfully." });
   } catch (error) {
-    console.error('Error deleting role:', error);
-    res.status(500).json({ message: 'Internal server error.' });
+    await client.query('ROLLBACK');
+    console.error("Error deleting role:", error);
+    res.status(500).json({ message: "Internal server error." });
+  } finally {
+    client.release();
   }
 };
