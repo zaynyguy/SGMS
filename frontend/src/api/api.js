@@ -1,4 +1,4 @@
-const API_URL = 'https://sgms-production.up.railway.app' || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export const api = async (endpoint, method = 'GET', body = null) => {
   const config = {
