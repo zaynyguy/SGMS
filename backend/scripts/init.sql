@@ -1,6 +1,3 @@
--- FILE: backend/src/scripts/init.sql
--- Complete schema for GTA, Reporting, and Attachment system.
-
 -- Drop tables in order of dependency
 DROP TABLE IF EXISTS "Attachments";
 DROP TABLE IF EXISTS "Reports";
