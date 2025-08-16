@@ -111,6 +111,8 @@ CREATE TABLE "Activities" (
   "title" VARCHAR(255) NOT NULL,
   "description" TEXT,
   "status" activity_status NOT NULL DEFAULT 'To Do',
+  "metrics" JSONB,
+  "groupId" INTEGER REFERENCES "Groups"(id) ON DELETE SET NULL,
   "dueDate" DATE,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
