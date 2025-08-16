@@ -1,30 +1,33 @@
-// src/components/ProtectedRoute.jsx
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import AccessDeniedPage from '../../pages/AccessDeniedPage';
 
-/**
- * This component now checks for authentication AND authorization.
- * @param {string} requiredPermission - The permission required to access this route.
- */
 const ProtectedRoute = ({ children, requiredPermission }) => {
-    const { isAuthenticated, user } = useAuth();
-    const location = useLocation();
+  const { isAuthenticated, user } = useAuth();
+  const { t } = useTranslation();
+  const location = useLocation();
 
-    // 1. Check if the user is authenticated
-    if (!isAuthenticated) {
-        return <Navigate to="/" state={{ from: location }} replace />;
-    }
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
 
-    // 2. Check if a required permission is provided and if the user has it
-    if (requiredPermission && !user?.permissions?.includes(requiredPermission)) {
-        // User is logged in but doesn't have the necessary permission
-        return <AccessDeniedPage />;
-    }
+  if (requiredPermission && !user?.permissions?.includes(requiredPermission)) {
+    return <AccessDeniedPage message={t('forbidden')} />;
+  }
 
-    // If all checks pass, render the requested component
-    return children;
+  return children;
 };
 
-export default ProtectedRoute;
+export default ProtectedRoute
+
+// u will this in the app.jsx
+// <Route 
+//   path="/admin" 
+//   element={
+//     <ProtectedRoute requiredPermission="manage_users">
+//       <AdminDashboard />
+//     </ProtectedRoute>
+//   } 
+// />

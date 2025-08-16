@@ -8,16 +8,17 @@ import companyLogo from '../../assets/logo.png';
 const Sidebar = () => {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+
   const [isHovered, setIsHovered] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Handle color scheme and window resize
   useEffect(() => {
     const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleColorSchemeChange = (e) => {
       document.documentElement.classList.toggle('dark', e.matches);
     };
-
     handleColorSchemeChange(colorSchemeQuery);
     colorSchemeQuery.addEventListener('change', handleColorSchemeChange);
 
@@ -36,6 +37,7 @@ const Sidebar = () => {
   const hasPermission = (permission) => user?.permissions?.includes(permission);
   const toggleMobileMenu = () => setIsMobileOpen((prev) => !prev);
 
+  // Menu items
   const mainMenuItems = [
     { to: '/dashboard', icon: <Home size={20} />, label: t('sidebar.menu.dashboard') },
     { to: '/settings', icon: <Settings size={20} />, label: t('sidebar.menu.settings') },
@@ -46,6 +48,7 @@ const Sidebar = () => {
     },
   ].filter(Boolean);
 
+  // Mobile hamburger button
   const MobileMenuButton = () => (
     <button
       onClick={toggleMobileMenu}
@@ -56,6 +59,7 @@ const Sidebar = () => {
     </button>
   );
 
+  // Sidebar content (used for both desktop and mobile)
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -98,21 +102,17 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="p-2 border-t border-gray-300 dark:border-gray-700">
+      {/* User info + Logout */}
+      <div className="mt-auto p-3 border-t border-gray-200 dark:border-gray-700 flex items-center">
+        <div className="flex-1">
+          <div className="font-semibold text-gray-900 dark:text-white">{user.name}</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">{user.role}</div>
+        </div>
         <button
           onClick={logout}
-          className="flex items-center w-full p-3 rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors"
-          aria-label={t('sidebar.logout')}
+          className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200 ease-in-out"
         >
-          <LogOut size={20} />
-          <span
-            className={`ml-4 overflow-hidden whitespace-nowrap transition-all duration-300 ${
-              isHovered ? 'w-full opacity-100' : 'w-0 opacity-0'
-            }`}
-          >
-            {t('sidebar.logout')}
-          </span>
+          <LogOut className="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </button>
       </div>
     </div>
@@ -134,7 +134,7 @@ const Sidebar = () => {
         <SidebarContent />
       </div>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
         <div className="md:hidden fixed inset-0 z-40">
           <div
@@ -147,15 +147,6 @@ const Sidebar = () => {
           </div>
         </div>
       )}
-
-      {/* Main Content Area */}
-      <div
-        className={`transition-all duration-300 ${
-          isMobile ? 'ml-0' : isHovered ? 'ml-64' : 'ml-20'
-        }`}
-      >
-        {/* Routed content renders here */}
-      </div>
     </>
   );
 };

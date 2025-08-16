@@ -3,7 +3,8 @@ import { User, Lock, Palette, Sun, Moon, CheckCircle, AlertTriangle, X } from 'l
 
 // --- API SERVICE ---
 // Replace with your actual API endpoint.
-const API_URL = '/api'; // Change this if your API is hosted elsewhere
+const API_URL =  import.meta.env.VITE_API_URL || 'https://sgms-production.up.railway.app';
+; // Change this if your API is hosted elsewhere
 
 const apiRequest = async (url, options = {}) => {
   // Assumes the JWT is stored in localStorage.
