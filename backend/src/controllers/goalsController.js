@@ -48,7 +48,8 @@ exports.createGoal = async (req, res) => {
 
 // -------------------- UPDATE GOAL --------------------
 exports.updateGoal = async (req, res) => {
-  const { id } = req.params;
+  const { goalId } = req.params;
+  const id = goalId;
   const { title, description, groupId, startDate, endDate } = req.body;
 
   if (!title || !groupId) {
@@ -85,7 +86,8 @@ exports.updateGoal = async (req, res) => {
 
 // -------------------- DELETE GOAL --------------------
 exports.deleteGoal = async (req, res) => {
-  const { id } = req.params;
+  const { goalId } = req.params;
+  const id = goalId;
   const client = await db.pool.connect();
   try {
     await client.query('BEGIN');

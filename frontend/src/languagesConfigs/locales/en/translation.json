@@ -1,50 +1,246 @@
 {
-  "login": {
-    "title": "Welcome back",
-    "subtitle": "Urban Development and Management Region",
-    "prompt": "Please enter your account details",
-    "username_label": "Username",
-    "username_placeholder": "Enter Username",
-    "password_label": "Password",
-    "password_placeholder": "Password",
-    "remember_label": "Keep me logged in",
-    "forgot_password": "Forgot Password ?",
-    "button_signin": "Sign in",
-    "error_default": "Login failed",
-    "language_label": "Languages",
-    "lang_en": "English",
-    "lang_am": "Amharic",
-    "lang_or": "Oromo",
-    "lang_hr": "Harari"
+  "accessDenied": {
+    "title": "403",
+    "heading": "Access Denied",
+    "message": "Sorry, you do not have the required permissions to view this page.",
+    "button": "Go to Dashboard"
   },
-  
+  "dashboard": {
+    "title": "This is a Dashboard"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Please try refreshing the page.",
+    "detailsTitle": "Error Details",
+    "technicalDetails": "Technical Details:",
+    "componentStack": "Component Stack:",
+    "refreshButton": "Refresh Page"
+  },
+  "login": {
+    "title": "Welcome Back",
+    "subtitle": "Sign in to your account",
+    "prompt": "Enter your credentials to continue",
+    "username_label": "Username",
+    "username_placeholder": "Enter your username",
+    "password_label": "Password",
+    "password_placeholder": "Enter your password",
+    "password_too_short": "Password must be at least 8 characters",
+    "remember_label": "Remember me",
+    "button_signin": "Sign In",
+    "logging_in": "Signing in...",
+    "error_default": "Login failed. Please try again.",
+    "forgot_password": "Forgot password?",
+    "no_account": "Don't have an account?",
+    "signup_link": "Sign up here"
+  },
+  "settings": {
+    "title": "User Settings",
+    "loading": "Loading settings...",
+    "personalInfo": "Personal Information",
+    "username": "Username",
+    "name": "Name",
+    "appearance": "Appearance",
+    "language": "Language",
+    "theme": "Theme",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "changePassword": "Change Password",
+    "oldPassword": "Old Password",
+    "newPassword": "New Password",
+    "passwordPlaceholder": "Enter your password",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "toasts": {
+      "updateSuccess": "Settings updated successfully!"
+    },
+    "errors": {
+      "loadError": "Failed to load settings",
+      "updateError": "Failed to update settings",
+      "passwordTooShort": "Password must be at least 8 characters long"
+    }
+  },
   "admin": {
     "title": "Admin Dashboard",
-    "header": "Administration",
+    "header": "Administration Panel",
     "mobileMenu": {
       "toggle": "Toggle menu"
     },
     "tabs": {
       "users": "Users",
-      "roles": "Roles & Permissions",
-      "settings": "System Settings",
+      "roles": "Roles",
+      "settings": "Settings",
       "auditLog": "Audit Log",
-      "switchTo": "Switch to {{tab}} tab"
+      "switchTo": "Switch to {tab} tab"
     },
-    "toast": {
-      "success": "Operation completed successfully",
-      "error": "An error occurred",
-      "info": "Information"
+    "sidebar": {
+      "appName": "Admin Panel",
+      "logoAlt": "Company Logo",
+      "menu": {
+        "dashboard": "Dashboard",
+        "settings": "Settings",
+        "admin": "Admin"
+      },
+      "logout": "Logout",
+      "closeMenu": "Close menu",
+      "openMenu": "Open menu"
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "create": "Create",
+      "delete": "Delete",
+      "tryAgain": "Try Again"
+    },
+    "users": {
+      "addUser": "Add User",
+      "edit": "Edit",
+      "delete": "Delete",
+      "editUser": "Edit user {name}",
+      "deleteUser": "Delete user {name}",
+      "editUserTitle": "Edit User",
+      "createUserTitle": "Create User",
+      "noUsers": "No users found",
+      "notAvailable": "N/A",
+      "role": "Role",
+      "changeStatus": "Change status",
+      "statusChanged": "Status for {name} changed to {status}",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending": "Pending"
+      },
+      "tableHeaders": {
+        "username": "Username",
+        "name": "Name",
+        "role": "Role",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "form": {
+        "username": "Username",
+        "usernamePlaceholder": "Enter username",
+        "name": "Full Name",
+        "namePlaceholder": "Enter full name",
+        "password": "Password",
+        "newPassword": "New Password",
+        "passwordPlaceholder": "Enter password",
+        "role": "Role",
+        "selectRole": "Select a role"
+      },
+      "deleteConfirm": {
+        "title": "Confirm Deletion",
+        "message": "Are you sure you want to delete user {name}? This action cannot be undone."
+      },
+      "toasts": {
+        "createSuccess": "User {name} created successfully!",
+        "updateSuccess": "User {name} updated successfully!",
+        "deleteSuccess": "User {name} deleted successfully!"
+      },
+      "errors": {
+        "loadFailed": "Failed to load users: {error}",
+        "saveFailed": "Failed to save user: {error}",
+        "deleteFailed": "Failed to delete user: {error}",
+        "passwordTooShort": "Password must be at least 8 characters long"
+      }
+    },
+    "roles": {
+      "title": "Roles Management",
+      "rolesList": "Roles",
+      "permissions": "Permissions",
+      "permission": "Permission",
+      "roleName": "Role Name",
+      "roleNamePlaceholder": "Enter role name",
+      "description": "Description",
+      "descriptionPlaceholder": "Enter description",
+      "optional": "optional",
+      "noRoles": "No roles available",
+      "noPermissions": "No permissions available",
+      "addRole": "Add Role",
+      "editRoleTitle": "Edit Role",
+      "createRoleTitle": "Create Role",
+      "editRole": "Edit {name}",
+      "deleteRole": "Delete {name}",
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "permissionStatus": "{permission} permission for {role} is {status}",
+      "loading": "Loading roles...",
+      "deleteConfirm": {
+        "title": "Delete Role Confirmation",
+        "message": "Are you sure you want to delete the role '{name}'?"
+      },
+      "toasts": {
+        "createSuccess": "Role '{name}' created successfully",
+        "updateSuccess": "Role '{name}' updated successfully",
+        "deleteSuccess": "Role '{name}' deleted successfully"
+      },
+      "errors": {
+        "title": "Error Loading Roles",
+        "loadError": "Failed to load roles data",
+        "saveError": "Failed to save role: {error}",
+        "deleteError": "Failed to delete role: {error}"
+      }
+    },
+    "settings": {
+      "title": "Settings",
+      "loading": "Loading settings...",
+      "saveButton": "Save Settings",
+      "saveSuccess": "Settings saved successfully",
+      "connectionTesting": "Testing email server connection...",
+      "connectionSuccess": "Email server connection successful",
+      "reportingPeriod": {
+        "title": "Reporting Period Settings",
+        "monthlyDueDate": "Monthly Report Due Date",
+        "fiscalYearStart": "Fiscal Year Start Month"
+      },
+      "emailServer": {
+        "title": "Email Server Configuration",
+        "smtpHost": "SMTP Host",
+        "smtpHostPlaceholder": "e.g., smtp.example.com",
+        "port": "Port",
+        "portPlaceholder": "e.g., 587",
+        "username": "Username",
+        "usernamePlaceholder": "SMTP username",
+        "password": "Password",
+        "passwordPlaceholder": "SMTP password",
+        "testConnection": "Test Connection"
+      },
+      "fileUpload": {
+        "title": "File Upload Settings",
+        "maxFileSize": "Maximum File Size (MB)",
+        "maxFileSizePlaceholder": "e.g., 10",
+        "allowedFileTypes": "Allowed File Types",
+        "allowedFileTypesPlaceholder": "e.g., .pdf,.doc,.docx,.xls,.xlsx"
+      },
+      "notifications": {
+        "title": "Notification Settings",
+        "reportDue": "Notify users when reports are due",
+        "onSubmission": "Notify administrators on report submission",
+        "weeklySummary": "Send weekly summary emails"
+      },
+      "emailTemplates": {
+        "title": "Email Templates",
+        "placeholder": "Enter your email template here...",
+        "default": "Default email template content..."
+      },
+      "errors": {
+        "loadError": "Failed to load settings",
+        "updateError": "Failed to update settings",
+        "missingEmailDetails": "Please fill in all email server details",
+        "connectionFailed": "Failed to connect to email server"
+      },
+      "toasts": {
+        "updateSuccess": "Settings updated successfully"
+      }
     },
     "auditLog": {
       "title": "Audit Log",
       "exportButton": "Export CSV",
       "searchPlaceholder": "Search logs...",
       "searchLabel": "Search audit logs",
-      "fromDate": "From Date",
-      "toDate": "To Date",
+      "fromDate": "From:",
+      "toDate": "To:",
       "applyFilters": "Apply Filters",
-      "noEntries": "No audit log entries found for the current filters.",
+      "noEntries": "No audit log entries found",
       "tableHeaders": {
         "timestamp": "Timestamp",
         "user": "User",
@@ -57,241 +253,37 @@
         "created": "Created",
         "updated": "Updated",
         "deleted": "Deleted",
-        "backup": "Backup"
+        "approved": "Approved",
+        "rejected": "Rejected"
       },
       "mockUsers": {
-        "alice": "Alice Manager",
-        "john": "John Clerk",
-        "jane": "Jane Lead"
+        "alice": "Alice Johnson",
+        "john": "John Smith",
+        "emma": "Emma Davis",
+        "michael": "Michael Brown"
       },
       "mockDetails": {
-        "projectSubmitted": "Project Z report submitted to HQ",
-        "reportCreated": "Monthly sales report draft",
-        "roleChanged": "Changed user's role",
-        "campaignRemoved": "Removed old marketing campaign",
-        "backupCompleted": "Daily database backup completed",
-        "settingsUpdated": "Changed monthly report due date",
-        "reportUpdated": "Updated financial report",
-        "projectCreated": "New project created"
+        "projectSubmitted": "Submitted new project proposal",
+        "reportCreated": "Generated monthly financial report",
+        "userUpdated": "Updated user permissions",
+        "settingsChanged": "Modified system settings"
       },
       "toast": {
-        "filtersApplied": "Filters applied!",
-        "exportSuccess": "Audit log exported to CSV!",
-        "exportError": "Your browser does not support downloading files directly."
+        "filtersApplied": "Filters applied successfully",
+        "exportSuccess": "Audit log exported successfully"
       }
-    },
-    "actions": {
-      "cancel": "Cancel",
-      "saveChanges": "Save Changes",
-      "create": "Create",
-      "delete": "Delete",
-      "tryAgain": "Try Again"
-    },
-    "roles": {
-      "title": "Role Management",
-      "rolesList": "Roles",
-      "permissions": "Permissions",
-      "permission": "Permission",
-      "noRoles": "No roles found",
-      "noPermissions": "No roles or permissions to display",
-      "addRole": "Add Role",
-      "editRole": "Edit {{name}}",
-      "deleteRole": "Delete {{name}}",
-      "roleName": "Role Name",
-      "roleNamePlaceholder": "e.g., Administrator",
-      "description": "Description",
-      "descriptionPlaceholder": "A brief description of the role's purpose",
-      "optional": "Optional",
-      "editRoleTitle": "Edit Role",
-      "createRoleTitle": "Create New Role",
-      "enabled": "enabled",
-      "disabled": "disabled",
-      "permissionStatus": "Permission {{permission}} for role {{role}} is {{status}}",
-      "deleteConfirm": {
-        "title": "Confirm Deletion",
-        "message": "Are you sure you want to delete role {{name}}? This action cannot be undone."
-      },
-      "toasts": {
-        "createSuccess": "Role \"{{name}}\" created successfully!",
-        "updateSuccess": "Role \"{{name}}\" updated successfully!",
-        "deleteSuccess": "Role \"{{name}}\" deleted."
-      },
-      "errors": {
-        "title": "An Error Occurred",
-        "loadError": "Failed to load roles and permissions. Please try again.",
-        "saveError": "Failed to save role: {{error}}",
-        "deleteError": "Failed to delete role: {{error}}"
-      },
-      "loading": "Loading roles and permissions..."
-    },
-    "settings": {
-      "reportingPeriod": {
-        "title": "Reporting Period",
-        "monthlyDueDate": "Monthly Report Due Date",
-        "fiscalYearStart": "Fiscal Year Start"
-      },
-      "emailServer": {
-        "title": "Email Server",
-        "smtpHost": "SMTP Host",
-        "smtpHostPlaceholder": "e.g., smtp.example.com",
-        "port": "Port",
-        "portPlaceholder": "e.g., 587",
-        "username": "Username",
-        "usernamePlaceholder": "e.g., your_email@example.com",
-        "password": "Password",
-        "passwordPlaceholder": "Your email password",
-        "testConnection": "Test Connection"
-      },
-      "fileUpload": {
-        "title": "File Upload Settings",
-        "maxFileSize": "Max File Size (MB)",
-        "maxFileSizePlaceholder": "e.g., 50",
-        "allowedFileTypes": "Allowed File Types",
-        "allowedFileTypesPlaceholder": "e.g., .pdf, .jpg, .png"
-      },
-      "notifications": {
-        "title": "Notifications",
-        "reportDue": "Notify when report due",
-        "onSubmission": "Notify on submission",
-        "weeklySummary": "Weekly summary email"
-      },
-      "emailTemplates": {
-        "title": "Email Templates",
-        "placeholder": "Template for report reminders...",
-        "default": "Template for report reminders:\n\nHi [User Name],\n\nThis is a reminder that your [Report Type] report is due on [Due Date].\n\nBest regards,\nThe Admin Team"
-      },
-      "saveButton": "Save Settings",
-      "saveSuccess": "Settings saved successfully!",
-      "connectionTesting": "Testing connection...",
-      "connectionSuccess": "Connection successful!",
-      "errors": {
-        "missingEmailDetails": "Please fill in all email server details to test connection.",
-        "connectionFailed": "Connection failed. Check credentials and host."
-      }
-    },
-    "users": {
-      "addUser": "Add User",
-      "editUser": "Edit {{name}}",
-      "deleteUser": "Delete {{name}}",
-      "editUserTitle": "Edit User",
-      "createUserTitle": "Create User",
-      "noUsers": "No users found",
-      "notAvailable": "N/A",
-      "changeStatus": "Click to change status",
-      "statusChanged": "User status for {{name}} changed to {{status}}.",
-      "role": "Role",
-      "tableHeaders": {
-        "username": "Username",
-        "name": "Name",
-        "role": "Role",
-        "status": "Status",
-        "actions": "Actions"
-      },
-      "status": {
-        "active": "Active",
-        "inactive": "Inactive",
-        "pending": "Pending"
-      },
-      "form": {
-        "username": "Username",
-        "usernamePlaceholder": "e.g., jdoe",
-        "name": "Name",
-        "namePlaceholder": "e.g., Jane Doe",
-        "password": "Password",
-        "newPassword": "New Password (leave blank to keep current)",
-        "passwordPlaceholder": "••••••••",
-        "role": "Role",
-        "selectRole": "Select a role"
-      },
-      "deleteConfirm": {
-        "title": "Confirm Deletion",
-        "message": "Are you sure you want to delete user {{name}}? This action cannot be undone."
-      },
-      "toasts": {
-        "createSuccess": "User {{name}} created successfully!",
-        "updateSuccess": "User {{name}} updated successfully!",
-        "deleteSuccess": "User {{name}} deleted."
-      },
-      "errors": {
-        "loadFailed": "Failed to load data: {{error}}",
-        "saveFailed": "Failed to save user: {{error}}",
-        "deleteFailed": "Failed to delete user: {{error}}"
-      },
-      "edit": "Edit",
-      "delete": "Delete"
     }
   },
-
-  "errorBoundary": {
-    "title": "Something went wrong",
-    "message": "We're sorry for the inconvenience. Please try refreshing the page.",
-    "detailsTitle": "Error Details",
-    "refreshButton": "Refresh Page",
-    "technicalDetails": "Technical Details:",
-    "componentStack": "Component Stack:"
-  },
-
   "sidebar": {
-    "appName": "SGMS",
+    "appName": "Admin Panel",
     "logoAlt": "Company Logo",
-    "navigation": "Main Navigation",
-    "openMenu": "Open menu",
-    "closeMenu": "Close menu",
-    "logout": "Logout",
     "menu": {
       "dashboard": "Dashboard",
       "settings": "Settings",
-      "admin": "Admin Settings" 
-    }
-  },
-  
-  "loading": "Loading...",
-  "settings": {
-    "title": "User Settings",
-    "profileTitle": "Profile Settings",
-    "passwordTitle": "Password Settings",
-    "name": "Name",
-    "namePlaceholder": "Enter your name",
-    "language": "Language",
-    "darkMode": "Dark Mode",
-    "saveProfile": "Save Profile",
-    "currentPassword": "Current Password",
-    "currentPasswordPlaceholder": "Enter current password",
-    "newPassword": "New Password",
-    "newPasswordPlaceholder": "Enter new password (min 8 characters)",
-    "confirmPassword": "Confirm New Password",
-    "confirmPasswordPlaceholder": "Confirm new password",
-    "changePassword": "Change Password",
-    "passwordRequirements": "Password must contain:",
-    "requirements": {
-      "minLength": "At least 8 characters",
-      "number": "One number",
-      "uppercase": "One uppercase letter",
-      "specialChar": "One special character"
+      "admin": "Admin"
     },
-    "profileSuccess": "Profile updated successfully",
-    "passwordSuccess": "Password updated successfully",
-    "profileError": "Failed to update profile",
-    "passwordError": "Failed to update password",
-    "loadError": "Failed to load settings"
-  },
-  "languages": {
-    "english": "English",
-    "oromo": "Oromoo",
-    "amharic": "Amharic",
-    "harari": "Harari"
-  },
-  "settings.errors": {
-    "currentPasswordRequired": "Current password is required",
-    "newPasswordRequired": "New password is required",
-    "confirmPasswordRequired": "Please confirm your password",
-    "passwordMinLength": "Password must be at least 8 characters",
-    "hasNumber": "Must contain at least one number",
-    "hasSpecialChar": "Must contain at least one special character",
-    "hasUpperCase": "Must contain at least one uppercase letter",
-    "notSameAsCurrent": "New password must be different from current password",
-    "passwordsDontMatch": "Passwords do not match"
+    "logout": "Logout",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu"
   }
-
-
 }

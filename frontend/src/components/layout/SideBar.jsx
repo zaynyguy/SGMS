@@ -8,154 +8,164 @@ import companyLogo from '../../assets/logo.png';
 const Sidebar = () => {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleColorSchemeChange = (e) => {
-      document.documentElement.classList.toggle('dark', e.matches);
-    };
-
-    handleColorSchemeChange(colorSchemeQuery);
-    colorSchemeQuery.addEventListener('change', handleColorSchemeChange);
-
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth >= 768) setIsMobileOpen(false);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setIsExpanded(false);
     };
+    handleResize();
     window.addEventListener('resize', handleResize);
-
-    return () => {
-      colorSchemeQuery.removeEventListener('change', handleColorSchemeChange);
-      window.removeEventListener('resize', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const hasPermission = (permission) => user?.permissions?.includes(permission);
-  const toggleMobileMenu = () => setIsMobileOpen((prev) => !prev);
 
   const mainMenuItems = [
-    { to: '/dashboard', icon: <Home size={20} />, label: t('sidebar.menu.dashboard') },
-    { to: '/settings', icon: <Settings size={20} />, label: t('sidebar.menu.settings') },
+    { to: '/dashboard', icon: <Home size={24} />, label: t('sidebar.menu.dashboard') },
+    { to: '/settings', icon: <Settings size={24} />, label: t('sidebar.menu.settings') },
     hasPermission('manage_roles') && {
       to: '/admin',
-      icon: <UserStar size={20} />,
+      icon: <UserStar size={24} />,
       label: t('sidebar.menu.admin'),
     },
   ].filter(Boolean);
 
-  const MobileMenuButton = () => (
-    <button
-      onClick={toggleMobileMenu}
-      className="md:hidden fixed top-3 right-3 z-50 p-2 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800"
-      aria-label={isMobileOpen ? t('sidebar.closeMenu') : t('sidebar.openMenu')}
-    >
-      {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
-    </button>
-  );
+  const toggleSidebar = () => setIsExpanded(!isExpanded);
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="flex items-center p-4 h-16 border-b border-gray-300 dark:border-gray-700">
-        <img src={companyLogo} alt={t('sidebar.logoAlt')} className="h-11 w-11" />
-        <span
-          className={`ml-3 text-lg font-bold text-gray-900 dark:text-white truncate transition-all duration-300 ${
-            isHovered ? 'opacity-100 w-auto' : 'opacity-0 w-0'
-          }`}
-        >
-          {t('sidebar.appName')}
-        </span>
-      </div>
+  const handleMouseEnter = () => !isMobile && setIsHovered(true);
+  const handleMouseLeave = () => !isMobile && setIsHovered(false);
 
-      {/* Menu */}
-      <nav className="flex-1 space-y-2 p-2">
-        {mainMenuItems.map((item, idx) => (
-          <NavLink
-            key={`main-${idx}`}
-            to={item.to}
-            onClick={() => isMobile && setIsMobileOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center p-3 rounded-md transition-colors duration-200 ${
-                isActive
-                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white'
-                  : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`
-            }
-            aria-label={item.label}
-          >
-            {item.icon}
-            <span
-              className={`ml-4 overflow-hidden whitespace-nowrap transition-all duration-300 ${
-                isHovered ? 'w-full opacity-100' : 'w-0 opacity-0'
-              }`}
-            >
-              {item.label}
-            </span>
-          </NavLink>
-        ))}
-      </nav>
+  const showExpanded = isMobile ? isExpanded : isHovered;
+  const sidebarWidth = isMobile ? (isExpanded ? 'w-64' : 'w-20') : (isHovered ? 'w-64' : 'w-20');
 
-      {/* Logout */}
-      <div className="p-2 border-t border-gray-300 dark:border-gray-700">
-        <button
-          onClick={logout}
-          className="flex items-center w-full p-3 rounded-md bg-red-600 hover:bg-red-700 text-white transition-colors"
-          aria-label={t('sidebar.logout')}
-        >
-          <LogOut size={20} />
-          <span
-            className={`ml-4 overflow-hidden whitespace-nowrap transition-all duration-300 ${
-              isHovered ? 'w-full opacity-100' : 'w-0 opacity-0'
-            }`}
-          >
-            {t('sidebar.logout')}
-          </span>
-        </button>
-      </div>
-    </div>
-  );
+  // Function to handle long names
+  const formatName = (name) => {
+    if (!name) return '';
+    if (name.length > 15 && !showExpanded) {
+      return `${name.substring(0, 12)}...`;
+    }
+    return name;
+  };
 
   return (
     <>
-      <MobileMenuButton />
-
-      {/* Desktop Sidebar */}
-      <div
-        className={`hidden md:block fixed h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ${
-          isHovered ? 'w-64' : 'w-20'
-        }`}
-        onMouseEnter={() => !isMobile && setIsHovered(true)}
-        onMouseLeave={() => !isMobile && setIsHovered(false)}
-        aria-label={t('sidebar.navigation')}
-      >
-        <SidebarContent />
-      </div>
-
-      {/* Mobile Sidebar */}
-      {isMobileOpen && (
-        <div className="md:hidden fixed inset-0 z-40">
-          <div
-            className="absolute inset-0 bg-black bg-opacity-50"
-            onClick={toggleMobileMenu}
-            aria-hidden="true"
-          />
-          <div className="relative w-64 h-full bg-white dark:bg-gray-800">
-            <SidebarContent />
-          </div>
-        </div>
+      {/* Mobile Toggle Button */}
+      {isMobile && (
+        <button
+          onClick={toggleSidebar}
+          className="md:hidden fixed z-50 p-2 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 shadow-md"
+          aria-label={isExpanded ? t('sidebar.closeMenu') : t('sidebar.openMenu')}
+        >
+          {isExpanded ? <X size={20} /> : <Menu size={20} />}
+        </button>
       )}
 
-      {/* Main Content Area */}
+      {/* Sidebar */}
       <div
-        className={`transition-all duration-300 ${
-          isMobile ? 'ml-0' : isHovered ? 'ml-64' : 'ml-20'
-        }`}
+        className={`fixed h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 z-40 ${sidebarWidth}
+          ${isMobile && !isExpanded ? 'hidden' : 'block'}`}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
-        {/* Routed content renders here */}
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* Logo */}
+          <div className="flex items-center justify-center p-4 h-16 border-b border-gray-300 dark:border-gray-700">
+            <div className="flex items-center min-w-0">
+              <img 
+                src={companyLogo} 
+                alt={t('sidebar.logoAlt')} 
+                className="h-10 w-10 min-w-[2.5rem]" 
+              />
+              {showExpanded && (
+                <span className="ml-3 text-lg font-bold text-gray-900 dark:text-white truncate">
+                  {t('sidebar.appName')}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Menu Items */}
+          <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
+            {mainMenuItems.map((item, idx) => (
+              <NavLink
+                key={`main-${idx}`}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center p-3 rounded-md transition-colors duration-200 ${
+                    isActive
+                      ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  } ${showExpanded ? 'justify-start' : 'justify-center'}`
+                }
+                aria-label={item.label}
+              >
+                <div className="flex-shrink-0 flex items-center justify-center w-6">
+                  {item.icon}
+                </div>
+                {showExpanded && (
+                  <span className="ml-3 truncate">
+                    {item.label}
+                  </span>
+                )}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* User Info */}
+          <div className="mt-auto p-3 border-t border-gray-200 dark:border-gray-700">
+            <div className={`flex items-center ${showExpanded ? 'justify-start' : 'justify-center'}`}>
+              {showExpanded ? (
+                <div className="flex items-center min-w-0">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800 flex items-center justify-center mr-3">
+                    <span className="font-bold">
+                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900 dark:text-white truncate">
+                      {formatName(user?.name || '')}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {user?.role || ''}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800 flex items-center justify-center">
+                  <span className="font-bold">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            {/* Logout Button */}
+            <button
+              onClick={logout}
+              className={`flex items-center w-full mt-3 p-2 rounded-md transition-colors duration-200
+                ${showExpanded ? 'justify-start' : 'justify-center'}
+                bg-red-500 hover:bg-red-600 text-white`}
+              aria-label={t('sidebar.logout')}
+            >
+              <LogOut size={20} />
+              {showExpanded && (
+                <span className="ml-3 truncate">
+                  {t('sidebar.logout')}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Main Content Area */}
+      <div className={`transition-all duration-300 ${sidebarWidth}`} />
     </>
   );
 };

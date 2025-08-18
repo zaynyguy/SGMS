@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const SettingsTab = ({ showToast }) => {
+const SettingsPage = ({ showToast }) => {
   const { t } = useTranslation();
   const [emailTemplate, setEmailTemplate] = useState(
     t('admin.settings.emailTemplate.default')
@@ -260,4 +260,4 @@ const SettingsTab = ({ showToast }) => {
   );
 };
 
-export default SettingsTab;
+export default SettingsPage;

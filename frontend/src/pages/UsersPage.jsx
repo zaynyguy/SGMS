@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Edit, Trash, Plus, UserPlus } from 'lucide-react';
 import { fetchUsers, createUser, updateUser, deleteUser, fetchRoles } from '../api/admin';
 
-const UsersTab = ({ showToast }) => {
+const UsersPage = ({ showToast }) => {
   const { t } = useTranslation();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -317,12 +317,25 @@ const UsersTab = ({ showToast }) => {
                     type="password"
                     id="password"
                     name="password"
-                    className="mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    className={`mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white ${
+                      formData.password && formData.password.length < 8 ? 'border-red-500' : ''
+                    }`}
                     placeholder={t('admin.users.form.passwordPlaceholder')}
                     value={formData.password}
-                    onChange={handleFormChange}
+                    onChange={(e) => {
+                      handleFormChange(e);
+                      // Validate password length
+                      if (e.target.value && e.target.value.length < 8) {
+                        showToast(t('admin.users.errors.passwordTooShort'), 'error');
+                      }
+                    }}
                     required={!userToEdit}
                   />
+                  {formData.password && formData.password.length < 8 && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      {t('admin.users.errors.passwordTooShort')}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="roleId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -354,6 +367,7 @@ const UsersTab = ({ showToast }) => {
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors duration-200"
+                  disabled={formData.password && formData.password.length < 8}
                 >
                   {userToEdit 
                     ? t('admin.actions.saveChanges') 
@@ -396,4 +410,4 @@ const UsersTab = ({ showToast }) => {
   );
 };
 
-export default UsersTab;
+export default UsersPage;
