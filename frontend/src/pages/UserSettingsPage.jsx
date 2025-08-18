@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
-import { CheckCircle, XCircle, Info, Moon, Sun, X } from "lucide-react";
+import { AlertTriangle, Check, X } from "lucide-react";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 
-const UserSettingsPage = () => {
+const UserSettingsPage = ({ showToast }) => {
   const { t } = useTranslation();
   const { token, updateUser } = useAuth();
   const [settings, setSettings] = useState({
@@ -17,47 +17,33 @@ const UserSettingsPage = () => {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [passwordError, setPasswordError] = useState("");
 
+  // Fetch user settings
   const fetchSettings = async () => {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!response.ok) throw new Error("Network response was not ok");
       const data = await response.json();
       setSettings(data);
+      setLoading(false);
     } catch (err) {
+      console.error("Failed to load settings:", err);
       showToast(t('settings.errors.loadError'), "error");
-    } finally {
       setLoading(false);
     }
   };
 
-  const showToast = (message, type = "info") => {
-    setToast({ message, type });
-  };
-
-  useEffect(() => { fetchSettings(); }, []);
-
-  const validatePassword = () => {
-    if (newPassword && newPassword.length < 8) {
-      setPasswordError(t('settings.errors.passwordTooShort'));
-      return false;
-    }
-    setPasswordError("");
-    return true;
-  };
+  useEffect(() => {
+    fetchSettings();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validatePassword()) {
-      return;
-    }
-
     setSaving(true);
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
         method: "PUT",
@@ -72,26 +58,28 @@ const UserSettingsPage = () => {
           newPassword: newPassword || undefined,
         }),
       });
-      if (!response.ok) throw new Error(t('settings.errors.updateError'));
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.message || "Failed to update settings");
+      }
+
       const data = await response.json();
       updateUser(data.user, data.token);
       showToast(t('settings.toasts.updateSuccess'), "success");
       setOldPassword("");
       setNewPassword("");
     } catch (err) {
-      showToast(err.message, "error");
+      console.error("Failed to update settings:", err);
+      showToast(err.message || t('settings.errors.updateError'), "error");
     } finally {
       setSaving(false);
     }
   };
 
-  const toggleDarkMode = () => {
-    setSettings({ ...settings, darkMode: !settings.darkMode });
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+      <div className="flex justify-center items-center h-72 bg-gray-100 dark:bg-gray-900">
         <div className="animate-pulse text-gray-400 dark:text-gray-600">
           {t('settings.loading')}
         </div>
@@ -100,168 +88,121 @@ const UserSettingsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      {/* Header */}
-      <header className="sticky top-0 bg-white dark:bg-gray-800 shadow-sm z-10 p-4">
-        <h1 className="text-xl font-bold">{t('settings.title')}</h1>
-      </header>
+    <section className="bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            {t('settings.title')}
+          </h1>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('settings.username')}
+                </label>
+                <input
+                  type="text"
+                  value={settings.username}
+                  readOnly
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
 
-      <div className="container mx-auto px-20 py-7">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <form onSubmit={handleSubmit} className="divide-y divide-gray-200 dark:divide-gray-700">
-            
-            {/* Personal Info */}
-            <div className="p-6">
-              <h2 className="font-medium mb-3">{t('settings.personalInfo')}</h2>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    {t('settings.username')}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.username}
-                    readOnly
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    {t('settings.name')}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.name}
-                    readOnly
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('settings.name')}
+                </label>
+                <input
+                  type="text"
+                  value={settings.name}
+                  readOnly
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
             </div>
 
-            {/* Appearance */}
-            <div className="p-6">
-              <h2 className="font-medium mb-3">{t('settings.appearance')}</h2>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    {t('settings.language')}
-                  </label>
-                  <LanguageSwitcher
-                    compact
-                    value={settings.language}
-                    onChange={(lang) => setSettings({ ...settings, language: lang })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    {t('settings.theme')}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={toggleDarkMode}
-                    className="flex items-center px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700"
-                  >
-                    {settings.darkMode ? (
-                      <>
-                        <Sun className="w-4 h-4 mr-2" />
-                        {t('settings.lightMode')}
-                      </>
-                    ) : (
-                      <>
-                        <Moon className="w-4 h-4 mr-2" />
-                        {t('settings.darkMode')}
-                      </>
-                    )}
-                  </button>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('settings.language')}
+              </label>
+              <LanguageSwitcher
+                value={settings.language}
+                onChange={(lang) => setSettings({ ...settings, language: lang })}
+              />
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="darkMode"
+                checked={settings.darkMode}
+                onChange={(e) => setSettings({ ...settings, darkMode: e.target.checked })}
+                className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600"
+              />
+              <label htmlFor="darkMode" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                {t('settings.darkMode')}
+              </label>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                {t('settings.changePassword')}
+              </h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('settings.oldPassword')}
+                </label>
+                <input
+                  type="password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder={t('settings.passwordPlaceholder')}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('settings.newPassword')}
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={t('settings.passwordPlaceholder')}
+                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
             </div>
 
-            {/* Password */}
-            <div className="p-6">
-              <h2 className="font-medium mb-3">{t('settings.changePassword')}</h2>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    {t('settings.oldPassword')}
-                  </label>
-                  <input
-                    type="password"
-                    value={oldPassword}
-                    onChange={(e) => setOldPassword(e.target.value)}
-                    placeholder={t('settings.passwordPlaceholder')}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-                    {t('settings.newPassword')}
-                  </label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => {
-                      setNewPassword(e.target.value);
-                      if (e.target.value && e.target.value.length < 8) {
-                        setPasswordError(t('settings.errors.passwordTooShort'));
-                      } else {
-                        setPasswordError("");
-                      }
-                    }}
-                    placeholder={t('settings.passwordPlaceholder')}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700"
-                  />
-                  {passwordError && (
-                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">
-                      {passwordError}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Submit */}
-            <div className="p-6 bg-gray-50 dark:bg-gray-700">
+            <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="submit"
-                disabled={saving || (newPassword && newPassword.length < 8)}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded shadow-sm disabled:opacity-50 flex items-center justify-center"
+                disabled={saving}
+                className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
                 {saving ? (
                   <>
-                    <svg className="animate-spin mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     {t('settings.saving')}
                   </>
-                ) : t('settings.saveChanges')}
+                ) : (
+                  <>
+                    <Check className="w-4 h-4 mr-2" />
+                    {t('settings.saveChanges')}
+                  </>
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
-
-      {/* Toast */}
-      {toast && (
-        <div
-          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-auto p-3 rounded shadow-lg flex items-center ${
-            toast.type === 'success' ? 'bg-green-500' :
-            toast.type === 'error' ? 'bg-red-500' :
-            'bg-blue-500'
-          } text-white text-sm`}
-        >
-          {toast.type === 'success' && <CheckCircle className="w-4 h-4 mr-2" />}
-          {toast.type === 'error' && <XCircle className="w-4 h-4 mr-2" />}
-          {toast.type === 'info' && <Info className="w-4 h-4 mr-2" />}
-          <span className="flex-1">{toast.message}</span>
-          <button onClick={() => setToast(null)} className="ml-2">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-    </div>
+    </section>
   );
 };
 
