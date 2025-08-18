@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Edit, Trash, Plus, UserPlus } from 'lucide-react';
-import { fetchUsers, createUser, updateUser, deleteUser, fetchRoles } from '../api/admin';
+import { fetchUsers, createUser, updateUser, deleteUser, fetchRoles } from '../api-endpoints/admin';
 
 const UsersPage = ({ showToast }) => {
   const { t } = useTranslation();
@@ -100,32 +100,6 @@ const UsersPage = ({ showToast }) => {
     setUserToDelete(null);
   };
 
-  const handleStatusToggle = (userId) => {
-    setUsers(users.map(user => {
-      if (user.id === userId) {
-        let newStatus;
-        switch (user.status) {
-          case 'Active':
-            newStatus = t('admin.users.status.inactive');
-            break;
-          case 'Inactive':
-            newStatus = t('admin.users.status.pending');
-            break;
-          case 'Pending':
-            newStatus = t('admin.users.status.active');
-            break;
-          default:
-            newStatus = user.status;
-        }
-        showToast(t('admin.users.statusChanged', { 
-          name: user.name, 
-          status: newStatus 
-        }), 'info');
-        return { ...user, status: newStatus };
-      }
-      return user;
-    }));
-  };
 
   return (
     <section id="users" role="tabpanel" aria-labelledby="users-tab">
@@ -145,8 +119,8 @@ const UsersPage = ({ showToast }) => {
         {users.length > 0 ? (
           <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                {['username', 'name', 'role', 'status', 'actions'].map((header) => (
+              <tr> {/* if u want to 'status' */}
+                {['username', 'name', 'role', 'actions'].map((header) => (
                   <th 
                     key={header}
                     className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
@@ -161,10 +135,8 @@ const UsersPage = ({ showToast }) => {
                 <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
                   <td className="px-4 py-3 whitespace-nowrap">{user.username}</td>
                   <td className="px-4 py-3 whitespace-nowrap">{user.name}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
-                    {user.role?.name || t('admin.users.notAvailable')}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                  <td className="px-4 py-3 whitespace-nowrap">{user.roleName}</td>
+                  {/* <td className="px-4 py-3 whitespace-nowrap text-center">
                     <button
                       onClick={() => handleStatusToggle(user.id)}
                       className={`px-3 py-1 text-xs leading-5 font-semibold rounded-full transition-colors duration-200
@@ -176,8 +148,8 @@ const UsersPage = ({ showToast }) => {
                     >
                       {user.status || t('admin.users.notAvailable')}
                     </button>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center space-x-1">
+                  </td> */}
+                  <td className="px-4 py-3 whitespace-nowrap space-x-1">
                     <button
                       onClick={() => handleOpenUserModal(user)}
                       className="btn-icon p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150"
@@ -239,7 +211,7 @@ const UsersPage = ({ showToast }) => {
               <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">@{user.username}</div>
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">
-                  {t('admin.users.role')}: {user.role?.name || t('admin.users.notAvailable')}
+                  {t('admin.users.role')}: {user.roleName || t('admin.users.notAvailable')}
                 </span>
                 <button
                   onClick={() => handleStatusToggle(user.id)}

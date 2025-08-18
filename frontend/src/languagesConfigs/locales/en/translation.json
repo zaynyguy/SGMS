@@ -275,7 +275,7 @@
     }
   },
   "sidebar": {
-    "appName": "Admin Panel",
+    "appName": "SGMS",
     "logoAlt": "Company Logo",
     "menu": {
       "dashboard": "Dashboard",

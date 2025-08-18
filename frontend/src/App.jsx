@@ -11,6 +11,8 @@ import DashboardPage from './pages/DashboardPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
 import UserSettingsPage from './pages/UserSettingsPage'; // Import the new page
 import Admin from './pages/AdminPage';
+import GroupsManagementPage from './pages/GroupsManagementPage'
+import GoalsManagementPage from './pages/GoalsManagement'
 
 
 function App() {
@@ -29,6 +31,8 @@ function App() {
                             {/* No special permissions needed */}
                             <Route path='/dashboard' element={<DashboardPage />} />
                             <Route path="/settings" element={<UserSettingsPage />} /> {/* Add settings route */}
+                            <Route path="/GoalsManagement" element={<GoalsManagementPage />} /> {/* Add settings route */}
+                            <Route path="/GroupsManagement" element={<GroupsManagementPage />} /> {/* Add settings route */}
 
                             {/* Admin Routes with specific permissions */}
                             <Route
