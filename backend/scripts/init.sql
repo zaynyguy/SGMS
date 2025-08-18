@@ -1,4 +1,6 @@
+-- =============================
 -- Drop tables in order of dependency
+-- =============================
 DROP TABLE IF EXISTS "Attachments";
 DROP TABLE IF EXISTS "Reports";
 DROP TABLE IF EXISTS "Activities";
@@ -10,18 +12,23 @@ DROP TABLE IF EXISTS "Users";
 DROP TABLE IF EXISTS "Permissions";
 DROP TABLE IF EXISTS "Roles";
 DROP TABLE IF EXISTS "Groups";
+
 DROP TYPE IF EXISTS goal_status;
 DROP TYPE IF EXISTS task_status;
 DROP TYPE IF EXISTS activity_status;
 DROP TYPE IF EXISTS report_status;
 
--- Create Custom Types
+-- =============================
+-- ENUM Types
+-- =============================
 CREATE TYPE goal_status AS ENUM ('Not Started', 'In Progress', 'Completed', 'On Hold');
 CREATE TYPE task_status AS ENUM ('To Do', 'In Progress', 'Done', 'Blocked');
 CREATE TYPE activity_status AS ENUM ('To Do', 'In Progress', 'Done');
 CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 'Rejected');
 
--- Foundational Tables
+-- =============================
+-- Roles & Permissions
+-- =============================
 CREATE TABLE "Roles" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
@@ -59,7 +66,9 @@ CREATE TABLE "RolePermissions" (
   UNIQUE("roleId", "permissionId")
 );
 
+-- =============================
 -- Groups
+-- =============================
 CREATE TABLE "Groups" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
@@ -77,7 +86,9 @@ CREATE TABLE "UserGroups" (
   UNIQUE("userId", "groupId")
 );
 
--- GTA Tables
+-- =============================
+-- Goals, Tasks, Activities
+-- =============================
 CREATE TABLE "Goals" (
   "id" SERIAL PRIMARY KEY,
   "title" VARCHAR(255) NOT NULL,
@@ -86,7 +97,7 @@ CREATE TABLE "Goals" (
   "startDate" DATE,
   "endDate" DATE,
   "status" goal_status NOT NULL DEFAULT 'Not Started',
-  "progress" INTEGER NOT NULL DEFAULT 0,
+  "progress" INTEGER NOT NULL DEFAULT 0 CHECK ("progress" BETWEEN 0 AND 100),
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -99,7 +110,7 @@ CREATE TABLE "Tasks" (
   "status" task_status NOT NULL DEFAULT 'To Do',
   "assigneeId" INTEGER REFERENCES "Users"("id") ON DELETE SET NULL,
   "dueDate" DATE,
-  "progress" INTEGER NOT NULL DEFAULT 0,
+  "progress" INTEGER NOT NULL DEFAULT 0 CHECK ("progress" BETWEEN 0 AND 100),
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -111,12 +122,16 @@ CREATE TABLE "Activities" (
   "title" VARCHAR(255) NOT NULL,
   "description" TEXT,
   "status" activity_status NOT NULL DEFAULT 'To Do',
+  "metrics" JSONB,
+  "groupId" INTEGER REFERENCES "Groups"("id") ON DELETE SET NULL,
   "dueDate" DATE,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- =============================
 -- Reporting & Attachments
+-- =============================
 CREATE TABLE "Reports" (
   "id" SERIAL PRIMARY KEY,
   "activityId" INTEGER NOT NULL REFERENCES "Activities"("id") ON DELETE CASCADE,
@@ -138,7 +153,9 @@ CREATE TABLE "Attachments" (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Trigger function for automatic updatedAt
+-- =============================
+-- Trigger function for updatedAt
+-- =============================
 CREATE OR REPLACE FUNCTION update_updatedAt_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -147,7 +164,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Triggers for updatedAt
+-- =============================
+-- Triggers for updatedAt (explicit method)
+-- =============================
 CREATE TRIGGER set_updatedAt_Roles
 BEFORE UPDATE ON "Roles"
 FOR EACH ROW

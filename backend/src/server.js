@@ -9,6 +9,10 @@ const userRoutes = require('./routes/userRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const permissionRoutes = require('./routes/permissionRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const goalRoutes = require('./routes/goalRoutes');
+const taskRoutes = require('./routes/taskRoutes');
+const activityRoutes = require('./routes/activityRoutes');
+const groupRoutes = require('./routes/groupRoutes');
 
 const app = express();
 
@@ -21,6 +25,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/roles', roleRoutes);
 app.use('/api/permissions', permissionRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/goals', goalRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/activities', activityRoutes);
+app.use('/api/groups', groupRoutes)
 
 app.get('/', (req, res) => {
   res.send('The api server is running ..')

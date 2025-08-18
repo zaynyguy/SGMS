@@ -34,7 +34,6 @@ exports.createUser = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // Check if username exists
     const existingUser = await client.query('SELECT id FROM "Users" WHERE username = $1', [username.trim()]);
     if (existingUser.rows.length > 0) {
       await client.query('ROLLBACK');
@@ -95,7 +94,6 @@ exports.updateUser = async (req, res) => {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    // Check if username is taken by another user
     const usernameCheck = await client.query('SELECT id FROM "Users" WHERE username = $1 AND id <> $2', [username.trim(), id]);
     if (usernameCheck.rows.length > 0) {
       await client.query('ROLLBACK');
