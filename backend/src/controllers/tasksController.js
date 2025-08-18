@@ -53,6 +53,7 @@ exports.createTask = async (req, res) => {
 // -------------------- UPDATE TASK --------------------
 exports.updateTask = async (req, res) => {
   const { taskId } = req.params;
+  const id = taskId
   const { title, description, assigneeId, dueDate } = req.body;
 
   const client = await db.pool.connect();
