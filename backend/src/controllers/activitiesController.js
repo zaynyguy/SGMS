@@ -43,12 +43,11 @@ exports.createActivity = async (req, res) => {
     }
 
     const result = await client.query(
-      `INSERT INTO "Activities" ("taskId", "parentId", title, description, "groupId", metrics, "dueDate")
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO "Activities" ("taskId", title, description, "groupId", metrics, "dueDate")
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *;`,
       [
         taskId,
-        parentId || null,
         title.trim(),
         description?.trim() || null,
         groupId,
@@ -92,14 +91,13 @@ exports.updateActivity = async (req, res) => {
 
     const query = `
       UPDATE "Activities"
-      SET title=$1, description=$2, "parentId"=$3, "groupId"=$4, metrics=$5, status=$6, "dueDate"=$7, "updatedAt"=NOW()
-      WHERE id=$8
+      SET title=$1, description=$2, "groupId"=$3, metrics=$4, status=$5, "dueDate"=$6, "updatedAt"=NOW()
+      WHERE id=$7
       RETURNING *;
     `;
     const { rows } = await client.query(query, [
       title?.trim() || null,
       description?.trim() || null,
-      parentId || null,
       groupId || null,
       metrics || {},
       status || null,
