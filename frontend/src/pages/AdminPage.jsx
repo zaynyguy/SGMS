@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserPlus, Settings, Shield, ChevronDown, CheckCircle, XCircle, Info } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
-import UsersTab from './UsersTab';
-import RolesTab from './RolesTab';
-import SettingsTab from './SettingsTab';
+import UsersPage from './UsersPage';
+import RolesManagementPage from './RolesManagementPage';
+import SettingsPage from './SettingsPage';
 import AuditLogTab from './AuditLogTab';
 
 const Admin = () => {
@@ -100,9 +100,9 @@ const Admin = () => {
             </div>
 
             <ErrorBoundary>
-              {activeTab === 'users' && <UsersTab showToast={showToast} />}
-              {activeTab === 'roles' && <RolesTab showToast={showToast} />}
-              {activeTab === 'settings' && <SettingsTab showToast={showToast} />}
+              {activeTab === 'users' && <UsersPage showToast={showToast} />}
+              {activeTab === 'roles' && <RolesManagementPage showToast={showToast} />}
+              {activeTab === 'settings' && <SettingsPage showToast={showToast} />}
               {activeTab === 'auditLog' && <AuditLogTab showToast={showToast} />}
             </ErrorBoundary>
           </div>
