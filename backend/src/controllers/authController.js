@@ -3,9 +3,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// Shared helper to create JWT + user payload
+// Helper: Generate token + payload
 const generateToken = async (userId) => {
-  // Get user info with role
   const query = `
     SELECT u.id, u.username, u.name, u.password, u."roleId", u.language, u."darkMode", r.name AS "roleName"
     FROM "Users" u
@@ -15,7 +14,6 @@ const generateToken = async (userId) => {
   const { rows } = await db.query(query, [userId]);
   const user = rows[0];
 
-  // Fetch permissions for user's role
   const permsQuery = `
     SELECT p.name AS permission
     FROM "Permissions" p
@@ -25,7 +23,6 @@ const generateToken = async (userId) => {
   const permsResult = await db.query(permsQuery, [user.roleId]);
   const permissions = permsResult.rows.map(r => r.permission);
 
-  // JWT payload
   const payload = {
     id: user.id,
     username: user.username,
@@ -45,48 +42,25 @@ const generateToken = async (userId) => {
 
 exports.login = async (req, res) => {
   let { username, password } = req.body;
-
-  if (!username || !password) {
-    return res.status(400).json({ message: 'Username and password are required.' });
-  }
+  if (!username || !password) return res.status(400).json({ message: 'Username and password are required.' });
 
   username = username.trim();
   password = password.trim();
 
   try {
-    // Fetch user by username
-    const query = `
-      SELECT id, username, password
-      FROM "Users"
-      WHERE username = $1;
-    `;
-    const { rows } = await db.query(query, [username]);
-
-    if (rows.length === 0) {
-      return res.status(401).json({ message: 'Invalid username or password.' });
-    }
+    const { rows } = await db.query(`SELECT id, username, password FROM "Users" WHERE username = $1;`, [username]);
+    if (rows.length === 0) return res.status(401).json({ message: 'Invalid username or password.' });
 
     const user = rows[0];
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) return res.status(401).json({ message: 'Invalid username or password.' });
 
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: 'Invalid username or password.' });
-    }
-
-    // Generate token & payload
     const { token, user: payload } = await generateToken(user.id);
-
-    res.status(200).json({
-      message: 'Login successful.',
-      token,
-      user: payload
-    });
-
+    res.status(200).json({ message: 'Login successful.', token, user: payload });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Internal server error.' });
   }
 };
 
-// Export token generator so settingsController can use it
 exports.generateToken = generateToken;
