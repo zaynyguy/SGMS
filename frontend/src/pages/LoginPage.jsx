@@ -19,6 +19,13 @@ const LoginPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        
+        // Add password length validation
+        if (password.length < 8) {
+            setError(t('login.password_too_short'));
+            return;
+        }
+
         setLoading(true);
         try {
             await login(username, password);
@@ -32,7 +39,7 @@ const LoginPage = () => {
 
     return (
         <div className="h-screen w-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-sans p-4">
-            <div className="w-full max-w-5xl grid md:grid-cols-2 rounded-3xl overflow-hidden shadow-2xl relative">
+            <div className="w-full max-w-4xl grid md:grid-cols-2 rounded-xl md:rounded-2xl overflow-hidden shadow-2xl relative">
                 <div className="absolute inset-0 bg-white/10 backdrop-blur-xl z-0"></div>
                 <div className="w-full p-4 sm:p-8 md:p-12 flex flex-col justify-center text-slate-800 dark:text-white relative z-10">
                     <div className='flex justify-between items-center'>
@@ -98,30 +105,6 @@ const LoginPage = () => {
                             </button>
                         </div>
                     </form>
-
-                    <div className="mt-6">
-                        <label htmlFor="language" className="block text-sm font-medium text-slate-800 dark:text-white/80 mb-1">
-                            {t('login.language_label')}
-                        </label>
-                        <div className="relative">
-                            <select
-                                id="language"
-                                name="language"
-                                autoComplete="language-name"
-                                className="w-full appearance-none rounded-md bg-black/30 dark:bg-slate-200 py-1.5 pl-3 pr-8 text-slate-200 dark:text-slate-800 focus:outline-none"
-                                onChange={(e) => i18n.changeLanguage(e.target.value)}
-                            >
-                                <option value="en">{t('login.lang_en')}</option>
-                                <option value="or">{t('login.lang_or')}</option>
-                                <option value="am">{t('login.lang_am')}</option>
-                                <option value="hr">{t('login.lang_hr')}</option>
-                            </select>
-                            <ChevronDown
-                                aria-hidden="true"
-                                className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-200 dark:text-slate-800"
-                            />
-                        </div>
-                    </div>
                 </div>
 
                 <div className="hidden md:flex flex-col justify-between relative">

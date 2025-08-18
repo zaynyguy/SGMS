@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Shield, Settings, Trash, AlertTriangle, X } from 'lucide-react';
 import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from '../api/admin';
 
-const RolesTab = ({ showToast }) => {
+const RolesManagementPage = ({ showToast }) => {
   const { t } = useTranslation();
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
@@ -387,4 +387,4 @@ const RolesTab = ({ showToast }) => {
   );
 };
 
-export default RolesTab;
+export default RolesManagementPage;
