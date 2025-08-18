@@ -1,13 +1,14 @@
-const db = require("../src/db");
-const bcrypt = require("bcrypt");
-require("dotenv").config();
+const db = require('../src/db');
+const bcrypt = require('bcrypt');
+require('dotenv').config();
 
 async function seedDatabase() {
-  console.log("Seeding database safely...");
+  console.log("🌱 Starting database seed...");
+
   try {
     await db.query("BEGIN");
 
-    // --- Roles ---
+    // --- ROLES ---
     const roles = {};
     const roleInsert = await db.query(`
       INSERT INTO "Roles" (name, description)
@@ -18,6 +19,7 @@ async function seedDatabase() {
       ON CONFLICT (name) DO NOTHING
       RETURNING id, name;
     `);
+
     for (const r of roleInsert.rows) roles[r.name] = r.id;
 
     for (const roleName of ["Admin", "Manager", "User"]) {
@@ -27,7 +29,7 @@ async function seedDatabase() {
       }
     }
 
-    // --- Permissions ---
+    // --- PERMISSIONS ---
     const permissionsList = [
       ["view_dashboard", "Can view the main dashboard"],
       ["manage_project", "Full control over all project-related features"],
@@ -40,7 +42,9 @@ async function seedDatabase() {
       ["view_goals", "Can view goals"],
       ["view_tasks", "Can view tasks"],
       ["view_activities", "Can view activities"],
-      ["view_reports", "Can view reports"]
+      ["view_reports", "Can view reports"],
+      ["manage_reports", "Approve or reject reports"],
+      ["manage_settings", "Update system-wide settings"]
     ];
 
     for (const [name, desc] of permissionsList) {
@@ -56,7 +60,7 @@ async function seedDatabase() {
     const allPerms = await db.query(`SELECT id, name FROM "Permissions"`);
     for (const p of allPerms.rows) permissions[p.name] = p.id;
 
-    // --- Admin User ---
+    // --- ADMIN USER ---
     const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
     const adminUserRes = await db.query(
       `INSERT INTO "Users" (username, name, password, "roleId")
@@ -70,7 +74,7 @@ async function seedDatabase() {
       adminUserRes.rows[0]?.id ||
       (await db.query(`SELECT id FROM "Users" WHERE username=$1`, [process.env.ADMIN_USERNAME])).rows[0].id;
 
-    // --- Assign all permissions to Admin ---
+    // --- ASSIGN ALL PERMISSIONS TO ADMIN ---
     for (const permId of Object.values(permissions)) {
       await db.query(
         `INSERT INTO "RolePermissions" ("roleId", "permissionId")
@@ -80,22 +84,22 @@ async function seedDatabase() {
       );
     }
 
-    // --- Groups ---
+    // --- GROUPS ---
     const devGroupId = (await db.query(`
       INSERT INTO "Groups" (name, description)
       VALUES ('Development Team', 'Responsible for software development goals.')
-      ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+      ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
       RETURNING id;
     `)).rows[0].id;
 
     const marketingGroupId = (await db.query(`
       INSERT INTO "Groups" (name, description)
       VALUES ('Marketing Team', 'Responsible for marketing and outreach goals.')
-      ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+      ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
       RETURNING id;
     `)).rows[0].id;
 
-    // --- Sample Users ---
+    // --- SAMPLE USERS ---
     const managerPass = await bcrypt.hash("password", 10);
     const managerId = (await db.query(
       `INSERT INTO "Users" (username, name, password, "roleId")
@@ -122,7 +126,7 @@ async function seedDatabase() {
       [userPass, roles["User"]]
     )).rows[0].id;
 
-    // --- Assign Users to Groups ---
+    // --- USER GROUPS ---
     const userGroups = [
       [managerId, devGroupId],
       [dev1Id, devGroupId],
@@ -134,6 +138,22 @@ async function seedDatabase() {
          VALUES ($1, $2)
          ON CONFLICT ("userId", "groupId") DO NOTHING;`,
         [uid, gid]
+      );
+    }
+
+    // --- SYSTEM SETTINGS ---
+    const settings = [
+      ['reporting_active', 'false', 'Enable or disable the periodic reporting window.'],
+      ['reporting_start_day', '25', 'The day of the month the reporting window opens.'],
+      ['reporting_end_day', '28', 'The day of the month the reporting window closes.'],
+      ['resubmission_deadline_days', '2', 'How many days a user has to resubmit a rejected report.']
+    ];
+    for (const [key, value, description] of settings) {
+      await db.query(
+        `INSERT INTO "SystemSettings" (key, value, description)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (key) DO NOTHING;`,
+        [key, value, description]
       );
     }
 

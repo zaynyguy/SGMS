@@ -1,11 +1,12 @@
--- =============================
--- Drop tables in order of dependency
--- =============================
+-- =================================================================
+-- DROP TABLES (in dependency order)
+-- =================================================================
 DROP TABLE IF EXISTS "Attachments";
 DROP TABLE IF EXISTS "Reports";
 DROP TABLE IF EXISTS "Activities";
 DROP TABLE IF EXISTS "Tasks";
 DROP TABLE IF EXISTS "Goals";
+DROP TABLE IF EXISTS "SystemSettings";
 DROP TABLE IF EXISTS "RolePermissions";
 DROP TABLE IF EXISTS "UserGroups";
 DROP TABLE IF EXISTS "Users";
@@ -13,22 +14,19 @@ DROP TABLE IF EXISTS "Permissions";
 DROP TABLE IF EXISTS "Roles";
 DROP TABLE IF EXISTS "Groups";
 
-DROP TYPE IF EXISTS goal_status;
-DROP TYPE IF EXISTS task_status;
-DROP TYPE IF EXISTS activity_status;
-DROP TYPE IF EXISTS report_status;
+DROP TYPE IF EXISTS goal_status, task_status, activity_status, report_status;
 
--- =============================
--- ENUM Types
--- =============================
+-- =================================================================
+-- ENUM TYPES
+-- =================================================================
 CREATE TYPE goal_status AS ENUM ('Not Started', 'In Progress', 'Completed', 'On Hold');
 CREATE TYPE task_status AS ENUM ('To Do', 'In Progress', 'Done', 'Blocked');
 CREATE TYPE activity_status AS ENUM ('To Do', 'In Progress', 'Done');
 CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 'Rejected');
 
--- =============================
--- Roles & Permissions
--- =============================
+-- =================================================================
+-- ROLES & PERMISSIONS
+-- =================================================================
 CREATE TABLE "Roles" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
@@ -66,9 +64,9 @@ CREATE TABLE "RolePermissions" (
   UNIQUE("roleId", "permissionId")
 );
 
--- =============================
--- Groups
--- =============================
+-- =================================================================
+-- GROUPS
+-- =================================================================
 CREATE TABLE "Groups" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
@@ -86,9 +84,9 @@ CREATE TABLE "UserGroups" (
   UNIQUE("userId", "groupId")
 );
 
--- =============================
--- Goals, Tasks, Activities
--- =============================
+-- =================================================================
+-- GOALS, TASKS, ACTIVITIES
+-- =================================================================
 CREATE TABLE "Goals" (
   "id" SERIAL PRIMARY KEY,
   "title" VARCHAR(255) NOT NULL,
@@ -118,7 +116,6 @@ CREATE TABLE "Tasks" (
 CREATE TABLE "Activities" (
   "id" SERIAL PRIMARY KEY,
   "taskId" INTEGER NOT NULL REFERENCES "Tasks"("id") ON DELETE CASCADE,
-  "parentId" INTEGER REFERENCES "Activities"("id") ON DELETE CASCADE,
   "title" VARCHAR(255) NOT NULL,
   "description" TEXT,
   "status" activity_status NOT NULL DEFAULT 'To Do',
@@ -129,16 +126,18 @@ CREATE TABLE "Activities" (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- =============================
--- Reporting & Attachments
--- =============================
+-- =================================================================
+-- REPORTING, ATTACHMENTS, SYSTEM SETTINGS
+-- =================================================================
 CREATE TABLE "Reports" (
   "id" SERIAL PRIMARY KEY,
   "activityId" INTEGER NOT NULL REFERENCES "Activities"("id") ON DELETE CASCADE,
   "userId" INTEGER NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
   "narrative" TEXT NOT NULL,
+  "metrics_data" JSONB,
   "status" report_status NOT NULL DEFAULT 'Pending',
   "adminComment" TEXT,
+  "resubmissionDeadline" TIMESTAMPTZ,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -153,9 +152,18 @@ CREATE TABLE "Attachments" (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- =============================
--- Trigger function for updatedAt
--- =============================
+CREATE TABLE "SystemSettings" (
+  "id" SERIAL PRIMARY KEY,
+  "key" VARCHAR(255) NOT NULL UNIQUE,
+  "value" TEXT,
+  "description" TEXT,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- =================================================================
+-- TRIGGERS FOR updatedAt
+-- =================================================================
 CREATE OR REPLACE FUNCTION update_updatedAt_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -164,60 +172,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- =============================
--- Triggers for updatedAt (explicit method)
--- =============================
-CREATE TRIGGER set_updatedAt_Roles
-BEFORE UPDATE ON "Roles"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_Permissions
-BEFORE UPDATE ON "Permissions"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_Users
-BEFORE UPDATE ON "Users"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_RolePermissions
-BEFORE UPDATE ON "RolePermissions"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_Groups
-BEFORE UPDATE ON "Groups"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_UserGroups
-BEFORE UPDATE ON "UserGroups"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_Goals
-BEFORE UPDATE ON "Goals"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_Tasks
-BEFORE UPDATE ON "Tasks"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_Activities
-BEFORE UPDATE ON "Activities"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_Reports
-BEFORE UPDATE ON "Reports"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
-
-CREATE TRIGGER set_updatedAt_Attachments
-BEFORE UPDATE ON "Attachments"
-FOR EACH ROW
-EXECUTE FUNCTION update_updatedAt_column();
+-- Attach triggers
+CREATE TRIGGER set_updatedAt_Roles BEFORE UPDATE ON "Roles" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_Permissions BEFORE UPDATE ON "Permissions" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_Users BEFORE UPDATE ON "Users" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_RolePermissions BEFORE UPDATE ON "RolePermissions" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_Groups BEFORE UPDATE ON "Groups" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_UserGroups BEFORE UPDATE ON "UserGroups" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_Goals BEFORE UPDATE ON "Goals" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_Tasks BEFORE UPDATE ON "Tasks" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_Activities BEFORE UPDATE ON "Activities" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_Reports BEFORE UPDATE ON "Reports" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_Attachments BEFORE UPDATE ON "Attachments" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+CREATE TRIGGER set_updatedAt_SystemSettings BEFORE UPDATE ON "SystemSettings" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();

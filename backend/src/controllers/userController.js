@@ -22,13 +22,10 @@ exports.getAllUsers = async (req, res) => {
     res.status(500).json({ message: 'Internal server error.' });
   }
 };
-
 // -------------------- CREATE USER --------------------
 exports.createUser = async (req, res) => {
   const { username, name, password, roleId } = req.body;
-  if (!username || !name || !password || !roleId) {
-    return res.status(400).json({ message: 'All fields are required.' });
-  }
+  if (!username || !name || !password || !roleId) return res.status(400).json({ message: 'All fields are required.' });
 
   const client = await db.pool.connect();
   try {
@@ -41,7 +38,6 @@ exports.createUser = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const userResult = await client.query(
       `INSERT INTO "Users" (username, name, password, "roleId", language, "darkMode")
        VALUES ($1, $2, $3, $4, 'en', false)
@@ -58,13 +54,9 @@ exports.createUser = async (req, res) => {
     );
 
     await client.query('COMMIT');
-
     res.status(201).json({
       message: 'User created successfully.',
-      user: { 
-        ...userResult.rows[0],
-        permissions: permsResult.rows.map(r => r.permission),
-      },
+      user: { ...userResult.rows[0], permissions: permsResult.rows.map(r => r.permission) },
     });
   } catch (error) {
     await client.query('ROLLBACK');
