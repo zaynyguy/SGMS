@@ -73,7 +73,7 @@ exports.createActivity = async (req, res) => {
 // -------------------- UPDATE ACTIVITY --------------------
 exports.updateActivity = async (req, res) => {
   const { activityId } = req.params;
-  const { title, description, parentId, groupId, metrics, status, dueDate } =
+  const { title, description, groupId, metrics, status, dueDate } =
     req.body;
 
   const client = await db.pool.connect();
