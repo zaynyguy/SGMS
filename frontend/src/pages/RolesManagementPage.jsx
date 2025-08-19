@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Shield, Settings, Trash, AlertTriangle, X } from 'lucide-react';
-import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from '../api/admin';
+import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from '../api-endpoints/admin';
 
 const RolesManagementPage = ({ showToast }) => {
   const { t } = useTranslation();

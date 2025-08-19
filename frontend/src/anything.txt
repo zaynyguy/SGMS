@@ -1,252 +1,233 @@
-JSON file for admin page
+import React, { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, X } from 'lucide-react';
+import { fetchGroups, createGroup, updateGroup, deleteGroup } from '../api-endpoints/groups';
 
-  {
-  "Admin": {
-    "title": "Administration",
-    "usersTab": "Users",
-    "rolesTab": "Roles & Permissions",
-    "settingsTab": "Settings",
-    "auditLogTab": "Audit Log",
-    "inviteUser": "Invite User",
-    "editUser": "Edit User",
-    "sendInvite": "Send Invite",
-    "saveChanges": "Save Changes",
-    "nameLabel": "Name",
-    "emailLabel": "Email",
-    "roleLabel": "Role",
-    "statusLabel": "Status",
-    "actionsLabel": "Actions",
-    "noUsersTitle": "No users invited yet.",
-    "editButton": "Edit",
-    "deleteButton": "Delete",
-    "confirmDeleteTitle": "Confirm Deletion",
-    "confirmDeleteMessage": "Are you sure you want to delete user {{name}}? This action cannot be undone.",
-    "cancelButton": "Cancel",
-    "deleteButtonConfirm": "Delete",
-    "rolesTitle": "Roles",
-    "permissionsTitle": "Permissions",
-    "addRoleButton": "Add Role",
-    "addRoleModalTitle": "Add New Role",
-    "roleNameLabel": "Role Name",
-    "settingsTitle": "System Settings",
-    "reportingPeriodTitle": "Reporting Period",
-    "monthlyReportDueDateLabel": "Monthly Report Due Date",
-    "fiscalYearStartLabel": "Fiscal Year Start",
-    "emailServerTitle": "Email Server",
-    "smtpHostLabel": "SMTP Host",
-    "portLabel": "Port",
-    "usernameLabel": "Username",
-    "passwordLabel": "Password",
-    "testConnectionButton": "Test Connection",
-    "fileUploadSettingsTitle": "File Upload Settings",
-    "maxFileSizeLabel": "Max File Size (MB)",
-    "allowedFileTypesLabel": "Allowed File Types",
-    "notificationsTitle": "Notifications",
-    "notifyReportDueLabel": "Notify when report due",
-    "notifyOnSubmissionLabel": "Notify on submission",
-    "weeklySummaryEmailLabel": "Weekly summary email",
-    "emailTemplatesTitle": "Email Templates",
-    "saveSettingsButton": "Save Settings",
-    "auditLogTitle": "Audit Log",
-    "exportCsvButton": "Export CSV",
-    "searchLogsPlaceholder": "Search logs…",
-    "fromDateLabel": "From Date",
-    "toDateLabel": "To Date",
-    "applyFiltersButton": "Apply Filters",
-    "timestampLabel": "Timestamp",
-    "userLabel": "User",
-    "entityLabel": "Entity",
-    "actionLabel": "Action",
-    "detailsLabel": "Details",
-    "noLogsMessage": "No audit log entries found for the current filters.",
-    "userUpdatedToast": "User {{name}} updated successfully!",
-    "userInvitedToast": "User {{name}} invited successfully!",
-    "userDeletedToast": "User {{name}} deleted.",
-    "userStatusChangeToast": "User status for {{name}} changed to {{status}}.",
-    "roleAddedToast": "Role '{{name}}' added.",
-    "roleNameRequiredError": "Role name cannot be empty.",
-    "roleExistsError": "Role with this name already exists.",
-    "permissionsUpdatedToast": "Permissions updated.",
-    "connectionFailedToast": "Connection failed. Check credentials and host.",
-    "connectionSuccessToast": "Connection successful!",
-    "connectionTestInfoToast": "Testing connection...",
-    "emailDetailsError": "Please fill in all email server details to test connection.",
-    "settingsSavedToast": "Settings saved successfully!",
-    "filtersAppliedToast": "Filters applied!",
-    "csvExportSuccessToast": "Audit log exported to CSV!",
-    "csvExportErrorToast": "Your browser does not support downloading files directly.",
-    "nameRequiredError": "Name is required",
-    "emailRequiredError": "Email is required",
-    "invalidEmailError": "Invalid email address",
-    "roleRequiredError": "Role is required",
-    "selectRolePlaceholder": "Select a role",
-    "projectNamePlaceholder": "e.g., Project X",
-    "userEmailPlaceholder": "user@example.com",
-    "namePlaceholder": "e.g., Jane Doe",
-    "smtpHostPlaceholder": "e.g., smtp.example.com",
-    "smtpPortPlaceholder": "e.g., 587",
-    "smtpUsernamePlaceholder": "e.g., your_email@example.com",
-    "smtpPasswordPlaceholder": "Your email password",
-    "maxFileSizePlaceholder": "e.g., 50",
-    "allowedFileTypesPlaceholder": "e.g., .pdf, .jpg, .png",
-    "emailTemplatePlaceholder": "Template for report reminders:\n\nHi [User Name],\n\nThis is a reminder that your [Report Type] report is due on [Due Date].\n\nBest regards,\nThe Admin Team",
-    "admin": "Admin",
-    "projectLead": "Project Lead",
-    "clerk": "Clerk",
-    "createProject": "Create Project",
-    "editProject": "Edit Project",
-    "deleteProject": "Delete Project",
-    "viewReports": "View Reports",
-    "manageUsers": "Manage Users",
-    "permissionLabel": "Permission",
-    "defineFirstRole": "Define your first role."
-  }
- }
+function GroupsManager() {
+  const [groups, setGroups] = useState([]);
+  const [filteredGroups, setFilteredGroups] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentGroup, setCurrentGroup] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [message, setMessage] = useState({ text: '', type: '' });
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
-
-
-
- import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';        // <-- import hook
-import companyLogo from '../assets/logo.png';
-import { ChevronDown } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-
-export default function Login() {
-  const { t, i18n } = useTranslation();             // get t() and i18n
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(false);
-  const [error, setError] = useState(null);
-  const { saveAuth } = useAuth();
-  const navigate = useNavigate();
-
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError(null);
-
-  try {
-    const response = await fetch('/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: name, password }), // ✅ key fixed
-    });
-
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || t('login.error_default'));
-
-    // ✅ Save JWT and user in context
-    saveAuth({ token: data.token, user: data.user });
-
-    // ✅ Remember option handling
-    if (remember) {
-      localStorage.setItem('remember', 'true');
-    } else {
-      localStorage.removeItem('remember');
+  // --- FETCH GROUPS ---
+  const loadGroups = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchGroups();
+      setGroups(data);
+      setFilteredGroups(data);
+    } catch (err) {
+      console.error('Failed to fetch groups:', err);
+      showMessage('Failed to load groups. Please try again later.', 'error');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    navigate('/dashboard');
-  } catch (err) {
-    setError(err.message);
-  }
-};
+  useEffect(() => {
+    loadGroups();
+  }, []);
+
+  // --- SEARCH ---
+  useEffect(() => {
+    if (!searchTerm) return setFilteredGroups(groups);
+    const filtered = groups.filter(g =>
+      g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (g.description && g.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    setFilteredGroups(filtered);
+  }, [searchTerm, groups]);
+
+  // --- SORT ---
+  useEffect(() => {
+    const sorted = [...filteredGroups].sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    setFilteredGroups(sorted);
+  }, [sortConfig]);
+
+  const showMessage = (text, type = 'success') => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage({ text: '', type: '' }), 4000);
+  };
+
+  // --- MODAL CONTROLS ---
+  const openCreateModal = () => { setCurrentGroup(null); setIsModalOpen(true); };
+  const openEditModal = (group) => { setCurrentGroup(group); setIsModalOpen(true); };
+  const closeModal = () => { setIsModalOpen(false); setCurrentGroup(null); };
+
+  // --- CRUD OPERATIONS ---
+  const handleSaveGroup = async (groupData) => {
+    try {
+      if (currentGroup) {
+        // ✅ Update
+        await updateGroup(currentGroup.id, groupData);
+        await loadGroups(); // 👈 refresh data
+        showMessage('Group updated successfully!', 'success');
+      } else {
+        // ✅ Create
+        await createGroup(groupData);
+        await loadGroups(); // 👈 refresh data
+        showMessage('Group created successfully!', 'success');
+      }
+      closeModal();
+    } catch (err) {
+      console.error('Error saving group:', err);
+      showMessage('Failed to save group.', 'error');
+    }
+  };
+
+  const handleDeleteGroup = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this group?')) return;
+    try {
+      await deleteGroup(id);
+      await loadGroups(); // 👈 refresh data after delete too
+      showMessage('Group deleted successfully!', 'success');
+    } catch (err) {
+      console.error('Error deleting group:', err);
+      showMessage('Failed to delete group.', 'error');
+    }
+  };
+
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
+    setSortConfig({ key, direction });
+  };
+
+  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-green-600 via-gray-600 to-blue-500 flex items-center justify-center font-sans p-4">
-      <div className="w-full max-w-6xl grid md:grid-cols-2 rounded-3xl overflow-hidden shadow-2xl relative">
-        <div className="absolute inset-0 bg-white/10 backdrop-blur-xl z-0"></div>
-        <div className="w-full p-8 md:p-12 flex flex-col justify-center text-white relative z-10">
-          <h1 className="text-4xl font-bold mb-2">{t('login.title')}</h1>
-          <p className="text-white/80 mb-2">{t('login.subtitle')}</p>
-          <p className="text-white/80 mb-8">{t('login.prompt')}</p>
-
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div>
-              <label className="text-sm font-light text-white/80">
-                {t('login.username_label')}
-              </label>
-              <input
-                type="text"
-                placeholder={t('login.username_placeholder')}
-                className="w-full mt-2 px-4 py-3 bg-black/30 rounded-lg border border-white/20 focus:outline-none transition-all duration-300"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-light text-white/80">
-                {t('login.password_label')}
-              </label>
-              <input
-                type="password"
-                placeholder={t('login.password_placeholder')}
-                className="w-full mt-2 px-4 py-3 bg-black/30 rounded-lg border border-white/20 focus:outline-none transition-all duration-300"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="keep-logged-in"
-                  className="h-4 w-4 rounded bg-black/30 border-white/30 focus:ring-pink-500"
-                  checked={remember}
-                  onChange={() => setRemember(!remember)}
-                />
-                <label htmlFor="keep-logged-in" className="ml-2 text-white/80">
-                  {t('login.remember_label')}
-                </label>
-              </div>
-              <a href="#" className="font-medium text-white/80 hover:text-white transition-colors">
-                {t('login.forgot_password')}
-              </a>
-            </div>
-            {error && <p className="text-red-400">{error}</p>}
-            <div>
-              <button
-                type="submit"
-                className="w-full py-3 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 rounded-lg font-bold text-white shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                {t('login.button_signin')}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-6">
-            <label htmlFor="language" className="block text-sm font-medium text-white/80 mb-1">
-              {t('login.language_label')}
-            </label>
-            <div className="relative">
-              <select
-                id="language"
-                name="language"
-                autoComplete="language-name"
-                className="w-full appearance-none rounded-md bg-white py-1.5 pl-3 pr-8 text-gray-900 focus:outline-none"
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
-              >
-                <option value="en">{t('login.lang_en')}</option>
-                <option value="or">{t('login.lang_or')}</option>
-                <option value="am">{t('login.lang_am')}</option>
-                <option value="hr">{t('login.lang_hr')}</option>
-              </select>
-              <ChevronDown
-                aria-hidden="true"
-                className="pointer-events-none absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500"
-              />
-            </div>
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Team Groups</h1>
+            <p className="text-gray-600 mt-2">Manage your organization's groups</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Search groups..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full sm:w-64 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 relative"
+            />
+            <button onClick={openCreateModal} className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white py-2 px-4 rounded-lg">
+              <Plus size={18} /> New Group
+            </button>
           </div>
         </div>
 
-        <div className="hidden md:flex flex-col justify-between relative text-white p-8 md:pr-0 md:p-12">
-          <div className="relative bg-gray-300 rounded-l-3xl h-full flex flex-col justify-center">
-            <img src={companyLogo} alt="Company Logo" className="mx-auto" />
+        {message.text && (
+          <div className={`mb-6 p-4 rounded-lg ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {message.text}
           </div>
-        </div>
+        )}
+
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mb-4"></div>
+            <p className="text-gray-600">Loading groups...</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th onClick={() => requestSort('name')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Group Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th onClick={() => requestSort('memberCount')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Members</th>
+                  <th onClick={() => requestSort('createdAt')} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer">Created</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredGroups.length > 0 ? (
+                  filteredGroups.map(g => (
+                    <tr key={g.id}>
+                      <td className="px-6 py-4">{g.name}</td>
+                      <td className="px-6 py-4">{g.description || 'No description'}</td>
+                      <td className="px-6 py-4">{g.memberCount}</td>
+                      <td className="px-6 py-4">{formatDate(g.createdAt)}</td>
+                      <td className="px-6 py-4">{formatDate(g.updatedAt)}</td>
+                      <td className="px-6 py-4 text-right">
+                        <button onClick={() => openEditModal(g)} className="text-indigo-600 hover:text-indigo-900 mr-4"><Edit size={18} /></button>
+                        <button onClick={() => handleDeleteGroup(g.id)} className="text-red-600 hover:text-red-900"><Trash2 size={18} /></button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-12 text-center">No groups found</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {isModalOpen && (
+          <GroupFormModal group={currentGroup} onSave={handleSaveGroup} onClose={closeModal} />
+        )}
       </div>
     </div>
   );
 }
+
+function GroupFormModal({ group, onSave, onClose }) {
+  const [name, setName] = useState(group?.name || '');
+  const [description, setDescription] = useState(group?.description || '');
+  const [errors, setErrors] = useState({});
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newErrors = {};
+    if (!name.trim()) newErrors.name = 'Group name is required';
+    if (name.length > 50) newErrors.name = 'Name must be less than 50 characters';
+    if (description.length > 200) newErrors.description = 'Description must be less than 200 characters';
+    if (Object.keys(newErrors).length) return setErrors(newErrors);
+    onSave({ name: name.trim(), description: description.trim() || null });
+  };
+
+  useEffect(() => {
+    const handleEscape = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="p-5 border-b flex justify-between items-center">
+          <h2 className="text-xl font-semibold">{group ? 'Edit Group' : 'Create Group'}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="mb-5">
+            <label className="block text-sm font-medium mb-1">Group Name</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} className={`w-full px-3 py-2 border rounded-lg ${errors.name ? 'border-red-500' : 'border-gray-300'}`} />
+            {errors.name && <p className="text-red-600 text-sm">{errors.name}</p>}
+          </div>
+          <div className="mb-5">
+            <label className="block text-sm font-medium mb-1">Description</label>
+            <textarea value={description} onChange={e => setDescription(e.target.value)} rows="3" className={`w-full px-3 py-2 border rounded-lg ${errors.description ? 'border-red-500' : 'border-gray-300'}`} />
+            {errors.description && <p className="text-red-600 text-sm">{errors.description}</p>}
+          </div>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-teal-600 text-white rounded-lg">{group ? 'Save' : 'Create'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default GroupsManager;

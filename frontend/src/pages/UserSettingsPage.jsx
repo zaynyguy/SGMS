@@ -21,19 +21,26 @@ const UserSettingsPage = () => {
   const [passwordError, setPasswordError] = useState("");
 
   const fetchSettings = async () => {
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error("Network response was not ok");
-      const data = await response.json();
-      setSettings(data);
-    } catch (err) {
-      showToast(t('settings.errors.loadError'), "error");
-    } finally {
-      setLoading(false);
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error("Network response was not ok");
+    const data = await response.json();
+    setSettings(data);
+
+    // Apply saved theme
+    if (data.darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-  };
+  } catch (err) {
+    showToast(t('settings.errors.loadError'), "error");
+  } finally {
+    setLoading(false);
+  }
+ };
 
   const showToast = (message, type = "info") => {
     setToast({ message, type });
@@ -88,8 +95,17 @@ const UserSettingsPage = () => {
   };
 
   const toggleDarkMode = () => {
-    setSettings({ ...settings, darkMode: !settings.darkMode });
-  };
+  setSettings(prev => {
+    const newDarkMode = !prev.darkMode;
+    // Apply immediately to the page
+    if (newDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    return { ...prev, darkMode: newDarkMode };
+  });
+ };
 
   if (loading) {
     return (
