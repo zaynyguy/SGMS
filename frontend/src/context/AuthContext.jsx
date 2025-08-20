@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { loginUser as apiLoginUser } from "../api-endpoints/auth";
+import { loginUser as apiLoginUser } from "../api/auth";
 import { applyTheme } from "../uites/applyTheme";
 
 const AuthContext = createContext(null);

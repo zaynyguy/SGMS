@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Shield, Settings, Trash, AlertTriangle, X } from 'lucide-react';
-import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from '../api-endpoints/admin';
+import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from '../api/admin';
 
 const RolesManagementPage = ({ showToast }) => {
   const { t } = useTranslation();
@@ -122,7 +122,7 @@ const RolesManagementPage = ({ showToast }) => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-72 bg-gray-100 dark:bg-gray-900">
+      <div className="flex justify-center h-screen items-center bg-gray-100 dark:bg-gray-900">
         <div className="animate-pulse text-gray-400 dark:text-gray-600">
           {t('admin.roles.loading')}
         </div>
@@ -151,11 +151,12 @@ const RolesManagementPage = ({ showToast }) => {
   }
 
   return (
-    <section id="roles" role="tabpanel" aria-labelledby="roles-tab" className="bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+    <>
+        <h1 className="sticky text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between w-full">
           {t('admin.roles.title')}
         </h1>
+    <section id="roles" role="tabpanel" aria-labelledby="roles-tab" className="bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
         
         <div className="grid grid-cols-12 gap-6">
           {/* Roles List Panel */}
@@ -384,7 +385,7 @@ const RolesManagementPage = ({ showToast }) => {
         </div>
       )}
     </section>
+</>
   );
 };
-
 export default RolesManagementPage;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
-import { Home, Settings, LogOut, Menu, X, UserStar, Users } from 'lucide-react';
+import { Home, Settings, LogOut, Menu, X, User, Users, Goal, UserPen, Settings2Icon, ClipboardCheck, ListTodo, Activity, FileChartColumnIncreasing, Paperclip } from 'lucide-react';
 import companyLogo from '../../assets/logo.png';
 
 const Sidebar = ({ children }) => {
@@ -29,13 +29,16 @@ const Sidebar = ({ children }) => {
   const mainMenuItems = [
     { to: '/dashboard', icon: <Home size={24} />, label: t('sidebar.menu.dashboard') },
     { to: '/settings', icon: <Settings size={24} />, label: t('sidebar.menu.settings') },
-    hasPermission('manage_roles') && { to: '/admin', icon: <UserStar size={24} />, label: t('sidebar.menu.admin') },
-    hasPermission('manage_roles') && { to: '/GroupsManagement', icon: <Users size={24} />, label: 'Groups Management' },
-    hasPermission('manage_roles') && { to: '/GoalsManagement', icon: <UserStar size={24} />, label: 'Goals Management' },
-    hasPermission('manage_roles') && { to: '/UsersManagement', icon: <UserStar size={24} />, label: 'Users Management' },
-    hasPermission('manage_roles') && { to: '/RolesManagement', icon: <UserStar size={24} />, label: 'Roles Management' },
-    hasPermission('manage_roles') && { to: '/SystemSettings', icon: <UserStar size={24} />, label: 'System Settings' },
-    hasPermission('manage_roles') && { to: '/AdditLog', icon: <UserStar size={24} />, label: 'Audit' },
+    hasPermission('manage_roles') && { to: '/groupsmanagement', icon: <Users size={24} />, label: 'Groups Management' },
+    hasPermission('manage_roles') && { to: '/goalsmanagement', icon: <Goal size={24} />, label: 'Goals Management' },
+    hasPermission('manage_roles') && { to: '/usersmanagement', icon: <User size={24} />, label: 'Users Management' },
+    hasPermission('manage_roles') && { to: '/rolesmanagement', icon: <UserPen size={24} />, label: 'Roles Management' },
+    hasPermission('manage_roles') && { to: '/systemsettings', icon: <Settings2Icon size={24} />, label: 'System Settings' },
+    hasPermission('manage_roles') && { to: '/auditLog', icon: <ClipboardCheck size={24} />, label: 'Audit' },
+    hasPermission('manage_roles') && { to: '/tasksmanagement', icon: <ListTodo size={24} />, label: 'Tasks Management' },
+    hasPermission('manage_roles') && { to: '/activity', icon: <Activity size={24} />, label: 'Activity' },
+    hasPermission('manage_roles') && { to: '/report', icon: <FileChartColumnIncreasing size={24} />, label: 'Report' },
+    hasPermission('manage_roles') && { to: '/attachment', icon: <Paperclip size={24} />, label: 'Attachment' },
   ].filter(Boolean);
 
   const toggleSidebar = () => setIsExpanded(!isExpanded);
@@ -133,7 +136,7 @@ const Sidebar = ({ children }) => {
                 bg-red-500 hover:bg-red-600 text-white`}
               aria-label={t('sidebar.logout')}
             >
-              <LogOut size={20} />
+              <LogOut size={24} />
               {showExpanded && <span className="ml-3 truncate">{t('sidebar.logout')}</span>}
             </button>
           </div>

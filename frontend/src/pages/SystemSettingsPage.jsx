@@ -55,10 +55,12 @@ const SettingsPage = ({ showToast }) => {
   };
 
   return (
-    <section id="settings" role="tabpanel" aria-labelledby="settings-tab" className="p-4 space-y-6">
+    <>
+    <h1 className='sticky text-2xl text-gray-600 dark:text-gray-50 bg-gray-50 dark:bg-gray-800 p-4 font-semibold'>System Settings</h1>
+    <section id="settings" role="tabpanel" aria-labelledby="settings-tab" className="p-4 space-y-6 dark:bg-gray-900">
       {/* Reporting Period */}
       <div>
-        <h2 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
+        <h2 className="text-lg font-medium mb-2 mt-4 text-gray-800 dark:text-gray-200">
           {t('admin.settings.reportingPeriod.title')}
         </h2>
         <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-sm">
@@ -257,7 +259,7 @@ const SettingsPage = ({ showToast }) => {
         </button>
       </div>
     </section>
+</>
   );
 };
-
 export default SettingsPage;
