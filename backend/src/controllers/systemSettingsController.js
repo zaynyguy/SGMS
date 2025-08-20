@@ -1,5 +1,7 @@
 const db = require('../db');
 
+
+// -------------------- GET ALL THE SETTINGS --------------------
 exports.getAllSettings = async (req, res) => {
   try {
     const { rows } = await db.query('SELECT key, value, description FROM "SystemSettings"');
@@ -14,6 +16,8 @@ exports.getAllSettings = async (req, res) => {
   }
 };
 
+
+// -------------------- UPDATE ALL THE SETTINGS --------------------
 exports.updateSettings = async (req, res) => {
   const settings = req.body;
   const client = await db.connect();
