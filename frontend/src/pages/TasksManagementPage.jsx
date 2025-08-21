@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchTasksByGoal, createTask, updateTask, deleteTask } from '../api/tasks';
 import { fetchUsers } from '../api/admin';
 import { fetchGoals } from '../api/goals';
+import Toast from '../components/common/Toast'; 
 
 const App = () => {
   // State for task data
@@ -10,6 +11,7 @@ const App = () => {
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState({ message: '', type: '', visible: false });
 
   // State for filters and sorting
   const [statusFilter, setStatusFilter] = useState('all');
@@ -31,6 +33,15 @@ const App = () => {
     dueDate: "",
     assigneeId: "",
   });
+
+  // Show toast notification
+  const showToast = (message, type = 'create') => {
+    setToast({ message, type, visible: true });
+  };
+
+  const handleToastClose = () => {
+    setToast({ message: '', type: '', visible: false });
+  };
 
   // Fetch all data when component mounts
   useEffect(() => {
@@ -71,6 +82,7 @@ const App = () => {
       
     } catch (err) {
       setError('Failed to load data. Please try again.');
+      showToast('Failed to load data. Please try again.', 'error');
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
@@ -93,6 +105,7 @@ const App = () => {
       setError(null);
     } catch (err) {
       setError('Failed to load tasks. Please try again.');
+      showToast('Failed to load tasks. Please try again.', 'error');
       console.error('Error loading tasks:', err);
     } finally {
       setLoading(false);
@@ -173,6 +186,7 @@ const App = () => {
       // Make sure we have the required fields
       if (!newTaskData.title || !selectedGoalId) {
         setError('Title is required and a goal must be selected');
+        showToast('Title is required and a goal must be selected', 'error');
         return;
       }
 
@@ -190,6 +204,7 @@ const App = () => {
       const updated = await fetchTasksByGoal(selectedGoalId);
       setTasks(updated);
       setShowCreateModal(false);
+      showToast('Task created successfully!', 'create');
 
       // reset form
       setNewTaskData({
@@ -201,6 +216,7 @@ const App = () => {
     } catch (err) {
       console.error("Error creating task:", err);
       setError('Failed to create task. Please check all required fields.');
+      showToast('Failed to create task. Please check all required fields.', 'error');
     }
   };
 
@@ -218,8 +234,10 @@ const App = () => {
       await updateTask(editTaskData.id, taskData);
       await loadTasks(); // Reload tasks to get the updated list
       closeEditModal();
+      showToast('Task updated successfully!', 'update');
     } catch (err) {
       setError('Failed to update task. Please try again.');
+      showToast('Failed to update task. Please try again.', 'error');
       console.error("Error updating task:", err);
     }
   };
@@ -230,8 +248,10 @@ const App = () => {
       await deleteTask(taskToDelete);
       setTasks(prevTasks => prevTasks.filter(task => task.id !== taskToDelete));
       closeConfirmModal();
+      showToast('Task deleted successfully!', 'delete');
     } catch (err) {
       setError('Failed to delete task. Please try again.');
+      showToast('Failed to delete task. Please try again.', 'error');
       console.error('Error deleting task:', err);
     }
   };
@@ -296,6 +316,15 @@ const App = () => {
     <div className="min-h-screen font-sans transition-colors duration-300 bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
+      {/* Toast Notification */}
+      {toast.visible && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={handleToastClose} 
+        />
+      )}
+
       <div className="container mx-auto">
         {/* Error message */}
         {error && (
@@ -324,34 +353,35 @@ const App = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            {/* Goal Selector - Now dynamic */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full">
+            {/* Goal Selector - Now dynamic and responsive */}
             {goals.length > 0 ? (
               <select 
                 value={selectedGoalId}
                 onChange={(e) => setSelectedGoalId(Number(e.target.value))}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                className="w-full sm:w-4/5 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm sm:text-base"
               >
                 {goals.map(goal => (
                   <option key={goal.id} value={goal.id}>{goal.title || goal.name}</option>
                 ))}
               </select>
             ) : (
-              <div className="text-sm text-gray-500">No goals available</div>
+              <div className="text-sm text-gray-500 w-full sm:w-auto">No goals available</div>
             )}
             
             <button 
               onClick={openCreateModal}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all font-semibold"
+              className="w-full sm:w-1/5 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-semibold text-sm sm:text-base"
               disabled={goals.length === 0}
             >
-              <i className="fas fa-plus"></i> NewTask
+              <i className="fas fa-plus"></i> 
+              <span>New Task</span>
             </button>
           </div>
         </header>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h3 className="text-3xl font-bold text-blue-600 dark:text-blue-400">{totalTasks}</h3>
             <p className="text-gray-600 dark:text-gray-400">Total Tasks</p>

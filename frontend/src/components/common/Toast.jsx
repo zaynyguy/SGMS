@@ -1,38 +1,45 @@
-// src/components/common/Toast.jsx
-import React, { useEffect } from "react";
-import { CheckCircle, XCircle, Info } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { CheckCircle, XCircle, Info, Pencil, Trash2 } from "lucide-react";
 
-const Toast = ({ message, type = "success", onClose }) => {
-  // Auto-close after 3s
+// Types: success (create), info (read), update, delete, error
+const icons = {
+  create: <CheckCircle className="text-white w-5 h-5" />,
+  read: <Info className="text-white w-5 h-5" />,
+  update: <Pencil className="text-white w-5 h-5" />,
+  delete: <Trash2 className="text-white w-5 h-5" />,
+  error: <XCircle className="text-white w-5 h-5" />,
+};
+
+const Toast = ({ message, type = "create", onClose }) => {
+  const [show, setShow] = useState(true);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      onClose?.();
-    }, 3000);
+      setShow(false);
+      if (onClose) onClose();
+    }, 2000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
-  if (!message) return null;
-
-  const baseStyles =
-    "fixed bottom-4 right-4 p-4 rounded-md shadow-lg flex items-center space-x-2 z-50 transition-all";
-  const typeStyles =
-    type === "success"
-      ? "bg-green-500 text-white"
-      : type === "error"
-      ? "bg-red-500 text-white"
-      : "bg-blue-500 text-white";
-
-  const Icon =
-    type === "success" ? CheckCircle : type === "error" ? XCircle : Info;
+  if (!show) return null;
 
   return (
     <div
-      className={`${baseStyles} ${typeStyles}`}
-      role="alert"
-      aria-live="assertive"
+      className={`fixed z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 text-white 
+        transition-all duration-300
+        ${type === "create" ? "bg-green-600" : ""}
+        ${type === "read" ? "bg-blue-600" : ""}
+        ${type === "update" ? "bg-yellow-600" : ""}
+        ${type === "delete" ? "bg-red-600" : ""}
+        ${type === "error" ? "bg-red-700" : ""}
+
+        // 📱 Mobile bottom full width
+        md:bottom-5 md:right-5 md:rounded-lg md:w-auto
+        bottom-0 left-0 w-full md:top-auto md:left-auto
+      `}
     >
-      <Icon size={20} aria-hidden="true" />
-      <span>{message}</span>
+      {icons[type]}
+      <span className="text-sm font-medium">{message}</span>
     </div>
   );
 };

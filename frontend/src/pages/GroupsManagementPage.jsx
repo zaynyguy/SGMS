@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, X, Search, Users } from 'lucide-react';
 import { fetchGroups, createGroup, updateGroup, deleteGroup, addUserToGroup, removeUserFromGroup, fetchGroupUsers } from '../api/groups';
 import { fetchUsers } from "../api/admin";
+import Toast from '../components/common/Toast'; // Import the Toast component
 
 function GroupsManager() {
   const [groups, setGroups] = useState([]);
@@ -10,7 +11,7 @@ function GroupsManager() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentGroup, setCurrentGroup] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [message, setMessage] = useState({ text: '', type: '' });
+  const [toast, setToast] = useState(null); // Changed from message to toast
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
 
   // Load groups
@@ -22,7 +23,7 @@ function GroupsManager() {
       setFilteredGroups(data);
     } catch (err) {
       console.error('Failed to fetch groups:', err);
-      showMessage('Failed to load groups. Please try again later.', 'error');
+      showToast('Failed to load groups. Please try again later.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -55,9 +56,12 @@ function GroupsManager() {
     setFilteredGroups(sorted);
   }, [sortConfig]);
 
-  const showMessage = (text, type = 'success') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: '', type: '' }), 4000);
+  const showToast = (text, type = 'success') => {
+    setToast({ text, type });
+  };
+
+  const handleToastClose = () => {
+    setToast(null);
   };
 
   // Modal
@@ -71,16 +75,16 @@ function GroupsManager() {
       if (currentGroup) {
         await updateGroup(currentGroup.id, groupData);
         await loadGroups();
-        showMessage('Group updated successfully!', 'success');
+        showToast('Group updated successfully!', 'update');
       } else {
         await createGroup(groupData);
         await loadGroups();
-        showMessage('Group created successfully!', 'success');
+        showToast('Group created successfully!', 'create');
       }
       closeModal();
     } catch (err) {
       console.error('Error saving group:', err);
-      showMessage('Failed to save group.', 'error');
+      showToast('Failed to save group.', 'error');
     }
   };
 
@@ -89,10 +93,10 @@ function GroupsManager() {
     try {
       await deleteGroup(id);
       await loadGroups();
-      showMessage('Group deleted successfully!', 'success');
+      showToast('Group deleted successfully!', 'delete');
     } catch (err) {
       console.error('Error deleting group:', err);
-      showMessage('Failed to delete group.', 'error');
+      showToast('Failed to delete group.', 'error');
     }
   };
 
@@ -106,20 +110,13 @@ function GroupsManager() {
 
   return (
     <>
-    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 p-4">Groups Management</h1>
+    <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 p-4">Groups Management</h1>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto">
         
-        {/* Page Title */}
-        <div className="flex items-center gap-3 mb-8">
-          <div>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">Organize and manage all your groups</p>
-          </div>
-        </div>
-
         {/* Top Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div className="relative w-full md:w-72">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-5">
+          <div className="relative w-full">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-gray-400" />
             </div>
@@ -133,23 +130,12 @@ function GroupsManager() {
           </div>
           <button 
             onClick={openCreateModal}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 sm:px-5 rounded-lg shadow-sm transition-colors duration-200 w-full md:w-auto"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 sm:px-5 rounded-lg shadow-sm transition-colors duration-200 md:w-48 w-full"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="text-sm sm:text-base font-medium">New Group</span>
           </button>
         </div>
-
-        {/* Alerts */}
-        {message.text && (
-          <div className={`mb-6 p-4 rounded-lg shadow-sm ${
-            message.type === 'success' 
-              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800' 
-              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
-          }`}>
-            {message.text}
-          </div>
-        )}
 
         {/* Loader */}
         {isLoading ? (
@@ -241,6 +227,15 @@ function GroupsManager() {
         {/* Modal */}
         {isModalOpen && (
           <GroupFormModal group={currentGroup} onSave={handleSaveGroup} onClose={closeModal} />
+        )}
+        
+        {/* Toast Component */}
+        {toast && (
+          <Toast 
+            message={toast.text} 
+            type={toast.type} 
+            onClose={handleToastClose} 
+          />
         )}
       </div>
     </div>

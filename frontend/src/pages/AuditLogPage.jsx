@@ -148,7 +148,7 @@ const AuditLogPage = ({ showToast }) => {
             aria-label="Toggle filters"
           >
             <Filter size={18} />
-            <span className="hidden sm:inline">Filters</span>
+            <span className="inline">Filters</span>
           </button>
           <button
             onClick={handleExportCSV}
@@ -156,7 +156,7 @@ const AuditLogPage = ({ showToast }) => {
             aria-label="Export audit log"
           >
             <Download size={18} />
-            <span className="hidden sm:inline">Export CSV</span>
+            <span className="inline">Export CSV</span>
           </button>
         </div>
       </div>

@@ -13,7 +13,7 @@ export default function DashboardLayout() {
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <header className="sticky top-0 bg-white dark:bg-gray-800 shadow-sm">
-        <div className="flex items-center justify-between p-4">
+        <div className="flex items-center justify-between p-3">
           <div className="flex items-center">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -21,16 +21,16 @@ export default function DashboardLayout() {
             >
               <i className="fas fa-bars" />
             </button>
-            <h1 className="font-bold text-xl">Dashboard</h1>
+            <h1 className="font-bold text-2xl">Dashboard</h1>
           </div>
-          <div className="flex items-center space-x-4 w-full mx-10">
+          <div className="relative w-full md:px-4 pl-4 pr-10">
             <input
               type="text"
               placeholder="Search..."
-              className="px-3 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 w-full"
+              className="px-3 py-2 pr-10 rounded-lg bg-gray-100 dark:bg-gray-700 w-full focus:outline-none"
             />
+            <BellIcon className="absolute md:right-6 right-12 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer" />
           </div>
-          <BellIcon/>
         </div>
       </header>
 

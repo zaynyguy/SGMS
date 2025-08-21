@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Edit, Trash2, X, Search, Filter, CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Edit, Trash2, X, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { fetchGoals, fetchGroups, createGoal, updateGoal, deleteGoal } from '../api/goals';
+import Toast from '../components/common/Toast'; // Import the Toast component
 
 function GoalsPage() {
   const [goals, setGoals] = useState([]);
@@ -10,7 +11,7 @@ function GoalsPage() {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [goalToDelete, setGoalToDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [message, setMessage] = useState({ text: '', type: '' });
+  const [toast, setToast] = useState(null); // Changed from message to toast
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGroup, setFilterGroup] = useState('all');
   const [expandedCards, setExpandedCards] = useState({});
@@ -26,9 +27,12 @@ function GoalsPage() {
   const toggleCard = (id) => setExpandedCards(prev => ({ ...prev, [id]: !prev[id] }));
 
   // Show toast messages
-  const showMessage = (text, type = 'success') => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage({ text: '', type: '' }), 4000);
+  const showToast = (text, type = 'success') => {
+    setToast({ text, type });
+  };
+
+  const handleToastClose = () => {
+    setToast(null);
   };
 
   // Fetch goals and groups from API
@@ -47,7 +51,7 @@ function GoalsPage() {
       setGroups(groupsData);
     } catch (error) {
       console.error('Failed to load data:', error);
-      showMessage('Failed to fetch goals. Please check your backend.', 'error');
+      showToast('Failed to fetch goals. Please check your backend.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -93,16 +97,16 @@ function GoalsPage() {
     try {
       if (goalToEdit) {
         await updateGoal(goalToEdit.id, formData);
-        showMessage('Goal updated successfully!', 'success');
+        showToast('Goal updated successfully!', 'update');
       } else {
         await createGoal(formData);
-        showMessage('Goal created successfully!', 'success');
+        showToast('Goal created successfully!', 'create');
       }
       loadData();
       handleCloseGoalModal();
     } catch (error) {
       console.error(error);
-      showMessage('Failed to save goal.', 'error');
+      showToast('Failed to save goal.', 'error');
     }
   };
 
@@ -112,10 +116,10 @@ function GoalsPage() {
     try {
       await deleteGoal(goalToDelete.id);
       loadData();
-      showMessage('Goal deleted successfully!', 'success');
+      showToast('Goal deleted successfully!', 'delete');
     } catch (error) {
       console.error(error);
-      showMessage('Failed to delete goal.', 'error');
+      showToast('Failed to delete goal.', 'error');
     } finally {
       setShowDeleteConfirmModal(false);
       setGoalToDelete(null);
@@ -138,30 +142,9 @@ function GoalsPage() {
 
   return (
     <>
-    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 p-4">Team Goals</h1>
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans p-4 sm:p-6 transition-colors duration-200">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
-          <div>
-            <p className="text-gray-600 dark:text-gray-400 mt-1 sm:mt-2">Manage all the goals for your teams and projects.</p>
-          </div>
-          <button onClick={() => handleOpenGoalModal(null)} className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors duration-200 w-full sm:w-auto">
-            <Plus size={18} /> <span className="text-sm sm:text-base">Add New Goal</span>
-          </button>
-        </div>
-
-        {/* Toast message */}
-        {message.text && (
-          <div className={`flex items-center gap-3 p-4 mb-6 rounded-lg font-medium ${
-            message.type === 'success' 
-              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
-              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-          }`}>
-            {message.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
-            {message.text}
-          </div>
-        )}
+    <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 p-4">Team Goals</h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans p-6 transition-colors duration-200">
+      <div className="max-w-7xl mx-auto">
 
         {/* Search & Filter */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -175,7 +158,7 @@ function GoalsPage() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
-          <div className="relative w-full sm:w-1/2">
+          <div className="relative w-full sm:w-1/3">
             <Filter size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <select
               value={filterGroup}
@@ -186,6 +169,11 @@ function GoalsPage() {
               {groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}
             </select>
             <ChevronDown size={20} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          </div>
+          <div className="frelative w-full sm:w-1/5">
+            <button onClick={() => handleOpenGoalModal(null)} className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors duration-200 w-full">
+              <Plus size={18} /> <span className="text-sm sm:text-base">Add New Goal</span>
+            </button>
           </div>
         </div>
 
@@ -346,6 +334,15 @@ function GoalsPage() {
           </div>
         )}
       </div>
+      
+      {/* Toast Component */}
+      {toast && (
+        <Toast 
+          message={toast.text} 
+          type={toast.type} 
+          onClose={handleToastClose} 
+        />
+      )}
     </div>
     </>
   );

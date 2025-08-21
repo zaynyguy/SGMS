@@ -194,7 +194,7 @@ const SettingsPage = ({ showToast }) => {
       </div>
 
       {/* Notification Settings */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-700 dark:text-white p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-medium mb-3">
           {t('admin.settings.notifications.title')}
         </h2>
@@ -236,13 +236,13 @@ const SettingsPage = ({ showToast }) => {
       </div>
 
       {/* Email Templates */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-700 dark:text-white p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-medium mb-3">
           {t('admin.settings.emailTemplates.title')}
         </h2>
         <textarea
           rows="6"
-          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white resize-y"
+          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-800 dark:text-white resize-y"
           placeholder={t('admin.settings.emailTemplates.placeholder')}
           value={emailTemplate}
           onChange={(e) => setEmailTemplate(e.target.value)}

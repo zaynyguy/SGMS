@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import companyLogo from '../assets/logo.png';
-import { ChevronDown, User, UserLock } from 'lucide-react';
+import { User, UserLock } from 'lucide-react';
 
 const LoginPage = () => {
     const { t, i18n } = useTranslation();

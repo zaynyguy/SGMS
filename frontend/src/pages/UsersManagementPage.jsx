@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Edit, Trash, UserPlus, X, CheckCircle, XCircle, Info } from 'lucide-react';
 import { fetchUsers, createUser, updateUser, deleteUser, fetchRoles } from '../api/admin';
+import Toast from '../components/common/Toast'
 
 const UsersManagementPage = () => {
   const { t } = useTranslation();
@@ -20,14 +21,15 @@ const UsersManagementPage = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [notification, setNotification] = useState({ message: '', type: '', visible: false });
+  const [toast, setToast] = useState({ message: '', type: '', visible: false });
 
-  // Show embedded notification
-  const showNotification = (message, type = 'info') => {
-    setNotification({ message, type, visible: true });
-    setTimeout(() => {
-      setNotification({ message: '', type: '', visible: false });
-    }, 3000);
+  // Show toast notification
+  const showToast = (message, type = 'create') => {
+    setToast({ message, type, visible: true });
+  };
+
+  const handleToastClose = () => {
+    setToast({ message: '', type: '', visible: false });
   };
 
   useEffect(() => {
@@ -48,7 +50,7 @@ const UsersManagementPage = () => {
         setUsers(usersWithRoleNames);
         setRoles(rolesData);
       } catch (error) {
-        showNotification(t('admin.users.errors.loadFailed', { error: error.message }), "error");
+        showToast(t('admin.users.errors.loadFailed', { error: error.message }), "error");
       } finally {
         setLoading(false);
       }
@@ -115,7 +117,7 @@ const UsersManagementPage = () => {
     e.preventDefault();
     
     if (!validateForm()) {
-      showNotification(t('admin.users.errors.formValidation') || 'Please fix the form errors', "error");
+      showToast(t('admin.users.errors.formValidation') || 'Please fix the form errors', "error");
       return;
     }
     
@@ -123,16 +125,16 @@ const UsersManagementPage = () => {
       setSubmitting(true);
       if (userToEdit) {
         await updateUser(userToEdit.id, formData);
-        showNotification(t('admin.users.toasts.updateSuccess', { name: formData.name }) || `User ${formData.name} updated successfully`, 'success');
+        showToast(t('admin.users.toasts.updateSuccess', { name: formData.name }) || `User ${formData.name} updated successfully`, 'update');
       } else {
         await createUser(formData);
-        showNotification(t('admin.users.toasts.createSuccess', { name: formData.name }) || `User ${formData.name} created successfully`, 'success');
+        showToast(t('admin.users.toasts.createSuccess', { name: formData.name }) || `User ${formData.name} created successfully`, 'create');
       }
       const updatedUsers = await fetchUsers();
       setUsers(updatedUsers);
       handleCloseUserModal();
     } catch (error) {
-      showNotification(t('admin.users.errors.saveFailed', { error: error.message }) || 'Failed to save user', "error");
+      showToast(t('admin.users.errors.saveFailed', { error: error.message }) || 'Failed to save user', "error");
     } finally {
       setSubmitting(false);
     }
@@ -149,9 +151,9 @@ const UsersManagementPage = () => {
       await deleteUser(userToDelete.id);
       const updatedUsers = await fetchUsers();
       setUsers(updatedUsers);
-      showNotification(t('admin.users.toasts.deleteSuccess', { name: userToDelete.name }) || `User ${userToDelete.name} deleted successfully`, 'success');
+      showToast(t('admin.users.toasts.deleteSuccess', { name: userToDelete.name }) || `User ${userToDelete.name} deleted successfully`, 'delete');
     } catch (error) {
-      showNotification(t('admin.users.errors.deleteFailed', { error: error.message }) || 'Failed to delete user', "error");
+      showToast(t('admin.users.errors.deleteFailed', { error: error.message }) || 'Failed to delete user', "error");
     } finally {
       setSubmitting(false);
       setShowDeleteConfirmModal(false);
@@ -178,30 +180,14 @@ const UsersManagementPage = () => {
         {t('admin.users.title') || 'User Management'}
       </h1>
     <section id="users" role="tabpanel" aria-labelledby="users-tab" className="p-4 sm:p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Embedded Notification */}
-      {notification.visible && (
-        <div className={`mb-6 p-4 rounded-lg border-l-4 ${
-          notification.type === 'success' 
-            ? 'bg-green-100 dark:bg-green-900 border-green-500 text-green-700 dark:text-green-300' 
-            : notification.type === 'error'
-            ? 'bg-red-100 dark:bg-red-900 border-red-500 text-red-700 dark:text-red-300'
-            : 'bg-blue-100 dark:bg-blue-900 border-blue-500 text-blue-700 dark:text-blue-300'
-        } transition-all duration-300 ease-in-out`}>
-          <div className="flex items-center">
-            {notification.type === 'success' && <CheckCircle className="h-5 w-5 mr-2" />}
-            {notification.type === 'error' && <XCircle className="h-5 w-5 mr-2" />}
-            {notification.type === 'info' && <Info className="h-5 w-5 mr-2" />}
-            <span className="font-medium">{notification.message}</span>
-            <button
-              onClick={() => setNotification({ message: '', type: '', visible: false })}
-              className="ml-auto text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
+      {/* Toast Notification */}
+      {toast.visible && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={handleToastClose} 
+        />
       )}
-
       
       {/* Add User Button */}
       <div className="flex justify-end mb-6">

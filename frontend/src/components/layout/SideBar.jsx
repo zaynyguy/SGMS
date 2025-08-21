@@ -37,8 +37,8 @@ const Sidebar = ({ children }) => {
     hasPermission('manage_roles') && { to: '/auditLog', icon: <ClipboardCheck size={24} />, label: 'Audit' },
     hasPermission('manage_roles') && { to: '/tasksmanagement', icon: <ListTodo size={24} />, label: 'Tasks Management' },
     hasPermission('manage_roles') && { to: '/activity', icon: <Activity size={24} />, label: 'Activity' },
-    hasPermission('manage_roles') && { to: '/report', icon: <FileChartColumnIncreasing size={24} />, label: 'Report' },
     hasPermission('manage_roles') && { to: '/attachment', icon: <Paperclip size={24} />, label: 'Attachment' },
+    hasPermission('manage_roles') && { to: '/report', icon: <FileChartColumnIncreasing size={24} />, label: 'Report' },
   ].filter(Boolean);
 
   const toggleSidebar = () => setIsExpanded(!isExpanded);
@@ -60,7 +60,7 @@ const Sidebar = ({ children }) => {
       {isMobile && (
         <button
           onClick={toggleSidebar}
-          className="md:hidden top-3 right-3 fixed z-50 p-2 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 shadow-md"
+          className="md:hidden top-4 right-3 fixed z-50 p-2 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 shadow-md"
           aria-label={isExpanded ? t('sidebar.closeMenu') : t('sidebar.openMenu')}
         >
           {isExpanded ? <X size={20} /> : <Menu size={20} />}
