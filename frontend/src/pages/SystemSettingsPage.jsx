@@ -55,10 +55,12 @@ const SettingsPage = ({ showToast }) => {
   };
 
   return (
-    <section id="settings" role="tabpanel" aria-labelledby="settings-tab" className="p-4 space-y-6">
+    <>
+    <h1 className='sticky text-2xl text-gray-600 dark:text-gray-50 bg-gray-50 dark:bg-gray-800 p-4 font-semibold'>System Settings</h1>
+    <section id="settings" role="tabpanel" aria-labelledby="settings-tab" className="p-4 space-y-6 dark:bg-gray-900">
       {/* Reporting Period */}
       <div>
-        <h2 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
+        <h2 className="text-lg font-medium mb-2 mt-4 text-gray-800 dark:text-gray-200">
           {t('admin.settings.reportingPeriod.title')}
         </h2>
         <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-sm">
@@ -192,7 +194,7 @@ const SettingsPage = ({ showToast }) => {
       </div>
 
       {/* Notification Settings */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-700 dark:text-white p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-medium mb-3">
           {t('admin.settings.notifications.title')}
         </h2>
@@ -234,13 +236,13 @@ const SettingsPage = ({ showToast }) => {
       </div>
 
       {/* Email Templates */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-700 dark:text-white p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
         <h2 className="text-lg font-medium mb-3">
           {t('admin.settings.emailTemplates.title')}
         </h2>
         <textarea
           rows="6"
-          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white resize-y"
+          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-800 dark:text-white resize-y"
           placeholder={t('admin.settings.emailTemplates.placeholder')}
           value={emailTemplate}
           onChange={(e) => setEmailTemplate(e.target.value)}
@@ -257,7 +259,7 @@ const SettingsPage = ({ showToast }) => {
         </button>
       </div>
     </section>
+</>
   );
 };
-
 export default SettingsPage;

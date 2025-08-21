@@ -10,8 +10,16 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
 import UserSettingsPage from './pages/UserSettingsPage'; // Import the new page
-import Admin from './pages/AdminPage';
-
+import GroupsManagementPage from './pages/GroupsManagementPage'
+import GoalsManagementPage from './pages/GoalsManagement'
+import SystemSettingsPage from './pages/SystemSettingsPage'
+import UsersManagementPage from './pages/UsersManagementPage';
+import RoleManagementPage from './pages/RolesManagementPage';
+import AuditLogPage from  './pages/AuditLogPage'
+import TasksManagementPage from './pages/TasksManagementPage'
+import ActivityPage from './pages/ActivityPage'
+import ReportPage from './pages/ReportPage';
+import Attachment from './pages/Attachment';
 
 function App() {
     return (
@@ -29,13 +37,71 @@ function App() {
                             {/* No special permissions needed */}
                             <Route path='/dashboard' element={<DashboardPage />} />
                             <Route path="/settings" element={<UserSettingsPage />} /> {/* Add settings route */}
+                            <Route path="/GoalsManagement" element={<GoalsManagementPage />} /> {/* Add settings route */}
+                            <Route path="/GroupsManagement" element={<GroupsManagementPage />} /> {/* Add settings route */}
 
                             {/* Admin Routes with specific permissions */}
                             <Route
-                                path="/admin"
+                                path="/systemsettings"
                                 element={
                                     <ProtectedRoute requiredPermission="manage_roles">
-                                        <Admin />
+                                        <SystemSettingsPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/usersmanagement"
+                                element={
+                                    <ProtectedRoute requiredPermission="manage_roles">
+                                        <UsersManagementPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/rolesmanagement"
+                                element={
+                                    <ProtectedRoute requiredPermission="manage_roles">
+                                        <RoleManagementPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/auditlog"
+                                element={
+                                    <ProtectedRoute requiredPermission="manage_roles">
+                                        <AuditLogPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/tasksmanagement"
+                                element={
+                                    <ProtectedRoute requiredPermission="manage_roles">
+                                        <TasksManagementPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/activity"
+                                element={
+                                    <ProtectedRoute requiredPermission="manage_roles">
+                                        <ActivityPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/report"
+                                element={
+                                    <ProtectedRoute requiredPermission="manage_roles">
+                                        <ReportPage />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/attachment"
+                                element={
+                                    <ProtectedRoute requiredPermission="manage_roles">
+                                        <Attachment />
                                     </ProtectedRoute>
                                 }
                             />

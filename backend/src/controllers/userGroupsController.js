@@ -1,6 +1,7 @@
 const db = require('../db');
 
-// Add user to group
+
+// -------------------- ADD USER TO GROUP --------------------
 exports.addUserToGroup = async (req, res) => {
   const { userId, groupId } = req.body;
   try {
@@ -14,7 +15,8 @@ exports.addUserToGroup = async (req, res) => {
   }
 };
 
-// Remove user from group
+
+// -------------------- REMOVE USER FROM GROUP --------------------
 exports.removeUserFromGroup = async (req, res) => {
   const { userId, groupId } = req.body;
   try {
@@ -25,7 +27,8 @@ exports.removeUserFromGroup = async (req, res) => {
   }
 };
 
-// List users in a group
+
+// -------------------- LIST USERS IN A GROUP --------------------
 exports.getGroupUsers = async (req, res) => {
   const { groupId } = req.params;
   try {

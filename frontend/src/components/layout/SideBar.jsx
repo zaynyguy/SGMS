@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
-import { Home, Settings, LogOut, Menu, X, UserStar } from 'lucide-react';
+import { Home, Settings, LogOut, Menu, X, User, Users, Goal, UserPen, Settings2Icon, ClipboardCheck, ListTodo, Activity, FileChartColumnIncreasing, Paperclip } from 'lucide-react';
 import companyLogo from '../../assets/logo.png';
 
-const Sidebar = () => {
+const Sidebar = ({ children }) => {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
 
@@ -29,28 +29,29 @@ const Sidebar = () => {
   const mainMenuItems = [
     { to: '/dashboard', icon: <Home size={24} />, label: t('sidebar.menu.dashboard') },
     { to: '/settings', icon: <Settings size={24} />, label: t('sidebar.menu.settings') },
-    hasPermission('manage_roles') && {
-      to: '/admin',
-      icon: <UserStar size={24} />,
-      label: t('sidebar.menu.admin'),
-    },
+    hasPermission('manage_roles') && { to: '/groupsmanagement', icon: <Users size={24} />, label: 'Groups Management' },
+    hasPermission('manage_roles') && { to: '/goalsmanagement', icon: <Goal size={24} />, label: 'Goals Management' },
+    hasPermission('manage_roles') && { to: '/usersmanagement', icon: <User size={24} />, label: 'Users Management' },
+    hasPermission('manage_roles') && { to: '/rolesmanagement', icon: <UserPen size={24} />, label: 'Roles Management' },
+    hasPermission('manage_roles') && { to: '/systemsettings', icon: <Settings2Icon size={24} />, label: 'System Settings' },
+    hasPermission('manage_roles') && { to: '/auditLog', icon: <ClipboardCheck size={24} />, label: 'Audit' },
+    hasPermission('manage_roles') && { to: '/tasksmanagement', icon: <ListTodo size={24} />, label: 'Tasks Management' },
+    hasPermission('manage_roles') && { to: '/activity', icon: <Activity size={24} />, label: 'Activity' },
+    hasPermission('manage_roles') && { to: '/attachment', icon: <Paperclip size={24} />, label: 'Attachment' },
+    hasPermission('manage_roles') && { to: '/report', icon: <FileChartColumnIncreasing size={24} />, label: 'Report' },
   ].filter(Boolean);
 
   const toggleSidebar = () => setIsExpanded(!isExpanded);
-
   const handleMouseEnter = () => !isMobile && setIsHovered(true);
   const handleMouseLeave = () => !isMobile && setIsHovered(false);
 
   const showExpanded = isMobile ? isExpanded : isHovered;
-  const sidebarWidth = isMobile ? (isExpanded ? 'w-64' : 'w-20') : (isHovered ? 'w-64' : 'w-20');
+  const sidebarWidth = showExpanded ? 'w-64' : 'w-20';
+  const contentMargin = !isMobile ? (showExpanded ? 'ml-64' : 'ml-20') : 'ml-0'; // Only push on desktop
 
-  // Function to handle long names
   const formatName = (name) => {
     if (!name) return '';
-    if (name.length > 15 && !showExpanded) {
-      return `${name.substring(0, 12)}...`;
-    }
-    return name;
+    return name.length > 15 && !showExpanded ? `${name.substring(0, 12)}...` : name;
   };
 
   return (
@@ -59,7 +60,7 @@ const Sidebar = () => {
       {isMobile && (
         <button
           onClick={toggleSidebar}
-          className="md:hidden fixed z-50 p-2 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 shadow-md"
+          className="md:hidden top-4 right-3 fixed z-50 p-2 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 shadow-md"
           aria-label={isExpanded ? t('sidebar.closeMenu') : t('sidebar.openMenu')}
         >
           {isExpanded ? <X size={20} /> : <Menu size={20} />}
@@ -77,11 +78,7 @@ const Sidebar = () => {
           {/* Logo */}
           <div className="flex items-center justify-center p-4 h-16 border-b border-gray-300 dark:border-gray-700">
             <div className="flex items-center min-w-0">
-              <img 
-                src={companyLogo} 
-                alt={t('sidebar.logoAlt')} 
-                className="h-10 w-10 min-w-[2.5rem]" 
-              />
+              <img src={companyLogo} alt={t('sidebar.logoAlt')} className="h-10 w-10 min-w-[2.5rem]" />
               {showExpanded && (
                 <span className="ml-3 text-lg font-bold text-gray-900 dark:text-white truncate">
                   {t('sidebar.appName')}
@@ -105,14 +102,8 @@ const Sidebar = () => {
                 }
                 aria-label={item.label}
               >
-                <div className="flex-shrink-0 flex items-center justify-center w-6">
-                  {item.icon}
-                </div>
-                {showExpanded && (
-                  <span className="ml-3 truncate">
-                    {item.label}
-                  </span>
-                )}
+                <div className="flex-shrink-0 flex items-center justify-center w-6">{item.icon}</div>
+                {showExpanded && <span className="ml-3 truncate">{item.label}</span>}
               </NavLink>
             ))}
           </nav>
@@ -123,28 +114,20 @@ const Sidebar = () => {
               {showExpanded ? (
                 <div className="flex items-center min-w-0">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800 flex items-center justify-center mr-3">
-                    <span className="font-bold">
-                      {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
+                    <span className="font-bold">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</span>
                   </div>
                   <div className="min-w-0">
-                    <div className="font-medium text-gray-900 dark:text-white truncate">
-                      {formatName(user?.name || '')}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {user?.role || ''}
-                    </div>
+                    <div className="font-medium text-gray-900 dark:text-white truncate">{formatName(user?.name)}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.role || ''}</div>
                   </div>
                 </div>
               ) : (
                 <div className="w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800 flex items-center justify-center">
-                  <span className="font-bold">
-                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                  </span>
+                  <span className="font-bold">{user?.name?.charAt(0)?.toUpperCase() || 'U'}</span>
                 </div>
               )}
             </div>
-            
+
             {/* Logout Button */}
             <button
               onClick={logout}
@@ -153,19 +136,17 @@ const Sidebar = () => {
                 bg-red-500 hover:bg-red-600 text-white`}
               aria-label={t('sidebar.logout')}
             >
-              <LogOut size={20} />
-              {showExpanded && (
-                <span className="ml-3 truncate">
-                  {t('sidebar.logout')}
-                </span>
-              )}
+              <LogOut size={24} />
+              {showExpanded && <span className="ml-3 truncate">{t('sidebar.logout')}</span>}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className={`transition-all duration-300 ${sidebarWidth}`} />
+      {/* Main Content */}
+      <div className={`transition-all duration-300 ${contentMargin}`}>
+        {children}
+      </div>
     </>
   );
 };

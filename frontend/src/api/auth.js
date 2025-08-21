@@ -23,19 +23,20 @@ export const api = async (endpoint, method = 'GET', body = null) => {
     const response = await fetch(`${API_URL}${endpoint}`, config);
 
     // Try to parse JSON; if not JSON, throw readable error
-    let data;
-    try {
-      data = await response.json();
-    } catch {
-      const text = await response.text();
-      throw new Error(`Non-JSON response: ${text.slice(0, 100)}`);
-    }
+   const text = await response.text(); // read body once
+let data;
 
-    if (!response.ok) {
-      throw new Error(data?.message || `HTTP ${response.status} error`);
-    }
+try {
+  data = JSON.parse(text); // try to parse JSON
+} catch {
+  data = null; // fallback if not JSON
+}
 
-    return data;
+if (!response.ok) {
+  throw new Error(data?.message || `HTTP ${response.status} error: ${text.slice(0, 100)}`);
+}
+
+return data;
   } catch (error) {
     console.error('API call failed:', error);
     throw error;

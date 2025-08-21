@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
-import { CheckCircle, XCircle, Info, ChevronDown, Moon, Sun, X } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
+import Toast from "../components/common/Toast";
 
 const UserSettingsPage = () => {
   const { t } = useTranslation();
@@ -19,6 +20,7 @@ const UserSettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [passwordError, setPasswordError] = useState("");
+  const [oldPasswordError, setOldPasswordError] = useState(""); // New state for old password error
 
   const fetchSettings = async () => {
     try {
@@ -28,6 +30,13 @@ const UserSettingsPage = () => {
       if (!response.ok) throw new Error("Network response was not ok");
       const data = await response.json();
       setSettings(data);
+
+      // Apply saved theme
+      if (data.darkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
     } catch (err) {
       showToast(t('settings.errors.loadError'), "error");
     } finally {
@@ -35,26 +44,45 @@ const UserSettingsPage = () => {
     }
   };
 
-  const showToast = (message, type = "info") => {
+  const showToast = (message, type = "create") => {
     setToast({ message, type });
   };
 
-  useEffect(() => { fetchSettings(); }, []);
+  const handleToastClose = () => {
+    setToast(null);
+  };
+
+  useEffect(() => { 
+    fetchSettings(); 
+  }, []);
 
   // Password validation function
   const validatePassword = () => {
+    let isValid = true;
+    
+    // Validate old password if new password is provided
+    if (newPassword && !oldPassword) {
+      setOldPasswordError(t('settings.errors.oldPasswordRequired'));
+      isValid = false;
+    } else {
+      setOldPasswordError("");
+    }
+    
+    // Validate new password length
     if (newPassword && newPassword.length < 8) {
       setPasswordError(t('settings.errors.passwordTooShort'));
-      return false;
+      isValid = false;
+    } else {
+      setPasswordError("");
     }
-    setPasswordError("");
-    return true;
+    
+    return isValid;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate password before submission
+    // Validate passwords before submission
     if (!validatePassword()) {
       return;
     }
@@ -74,10 +102,15 @@ const UserSettingsPage = () => {
           newPassword: newPassword || undefined,
         }),
       });
-      if (!response.ok) throw new Error(t('settings.errors.updateError'));
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || t('settings.errors.updateError'));
+      }
+      
       const data = await response.json();
       updateUser(data.user, data.token);
-      showToast(t('settings.toasts.updateSuccess'), "success");
+      showToast(t('settings.toasts.updateSuccess'), "update");
       setOldPassword("");
       setNewPassword("");
     } catch (err) {
@@ -88,7 +121,16 @@ const UserSettingsPage = () => {
   };
 
   const toggleDarkMode = () => {
-    setSettings({ ...settings, darkMode: !settings.darkMode });
+    setSettings(prev => {
+      const newDarkMode = !prev.darkMode;
+      // Apply immediately to the page
+      if (newDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      return { ...prev, darkMode: newDarkMode };
+    });
   };
 
   if (loading) {
@@ -104,16 +146,16 @@ const UserSettingsPage = () => {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <header className="sticky top-0 bg-white dark:bg-gray-800 shadow-sm z-10 p-4">
-        <h1 className="text-xl font-bold">{t('settings.title')}</h1>
+        <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
       </header>
 
-      <div className="container mx-auto px-40 py-10">
+      <div className="container mx-auto px-4 sm:px-6 md:px-40 py-6 md:py-10">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
           <form onSubmit={handleSubmit} className="divide-y divide-gray-200 dark:divide-gray-700">
             
             {/* Personal Info */}
-            <div className="p-6">
-              <h2 className="font-medium mb-3">{t('settings.personalInfo')}</h2>
+            <div className="p-4 md:p-6">
+              <h2 className="font-medium mb-3 text-lg md:text-base">{t('settings.personalInfo')}</h2>
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -141,8 +183,8 @@ const UserSettingsPage = () => {
             </div>
 
             {/* Appearance */}
-            <div className="p-6">
-              <h2 className="font-medium mb-3">{t('settings.appearance')}</h2>
+            <div className="p-4 md:p-6">
+              <h2 className="font-medium mb-3 text-lg md:text-base">{t('settings.appearance')}</h2>
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -161,7 +203,7 @@ const UserSettingsPage = () => {
                   <button
                     type="button"
                     onClick={toggleDarkMode}
-                    className="flex items-center px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700"
+                    className="flex items-center px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 w-full md:w-auto"
                   >
                     {settings.darkMode ? (
                       <>
@@ -180,8 +222,8 @@ const UserSettingsPage = () => {
             </div>
 
             {/* Password */}
-            <div className="p-6">
-              <h2 className="font-medium mb-3">{t('settings.changePassword')}</h2>
+            <div className="p-4 md:p-6">
+              <h2 className="font-medium mb-3 text-lg md:text-base">{t('settings.changePassword')}</h2>
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -190,10 +232,27 @@ const UserSettingsPage = () => {
                   <input
                     type="password"
                     value={oldPassword}
-                    onChange={(e) => setOldPassword(e.target.value)}
+                    onChange={(e) => {
+                      setOldPassword(e.target.value);
+                      // Clear error when user starts typing
+                      if (e.target.value && oldPasswordError.length < 8) {
+                        setOldPasswordError(t('settings.errors.passwordTooShort'));
+                      } else {
+                        setOldPasswordError("");
+                      }
+                    }}
                     placeholder={t('settings.passwordPlaceholder')}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700"
+                    className={`w-full px-3 py-2 text-sm border rounded ${
+                      oldPasswordError 
+                        ? "border-red-500 dark:border-red-400" 
+                        : "border-gray-200 dark:border-gray-600"
+                    } bg-gray-50 dark:bg-gray-700`}
                   />
+                  {oldPasswordError && (
+                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">
+                      {oldPasswordError}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -212,7 +271,11 @@ const UserSettingsPage = () => {
                       }
                     }}
                     placeholder={t('settings.passwordPlaceholder')}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700"
+                    className={`w-full px-3 py-2 text-sm border rounded ${
+                      passwordError 
+                        ? "border-red-500 dark:border-red-400" 
+                        : "border-gray-200 dark:border-gray-600"
+                    } bg-gray-50 dark:bg-gray-700`}
                   />
                   {passwordError && (
                     <p className="mt-1 text-xs text-red-500 dark:text-red-400">
@@ -224,11 +287,11 @@ const UserSettingsPage = () => {
             </div>
 
             {/* Submit */}
-            <div className="p-6 bg-gray-50 dark:bg-gray-700">
+            <div className="p-4 md:p-6 bg-gray-50 dark:bg-gray-700">
               <button
                 type="submit"
-                disabled={saving || (newPassword && newPassword.length < 8)}
-                className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded shadow-sm disabled:opacity-50 flex items-center justify-center"
+                disabled={saving || (newPassword && newPassword.length < 8) || (newPassword && !oldPassword)}
+                className="w-full py-3 md:py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded shadow-sm disabled:opacity-50 flex items-center justify-center"
               >
                 {saving ? (
                   <>
@@ -245,23 +308,13 @@ const UserSettingsPage = () => {
         </div>
       </div>
 
-      {/* Toast */}
+      {/* Toast Component */}
       {toast && (
-        <div
-          className={`fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-auto p-3 rounded shadow-lg flex items-center ${
-            toast.type === 'success' ? 'bg-green-500' :
-            toast.type === 'error' ? 'bg-red-500' :
-            'bg-blue-500'
-          } text-white text-sm`}
-        >
-          {toast.type === 'success' && <CheckCircle className="w-4 h-4 mr-2" />}
-          {toast.type === 'error' && <XCircle className="w-4 h-4 mr-2" />}
-          {toast.type === 'info' && <Info className="w-4 h-4 mr-2" />}
-          <span className="flex-1">{toast.message}</span>
-          <button onClick={() => setToast(null)} className="ml-2">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={handleToastClose} 
+        />
       )}
     </div>
   );

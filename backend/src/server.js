@@ -14,8 +14,9 @@ const goalsRoutes = require("./routes/goalsRoutes");
 const tasksRoutes = require("./routes/tasksRoutes");
 const activitiesRoutes = require("./routes/activitiesRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
-// const systemSettingsRoutes = require("./routes/systemSettingsRoutes");
-// const reportsRoutes = require("./routes/reportsRoutes");
+const systemSettingsRoutes = require("./routes/systemSettingsRoutes");
+const reportsRoutes = require("./routes/reportsRoutes");
+const attachmentsRoutes = require('./routes/attachmentsRoutes');
 
 const app = express();
 
@@ -33,8 +34,9 @@ app.use("/api/tasks", tasksRoutes);
 app.use("/api/activities", activitiesRoutes);
 app.use("/api/groups", groupsRoutes);
 app.use('/api/user-groups', userGroupsRoutes);
-// app.use("/api/system-settings", systemSettingsRoutes);
-// app.use("/api/reports", reportsRoutes);
+app.use("/api/system-settings", systemSettingsRoutes);
+app.use("/api/reports", reportsRoutes);
+app.use('/api/attachments', attachmentsRoutes);
 
 app.get("/", (req, res) => {
   res.send("The api server is running ..");

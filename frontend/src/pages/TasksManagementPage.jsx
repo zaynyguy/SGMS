@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { fetchTasksByGoal, createTask, updateTask, deleteTask } from '../api/tasks';
 import { fetchUsers } from '../api/admin';
-import { fetchGoals } from '../api/goals'; // Import goals API
+import { fetchGoals } from '../api/goals';
+import Toast from '../components/common/Toast'; 
 
 const App = () => {
   // State for task data
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
-  const [goals, setGoals] = useState([]); // Store goals for dropdown
+  const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState({ message: '', type: '', visible: false });
 
   // State for filters and sorting
   const [statusFilter, setStatusFilter] = useState('all');
@@ -25,10 +27,25 @@ const App = () => {
   const [editTaskData, setEditTaskData] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
+  const [newTaskData, setNewTaskData] = useState({
+    title: "",
+    description: "",
+    dueDate: "",
+    assigneeId: "",
+  });
 
-  // Fetch tasks, users, and goals when component mounts
+  // Show toast notification
+  const showToast = (message, type = 'create') => {
+    setToast({ message, type, visible: true });
+  };
+
+  const handleToastClose = () => {
+    setToast({ message: '', type: '', visible: false });
+  };
+
+  // Fetch all data when component mounts
   useEffect(() => {
-    loadData();
+    loadAllData();
   }, []);
 
   // Fetch tasks when selected goal changes
@@ -38,27 +55,34 @@ const App = () => {
     }
   }, [selectedGoalId]);
 
-  // Load tasks, users, and goals from API
-  const loadData = async () => {
+  // Load all initial data
+  const loadAllData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // Load goals first
+      // Load goals
       const goalsResponse = await fetchGoals();
-      if (goalsResponse.data && goalsResponse.data.length > 0) {
-        setGoals(goalsResponse.data);
-        setSelectedGoalId(goalsResponse.data[0].id); // Set first goal as default
+      if (goalsResponse && goalsResponse.length > 0) {
+        setGoals(goalsResponse);
+        setSelectedGoalId(goalsResponse[0].id);
+      } else {
+        setGoals([]);
+        console.warn('No goals found or empty response');
       }
       
       // Load users
       const usersResponse = await fetchUsers();
-      if (usersResponse.data) {
-        setUsers(usersResponse.data);
+      if (usersResponse && usersResponse.length > 0) {
+        setUsers(usersResponse);
+      } else {
+        setUsers([]);
+        console.warn('No users found or empty response');
       }
       
-      setError(null);
     } catch (err) {
       setError('Failed to load data. Please try again.');
+      showToast('Failed to load data. Please try again.', 'error');
       console.error('Error loading data:', err);
     } finally {
       setLoading(false);
@@ -67,15 +91,21 @@ const App = () => {
 
   // Load tasks for the selected goal
   const loadTasks = async () => {
+    if (!selectedGoalId) return;
+    
     try {
       setLoading(true);
       const tasksResponse = await fetchTasksByGoal(selectedGoalId);
-      if (tasksResponse.data) {
-        setTasks(tasksResponse.data);
+      if (tasksResponse && tasksResponse.length > 0) {
+        setTasks(tasksResponse);
+      } else {
+        setTasks([]);
+        console.warn('No tasks found for this goal');
       }
       setError(null);
     } catch (err) {
       setError('Failed to load tasks. Please try again.');
+      showToast('Failed to load tasks. Please try again.', 'error');
       console.error('Error loading tasks:', err);
     } finally {
       setLoading(false);
@@ -84,12 +114,24 @@ const App = () => {
 
   // Helper functions for modals
   const openCreateModal = () => setShowCreateModal(true);
-  const closeCreateModal = () => setShowCreateModal(false);
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setNewTaskData({
+      title: "",
+      description: "",
+      dueDate: "",
+      assigneeId: "",
+    });
+  };
 
   const openEditModal = (task) => {
-    setEditTaskData(task);
+    setEditTaskData({
+      ...task,
+      dueDate: task.dueDate ? task.dueDate.split('T')[0] : ''
+    });
     setShowEditModal(true);
   };
+  
   const closeEditModal = () => {
     setShowEditModal(false);
     setEditTaskData(null);
@@ -99,6 +141,7 @@ const App = () => {
     setTaskToDelete(taskId);
     setShowConfirmModal(true);
   };
+  
   const closeConfirmModal = () => {
     setShowConfirmModal(false);
     setTaskToDelete(null);
@@ -108,27 +151,17 @@ const App = () => {
   const getVisibleTasks = () => {
     let filteredTasks = [...tasks];
 
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filteredTasks = filteredTasks.filter(task => task.status === statusFilter);
-    }
-
-    // Filter by priority
-    if (priorityFilter !== 'all') {
-      filteredTasks = filteredTasks.filter(task => task.priority === priorityFilter);
-    }
-
-    // Filter by assignee (now using assigneeId)
-    if (assigneeFilter !== 'all') {
-      filteredTasks = filteredTasks.filter(task => task.assigneeId == assigneeFilter);
-    }
-
     // Filter by search query
     if (searchQuery.length > 0) {
       filteredTasks = filteredTasks.filter(task =>
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
+    }
+
+    // Filter by assignee (now using assigneeId)
+    if (assigneeFilter !== 'all') {
+      filteredTasks = filteredTasks.filter(task => task.assigneeId == assigneeFilter);
     }
 
     // Sort the filtered tasks
@@ -139,9 +172,6 @@ const App = () => {
         return filteredTasks.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
       case 'dueDate':
         return filteredTasks.sort((a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0));
-      case 'priority':
-        const priorityOrder = { 'high': 1, 'medium': 2, 'low': 3 };
-        return filteredTasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
       default:
         return filteredTasks;
     }
@@ -152,51 +182,63 @@ const App = () => {
   // Handle task creation
   const handleCreateTask = async (e) => {
     e.preventDefault();
-    const form = e.target;
-    const newTask = {
-      title: form.taskTitle.value,
-      description: form.taskDescription.value,
-      assigneeId: parseInt(form.taskAssignee.value) || null,
-      dueDate: form.taskDueDate.value,
-      priority: form.taskPriority.value,
-      status: form.taskStatus.value,
-    };
-    
     try {
-      const response = await createTask(selectedGoalId, newTask);
-      if (response.data) {
-        setTasks([...tasks, response.data]);
-        closeCreateModal();
-        form.reset();
+      // Make sure we have the required fields
+      if (!newTaskData.title || !selectedGoalId) {
+        setError('Title is required and a goal must be selected');
+        showToast('Title is required and a goal must be selected', 'error');
+        return;
       }
+
+      // Prepare the task data with ONLY the fields the backend expects
+      const taskData = {
+        title: newTaskData.title,
+        description: newTaskData.description || '',
+        assigneeId: newTaskData.assigneeId ? parseInt(newTaskData.assigneeId) : null,
+        dueDate: newTaskData.dueDate || null
+      };
+
+      await createTask(selectedGoalId, taskData);
+      
+      // Reload tasks to get the updated list
+      const updated = await fetchTasksByGoal(selectedGoalId);
+      setTasks(updated);
+      setShowCreateModal(false);
+      showToast('Task created successfully!', 'create');
+
+      // reset form
+      setNewTaskData({
+        title: "",
+        description: "",
+        dueDate: "",
+        assigneeId: "",
+      });
     } catch (err) {
-      setError('Failed to create task. Please try again.');
-      console.error('Error creating task:', err);
+      console.error("Error creating task:", err);
+      setError('Failed to create task. Please check all required fields.');
+      showToast('Failed to create task. Please check all required fields.', 'error');
     }
   };
 
   // Handle task editing
-  const handleEditTask = async (e) => {
+  const handleUpdateTask = async (e) => {
     e.preventDefault();
-    const form = e.target;
-    const updatedTask = {
-      title: form.editTaskTitle.value,
-      description: form.editTaskDescription.value,
-      assigneeId: parseInt(form.editTaskAssignee.value) || null,
-      dueDate: form.editTaskDueDate.value,
-      priority: form.editTaskPriority.value,
-      status: form.editTaskStatus.value,
-    };
-    
     try {
-      const response = await updateTask(editTaskData.id, updatedTask);
-      if (response.data) {
-        setTasks(tasks.map(t => t.id === response.data.id ? response.data : t));
-        closeEditModal();
-      }
+      const taskData = {
+        title: editTaskData.title,
+        description: editTaskData.description || '',
+        assigneeId: editTaskData.assigneeId ? parseInt(editTaskData.assigneeId) : null,
+        dueDate: editTaskData.dueDate || null
+      };
+      
+      await updateTask(editTaskData.id, taskData);
+      await loadTasks(); // Reload tasks to get the updated list
+      closeEditModal();
+      showToast('Task updated successfully!', 'update');
     } catch (err) {
       setError('Failed to update task. Please try again.');
-      console.error('Error updating task:', err);
+      showToast('Failed to update task. Please try again.', 'error');
+      console.error("Error updating task:", err);
     }
   };
 
@@ -204,28 +246,46 @@ const App = () => {
   const handleDeleteTask = async () => {
     try {
       await deleteTask(taskToDelete);
-      setTasks(tasks.filter(task => task.id !== taskToDelete));
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskToDelete));
       closeConfirmModal();
+      showToast('Task deleted successfully!', 'delete');
     } catch (err) {
       setError('Failed to delete task. Please try again.');
+      showToast('Failed to delete task. Please try again.', 'error');
       console.error('Error deleting task:', err);
     }
   };
 
+  // Handle input changes for create form
+  const handleNewTaskChange = (e) => {
+    const { name, value } = e.target;
+    setNewTaskData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle input changes for edit form
+  const handleEditTaskChange = (e) => {
+    const { name, value } = e.target;
+    setEditTaskData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   // Calculate dynamic stats
   const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(task => task.status === 'completed').length;
-  const inProgressTasks = tasks.filter(task => task.status === 'inprogress').length;
   const overdueTasks = tasks.filter(task => {
-    if (!task.dueDate || task.status === 'completed') return false;
+    if (!task.dueDate) return false;
     const today = new Date();
     const due = new Date(task.dueDate);
     return due < today;
   }).length;
   
   // Determine due date status
-  const getDueDateStatus = (dueDate, status) => {
-    if (status === 'completed' || !dueDate) return null;
+  const getDueDateStatus = (dueDate) => {
+    if (!dueDate) return null;
     
     const today = new Date();
     const due = new Date(dueDate);
@@ -237,49 +297,16 @@ const App = () => {
     return null;
   };
 
-  // Get status badge class
-  const getStatusBadgeClass = (status) => {
-    switch(status) {
-      case 'completed': return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
-      case 'inprogress': return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
-      default: return 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
-    }
-  };
-
-  // Get status text
-  const getStatusText = (status) => {
-    switch(status) {
-      case 'completed': return 'Completed';
-      case 'inprogress': return 'In Progress';
-      default: return 'To Do';
-    }
-  };
-
-  // Get priority badge class
-  const getPriorityBadgeClass = (priority) => {
-    switch(priority) {
-      case 'high': return 'bg-red-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-green-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
-
-  // Get priority text
-  const getPriorityText = (priority) => {
-    return `${priority.charAt(0).toUpperCase() + priority.slice(1)} Priority`;
-  };
-
   // Get assignee name from ID
   const getAssigneeName = (assigneeId) => {
     if (!assigneeId) return 'Unassigned';
     const user = users.find(u => u.id === assigneeId);
-    return user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
+    return user ? `${user.name || `${user.firstName} ${user.lastName}`}` : 'Unknown User';
   };
 
   if (loading && goals.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-xl">Loading tasks...</div>
       </div>
     );
@@ -289,7 +316,16 @@ const App = () => {
     <div className="min-h-screen font-sans transition-colors duration-300 bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
       <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-      <div className="container mx-auto px-4 py-8">
+      {/* Toast Notification */}
+      {toast.visible && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={handleToastClose} 
+        />
+      )}
+
+      <div className="container mx-auto">
         {/* Error message */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 dark:bg-red-900 dark:border-red-700 dark:text-red-200">
@@ -301,10 +337,10 @@ const App = () => {
         )}
         
         {/* Header Section */}
-        <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-blue-600 dark:text-blue-400">Task Manager</h1>
+        <h1 className="sticky text-2xl font-bold text-black dark:text-white bg-white dark:bg-gray-800 w-full p-4">Task Manager</h1>
+        <header className="flex flex-col sm:flex-row justify-between items-center gap-4 px-4 py-8">
           
-          <div className="w-full sm:w-auto md:w-96">
+          <div className="w-full">
             <div className="relative">
               <input 
                 type="text" 
@@ -317,40 +353,38 @@ const App = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            {/* Goal Selector - Now dynamic */}
-            <select 
-              value={selectedGoalId}
-              onChange={(e) => setSelectedGoalId(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
-            >
-              {goals.map(goal => (
-                <option key={goal.id} value={goal.id}>{goal.name}</option>
-              ))}
-            </select>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full">
+            {/* Goal Selector - Now dynamic and responsive */}
+            {goals.length > 0 ? (
+              <select 
+                value={selectedGoalId}
+                onChange={(e) => setSelectedGoalId(Number(e.target.value))}
+                className="w-full sm:w-4/5 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm sm:text-base"
+              >
+                {goals.map(goal => (
+                  <option key={goal.id} value={goal.id}>{goal.title || goal.name}</option>
+                ))}
+              </select>
+            ) : (
+              <div className="text-sm text-gray-500 w-full sm:w-auto">No goals available</div>
+            )}
             
             <button 
               onClick={openCreateModal}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all font-semibold"
+              className="w-full sm:w-1/5 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-semibold text-sm sm:text-base"
+              disabled={goals.length === 0}
             >
-              <i className="fas fa-plus"></i> New Task
+              <i className="fas fa-plus"></i> 
+              <span>New Task</span>
             </button>
           </div>
         </header>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h3 className="text-3xl font-bold text-blue-600 dark:text-blue-400">{totalTasks}</h3>
             <p className="text-gray-600 dark:text-gray-400">Total Tasks</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <h3 className="text-3xl font-bold text-green-500">{completedTasks}</h3>
-            <p className="text-gray-600 dark:text-gray-400">Completed</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-            <h3 className="text-3xl font-bold text-yellow-500">{inProgressTasks}</h3>
-            <p className="text-gray-600 dark:text-gray-400">In Progress</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h3 className="text-3xl font-bold text-red-500">{overdueTasks}</h3>
@@ -358,39 +392,11 @@ const App = () => {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-6 px-4">
           {/* Filters Section */}
           <div className="w-full lg:w-1/4">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
               <h3 className="text-lg font-semibold mb-4">Filters</h3>
-              
-              <div className="mb-4">
-                <label className="block mb-2 font-medium">Status</label>
-                <select 
-                  value={statusFilter} 
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
-                >
-                  <option value="all">All Status</option>
-                  <option value="todo">To Do</option>
-                  <option value="inprogress">In Progress</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-              
-              <div className="mb-4">
-                <label className="block mb-2 font-medium">Priority</label>
-                <select 
-                  value={priorityFilter} 
-                  onChange={(e) => setPriorityFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
-                >
-                  <option value="all">All Priorities</option>
-                  <option value="high">High</option>
-                  <option value="medium">Medium</option>
-                  <option value="low">Low</option>
-                </select>
-              </div>
               
               <div className="mb-4">
                 <label className="block mb-2 font-medium">Assignee</label>
@@ -402,7 +408,7 @@ const App = () => {
                   <option value="all">All Assignees</option>
                   {users.map(user => (
                     <option key={user.id} value={user.id}>
-                      {user.firstName} {user.lastName}
+                      {user.name || `${user.firstName} ${user.lastName}`}
                     </option>
                   ))}
                 </select>
@@ -426,26 +432,32 @@ const App = () => {
                     <option value="newest">Newest First</option>
                     <option value="oldest">Oldest First</option>
                     <option value="dueDate">Due Date</option>
-                    <option value="priority">Priority</option>
                   </select>
                 </div>
               </div>
               
               <div className="p-4">
-                {visibleTasks.length > 0 ? (
+                {tasks.length === 0 ? (
+                  <div className="text-center py-8">
+                    <i className="fas fa-tasks text-4xl text-gray-300 mb-4"></i>
+                    <p className="text-gray-500">No tasks found for this goal.</p>
+                    <button 
+                      onClick={openCreateModal}
+                      className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                    >
+                      Create Your First Task
+                    </button>
+                  </div>
+                ) : visibleTasks.length > 0 ? (
                   visibleTasks.map(task => {
-                    const dueStatus = getDueDateStatus(task.dueDate, task.status);
-                    const statusBadgeClass = getStatusBadgeClass(task.status);
-                    const priorityBadgeClass = getPriorityBadgeClass(task.priority);
+                    const dueStatus = getDueDateStatus(task.dueDate);
                     
                     return (
                       <div 
                         key={task.id}
                         className={`mb-4 p-4 rounded-lg border-l-4 bg-white dark:bg-gray-800 shadow-sm 
-                          ${task.priority === 'high' ? 'border-red-500' : 
-                            task.priority === 'medium' ? 'border-yellow-500' : 'border-green-500'}
-                          ${dueStatus === 'overdue' ? 'bg-red-50 dark:bg-red-900/20' : 
-                            dueStatus === 'dueSoon' ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''}
+                          ${dueStatus === 'overdue' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 
+                            dueStatus === 'dueSoon' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' : 'border-gray-300'}
                         `}
                       >
                         <div className="flex flex-col sm:flex-row justify-between gap-2">
@@ -454,12 +466,6 @@ const App = () => {
                             <p className="text-gray-600 dark:text-gray-400 mt-1">{task.description || 'No description'}</p>
                           </div>
                           <div className="flex sm:flex-col sm:items-end gap-2">
-                            <span className={`${priorityBadgeClass} text-xs px-2 py-1 rounded-full`}>
-                              {getPriorityText(task.priority)}
-                            </span>
-                            <span className={`${statusBadgeClass} text-xs px-2 py-1 rounded-full`}>
-                              {getStatusText(task.status)}
-                            </span>
                             {dueStatus === 'overdue' && (
                               <span className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs px-2 py-1 rounded-full">
                                 Overdue
@@ -508,7 +514,7 @@ const App = () => {
                     );
                   })
                 ) : (
-                  <p className="text-center text-gray-500">No tasks found. Try adjusting your filters.</p>
+                  <p className="text-center text-gray-500">No tasks match your filters. Try adjusting them.</p>
                 )}
               </div>
             </div>
@@ -532,7 +538,9 @@ const App = () => {
                 <label className="block mb-2 font-medium">Title *</label>
                 <input 
                   type="text" 
-                  name="taskTitle"
+                  name="title"
+                  value={newTaskData.title}
+                  onChange={handleNewTaskChange}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800" 
                   required 
                 />
@@ -541,7 +549,9 @@ const App = () => {
               <div className="mb-4">
                 <label className="block mb-2 font-medium">Description</label>
                 <textarea 
-                  name="taskDescription"
+                  name="description"
+                  value={newTaskData.description}
+                  onChange={handleNewTaskChange}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800" 
                   rows="3"
                 ></textarea>
@@ -550,11 +560,16 @@ const App = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block mb-2 font-medium">Assignee</label>
-                  <select name="taskAssignee" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
+                  <select 
+                    name="assigneeId"
+                    value={newTaskData.assigneeId}
+                    onChange={handleNewTaskChange}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
+                  >
                     <option value="">Select assignee</option>
                     {users.map(user => (
                       <option key={user.id} value={user.id}>
-                        {user.firstName} {user.lastName}
+                        {user.name || `${user.firstName} ${user.lastName}`}
                       </option>
                     ))}
                   </select>
@@ -564,29 +579,11 @@ const App = () => {
                   <label className="block mb-2 font-medium">Due Date</label>
                   <input 
                     type="date" 
-                    name="taskDueDate"
+                    name="dueDate"
+                    value={newTaskData.dueDate}
+                    onChange={handleNewTaskChange}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800" 
                   />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block mb-2 font-medium">Priority</label>
-                  <select name="taskPriority" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block mb-2 font-medium">Status</label>
-                  <select name="taskStatus" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-                    <option value="todo">To Do</option>
-                    <option value="inprogress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
                 </div>
               </div>
               
@@ -621,14 +618,15 @@ const App = () => {
               </button>
             </div>
             
-            <form className="p-6" onSubmit={handleEditTask}>
+            <form className="p-6" onSubmit={handleUpdateTask}>
               <div className="mb-4">
                 <label className="block mb-2 font-medium">Title *</label>
                 <input 
                   type="text" 
-                  name="editTaskTitle"
+                  name="title"
+                  value={editTaskData.title || ''}
+                  onChange={handleEditTaskChange}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800" 
-                  defaultValue={editTaskData.title}
                   required 
                 />
               </div>
@@ -636,10 +634,11 @@ const App = () => {
               <div className="mb-4">
                 <label className="block mb-2 font-medium">Description</label>
                 <textarea 
-                  name="editTaskDescription"
+                  name="description"
+                  value={editTaskData.description || ''}
+                  onChange={handleEditTaskChange}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800" 
                   rows="3"
-                  defaultValue={editTaskData.description}
                 ></textarea>
               </div>
               
@@ -647,14 +646,15 @@ const App = () => {
                 <div>
                   <label className="block mb-2 font-medium">Assignee</label>
                   <select 
-                    name="editTaskAssignee"
+                    name="assigneeId"
+                    value={editTaskData.assigneeId || ''}
+                    onChange={handleEditTaskChange}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
-                    defaultValue={editTaskData.assigneeId || ''}
                   >
                     <option value="">Select assignee</option>
                     {users.map(user => (
                       <option key={user.id} value={user.id}>
-                        {user.firstName} {user.lastName}
+                        {user.name || `${user.firstName} ${user.lastName}`}
                       </option>
                     ))}
                   </select>
@@ -664,38 +664,11 @@ const App = () => {
                   <label className="block mb-2 font-medium">Due Date</label>
                   <input 
                     type="date" 
-                    name="editTaskDueDate"
+                    name="dueDate"
+                    value={editTaskData.dueDate || ''}
+                    onChange={handleEditTaskChange}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800" 
-                    defaultValue={editTaskData.dueDate}
                   />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block mb-2 font-medium">Priority</label>
-                  <select 
-                    name="editTaskPriority"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
-                    defaultValue={editTaskData.priority}
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block mb-2 font-medium">Status</label>
-                  <select 
-                    name="editTaskStatus"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
-                    defaultValue={editTaskData.status}
-                  >
-                    <option value="todo">To Do</option>
-                    <option value="inprogress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
                 </div>
               </div>
 
@@ -747,47 +720,3 @@ const App = () => {
 };
 
 export default App;
-
-
-const { title, description, assigneeId, dueDate, status, priority, progress } = req.body;
-
-const query = `
-  UPDATE "Tasks"
-  SET title = $1, description = $2, "assigneeId" = $3, "dueDate" = $4,
-      status = $5, priority = $6, progress = $7, "updatedAt" = NOW()
-  WHERE id = $8
-  RETURNING *;
-`;
-const { rows } = await client.query(query, [
-  title.trim(),
-  description?.trim() || null,
-  assigneeId || null,
-  dueDate || null,
-  status || 'Not Started',
-  priority || 'Medium',
-  progress || 0,
-  taskId,
-]);
-
-JSON File /////////////////////////////////////////
-
-{
-  "admin": {
-    "users": {
-      "errors": {
-        "usernameExists": "Username already exists. Please choose a different one.",
-        "usernameRequired": "Username is required",
-        "nameRequired": "Name is required",
-        "passwordRequired": "Password is required",
-        "roleRequired": "Role is required"
-      },
-      "form": {
-        "passwordStrong": "Password is strong"
-      }
-    },
-    "actions": {
-      "processing": "Processing...",
-      "deleting": "Deleting..."
-    }
-  }
-}
