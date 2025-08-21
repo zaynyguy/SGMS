@@ -1,167 +1,248 @@
-const db = require('../src/db');
-const bcrypt = require('bcrypt');
-require('dotenv').config();
+// File: backend/seed.js
+const db = require("./src/db"); // Ensure this path is correct based on your project structure
+const bcrypt = require("bcrypt");
+require("dotenv").config(); // Load environment variables (ADMIN_USERNAME, ADMIN_PASSWORD)
 
+/**
+ * Seeds the database with initial roles, permissions, an admin user, and sample data.
+ * It uses ON CONFLICT DO NOTHING to ensure idempotency, meaning it can be run
+ * multiple times without creating duplicate records if they already exist.
+ */
 async function seedDatabase() {
-  console.log("🌱 Starting database seed...");
+  console.log("Starting database seeding...");
+  const client = await db.pool.connect(); // Use pool.connect() for transactions
 
   try {
-    await db.query("BEGIN");
+    await client.query("BEGIN"); // Start a transaction for atomicity
 
-    // --- ROLES ---
-    const roles = {};
-    const roleInsert = await db.query(`
+    // --- 1. Seed Roles ---
+    // Ensure 'Admin', 'Manager', 'User' roles exist.
+    await client.query(`
       INSERT INTO "Roles" (name, description)
-      VALUES 
-        ('Admin', 'Has all permissions.'),
-        ('Manager', 'Can manage groups, goals, tasks, and activities.'),
-        ('User', 'Can view and update their own items.')
-      ON CONFLICT (name) DO NOTHING
-      RETURNING id, name;
+      VALUES
+        ('Admin', 'System administrator with full access.'),
+        ('Manager', 'Manages goals, tasks, and reports within assigned groups.'),
+        ('User', 'Regular user, can view and update their assigned items.')
+      ON CONFLICT (name) DO NOTHING;
     `);
-
-    for (const r of roleInsert.rows) roles[r.name] = r.id;
-
-    for (const roleName of ["Admin", "Manager", "User"]) {
-      if (!roles[roleName]) {
-        const res = await db.query(`SELECT id FROM "Roles" WHERE name = $1`, [roleName]);
-        roles[roleName] = res.rows[0].id;
-      }
-    }
-
-    // --- PERMISSIONS ---
-    const permissionsList = [
-      ["view_dashboard", "Can view the main dashboard"],
-      ["manage_project", "Full control over all project-related features"],
-      ["manage_users", "Full control over users"],
-      ["manage_roles", "Full control over roles and permissions"],
-      ["manage_groups", "Full control over groups"],
-      ["manage_goals", "Full control over all goals"],
-      ["manage_tasks", "Full control over all tasks"],
-      ["manage_activities", "Full control over all activities"],
-      ["view_goals", "Can view goals"],
-      ["view_tasks", "Can view tasks"],
-      ["view_activities", "Can view activities"],
-      ["view_reports", "Can view reports"],
-      ["manage_reports", "Approve or reject reports"],
-      ["manage_settings", "Update system-wide settings"]
-    ];
-
-    for (const [name, desc] of permissionsList) {
-      await db.query(
-        `INSERT INTO "Permissions" (name, description)
-         VALUES ($1, $2)
-         ON CONFLICT (name) DO NOTHING;`,
-        [name, desc]
-      );
-    }
-
-    const permissions = {};
-    const allPerms = await db.query(`SELECT id, name FROM "Permissions"`);
-    for (const p of allPerms.rows) permissions[p.name] = p.id;
-
-    // --- ADMIN USER ---
-    const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
-    const adminUserRes = await db.query(
-      `INSERT INTO "Users" (username, name, password, "roleId")
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (username) DO NOTHING
-       RETURNING id;`,
-      [process.env.ADMIN_USERNAME, "Administrator", hashedPassword, roles["Admin"]]
+    const rolesResult = await client.query(
+      `SELECT id, name FROM "Roles" WHERE name IN ('Admin', 'Manager', 'User');`
     );
+    const roles = rolesResult.rows.reduce((acc, curr) => {
+      acc[curr.name] = curr.id;
+      return acc;
+    }, {});
+    console.log("Seeded/Fetched Roles:", roles);
 
-    const adminUserId =
-      adminUserRes.rows[0]?.id ||
-      (await db.query(`SELECT id FROM "Users" WHERE username=$1`, [process.env.ADMIN_USERNAME])).rows[0].id;
+    // --- 2. Seed Permissions ---
+    // Define core system permissions.
+    await client.query(`
+      INSERT INTO "Permissions" (name, description)
+      VALUES
+        ('manage:users', 'Allows creating, viewing, updating, and deleting all users.'),
+        ('manage:roles', 'Allows creating, viewing, updating, and deleting all roles and their permissions.'),
+        ('manage:groups', 'Allows creating, viewing, updating, and deleting groups.'),
+        ('manage:goals', 'Allows creating, viewing, updating, and deleting all goals.'),
+        ('manage:tasks', 'Allows creating, viewing, updating, and deleting all tasks and activities.'),
+        ('manage:reports', 'Allows viewing, approving, and rejecting all reports.'),
+        ('view:dashboard', 'Allows access to the main system dashboard and analytics.'),
+        ('view:all_users', 'Allows viewing all users in the system.'),
+        ('view:all_roles', 'Allows viewing all roles and their permissions.'),
+        ('view:all_goals', 'Allows viewing all goals in the system.'),
+        ('view:all_tasks', 'Allows viewing all tasks and activities in the system.'),
+        ('view:all_reports', 'Allows viewing all reports in the system.'),
+        ('submit:reports', 'Allows submitting reports for activities.'),
+        ('update:own_tasks', 'Allows updating status/progress of assigned tasks.'),
+        ('update:own_activities', 'Allows updating status/progress of assigned activities.')
+      ON CONFLICT (name) DO NOTHING;
+    `);
+    const permsResult = await client.query(
+      `SELECT id, name FROM "Permissions";`
+    );
+    const permissions = permsResult.rows.reduce((acc, curr) => {
+      acc[curr.name] = curr.id;
+      return acc;
+    }, {});
+    console.log("Seeded/Fetched Permissions:", Object.keys(permissions));
 
-    // --- ASSIGN ALL PERMISSIONS TO ADMIN ---
-    for (const permId of Object.values(permissions)) {
-      await db.query(
-        `INSERT INTO "RolePermissions" ("roleId", "permissionId")
-         VALUES ($1, $2)
-         ON CONFLICT ("roleId", "permissionId") DO NOTHING;`,
+    // --- 3. Assign Permissions to Roles (Idempotent) ---
+    // Admin role gets all permissions.
+    const adminPermissions = Object.values(permissions);
+    for (const permId of adminPermissions) {
+      await client.query(
+        `
+        INSERT INTO "RolePermissions" ("roleId", "permissionId")
+        VALUES ($1, $2)
+        ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+      `,
         [roles["Admin"], permId]
       );
     }
 
-    // --- GROUPS ---
-    const devGroupId = (await db.query(`
-      INSERT INTO "Groups" (name, description)
-      VALUES ('Development Team', 'Responsible for software development goals.')
-      ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
-      RETURNING id;
-    `)).rows[0].id;
-
-    const marketingGroupId = (await db.query(`
-      INSERT INTO "Groups" (name, description)
-      VALUES ('Marketing Team', 'Responsible for marketing and outreach goals.')
-      ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
-      RETURNING id;
-    `)).rows[0].id;
-
-    // --- SAMPLE USERS ---
-    const managerPass = await bcrypt.hash("password", 10);
-    const managerId = (await db.query(
-      `INSERT INTO "Users" (username, name, password, "roleId")
-       VALUES ('manager', 'Dev Manager', $1, $2)
-       ON CONFLICT (username) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id;`,
-      [managerPass, roles["Manager"]]
-    )).rows[0].id;
-
-    const userPass = await bcrypt.hash("password", 10);
-    const dev1Id = (await db.query(
-      `INSERT INTO "Users" (username, name, password, "roleId")
-       VALUES ('dev1', 'Developer One', $1, $2)
-       ON CONFLICT (username) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id;`,
-      [userPass, roles["User"]]
-    )).rows[0].id;
-
-    const marketerId = (await db.query(
-      `INSERT INTO "Users" (username, name, password, "roleId")
-       VALUES ('marketer1', 'Marketer One', $1, $2)
-       ON CONFLICT (username) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id;`,
-      [userPass, roles["User"]]
-    )).rows[0].id;
-
-    // --- USER GROUPS ---
-    const userGroups = [
-      [managerId, devGroupId],
-      [dev1Id, devGroupId],
-      [marketerId, marketingGroupId],
-    ];
-    for (const [uid, gid] of userGroups) {
-      await db.query(
-        `INSERT INTO "UserGroups" ("userId", "groupId")
-         VALUES ($1, $2)
-         ON CONFLICT ("userId", "groupId") DO NOTHING;`,
-        [uid, gid]
+    // Manager role gets specific permissions.
+    const managerPermissions = [
+      permissions["manage:goals"],
+      permissions["manage:tasks"],
+      permissions["manage:reports"],
+      permissions["view:dashboard"],
+      permissions["view:all_goals"],
+      permissions["view:all_tasks"],
+      permissions["view:all_reports"],
+      permissions["view:all_users"], // Managers might need to see users to assign tasks
+      permissions["submit:reports"],
+    ].filter(Boolean); // Filter out any undefined if a permission name isn't found
+    for (const permId of managerPermissions) {
+      await client.query(
+        `
+        INSERT INTO "RolePermissions" ("roleId", "permissionId")
+        VALUES ($1, $2)
+        ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+      `,
+        [roles["Manager"], permId]
       );
     }
 
-    // --- SYSTEM SETTINGS ---
-    const settings = [
-      ['reporting_active', 'false', 'Enable or disable the periodic reporting window.'],
-      ['reporting_start_day', '25', 'The day of the month the reporting window opens.'],
-      ['reporting_end_day', '28', 'The day of the month the reporting window closes.'],
-      ['resubmission_deadline_days', '2', 'How many days a user has to resubmit a rejected report.']
+    // User role gets basic permissions.
+    const userPermissions = [
+      permissions["view:dashboard"],
+      permissions["update:own_tasks"],
+      permissions["update:own_activities"],
+      permissions["submit:reports"],
+    ].filter(Boolean);
+    for (const permId of userPermissions) {
+      await client.query(
+        `
+        INSERT INTO "RolePermissions" ("roleId", "permissionId")
+        VALUES ($1, $2)
+        ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+      `,
+        [roles["User"], permId]
+      );
+    }
+    console.log("Assigned Permissions to Roles.");
+
+    // --- 4. Seed Admin User ---
+    const hashedPassword = await bcrypt.hash(
+      process.env.ADMIN_PASSWORD || "admin123",
+      10
+    );
+    const adminUsername = process.env.ADMIN_USERNAME || "admin";
+
+    await client.query(
+      `
+      INSERT INTO "Users" (username, name, password, "roleId", language, "darkMode")
+      VALUES ($1, $2, $3, $4, 'en', FALSE)
+      ON CONFLICT (username) DO NOTHING;
+    `,
+      [adminUsername, "System Administrator", hashedPassword, roles["Admin"]]
+    );
+
+    const adminUserRes = await client.query(
+      `SELECT id FROM "Users" WHERE username = $1;`,
+      [adminUsername]
+    );
+    const adminUserId = adminUserRes.rows[0].id;
+    console.log(
+      `Seeded/Fetched Admin User: ${adminUsername} (ID: ${adminUserId})`
+    );
+
+    // --- 5. Seed Groups ---
+    await client.query(`
+      INSERT INTO "Groups" (name, description)
+      VALUES
+        ('Development Team', 'Responsible for software development goals and tasks.'),
+        ('Marketing Team', 'Responsible for marketing and outreach goals and campaigns.')
+      ON CONFLICT (name) DO NOTHING;
+    `);
+    const groupsResult = await client.query(
+      `SELECT id, name FROM "Groups" WHERE name IN ('Development Team', 'Marketing Team');`
+    );
+    const groups = groupsResult.rows.reduce((acc, curr) => {
+      acc[curr.name] = curr.id;
+      return acc;
+    }, {});
+    console.log("Seeded/Fetched Groups:", groups);
+
+    // --- 6. Seed Sample Users ---
+    const defaultUserPasswordHash = await bcrypt.hash("password", 10);
+
+    const usersToSeed = [
+      {
+        username: "manager1",
+        name: "Alice Manager",
+        role: "Manager",
+        group: "Development Team",
+      },
+      {
+        username: "dev1",
+        name: "Bob Developer",
+        role: "User",
+        group: "Development Team",
+      },
+      {
+        username: "marketer1",
+        name: "Charlie Marketer",
+        role: "User",
+        group: "Marketing Team",
+      },
     ];
-    for (const [key, value, description] of settings) {
-      await db.query(
-        `INSERT INTO "SystemSettings" (key, value, description)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (key) DO NOTHING;`,
-        [key, value, description]
+
+    const seededUserIds = {};
+    for (const user of usersToSeed) {
+      await client.query(
+        `
+        INSERT INTO "Users" (username, name, password, "roleId")
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (username) DO NOTHING;
+      `,
+        [user.username, user.name, defaultUserPasswordHash, roles[user.role]]
+      );
+
+      const userRes = await client.query(
+        `SELECT id FROM "Users" WHERE username = $1;`,
+        [user.username]
+      );
+      seededUserIds[user.username] = userRes.rows[0].id;
+      console.log(
+        `Seeded/Fetched User: ${user.username} (ID: ${
+          seededUserIds[user.username]
+        })`
       );
     }
 
-    await db.query("COMMIT");
-    console.log("✅ Database seeding completed successfully!");
+    // --- 7. Assign Sample Users to Groups ---
+    for (const user of usersToSeed) {
+      if (seededUserIds[user.username] && groups[user.group]) {
+        await client.query(
+          `
+          INSERT INTO "UserGroups" ("userId", "groupId")
+          VALUES ($1, $2)
+          ON CONFLICT ("userId", "groupId") DO NOTHING;
+        `,
+          [seededUserIds[user.username], groups[user.group]]
+        );
+      }
+    }
+    console.log("Assigned Sample Users to Groups.");
+
+    // --- 8. Seed Sample Goals (Associated with Groups) ---
+    await client.query(`
+      INSERT INTO "Goals" (title, description, "groupId", "startDate", "endDate", status, progress)
+      VALUES
+        ('Launch New Feature X', 'Develop and deploy the core feature set for product X.', ${groups["Development Team"]}, '2025-01-01', '2025-03-31', 'In Progress', 30),
+        ('Increase Market Share by 10%', 'Execute marketing campaigns to expand customer base.', ${groups["Marketing Team"]}, '2025-02-01', '2025-06-30', 'Not Started', 0)
+      ON CONFLICT (title) DO NOTHING;
+    `);
+    console.log("Seeded Sample Goals.");
+
+    await client.query("COMMIT"); // Commit the transaction
+    console.log("Database seeding completed successfully!");
   } catch (err) {
-    await db.query("ROLLBACK");
-    console.error("❌ Error seeding database:", err);
+    await client.query("ROLLBACK"); // Rollback on error
+    console.error("Error seeding database:", err);
+    process.exit(1); // Exit with error code
+  } finally {
+    client.release(); // Release the client back to the pool
   }
 }
 
