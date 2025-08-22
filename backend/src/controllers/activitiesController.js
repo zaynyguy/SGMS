@@ -5,9 +5,15 @@ exports.getActivitiesByTask = async (req, res) => {
   const { taskId } = req.params;
   try {
     const query = `
-      SELECT a.*, g.name AS groupName
+      SELECT 
+        a.*, 
+        t."goalId",
+        gl."groupId",
+        g.name AS "groupName"
       FROM "Activities" a
-      LEFT JOIN "Groups" g ON a."groupId" = g.id
+      JOIN "Tasks" t ON a."taskId" = t.id
+      JOIN "Goals" gl ON t."goalId" = gl.id
+      JOIN "Groups" g ON gl."groupId" = g.id
       WHERE a."taskId" = $1
       ORDER BY a."createdAt" DESC;
     `;
@@ -22,8 +28,7 @@ exports.getActivitiesByTask = async (req, res) => {
 // -------------------- CREATE ACTIVITY --------------------
 exports.createActivity = async (req, res) => {
   const { taskId } = req.params;
-
-  let { title, description, parentId, groupId, metrics, dueDate } = req.body;
+  const { title, description, parentId, metrics, dueDate } = req.body;
 
   if (!title || !taskId) {
     return res.status(400).json({ message: "Title and taskId are required." });
@@ -33,24 +38,23 @@ exports.createActivity = async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // If groupId not provided, inherit from parent task
-    if (!groupId) {
-      const taskRes = await client.query(
-        'SELECT "assigneeId" FROM "Tasks" WHERE id=$1',
-        [taskId]
-      );
-      groupId = taskRes.rows[0]?.assigneeId || null;
+    // Check if task exists
+    const taskRes = await client.query('SELECT id FROM "Tasks" WHERE id=$1', [
+      taskId,
+    ]);
+    if (taskRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Task not found." });
     }
 
     const result = await client.query(
-      `INSERT INTO "Activities" ("taskId", title, description, "groupId", metrics, "dueDate")
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *;`,
+      `INSERT INTO "Activities" ("taskId", title, description, metrics, "dueDate")
+   VALUES ($1, $2, $3, $4, $5)
+   RETURNING *;`,
       [
         taskId,
         title.trim(),
         description?.trim() || null,
-        groupId,
         metrics || {},
         dueDate || null,
       ]
@@ -73,8 +77,7 @@ exports.createActivity = async (req, res) => {
 // -------------------- UPDATE ACTIVITY --------------------
 exports.updateActivity = async (req, res) => {
   const { activityId } = req.params;
-  const { title, description, groupId, metrics, status, dueDate } =
-    req.body;
+  const { title, description, metrics, status, dueDate } = req.body;
 
   const client = await db.pool.connect();
   try {
@@ -90,17 +93,15 @@ exports.updateActivity = async (req, res) => {
     }
 
     const query = `
-      UPDATE "Activities"
-      SET title=$1, description=$2, "groupId"=$3, metrics=$4, status=$5, "dueDate"=$6, "updatedAt"=NOW()
-      WHERE id=$7
-      RETURNING *;
-    `;
+  UPDATE "Activities"
+  SET title=$1, description=$2, metrics=$3, "dueDate"=$4, "updatedAt"=NOW()
+  WHERE id=$5
+  RETURNING *;
+`;
     const { rows } = await client.query(query, [
       title?.trim() || null,
       description?.trim() || null,
-      groupId || null,
       metrics || {},
-      status || null,
       dueDate || null,
       activityId,
     ]);

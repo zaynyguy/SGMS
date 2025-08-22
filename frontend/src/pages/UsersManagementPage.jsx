@@ -32,31 +32,23 @@ const UsersManagementPage = () => {
     setToast({ message: '', type: '', visible: false });
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [usersData, rolesData] = await Promise.all([
-          fetchUsers(),
-          fetchRoles()
-        ]);
-        
-        // Enhance users with role names for display
-        const usersWithRoleNames = usersData.map(user => ({
-          ...user,
-          roleName: rolesData.find(role => role.id === user.roleId)?.name || user.roleId
-        }));
-        
-        setUsers(usersWithRoleNames);
-        setRoles(rolesData);
-      } catch (error) {
-        showToast(t('admin.users.errors.loadFailed', { error: error.message }), "error");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [t]);
+ useEffect(() => {
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const usersData = await fetchUsers();
+      setUsers(usersData);
+
+      const rolesData = await fetchRoles();
+      setRoles(rolesData);
+    } catch (error) {
+      showToast(t('admin.users.errors.loadFailed', { error: error.message }), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+  loadData();
+}, [t]);
 
   const validateForm = () => {
     const errors = {};
@@ -227,7 +219,7 @@ const UsersManagementPage = () => {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-                      {user.roleName || roles.find(r => r.id === user.roleId)?.name || user.roleId}
+                      {user.roleName}
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap space-x-1">
@@ -303,7 +295,7 @@ const UsersManagementPage = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                  {user.roleName || roles.find(r => r.id === user.roleId)?.name || user.roleId}
+                  {user.roleName}
                 </span>
               </div>
             </div>
@@ -458,7 +450,6 @@ const UsersManagementPage = () => {
                 <button
                   type="submit"
                   className="flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors duration-200 disabled:opacity-50"
-                  disabled={submitting || Object.keys(formErrors).length > 0}
                 >
                   {submitting ? (
                     <div className="flex items-center justify-center">

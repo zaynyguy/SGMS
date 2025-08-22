@@ -9,7 +9,7 @@ import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AccessDeniedPage from './pages/AccessDeniedPage';
-import UserSettingsPage from './pages/UserSettingsPage'; // Import the new page
+import UserSettingsPage from './pages/UserSettingsPage';
 import GroupsManagementPage from './pages/GroupsManagementPage'
 import GoalsManagementPage from './pages/GoalsManagement'
 import SystemSettingsPage from './pages/SystemSettingsPage'
@@ -19,7 +19,6 @@ import AuditLogPage from  './pages/AuditLogPage'
 import TasksManagementPage from './pages/TasksManagementPage'
 import ActivityPage from './pages/ActivityPage'
 import ReportPage from './pages/ReportPage';
-import Attachment from './pages/Attachment';
 
 function App() {
     return (
@@ -94,14 +93,6 @@ function App() {
                                 element={
                                     <ProtectedRoute requiredPermission="manage_roles">
                                         <ReportPage />
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/attachment"
-                                element={
-                                    <ProtectedRoute requiredPermission="manage_roles">
-                                        <Attachment />
                                     </ProtectedRoute>
                                 }
                             />
