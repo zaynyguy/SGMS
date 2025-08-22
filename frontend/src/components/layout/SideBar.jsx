@@ -37,7 +37,6 @@ const Sidebar = ({ children }) => {
     hasPermission('manage_roles') && { to: '/auditLog', icon: <ClipboardCheck size={24} />, label: 'Audit' },
     hasPermission('manage_roles') && { to: '/tasksmanagement', icon: <ListTodo size={24} />, label: 'Tasks Management' },
     hasPermission('manage_roles') && { to: '/activity', icon: <Activity size={24} />, label: 'Activity' },
-    hasPermission('manage_roles') && { to: '/attachment', icon: <Paperclip size={24} />, label: 'Attachment' },
     hasPermission('manage_roles') && { to: '/report', icon: <FileChartColumnIncreasing size={24} />, label: 'Report' },
   ].filter(Boolean);
 
