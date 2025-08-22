@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import StatsCard from '../Components/Dashboard-components/StatsCard';
-import LineChartCard from '../Components/Dashboard-components/LineChart';
-import PieChartCard from '../Components/Dashboard-components/PieChart';
-import RecentActivityList from '../Components/Dashboard-components/RecentActivity';
-import QuickActionsPanel from '../Components/Dashboard-components/QuickActions';
+import StatsCard from '../components/dashboardcomponents/StatsCard';
+import LineChartCard from '../components/dashboardcomponents/LineChart';
+import PieChartCard from '../components/dashboardcomponents/PieChart';
+import RecentActivityList from '../components/dashboardcomponents/RecentActivity';
+import QuickActionsPanel from '../components/dashboardcomponents/QuickActions';
 import { BellIcon } from 'lucide-react'
 
 export default function DashboardLayout() {
