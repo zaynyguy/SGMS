@@ -118,9 +118,9 @@ const App = () => {
     setShowCreateModal(false);
     setNewTaskData({
       title: "",
-      description: "",
-      dueDate: "",
-      assigneeId: "",
+    description: "",
+    dueDate: "",
+    assigneeId: "",
     });
   };
 
@@ -325,7 +325,8 @@ const App = () => {
         />
       )}
 
-      <div className="container mx-auto">
+      <h1 className="text-2xl font-bold text-black dark:text-white bg-white dark:bg-gray-800 w-full p-4">Task Management</h1>
+      <div className="container mx-auto px-10">
         {/* Error message */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 dark:bg-red-900 dark:border-red-700 dark:text-red-200">
@@ -337,10 +338,8 @@ const App = () => {
         )}
         
         {/* Header Section */}
-        <h1 className="sticky text-2xl font-bold text-black dark:text-white bg-white dark:bg-gray-800 w-full p-4">Task Manager</h1>
-        <header className="flex flex-col sm:flex-row justify-between items-center gap-4 px-4 py-8">
-          
-          <div className="w-full">
+        <header className="flex flex-col md:flex-row justify-between items-center gap-4 py-6">
+          <div className="w-full md:w-2/5">
             <div className="relative">
               <input 
                 type="text" 
@@ -353,25 +352,25 @@ const App = () => {
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full md:w-3/5">
             {/* Goal Selector - Now dynamic and responsive */}
             {goals.length > 0 ? (
               <select 
                 value={selectedGoalId}
                 onChange={(e) => setSelectedGoalId(Number(e.target.value))}
-                className="w-full sm:w-4/5 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm sm:text-base"
+                className="w-full md:w-3/5 px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-sm md:text-base"
               >
                 {goals.map(goal => (
                   <option key={goal.id} value={goal.id}>{goal.title || goal.name}</option>
                 ))}
               </select>
             ) : (
-              <div className="text-sm text-gray-500 w-full sm:w-auto">No goals available</div>
+              <div className="text-sm text-gray-500 w-full md:w-auto">No goals available</div>
             )}
             
             <button 
               onClick={openCreateModal}
-              className="w-full sm:w-1/5 bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-semibold text-sm sm:text-base"
+              className="w-full md:w-2/5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-all font-semibold text-sm md:text-base"
               disabled={goals.length === 0}
             >
               <i className="fas fa-plus"></i> 
@@ -381,7 +380,7 @@ const App = () => {
         </header>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h3 className="text-3xl font-bold text-blue-600 dark:text-blue-400">{totalTasks}</h3>
             <p className="text-gray-600 dark:text-gray-400">Total Tasks</p>
@@ -392,7 +391,7 @@ const App = () => {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 px-4">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Filters Section */}
           <div className="w-full lg:w-1/4">
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow mb-6">
@@ -419,7 +418,7 @@ const App = () => {
           {/* Task List */}
           <div className="w-full lg:w-3/4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <h2 className="text-xl font-semibold">Tasks</h2>
                 
                 <div className="flex items-center gap-2">
@@ -460,26 +459,26 @@ const App = () => {
                             dueStatus === 'dueSoon' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' : 'border-gray-300'}
                         `}
                       >
-                        <div className="flex flex-col sm:flex-row justify-between gap-2">
-                          <div>
+                        <div className="flex flex-col md:flex-row justify-between gap-4">
+                          <div className="flex-1">
                             <h3 className="font-semibold text-lg">{task.title}</h3>
                             <p className="text-gray-600 dark:text-gray-400 mt-1">{task.description || 'No description'}</p>
                           </div>
-                          <div className="flex sm:flex-col sm:items-end gap-2">
+                          <div className="flex flex-col md:items-end gap-2">
                             {dueStatus === 'overdue' && (
-                              <span className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs px-2 py-1 rounded-full">
+                              <span className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs px-2 py-1 rounded-full self-start md:self-auto">
                                 Overdue
                               </span>
                             )}
                             {dueStatus === 'dueSoon' && (
-                              <span className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs px-2 py-1 rounded-full">
+                              <span className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs px-2 py-1 rounded-full self-start md:self-auto">
                                 Due Soon
                               </span>
                             )}
                           </div>
                         </div>
                         
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-2">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-4 gap-2">
                           <div className="flex items-center gap-2">
                             <span className="text-sm flex items-center gap-1">
                               <i className="fas fa-user text-gray-500"></i> {getAssigneeName(task.assigneeId)}
@@ -525,7 +524,7 @@ const App = () => {
       {/* Create Task Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-11/12 md:w-2/3 lg:w-1/2 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-semibold">Create New Task</h2>
               <button onClick={closeCreateModal} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
@@ -610,7 +609,7 @@ const App = () => {
       {/* Edit Task Modal */}
       {showEditModal && editTaskData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg w-11/12 md:w-2/3 lg:w-1/2 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
               <h2 className="text-xl font-semibold">Edit Task</h2>
               <button onClick={closeEditModal} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
@@ -695,7 +694,7 @@ const App = () => {
       {/* Confirmation Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md text-center">
             <h3 className="text-xl font-bold mb-4">Confirm Deletion</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">Are you sure you want to delete this task?</p>
             <div className="flex justify-center gap-4">
