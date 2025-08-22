@@ -458,7 +458,6 @@ const UsersManagementPage = () => {
                 <button
                   type="submit"
                   className="flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors duration-200 disabled:opacity-50"
-                  disabled={submitting || Object.keys(formErrors).length > 0}
                 >
                   {submitting ? (
                     <div className="flex items-center justify-center">
