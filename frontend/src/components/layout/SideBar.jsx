@@ -98,7 +98,7 @@ const Sidebar = ({ children }) => {
                     isActive
                       ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                  } ${showExpanded ? 'justify-start' : 'justify-center'}`
+                  } ${showExpanded ? 'justify-normal' : 'justify-normal'}`
                 }
                 aria-label={item.label}
               >
@@ -129,7 +129,20 @@ const Sidebar = ({ children }) => {
             </div>
 
             {/* Logout Button */}
-            <button
+            <div>
+              <button
+                onClick={logout}
+                className={`flex items-center w-full mt-3 p-2 rounded-md transition-colors duration-200
+                  ${showExpanded ? 'justify-start' : 'justify-center'}
+                  bg-red-500 hover:bg-red-600 text-white
+                  ${showExpanded ? 'min-w-[150px]' : 'min-w-[48px]'}`}
+                aria-label={t('sidebar.logout')}
+              >
+                <LogOut size={24} />
+                {showExpanded && <span className="ml-3 truncate">{t('sidebar.logout')}</span>}
+              </button>
+            </div>
+            {/* <button  choose between them
               onClick={logout}
               className={`flex items-center w-full mt-3 p-2 rounded-md transition-colors duration-200
                 ${showExpanded ? 'justify-start' : 'justify-center'}
@@ -138,7 +151,7 @@ const Sidebar = ({ children }) => {
             >
               <LogOut size={24} />
               {showExpanded && <span className="ml-3 truncate">{t('sidebar.logout')}</span>}
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

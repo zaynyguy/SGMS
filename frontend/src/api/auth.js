@@ -1,7 +1,7 @@
 // src/api/auth.js
 
 // Use Vite environment variable or fallback to production backend
-const API_URL = import.meta.env.VITE_API_URL || 'https://sgms-production.up.railway.app';
+const API_URL = import.meta.env.VITE_API_URL;
 
 /**
  * General API request helper
