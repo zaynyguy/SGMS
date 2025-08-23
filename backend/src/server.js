@@ -1,11 +1,10 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const db = require("./db");
 
 // --- Import Routes ---
 const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
+const usersRoutes = require("./routes/usersRoutes");
 const roleRoutes = require("./routes/roleRoutes");
 const permissionRoutes = require("./routes/permissionRoutes");
 const groupsRoutes = require("./routes/groupsRoutes");
@@ -24,7 +23,7 @@ app.use(express.json());
 
 // --- API Routes ---
 app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
+app.use("/api/users", usersRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/permissions", permissionRoutes);
 app.use("/api/settings", settingsRoutes);
@@ -47,8 +46,6 @@ app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
 
   try {
-    const current_time = await db.query("SELECT NOW()");
-    console.log(`Current time: ${current_time.rows[0].now}`);
     console.log("Database connection established successfully.");
   } catch (error) {
     console.error("Unable to connect to the database:", error);

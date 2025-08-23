@@ -1,247 +1,196 @@
+require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
 const db = require("../src/db");
 const bcrypt = require("bcrypt");
-require("dotenv").config();
 
-async function seedDatabase() {
-  console.log("🌱 Starting database seeding...");
-  const client = await db.pool.connect();
-
+async function run() {
+  const client = await db.connect();
   try {
     await client.query("BEGIN");
+    const schemaSql = fs.readFileSync(
+      path.join(__dirname, "schema.sql"),
+      "utf-8"
+    );
+    await client.query(schemaSql);
 
-    // -------------------- ROLES --------------------
-    await client.query(`
-      INSERT INTO "Roles" (name, description)
-      VALUES
-        ('Admin', 'Full access to all features'),
-        ('Manager', 'Can manage goals, tasks, activities, reports, and groups'),
-        ('User', 'Limited access for regular users')
-      ON CONFLICT (name) DO NOTHING;
-    `);
+    const roleNames = ["Admin", "Manager", "User"];
+    const roleIds = {};
+    for (const r of roleNames) {
+      const ins = await client.query(
+        `INSERT INTO "Roles"(name) VALUES ($1) RETURNING id`,
+        [r]
+      );
+      roleIds[r] = ins.rows[0].id;
+    }
 
-    const rolesRes = await client.query(`SELECT id, name FROM "Roles";`);
-    const roles = rolesRes.rows.reduce((acc, row) => {
-      acc[row.name] = row.id;
-      return acc;
-    }, {});
-    console.log("✅ Roles seeded:", roles);
+    const perms = [
+      // Users & Roles
+      "manage_users",
+      "manage_roles",
+      "manage_groups",
+      "view_groups",
 
-    // -------------------- PERMISSIONS --------------------
-    const permissionsToInsert = [
-      ["manage_users", "Can manage users"],
-      ["manage_roles", "Can manage roles"],
-      ["manage_permissions", "Can manage permissions"],
-      ["manage_groups", "Can manage groups & user assignments"],
-      ["manage_goals", "Can manage goals"],
-      ["manage_tasks", "Can manage tasks"],
-      ["manage_activities", "Can manage activities"],
-      ["manage_reports", "Can approve/reject reports"],
-      ["manage_attachments", "Can delete/manage attachments"],
-      ["submit_reports", "Can submit reports"],
-      ["upload_attachments", "Can upload attachments"],
-      ["view_users", "Can view users"],
-      ["view_roles", "Can view roles"],
-      ["view_permissions", "Can view permissions"],
-      ["view_groups", "Can view groups"],
-      ["view_goals", "Can view goals"],
-      ["view_tasks", "Can view tasks"],
-      ["view_activities", "Can view activities"],
-      ["view_reports", "Can view reports"],
-      ["view_attachments", "Can view attachments"],
-      ["manage_settings", "Can manage system settings"],
-      ["view_settings", "Can view system settings"],
+      // Goals / Tasks / Activities
+      "manage_goals",
+      "manage_tasks",
+      "manage_activities",
+
+      // Reports
+      "submit_reports",
+      "review_reports",
+      "view_reports",
+      "manage_reports",
+
+      // Attachments
+      "upload_attachments",
+
+      // Settings
+      "manage_settings",
+      "view_settings",
+
+      // Phase 3 extras
+      "view_audit_logs",
+      "manage_notifications",
+      "view_analytics",
+      "manage_analytics",
     ];
 
-    for (const [name, desc] of permissionsToInsert) {
-      await client.query(
-        `INSERT INTO "Permissions" (name, description)
-         VALUES ($1, $2) ON CONFLICT (name) DO NOTHING;`,
-        [name, desc]
+    const permIds = {};
+    for (const p of perms) {
+      const ins = await client.query(
+        `INSERT INTO "Permissions"(name) VALUES ($1) RETURNING id`,
+        [p]
       );
+      permIds[p] = ins.rows[0].id;
     }
 
-    const permsRes = await client.query(`SELECT id, name FROM "Permissions";`);
-    const permissions = permsRes.rows.reduce((acc, row) => {
-      acc[row.name] = row.id;
-      return acc;
-    }, {});
-    console.log("✅ Permissions seeded:", Object.keys(permissions));
-
-    // -------------------- ROLE PERMISSIONS --------------------
-    // Admin: all permissions
-    for (const permId of Object.values(permissions)) {
-      await client.query(
-        `INSERT INTO "RolePermissions" ("roleId", "permissionId")
-         VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
-        [roles.Admin, permId]
-      );
+    async function grant(role, arr) {
+      for (const p of arr) {
+        await client.query(
+          `INSERT INTO "RolePermissions"("roleId","permissionId") VALUES ($1,$2)`,
+          [roleIds[role], permIds[p]]
+        );
+      }
     }
-
-    // Manager: manage groups, goals, tasks, activities, reports, and settings + view everything
-    const managerPerms = [
+    await grant("Admin", perms);
+    await grant("Manager", [
+      "view_groups",
       "manage_groups",
       "manage_goals",
       "manage_tasks",
       "manage_activities",
-      "manage_reports",
-      "submit_reports",
-      "upload_attachments",
-      "view_users",
-      "view_roles",
-      "view_groups",
-      "view_goals",
-      "view_tasks",
-      "view_activities",
       "view_reports",
-      "manage_settings",      
-      "view_attachments",
-      "view_settings",    
-    ];
-    for (const name of managerPerms) {
-      if (permissions[name]) {
-        await client.query(
-          `INSERT INTO "RolePermissions" ("roleId", "permissionId")
-           VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
-          [roles.Manager, permissions[name]]
-        );
-      }
-    }
-
-    // User: minimal permissions
-    const userPerms = [
-      "view_tasks",
-      "view_activities",
+      "review_reports",
+      "upload_attachments",
+      "view_settings",
+    ]);
+    await grant("User", [
       "view_reports",
       "submit_reports",
       "upload_attachments",
-      "view_settings", 
-    ];
-    for (const name of userPerms) {
-      if (permissions[name]) {
-        await client.query(
-          `INSERT INTO "RolePermissions" ("roleId", "permissionId")
-           VALUES ($1, $2) ON CONFLICT DO NOTHING;`,
-          [roles.User, permissions[name]]
-        );
-      }
-    }
-    console.log("✅ Role permissions assigned.");
+      "view_settings",
+    ]);
 
-    // -------------------- ADMIN USER --------------------
-    const hashedPassword = await bcrypt.hash(
-      process.env.ADMIN_PASSWORD || "admin123",
-      10
+    const adminUser = process.env.ADMIN_USERNAME || "admin";
+    const adminPass = process.env.ADMIN_PASSWORD || "admin123";
+    const hash = await bcrypt.hash(adminPass, 10);
+    const u = await client.query(
+      `INSERT INTO "Users"(username, name, password, "roleId")
+      VALUES ($1,$2,$3,$4) RETURNING id`,
+      [adminUser, "System Admin", hash, roleIds["Admin"]]
     );
-    const adminUsername = process.env.ADMIN_USERNAME || "admin";
+    const adminId = u.rows[0].id;
 
-    await client.query(
-      `INSERT INTO "Users" (username, name, password, "roleId")
-       VALUES ($1, $2, $3, $4) ON CONFLICT (username) DO NOTHING;`,
-      [adminUsername, "System Admin", hashedPassword, roles.Admin]
+    const g = await client.query(
+      `INSERT INTO "Groups"(name, description) VALUES ($1,$2) RETURNING id`,
+      ["Development Team", "Handles software development."]
     );
+    const devGroupId = g.rows[0].id;
 
-    const adminRes = await client.query(
-      `SELECT id FROM "Users" WHERE username=$1`,
-      [adminUsername]
-    );
-    const adminId = adminRes.rows[0].id;
-    console.log(`✅ Admin user: ${adminUsername} (id=${adminId})`);
-
-    // -------------------- SAMPLE GROUP --------------------
-    await client.query(
-      `INSERT INTO "Groups" (name, description)
-       VALUES ('Development Team', 'Handles software development.')
-       ON CONFLICT (name) DO NOTHING;`
-    );
-
-    const groupRes = await client.query(
-      `SELECT id FROM "Groups" WHERE name='Development Team'`
-    );
-    const devGroupId = groupRes.rows[0].id;
-
-    // -------------------- SAMPLE GOAL --------------------
-    await client.query(
-      `INSERT INTO "Goals" (title, description, "groupId", "startDate", "endDate", status, progress)
-       VALUES ('Launch Feature X', 'Implement and release new feature.', $1, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'In Progress', 25);`,
+    const gl = await client.query(
+      `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", status, progress)
+      VALUES ('Launch Feature X','Implement and release new feature.', $1, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days','In Progress',25)
+      RETURNING id`,
       [devGroupId]
     );
-    const goalRes = await client.query(
-      `SELECT id FROM "Goals" WHERE title='Launch Feature X'`
-    );
-    const goalId = goalRes.rows[0].id;
+    const goalId = gl.rows[0].id;
 
-    // -------------------- SAMPLE TASK --------------------
-    await client.query(
-      `INSERT INTO "Tasks" (title, description, "goalId", status, "assigneeId", "dueDate", progress)
-       VALUES ('Implement Login', 'Create login module with JWT.', $1, 'In Progress', $2, CURRENT_DATE + INTERVAL '10 days', 50);`,
+    const tk = await client.query(
+      `INSERT INTO "Tasks"(title, description, "goalId", status, "assigneeId", "dueDate", progress)
+      VALUES ('Implement Login','Create login module with JWT.', $1, 'In Progress', $2, CURRENT_DATE + INTERVAL '10 days', 50)
+      RETURNING id`,
       [goalId, adminId]
     );
-    const taskRes = await client.query(
-      `SELECT id FROM "Tasks" WHERE title='Implement Login'`
-    );
-    const taskId = taskRes.rows[0].id;
+    const taskId = tk.rows[0].id;
 
-    // -------------------- SAMPLE ACTIVITY --------------------
-    await client.query(
-      `INSERT INTO "Activities" (title, description, "taskId", status)
-       VALUES ('JWT Middleware', 'Build and test JWT auth middleware.', $1, 'In Progress');`,
+    const ac = await client.query(
+      `INSERT INTO "Activities"(title, description, "taskId", status)
+      VALUES ('JWT Middleware','Build and test JWT auth middleware.', $1, 'In Progress') RETURNING id`,
       [taskId]
     );
+    const activityId = ac.rows[0].id;
 
-    const activityRes = await client.query(
-      `SELECT id FROM "Activities" WHERE title='JWT Middleware'`
-    );
-    const activityId = activityRes.rows[0].id;
-
-    // -------------------- SYSTEM SETTINGS --------------------
-    const settingsToInsert = [
-      // Use native JavaScript types
-      { key: "reporting_active", value: true, description: "Enable or disable the report submission window." },
-      { key: "resubmission_deadline_days", value: 7, description: "Number of days to resubmit a rejected report." },
-      { key: "reporting_start_day", value: "Monday", description: "The day of the week the reporting period starts." }
+    const settings = [
+      {
+        key: "reporting_active",
+        value: true,
+        description: "Enable or disable the report submission window.",
+      },
+      {
+        key: "resubmission_deadline_days",
+        value: 7,
+        description: "Number of days to resubmit a rejected report.",
+      },
+      {
+        key: "reporting_start_day",
+        value: "Monday",
+        description: "The day of the week the reporting period starts.",
+      },
+      {
+        key: "notification_email_enabled",
+        value: true,
+        description: "Enable or disable email notifications for the system.",
+      },
+      {
+        key: "dashboard_refresh_interval",
+        value: 60,
+        description: "The refresh interval in seconds for the dashboard data.",
+      },
+      {
+        key: "audit_retention_days",
+        value: 365,
+        description: "Number of days to retain audit logs.",
+      },
     ];
-
-    for (const setting of settingsToInsert) {
-      // Correctly format the string value as a JSON string literal for the database
-      const valueToInsert = (typeof setting.value === 'string') ? JSON.stringify(setting.value) : setting.value;
+    for (const s of settings) {
+      const val =
+        typeof s.value === "string" ? JSON.stringify(s.value) : s.value;
       await client.query(
-        `INSERT INTO "SystemSettings" (key, value, description)
-         VALUES ($1, $2::jsonb, $3)
-         ON CONFLICT (key) DO NOTHING;`,
-        [setting.key, valueToInsert, setting.description]
+        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1, $2::jsonb, $3)`,
+        [s.key, val, s.description]
       );
     }
-    console.log("✅ System settings seeded.");
 
-    // -------------------- SAMPLE REPORT --------------------
-    await client.query(
-      `INSERT INTO "Reports" ("activityId", "userId", narrative, status)
-       VALUES ($1, $2, 'Initial activity report.', 'Pending');`,
+    const r = await client.query(
+      `INSERT INTO "Reports"("activityId","userId", narrative, status)
+      VALUES ($1,$2,'Initial activity report.','Pending') RETURNING id`,
       [activityId, adminId]
     );
-
-    const reportRes = await client.query(
-      `SELECT id FROM "Reports" WHERE "activityId"=$1`,
-      [activityId]
-    );
-    const reportId = reportRes.rows[0].id;
-
-    // -------------------- SAMPLE ATTACHMENT --------------------
+    const reportId = r.rows[0].id;
     await client.query(
-      `INSERT INTO "Attachments" ("reportId", "fileName", "filePath", "fileType")
-       VALUES ($1, 'sample.png', '/uploads/sample.png', 'image/png');`,
-      [reportId]
+      `INSERT INTO "Attachments"("reportId","fileName","filePath","fileType") VALUES ($1,$2,$3,$4)`,
+      [reportId, "sample.txt", "/uploads/sample.txt", "text/plain"]
     );
-    console.log("✅ Sample report and attachment seeded.");
 
     await client.query("COMMIT");
-    console.log("🎉 Database seeded successfully!");
-  } catch (err) {
+    console.log("Seed complete.");
+  } catch (e) {
     await client.query("ROLLBACK");
-    console.error("❌ Seeding failed:", err);
+    console.error("Seed failed", e);
   } finally {
     client.release();
   }
 }
 
-seedDatabase();
+run();

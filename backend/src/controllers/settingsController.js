@@ -1,6 +1,6 @@
 const db = require('../db');
 const bcrypt = require('bcrypt');
-const { generateToken } = require('./authController');
+const { generateToken } = require('../utils/generateToken');
 
 // -------------------- GET SETTINGS --------------------
 exports.getSettings = async (req, res) => {

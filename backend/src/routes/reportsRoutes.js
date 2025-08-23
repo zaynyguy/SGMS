@@ -1,12 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const reportsController = require("../controllers/reportsController");
-const {
-  authenticateJWT,
-  authorizePermissions,
-} = require("../middleware/authMiddleware");
+const { authenticateJWT, authorizePermissions } = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
 
+// Protect all routes
 router.use(authenticateJWT);
 
 // User submits a report for an activity (with attachments)
@@ -30,7 +28,7 @@ router.get(
   reportsController.generateMasterReport
 );
 
-// Fetch all reports (for the admin's review page)
+// Fetch all reports (for admin’s review page)
 router.get(
   "/",
   authorizePermissions(["manage_reports"]),
@@ -40,7 +38,7 @@ router.get(
 // Download a specific attachment
 router.get(
   "/attachments/:attachmentId/download",
-  authorizePermissions(["view_reports"]),
+  authorizePermissions(["view_reports", "manage_reports"]),
   reportsController.downloadAttachment
 );
 
