@@ -2,19 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-// --- Import Routes ---
-const authRoutes = require("./routes/authRoutes");
-const usersRoutes = require("./routes/usersRoutes");
-const roleRoutes = require("./routes/roleRoutes");
-const permissionRoutes = require("./routes/permissionRoutes");
-const groupsRoutes = require("./routes/groupsRoutes");
-const userGroupsRoutes = require('./routes/userGroupsRoutes');
-const goalsRoutes = require("./routes/goalsRoutes");
-const tasksRoutes = require("./routes/tasksRoutes");
-const activitiesRoutes = require("./routes/activitiesRoutes");
-const settingsRoutes = require("./routes/settingsRoutes");
-const systemSettingsRoutes = require("./routes/systemSettingsRoutes");
-const reportsRoutes = require("./routes/reportsRoutes");
 
 const app = express();
 
@@ -22,18 +9,22 @@ app.use(cors());
 app.use(express.json());
 
 // --- API Routes ---
-app.use("/api/auth", authRoutes);
-app.use("/api/users", usersRoutes);
-app.use("/api/roles", roleRoutes);
-app.use("/api/permissions", permissionRoutes);
-app.use("/api/settings", settingsRoutes);
-app.use("/api/goals", goalsRoutes);
-app.use("/api/tasks", tasksRoutes);
-app.use("/api/activities", activitiesRoutes);
-app.use("/api/groups", groupsRoutes);
-app.use('/api/user-groups', userGroupsRoutes);
-app.use("/api/system-settings", systemSettingsRoutes);
-app.use("/api/reports", reportsRoutes);
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/users", require("./routes/usersRoutes"));
+app.use("/api/roles", require("./routes/roleRoutes"));
+app.use("/api/permissions", require("./routes/permissionRoutes"));
+app.use("/api/settings", require("./routes/settingsRoutes"));
+app.use("/api/goals", require("./routes/goalsRoutes"));
+app.use("/api/tasks", require("./routes/tasksRoutes"));
+app.use("/api/activities", require("./routes/activitiesRoutes"));
+app.use("/api/groups", require("./routes/groupsRoutes"));
+app.use('/api/user-groups', require('./routes/userGroupsRoutes'));
+app.use("/api/system-settings", require("./routes/systemSettingsRoutes"));
+app.use("/api/reports", require("./routes/reportsRoutes"));
+app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/notifications", require("./routes/notificationsRoutes"));
+app.use("/api/audit", require("./routes/auditRoutes"));
+
 
 app.get("/", (req, res) => {
   res.send("The api server is running ..");

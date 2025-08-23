@@ -152,23 +152,23 @@ CREATE INDEX idx_attachments_reportId ON "Attachments" ("reportId");
 
 -- Notifications
 CREATE TABLE "Notifications" (
-  id SERIAL PRIMARY KEY,
-  userId INT NOT NULL REFERENCES "Users"(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,
-  message TEXT NOT NULL,
-  isRead BOOLEAN DEFAULT false,
-  createdAt TIMESTAMPTZ DEFAULT now()
+  "id" SERIAL PRIMARY KEY,
+  "userId" INT NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
+  "type" VARCHAR(50) NOT NULL,
+  "message" TEXT NOT NULL,
+  "isRead" BOOLEAN DEFAULT false,
+  "createdAt" TIMESTAMPTZ DEFAULT now()
 );
 
 -- Audit Logs
 CREATE TABLE "AuditLogs" (
-  id SERIAL PRIMARY KEY,
-  userId INT REFERENCES "Users"(id) ON DELETE SET NULL,
-  action VARCHAR(100) NOT NULL,
-  entity VARCHAR(100) NOT NULL,
-  entityId INT,
-  details JSONB,
-  createdAt TIMESTAMPTZ DEFAULT now()
+  "id" SERIAL PRIMARY KEY,
+  "userId" INT REFERENCES "Users"("id") ON DELETE SET NULL,
+  "action" VARCHAR(100) NOT NULL,
+  "entity" VARCHAR(100) NOT NULL,
+  "entityId" INT,
+  "details" JSONB,
+  "createdAt" TIMESTAMPTZ DEFAULT now()
 );
 
 -- generic updatedAt trigger
