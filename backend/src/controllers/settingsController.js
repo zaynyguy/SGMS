@@ -1,12 +1,15 @@
 const db = require('../db');
 const bcrypt = require('bcrypt');
-const { generateToken } = require('../utils/generateToken');
+const generateToken = require('../utils/generateToken');
 
 // -------------------- GET SETTINGS --------------------
 exports.getSettings = async (req, res) => {
   const userId = req.user.id;
   try {
-    const { rows } = await db.query('SELECT username, name, language, "darkMode" FROM "Users" WHERE id = $1', [userId]);
+    const { rows } = await db.query(
+      'SELECT username, name, language, "darkMode", "profilePicture" FROM "Users" WHERE id = $1',
+      [userId]
+    );
     if (!rows[0]) return res.status(404).json({ message: "User not found." });
     res.status(200).json(rows[0]);
   } catch (error) {
@@ -18,10 +21,11 @@ exports.getSettings = async (req, res) => {
 // -------------------- UPDATE SETTINGS --------------------
 exports.updateSettings = async (req, res) => {
   const userId = req.user.id;
-  const { language, darkMode, oldPassword, newPassword } = req.body;
+  const { name, language, darkMode, oldPassword, newPassword } = req.body;
 
   try {
     if (oldPassword && newPassword) {
+      // password change case
       const { rows } = await db.query('SELECT password FROM "Users" WHERE id = $1', [userId]);
       if (!rows[0]) return res.status(404).json({ message: "User not found." });
 
@@ -30,13 +34,14 @@ exports.updateSettings = async (req, res) => {
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await db.query(
-        'UPDATE "Users" SET password = $1, language = $2, "darkMode" = $3, "updatedAt" = NOW() WHERE id = $4',
-        [hashedPassword, language, darkMode, userId]
+        'UPDATE "Users" SET password = $1, name = COALESCE($2,name), language = $3, "darkMode" = $4, "updatedAt" = NOW() WHERE id = $5',
+        [hashedPassword, name, language, darkMode, userId]
       );
     } else {
+      // no password change, just settings
       await db.query(
-        'UPDATE "Users" SET language = $1, "darkMode" = $2, "updatedAt" = NOW() WHERE id = $3',
-        [language, darkMode, userId]
+        'UPDATE "Users" SET name = COALESCE($1,name), language = $2, "darkMode" = $3, "updatedAt" = NOW() WHERE id = $4',
+        [name, language, darkMode, userId]
       );
     }
 
@@ -45,5 +50,37 @@ exports.updateSettings = async (req, res) => {
   } catch (error) {
     console.error("Error updating user settings:", error);
     res.status(500).json({ message: "Failed to update user settings.", error: error.message });
+  }
+};
+
+// -------------------- UPDATE PROFILE PICTURE --------------------
+exports.updateProfilePicture = async (req, res) => {
+  const userId = req.user.id;
+
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded." });
+  }
+
+  try {
+    const filePath = req.file.filename; // stored by multer in UPLOAD_DIR
+
+    const { rows } = await db.query(
+      `UPDATE "Users" 
+       SET "profilePicture" = $1, "updatedAt" = NOW() 
+       WHERE id = $2 RETURNING id, username, name, language, "darkMode", "profilePicture"`,
+      [filePath, userId]
+    );
+
+    if (!rows[0]) return res.status(404).json({ message: "User not found." });
+
+    const { token, user } = await generateToken(userId);
+    res.status(200).json({
+      message: "Profile picture updated successfully.",
+      token,
+      user: rows[0]
+    });
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    res.status(500).json({ message: "Failed to update profile picture.", error: error.message });
   }
 };

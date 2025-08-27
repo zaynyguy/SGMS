@@ -10,6 +10,8 @@ DROP TABLE IF EXISTS "Users" CASCADE;
 DROP TABLE IF EXISTS "Permissions" CASCADE;
 DROP TABLE IF EXISTS "Roles" CASCADE;
 DROP TABLE IF EXISTS "Groups" CASCADE;
+DROP TABLE IF EXISTS "Notifications" CASCADE;
+DROP TABLE IF EXISTS "AuditLogs" CASCADE;
 
 DROP TYPE IF EXISTS goal_status, task_status, activity_status, report_status;
 
@@ -38,6 +40,7 @@ CREATE TABLE "Users" (
   "id" SERIAL PRIMARY KEY,
   "username" VARCHAR(255) NOT NULL UNIQUE,
   "name" VARCHAR(255),
+  "profilePicture" TEXT,
   "password" VARCHAR(255) NOT NULL,
   "roleId" INTEGER REFERENCES "Roles"("id") ON DELETE SET NULL,
   "language" VARCHAR(10) DEFAULT 'en',

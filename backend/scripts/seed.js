@@ -8,12 +8,15 @@ async function run() {
   const client = await db.connect();
   try {
     await client.query("BEGIN");
+
+    // reload schema
     const schemaSql = fs.readFileSync(
       path.join(__dirname, "schema.sql"),
       "utf-8"
     );
     await client.query(schemaSql);
 
+    // roles
     const roleNames = ["Admin", "Manager", "User"];
     const roleIds = {};
     for (const r of roleNames) {
@@ -24,32 +27,22 @@ async function run() {
       roleIds[r] = ins.rows[0].id;
     }
 
+    // permissions
     const perms = [
-      // Users & Roles
       "manage_users",
       "manage_roles",
       "manage_groups",
       "view_groups",
-
-      // Goals / Tasks / Activities
       "manage_goals",
       "manage_tasks",
       "manage_activities",
-
-      // Reports
       "submit_reports",
       "review_reports",
       "view_reports",
       "manage_reports",
-
-      // Attachments
       "upload_attachments",
-
-      // Settings
       "manage_settings",
       "view_settings",
-
-      // Phase 3 extras
       "view_audit_logs",
       "manage_notifications",
       "view_analytics",
@@ -92,16 +85,18 @@ async function run() {
       "view_settings",
     ]);
 
+    // admin user
     const adminUser = process.env.ADMIN_USERNAME || "admin";
     const adminPass = process.env.ADMIN_PASSWORD || "admin123";
     const hash = await bcrypt.hash(adminPass, 10);
     const u = await client.query(
-      `INSERT INTO "Users"(username, name, password, "roleId")
-      VALUES ($1,$2,$3,$4) RETURNING id`,
-      [adminUser, "System Admin", hash, roleIds["Admin"]]
+      `INSERT INTO "Users"(username, name, password, "roleId", "profilePicture")
+       VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+      [adminUser, "System Admin", hash, roleIds["Admin"], "/uploads/admin.png"]
     );
     const adminId = u.rows[0].id;
 
+    // create test group + goal/task/activity
     const g = await client.query(
       `INSERT INTO "Groups"(name, description) VALUES ($1,$2) RETURNING id`,
       ["Development Team", "Handles software development."]
@@ -131,41 +126,17 @@ async function run() {
     );
     const activityId = ac.rows[0].id;
 
+    // settings
     const settings = [
-      {
-        key: "reporting_active",
-        value: true,
-        description: "Enable or disable the report submission window.",
-      },
-      {
-        key: "resubmission_deadline_days",
-        value: 7,
-        description: "Number of days to resubmit a rejected report.",
-      },
-      {
-        key: "reporting_start_day",
-        value: "Monday",
-        description: "The day of the week the reporting period starts.",
-      },
-      {
-        key: "notification_email_enabled",
-        value: true,
-        description: "Enable or disable email notifications for the system.",
-      },
-      {
-        key: "dashboard_refresh_interval",
-        value: 60,
-        description: "The refresh interval in seconds for the dashboard data.",
-      },
-      {
-        key: "audit_retention_days",
-        value: 365,
-        description: "Number of days to retain audit logs.",
-      },
+      { key: "reporting_active", value: true, description: "Enable or disable the report submission window." },
+      { key: "resubmission_deadline_days", value: 7, description: "Number of days to resubmit a rejected report." },
+      { key: "reporting_start_day", value: "Monday", description: "The day of the week the reporting period starts." },
+      { key: "notification_email_enabled", value: true, description: "Enable or disable email notifications for the system." },
+      { key: "dashboard_refresh_interval", value: 60, description: "The refresh interval in seconds for the dashboard data." },
+      { key: "audit_retention_days", value: 365, description: "Number of days to retain audit logs." },
     ];
     for (const s of settings) {
-      const val =
-        typeof s.value === "string" ? JSON.stringify(s.value) : s.value;
+      const val = typeof s.value === "string" ? JSON.stringify(s.value) : s.value;
       await client.query(
         `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1, $2::jsonb, $3)`,
         [s.key, val, s.description]
@@ -178,8 +149,10 @@ async function run() {
       [activityId, adminId]
     );
     const reportId = r.rows[0].id;
+
     await client.query(
-      `INSERT INTO "Attachments"("reportId","fileName","filePath","fileType") VALUES ($1,$2,$3,$4)`,
+      `INSERT INTO "Attachments"("reportId","fileName","filePath","fileType")
+       VALUES ($1,$2,$3,$4)`,
       [reportId, "sample.txt", "/uploads/sample.txt", "text/plain"]
     );
 

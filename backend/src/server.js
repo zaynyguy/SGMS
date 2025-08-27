@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-
 const app = express();
 
 app.use(cors());
@@ -18,13 +17,12 @@ app.use("/api/goals", require("./routes/goalsRoutes"));
 app.use("/api/tasks", require("./routes/tasksRoutes"));
 app.use("/api/activities", require("./routes/activitiesRoutes"));
 app.use("/api/groups", require("./routes/groupsRoutes"));
-app.use('/api/user-groups', require('./routes/userGroupsRoutes'));
+app.use("/api/user-groups", require("./routes/userGroupsRoutes"));
 app.use("/api/system-settings", require("./routes/systemSettingsRoutes"));
 app.use("/api/reports", require("./routes/reportsRoutes"));
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/notifications", require("./routes/notificationsRoutes"));
 app.use("/api/audit", require("./routes/auditRoutes"));
-
 
 app.get("/", (req, res) => {
   res.send("The api server is running ..");
