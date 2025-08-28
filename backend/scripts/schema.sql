@@ -1,3 +1,4 @@
+-- schema.sql (full)
 DROP TABLE IF EXISTS "Attachments" CASCADE;
 DROP TABLE IF EXISTS "Reports" CASCADE;
 DROP TABLE IF EXISTS "SystemSettings" CASCADE;
@@ -84,6 +85,7 @@ CREATE TABLE "Goals" (
   "endDate" DATE,
   "status" goal_status NOT NULL DEFAULT 'Not Started',
   "progress" INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+  "weight" NUMERIC DEFAULT 100,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -98,6 +100,7 @@ CREATE TABLE "Tasks" (
   "assigneeId" INTEGER REFERENCES "Users"("id") ON DELETE SET NULL,
   "dueDate" DATE,
   "progress" INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+  "weight" NUMERIC DEFAULT 0,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -113,6 +116,10 @@ CREATE TABLE "Activities" (
   "status" activity_status NOT NULL DEFAULT 'To Do',
   "dueDate" DATE,
   "metrics" JSONB,
+  "targetMetric" JSONB DEFAULT '{}'::jsonb,
+  "currentMetric" JSONB DEFAULT '{}'::jsonb,
+  "weight" NUMERIC DEFAULT 0,
+  "isDone" BOOLEAN DEFAULT false,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -153,7 +160,6 @@ CREATE TABLE "Attachments" (
 );
 CREATE INDEX idx_attachments_reportId ON "Attachments" ("reportId");
 
--- Notifications
 CREATE TABLE "Notifications" (
   "id" SERIAL PRIMARY KEY,
   "userId" INT NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
@@ -163,7 +169,6 @@ CREATE TABLE "Notifications" (
   "createdAt" TIMESTAMPTZ DEFAULT now()
 );
 
--- Audit Logs
 CREATE TABLE "AuditLogs" (
   "id" SERIAL PRIMARY KEY,
   "userId" INT REFERENCES "Users"("id") ON DELETE SET NULL,
@@ -192,59 +197,3 @@ CREATE TRIGGER set_updatedAt_Tasks BEFORE UPDATE ON "Tasks" FOR EACH ROW EXECUTE
 CREATE TRIGGER set_updatedAt_Activities BEFORE UPDATE ON "Activities" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
 CREATE TRIGGER set_updatedAt_SystemSettings BEFORE UPDATE ON "SystemSettings" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
 CREATE TRIGGER set_updatedAt_Reports BEFORE UPDATE ON "Reports" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-
--- Progress triggers (DB-level, in addition to app-level recalcs)
-CREATE OR REPLACE FUNCTION trg_recalc_task_progress() RETURNS TRIGGER AS $$
-DECLARE v_task_id INT;
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    v_task_id := OLD."taskId";
-  ELSE
-    v_task_id := NEW."taskId";
-  END IF;
-
-  UPDATE "Tasks" t
-  SET progress = COALESCE((
-    SELECT AVG(CASE a.status WHEN 'Done' THEN 100 WHEN 'In Progress' THEN 50 ELSE 0 END)::int
-    FROM "Activities" a WHERE a."taskId" = v_task_id
-  ), 0)
-  WHERE t.id = v_task_id;
-
-  IF TG_OP = 'DELETE' THEN
-    RETURN OLD;
-  ELSE
-    RETURN NEW;
-  END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER after_activities_change
-AFTER INSERT OR UPDATE OR DELETE ON "Activities"
-FOR EACH ROW EXECUTE FUNCTION trg_recalc_task_progress();
-
-CREATE OR REPLACE FUNCTION trg_recalc_goal_progress() RETURNS TRIGGER AS $$
-DECLARE v_goal_id INT;
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    v_goal_id := OLD."goalId";
-  ELSE
-    v_goal_id := NEW."goalId";
-  END IF;
-
-  UPDATE "Goals" g
-  SET progress = COALESCE((
-    SELECT AVG(t.progress)::int FROM "Tasks" t WHERE t."goalId" = v_goal_id
-  ), 0)
-  WHERE g.id = v_goal_id;
-
-  IF TG_OP = 'DELETE' THEN
-    RETURN OLD;
-  ELSE
-    RETURN NEW;
-  END IF;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER after_tasks_change
-AFTER INSERT OR UPDATE OR DELETE ON "Tasks"
-FOR EACH ROW EXECUTE FUNCTION trg_recalc_goal_progress();

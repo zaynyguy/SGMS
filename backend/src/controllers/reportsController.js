@@ -1,11 +1,12 @@
+// src/controllers/reportsController.js
 const db = require("../db");
 const path = require("path");
 const fs = require("fs");
 const { logAudit } = require("../helpers/audit");
 const { createNotification } = require("./notificationsController");
 const { generateReportHtml } = require("../helpers/reportHelper");
-
 const UPLOADS_DIR = path.join(__dirname, "..", "uploads");
+const { recalcProgressFromActivity } = require("../utils/progress");
 
 exports.submitReport = async (req, res) => {
   const { activityId } = req.params;
@@ -25,7 +26,7 @@ exports.submitReport = async (req, res) => {
       `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [activityId, req.user.id, narrative, metrics_data, new_status]
+      [activityId, req.user.id, narrative, metrics_data || null, new_status]
     );
 
     const report = reportResult.rows[0];
@@ -60,25 +61,84 @@ exports.reviewReport = async (req, res) => {
     return res.status(400).json({ error: "Invalid status provided." });
   }
 
+  const client = await db.connect();
   try {
-    const { rows } = await db.query(
+    await client.query("BEGIN");
+
+    
+    const repRes = await client.query(
+      `SELECT * FROM "Reports" WHERE id = $1 FOR UPDATE`,
+      [reportId]
+    );
+
+    if (!repRes.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Report not found" });
+    }
+
+    const updated = await client.query(
       `UPDATE "Reports" SET status=$1, "adminComment"=$2, "updatedAt"=now() WHERE id=$3 RETURNING *`,
       [status, adminComment || null, reportId]
     );
 
-    if (!rows[0]) {
-      return res.status(404).json({ error: "Report not found" });
+    const updatedReport = updated.rows[0];
+
+    
+    if (status === "Approved") {
+      const activityId = updatedReport.activityId;
+
+      
+      if (updatedReport.metrics_data) {
+        await client.query(
+          `UPDATE "Activities" SET "currentMetric" = COALESCE($1,"currentMetric"), "isDone" = true, "status" = 'Done', "updatedAt" = NOW() WHERE id = $2`,
+          [updatedReport.metrics_data, activityId]
+        );
+      } else {
+        await client.query(
+          `UPDATE "Activities" SET "isDone" = true, "status" = 'Done', "updatedAt" = NOW() WHERE id = $1`,
+          [activityId]
+        );
+      }
+
+      
+      await recalcProgressFromActivity(client, activityId);
     }
 
     await logAudit(req.user.id, "review", "Report", reportId, { status });
     await createNotification(
-      rows[0].userId,
+      updatedReport.userId,
       "report_review",
       `Your report was ${status}.`
     );
-    res.json(rows[0]);
+
+    await client.query("COMMIT");
+    res.json(updatedReport);
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Error reviewing report:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+};
+
+exports.getAllReports = async (req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT r.*, u.name as user_name,
+             a.title as activity_title,
+             t.title as task_title,
+             g.title as goal_title
+      FROM "Reports" r
+      LEFT JOIN "Users" u ON r."userId" = u.id
+      LEFT JOIN "Activities" a ON r."activityId" = a.id
+      LEFT JOIN "Tasks" t ON a."taskId" = t.id
+      LEFT JOIN "Goals" g ON t."goalId" = g.id
+      ORDER BY r."createdAt" DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error("Error fetching all reports:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -103,27 +163,6 @@ exports.generateMasterReport = async (req, res) => {
     res.set("Content-Type", "text/html").send(html);
   } catch (err) {
     console.error("Error generating master report:", err);
-    res.status(500).json({ error: err.message });
-  }
-};
-
-exports.getAllReports = async (req, res) => {
-  try {
-    const { rows } = await db.query(`
-      SELECT r.*, u.name as user_name,
-             a.title as activity_title,
-             t.title as task_title,
-             g.title as goal_title
-      FROM "Reports" r
-      LEFT JOIN "Users" u ON r."userId" = u.id
-      LEFT JOIN "Activities" a ON r."activityId" = a.id
-      LEFT JOIN "Tasks" t ON a."taskId" = t.id
-      LEFT JOIN "Goals" g ON t."goalId" = g.id
-      ORDER BY r."createdAt" DESC
-    `);
-    res.json(rows);
-  } catch (err) {
-    console.error("Error fetching all reports:", err);
     res.status(500).json({ error: err.message });
   }
 };

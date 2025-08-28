@@ -28,6 +28,7 @@ async function run() {
     }
 
     // permissions
+    // NOTE: added manage_gta and view_gta for the consolidated GTA permission model
     const perms = [
       "manage_users",
       "manage_roles",
@@ -36,6 +37,8 @@ async function run() {
       "manage_goals",
       "manage_tasks",
       "manage_activities",
+      "manage_gta",    
+      "view_gta",      
       "submit_reports",
       "review_reports",
       "view_reports",
@@ -66,23 +69,32 @@ async function run() {
         );
       }
     }
+
+    // Grants
+    // Admin gets everything
     await grant("Admin", perms);
+
+    // Manager gets group & GTA management and report viewing/reviewing etc.
     await grant("Manager", [
       "view_groups",
       "manage_groups",
-      "manage_goals",
-      "manage_tasks",
-      "manage_activities",
+      "manage_gta",      
+      "view_gta",
+      "manage_reports",
       "view_reports",
       "review_reports",
       "upload_attachments",
       "view_settings",
+      "view_analytics"
     ]);
+
+    // User gets viewing / submitting rights within their groups
     await grant("User", [
       "view_reports",
       "submit_reports",
       "upload_attachments",
       "view_settings",
+      "view_gta"         
     ]);
 
     // admin user
@@ -103,26 +115,28 @@ async function run() {
     );
     const devGroupId = g.rows[0].id;
 
+    // Insert a sample goal with an explicit weight to show it's supported (default is 100)
     const gl = await client.query(
-      `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", status, progress)
-      VALUES ('Launch Feature X','Implement and release new feature.', $1, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days','In Progress',25)
+      `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", status, progress, weight)
+      VALUES ('Launch Feature X','Implement and release new feature.', $1, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days','In Progress',25, 100)
       RETURNING id`,
       [devGroupId]
     );
     const goalId = gl.rows[0].id;
 
     const tk = await client.query(
-      `INSERT INTO "Tasks"(title, description, "goalId", status, "assigneeId", "dueDate", progress)
-      VALUES ('Implement Login','Create login module with JWT.', $1, 'In Progress', $2, CURRENT_DATE + INTERVAL '10 days', 50)
+      `INSERT INTO "Tasks"(title, description, "goalId", status, "assigneeId", "dueDate", progress, weight)
+      VALUES ('Implement Login','Create login module with JWT.', $1, 'In Progress', $2, CURRENT_DATE + INTERVAL '10 days', 50, 40)
       RETURNING id`,
       [goalId, adminId]
     );
     const taskId = tk.rows[0].id;
 
+    // Insert an activity with a weight and optional targetMetric example
     const ac = await client.query(
-      `INSERT INTO "Activities"(title, description, "taskId", status)
-      VALUES ('JWT Middleware','Build and test JWT auth middleware.', $1, 'In Progress') RETURNING id`,
-      [taskId]
+      `INSERT INTO "Activities"(title, description, "taskId", status, weight, "targetMetric", "currentMetric", "isDone")
+      VALUES ('JWT Middleware','Build and test JWT auth middleware.', $1, 'In Progress', 20, $2, $3, false) RETURNING id`,
+      [taskId, JSON.stringify({ linesOfCode: 1000 }), JSON.stringify({ linesOfCode: 200 })]
     );
     const activityId = ac.rows[0].id;
 
@@ -136,10 +150,10 @@ async function run() {
       { key: "audit_retention_days", value: 365, description: "Number of days to retain audit logs." },
     ];
     for (const s of settings) {
-      const val = typeof s.value === "string" ? JSON.stringify(s.value) : s.value;
+      // Ensure we insert JSONB properly: stringify JS values before passing to query
       await client.query(
         `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1, $2::jsonb, $3)`,
-        [s.key, val, s.description]
+        [s.key, JSON.stringify(s.value), s.description]
       );
     }
 
