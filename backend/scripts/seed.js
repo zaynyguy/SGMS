@@ -37,8 +37,8 @@ async function run() {
       "manage_goals",
       "manage_tasks",
       "manage_activities",
-      "manage_gta",    
-      "view_gta",      
+      "manage_gta",
+      "view_gta",
       "submit_reports",
       "review_reports",
       "view_reports",
@@ -78,14 +78,14 @@ async function run() {
     await grant("Manager", [
       "view_groups",
       "manage_groups",
-      "manage_gta",      
+      "manage_gta",
       "view_gta",
       "manage_reports",
       "view_reports",
       "review_reports",
       "upload_attachments",
       "view_settings",
-      "view_analytics"
+      "view_analytics",
     ]);
 
     // User gets viewing / submitting rights within their groups
@@ -94,7 +94,7 @@ async function run() {
       "submit_reports",
       "upload_attachments",
       "view_settings",
-      "view_gta"         
+      "view_gta",
     ]);
 
     // admin user
@@ -136,18 +136,36 @@ async function run() {
     const ac = await client.query(
       `INSERT INTO "Activities"(title, description, "taskId", status, weight, "targetMetric", "currentMetric", "isDone")
       VALUES ('JWT Middleware','Build and test JWT auth middleware.', $1, 'In Progress', 20, $2, $3, false) RETURNING id`,
-      [taskId, JSON.stringify({ linesOfCode: 1000 }), JSON.stringify({ linesOfCode: 200 })]
+      [
+        taskId,
+        JSON.stringify({ linesOfCode: 1000 }),
+        JSON.stringify({ linesOfCode: 200 }),
+      ]
     );
     const activityId = ac.rows[0].id;
 
     // settings
     const settings = [
-      { key: "reporting_active", value: true, description: "Enable or disable the report submission window." },
-      { key: "resubmission_deadline_days", value: 7, description: "Number of days to resubmit a rejected report." },
-      { key: "reporting_start_day", value: "Monday", description: "The day of the week the reporting period starts." },
-      { key: "notification_email_enabled", value: true, description: "Enable or disable email notifications for the system." },
-      { key: "dashboard_refresh_interval", value: 60, description: "The refresh interval in seconds for the dashboard data." },
-      { key: "audit_retention_days", value: 365, description: "Number of days to retain audit logs." },
+      {
+        key: "max_attachment_size_mb",
+        value: 10,
+        description: "Max attachment upload size (MB)",
+      },
+      {
+        key: "allowed_attachment_types",
+        value: ["application/pdf", "image/png", "image/jpeg", "text/plain"],
+        description: "Allowed MIME types for attachments",
+      },
+      {
+        key: "reporting_active",
+        value: true,
+        description: "Enable or disable report submissions",
+      },
+      {
+        key: "resubmission_deadline_days",
+        value: 7,
+        description: "Days to resubmit rejected reports",
+      },
     ];
     for (const s of settings) {
       // Ensure we insert JSONB properly: stringify JS values before passing to query

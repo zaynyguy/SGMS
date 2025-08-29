@@ -1,4 +1,3 @@
--- schema.sql (full)
 DROP TABLE IF EXISTS "Attachments" CASCADE;
 DROP TABLE IF EXISTS "Reports" CASCADE;
 DROP TABLE IF EXISTS "SystemSettings" CASCADE;
@@ -115,7 +114,6 @@ CREATE TABLE "Activities" (
   "description" TEXT,
   "status" activity_status NOT NULL DEFAULT 'To Do',
   "dueDate" DATE,
-  "metrics" JSONB,
   "targetMetric" JSONB DEFAULT '{}'::jsonb,
   "currentMetric" JSONB DEFAULT '{}'::jsonb,
   "weight" NUMERIC DEFAULT 0,
