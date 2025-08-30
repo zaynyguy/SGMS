@@ -20,7 +20,7 @@ app.use("/api/groups", require("./routes/groupsRoutes"));
 app.use("/api/user-groups", require("./routes/userGroupsRoutes"));
 app.use("/api/system-settings", require("./routes/systemSettingsRoutes"));
 app.use("/api/reports", require("./routes/reportsRoutes"));
-app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/notifications", require("./routes/notificationsRoutes"));
 app.use("/api/audit", require("./routes/auditRoutes"));
 

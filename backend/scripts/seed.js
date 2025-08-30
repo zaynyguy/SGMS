@@ -1,198 +1,155 @@
-require("dotenv").config();
-const fs = require("fs");
-const path = require("path");
-const db = require("../src/db");
-const bcrypt = require("bcrypt");
+// scripts/seed.minimal.js
+// Minimal seed: roles, permissions, admin user, one group, basic settings.
+// Usage: node scripts/seed.minimal.js
+
+require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
+const db = require('../src/db'); // adjust path if needed
+const bcrypt = require('bcrypt');
+
+async function findSchema() {
+  const candidates = [
+    path.join(__dirname, '..', 'db', 'schema.sql'),
+    path.join(__dirname, '..', 'schema.sql'),
+    path.join(__dirname, 'schema.sql'),
+    path.join(__dirname, '..', 'db', 'schema.sql')
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return fs.readFileSync(p, 'utf8');
+  }
+  throw new Error('schema.sql not found in expected locations.');
+}
 
 async function run() {
   const client = await db.connect();
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
-    // reload schema
-    const schemaSql = fs.readFileSync(
-      path.join(__dirname, "schema.sql"),
-      "utf-8"
-    );
+    const schemaSql = await findSchema();
+    console.log('Applying schema (will drop/create) ...');
     await client.query(schemaSql);
 
-    // roles
-    const roleNames = ["Admin", "Manager", "User"];
+    // Roles
+    const roleNames = ['Admin', 'Manager', 'User'];
     const roleIds = {};
     for (const r of roleNames) {
-      const ins = await client.query(
-        `INSERT INTO "Roles"(name) VALUES ($1) RETURNING id`,
-        [r]
+      const { rows } = await client.query(
+        `INSERT INTO "Roles"(name, description) VALUES ($1,$2) RETURNING id`,
+        [r, `${r} role`]
       );
-      roleIds[r] = ins.rows[0].id;
+      roleIds[r] = rows[0].id;
     }
 
-    // permissions
-    // NOTE: added manage_gta and view_gta for the consolidated GTA permission model
+    // Full permission set (keeps feature parity)
     const perms = [
-      "manage_users",
-      "manage_roles",
-      "manage_groups",
-      "view_groups",
-      "manage_goals",
-      "manage_tasks",
-      "manage_activities",
-      "manage_gta",
-      "view_gta",
-      "submit_reports",
-      "review_reports",
-      "view_reports",
-      "manage_reports",
-      "upload_attachments",
-      "manage_settings",
-      "view_settings",
-      "view_audit_logs",
-      "manage_notifications",
-      "view_analytics",
-      "manage_analytics",
+      "manage_users","manage_roles","manage_groups","view_groups",
+      "manage_goals","manage_tasks","manage_activities","manage_gta","view_gta",
+      "submit_reports","review_reports","view_reports","manage_reports",
+      "upload_attachments","manage_settings","view_settings",
+      "view_audit_logs","manage_notifications","view_analytics","manage_analytics",
+      "view_dashboard","manage_dashboard","manage_attachments"
     ];
-
     const permIds = {};
     for (const p of perms) {
-      const ins = await client.query(
-        `INSERT INTO "Permissions"(name) VALUES ($1) RETURNING id`,
-        [p]
+      const { rows } = await client.query(
+        `INSERT INTO "Permissions"(name, description) VALUES ($1,$2) RETURNING id`,
+        [p, `${p} permission`]
       );
-      permIds[p] = ins.rows[0].id;
+      permIds[p] = rows[0].id;
     }
 
-    async function grant(role, arr) {
-      for (const p of arr) {
+    // Grant helper
+    async function grant(roleName, arr) {
+      const rId = roleIds[roleName];
+      if (!rId) return;
+      for (const name of arr) {
+        const pid = permIds[name];
+        if (!pid) continue;
         await client.query(
-          `INSERT INTO "RolePermissions"("roleId","permissionId") VALUES ($1,$2)`,
-          [roleIds[role], permIds[p]]
+          `INSERT INTO "RolePermissions"("roleId","permissionId") VALUES ($1,$2) ON CONFLICT DO NOTHING`,
+          [rId, pid]
         );
       }
     }
 
-    // Grants
-    // Admin gets everything
-    await grant("Admin", perms);
-
-    // Manager gets group & GTA management and report viewing/reviewing etc.
-    await grant("Manager", [
-      "view_groups",
-      "manage_groups",
-      "manage_gta",
-      "view_gta",
-      "manage_reports",
-      "view_reports",
-      "review_reports",
-      "upload_attachments",
-      "view_settings",
-      "view_analytics",
+    // Grants: admin gets all; manager basic; user limited
+    await grant('Admin', perms);
+    await grant('Manager', [
+      "view_groups","manage_groups","manage_gta","view_gta",
+      "manage_reports","view_reports","review_reports","upload_attachments",
+      "view_settings","view_analytics","view_dashboard"
+    ]);
+    await grant('User', [
+      "view_reports","submit_reports","upload_attachments","view_settings","view_gta","view_dashboard"
     ]);
 
-    // User gets viewing / submitting rights within their groups
-    await grant("User", [
-      "view_reports",
-      "submit_reports",
-      "upload_attachments",
-      "view_settings",
-      "view_gta",
-    ]);
-
-    // admin user
-    const adminUser = process.env.ADMIN_USERNAME || "admin";
-    const adminPass = process.env.ADMIN_PASSWORD || "admin123";
+    // Admin user
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
     const hash = await bcrypt.hash(adminPass, 10);
-    const u = await client.query(
+    const { rows: urows } = await client.query(
       `INSERT INTO "Users"(username, name, password, "roleId", "profilePicture")
        VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-      [adminUser, "System Admin", hash, roleIds["Admin"], "/uploads/admin.png"]
+      [adminUser, 'System Admin', hash, roleIds['Admin'], '/uploads/admin.png']
     );
-    const adminId = u.rows[0].id;
+    const adminId = urows[0].id;
 
-    // create test group + goal/task/activity
-    const g = await client.query(
+    // One sample group
+    const { rows: grows } = await client.query(
       `INSERT INTO "Groups"(name, description) VALUES ($1,$2) RETURNING id`,
-      ["Development Team", "Handles software development."]
+      ['Development Team', 'Team handling core development']
     );
-    const devGroupId = g.rows[0].id;
+    const devGroupId = grows[0].id;
 
-    // Insert a sample goal with an explicit weight to show it's supported (default is 100)
-    const gl = await client.query(
-      `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", status, progress, weight)
-      VALUES ('Launch Feature X','Implement and release new feature.', $1, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days','In Progress',25, 100)
-      RETURNING id`,
-      [devGroupId]
+    // Attach admin to group
+    await client.query(
+      `INSERT INTO "UserGroups"("userId","groupId") VALUES ($1,$2) ON CONFLICT DO NOTHING`,
+      [adminId, devGroupId]
     );
-    const goalId = gl.rows[0].id;
 
-    const tk = await client.query(
+    // Minimal sample goal/task/activity (light)
+    const { rows: gl } = await client.query(
+      `INSERT INTO "Goals"(title, description, "groupId", startDate, endDate, status, progress, weight)
+       VALUES ($1,$2,$3,CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days','In Progress', 10, 100) RETURNING id`,
+      ['Initial Goal', 'A small seeded goal', devGroupId]
+    );
+    const goalId = gl[0].id;
+
+    const { rows: t } = await client.query(
       `INSERT INTO "Tasks"(title, description, "goalId", status, "assigneeId", "dueDate", progress, weight)
-      VALUES ('Implement Login','Create login module with JWT.', $1, 'In Progress', $2, CURRENT_DATE + INTERVAL '10 days', 50, 40)
-      RETURNING id`,
-      [goalId, adminId]
+       VALUES ($1,$2,$3,'To Do',$4,CURRENT_DATE + INTERVAL '10 days', 0, 50) RETURNING id`,
+      ['Initial Task', 'First seed task', goalId, adminId]
     );
-    const taskId = tk.rows[0].id;
+    const taskId = t[0].id;
 
-    // Insert an activity with a weight and optional targetMetric example
-    const ac = await client.query(
-      `INSERT INTO "Activities"(title, description, "taskId", status, weight, "targetMetric", "currentMetric", "isDone")
-      VALUES ('JWT Middleware','Build and test JWT auth middleware.', $1, 'In Progress', 20, $2, $3, false) RETURNING id`,
-      [
-        taskId,
-        JSON.stringify({ linesOfCode: 1000 }),
-        JSON.stringify({ linesOfCode: 200 }),
-      ]
+    await client.query(
+      `INSERT INTO "Activities"(title, description, "taskId", status, weight, targetMetric, currentMetric, isDone)
+       VALUES ($1,$2,$3,'To Do',50,$4,$5,false)`,
+      ['Initial Activity', 'First seeded activity', taskId, JSON.stringify({ target: 'any' }), JSON.stringify({ current: 'none' })]
     );
-    const activityId = ac.rows[0].id;
 
-    // settings
+    // Basic system settings
     const settings = [
-      {
-        key: "max_attachment_size_mb",
-        value: 10,
-        description: "Max attachment upload size (MB)",
-      },
-      {
-        key: "allowed_attachment_types",
-        value: ["application/pdf", "image/png", "image/jpeg", "text/plain"],
-        description: "Allowed MIME types for attachments",
-      },
-      {
-        key: "reporting_active",
-        value: true,
-        description: "Enable or disable report submissions",
-      },
-      {
-        key: "resubmission_deadline_days",
-        value: 7,
-        description: "Days to resubmit rejected reports",
-      },
+      { key: 'max_attachment_size_mb', value: 10, description: 'Max attachment upload size (MB)' },
+      { key: 'allowed_attachment_types', value: ['application/pdf','image/png','image/jpeg','text/plain'], description: 'Allowed MIME types' },
+      { key: 'reporting_active', value: true, description: 'Enable report submissions' },
+      { key: 'resubmission_deadline_days', value: 7, description: 'Days to resubmit rejected reports' },
+      { key: 'audit_retention_days', value: 365, description: 'Days to retain audit logs' }
     ];
     for (const s of settings) {
-      // Ensure we insert JSONB properly: stringify JS values before passing to query
       await client.query(
-        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1, $2::jsonb, $3)`,
+        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)`,
         [s.key, JSON.stringify(s.value), s.description]
       );
     }
 
-    const r = await client.query(
-      `INSERT INTO "Reports"("activityId","userId", narrative, status)
-      VALUES ($1,$2,'Initial activity report.','Pending') RETURNING id`,
-      [activityId, adminId]
-    );
-    const reportId = r.rows[0].id;
-
-    await client.query(
-      `INSERT INTO "Attachments"("reportId","fileName","filePath","fileType")
-       VALUES ($1,$2,$3,$4)`,
-      [reportId, "sample.txt", "/uploads/sample.txt", "text/plain"]
-    );
-
-    await client.query("COMMIT");
-    console.log("Seed complete.");
-  } catch (e) {
-    await client.query("ROLLBACK");
-    console.error("Seed failed", e);
+    await client.query('COMMIT');
+    console.log('Minimal seed complete. Admin user:', adminUser, '(password from env or admin123)');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Minimal seed failed:', err);
+    process.exitCode = 1;
   } finally {
     client.release();
   }
