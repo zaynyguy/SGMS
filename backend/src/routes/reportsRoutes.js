@@ -1,47 +1,60 @@
 const express = require("express");
 const router = express.Router();
 const reportsController = require("../controllers/reportsController");
+const attachmentsController = require("../controllers/attachmentsController");
 const {
   authenticateJWT,
   authorizePermissions,
 } = require("../middleware/authMiddleware");
-const upload = require("../middleware/uploadMiddleware");
+const { upload } = require("../middleware/uploadMiddleware");
 
 router.use(authenticateJWT);
 
-// User submits a report for an activity (with attachments)
 router.post(
   "/activity/:activityId",
   upload.array("attachments", 5),
   reportsController.submitReport
 );
 
-// Admin reviews a report
 router.put(
   "/:reportId/review",
   authorizePermissions(["manage_reports"]),
   reportsController.reviewReport
 );
 
-// Admin generates the master HTML report
+// Admin generates the master HTML report (optional groupId query)
 router.get(
   "/master-report",
   authorizePermissions(["manage_reports"]),
   reportsController.generateMasterReport
 );
 
-// Fetch all reports (for the admin's review page)
+// Fetch all reports (for admin review)
 router.get(
   "/",
   authorizePermissions(["manage_reports"]),
   reportsController.getAllReports
 );
 
-// Download a specific attachment
+// Download a specific attachment (checks group scope inside controller)
 router.get(
   "/attachments/:attachmentId/download",
-  authorizePermissions(["view_reports"]),
-  reportsController.downloadAttachment
+  authorizePermissions(["manage_reports", "view_reports", "view_attachments"]),
+  attachmentsController.downloadAttachment
+);
+
+// Delete attachment
+router.delete(
+  "/attachments/:attachmentId",
+  authorizePermissions(["manage_reports", "manage_attachments"]),
+  attachmentsController.deleteAttachment
+);
+
+// Admin list attachments
+router.get(
+  "/attachments",
+  authorizePermissions(["manage_attachments", "manage_reports"]),
+  attachmentsController.listAttachments
 );
 
 module.exports = router;

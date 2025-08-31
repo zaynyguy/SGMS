@@ -1,28 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const userGroupsController = require("../controllers/userGroupsController");
-const {
-  authenticateJWT,
-  authorize,
-  authorizePermissions,
-} = require("../middleware/authMiddleware");
+const { authenticateJWT, authorizePermissions } = require("../middleware/authMiddleware");
 
-router.use(authenticateJWT);
+router.use(authenticateJWT, authorizePermissions(["manage_groups"]));
 
-router.post(
-  "/",
-  authorizePermissions(["manage_groups"]),
-  userGroupsController.addUserToGroup
-);
-router.delete(
-  "/",
-  authorizePermissions(["manage_groups"]),
-  userGroupsController.removeUserFromGroup
-);
-router.get(
-  "/:groupId/users",
-  authorizePermissions(["view_groups", "manage_groups"]),
-  userGroupsController.getGroupUsers
-);
+router.post("/", userGroupsController.addUserToGroup);
+router.delete("/", userGroupsController.removeUserFromGroup);
+router.get("/:groupId/users", userGroupsController.getGroupUsers);
+router.get("/user/:userId/groups", userGroupsController.getUserGroups);
 
 module.exports = router;

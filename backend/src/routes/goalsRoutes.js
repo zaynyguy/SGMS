@@ -1,26 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const goalsController = require("../controllers/goalsController");
-const tasksRouter = require("./tasksRoutes"); // ⬅️ import tasks router
-const {
-  authenticateJWT,
-  authorizePermissions,
-} = require("../middleware/authMiddleware");
+const tasksRouter = require("./tasksRoutes");
+const { authenticateJWT, authorizePermissions } = require("../middleware/authMiddleware");
 
 router.use(authenticateJWT);
 
-router
-  .route("/")
-  .get(goalsController.getAllGoals)
-  .post(authorizePermissions(["manage_goals"]), goalsController.createGoal);
+// Require either manage_gta OR view_gta to access goals listing
+router.get("/", authorizePermissions(["manage_gta", "view_gta"]), goalsController.getGoals);
 
-router
-  .route("/:goalId")
-  .put(authorizePermissions(["manage_goals"]), goalsController.updateGoal)
-  .delete(authorizePermissions(["manage_goals"]), goalsController.deleteGoal);
+// Mutations still require manage_gta only
+router.post("/", authorizePermissions(["manage_gta"]), goalsController.createGoal);
+router.put("/:goalId", authorizePermissions(["manage_gta"]), goalsController.updateGoal);
+router.delete("/:goalId", authorizePermissions(["manage_gta"]), goalsController.deleteGoal);
 
-// Nested tasks under goals
-// Example: /api/goals/:goalId/tasks
 router.use("/:goalId/tasks", tasksRouter);
-
 module.exports = router;

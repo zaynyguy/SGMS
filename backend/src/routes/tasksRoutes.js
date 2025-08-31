@@ -1,5 +1,5 @@
 const express = require("express");
-const router = express.Router({ mergeParams: true }); // get goalId from parent
+const router = express.Router({ mergeParams: true });
 const tasksController = require("../controllers/tasksController");
 const activitiesRouter = require("./activitiesRoutes");
 const {
@@ -9,27 +9,29 @@ const {
 
 router.use(authenticateJWT);
 
-router.get("/", tasksController.getTasksByGoal);
-
-router.post(
+// List tasks under a goal — require view_gta OR manage_gta
+router.get(
   "/",
-  authorizePermissions(["manage_tasks"]),
-  tasksController.createTask
+  authorizePermissions(["manage_gta", "view_gta"]),
+  tasksController.getTasksByGoal
 );
 
+// Mutations
+router.post(
+  "/",
+  authorizePermissions(["manage_gta"]),
+  tasksController.createTask
+);
 router.put(
   "/:taskId",
-  authorizePermissions(["manage_tasks"]),
+  authorizePermissions(["manage_gta"]),
   tasksController.updateTask
 );
 router.delete(
   "/:taskId",
-  authorizePermissions(["manage_tasks"]),
+  authorizePermissions(["manage_gta"]),
   tasksController.deleteTask
 );
 
-// Nested activities under tasks
-// Example: /api/goals/:goalId/tasks/:taskId/activities
 router.use("/:taskId/activities", activitiesRouter);
-
 module.exports = router;

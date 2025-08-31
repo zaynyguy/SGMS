@@ -1,31 +1,34 @@
 const express = require("express");
 const router = express.Router({ mergeParams: true });
 const activitiesController = require("../controllers/activitiesController");
-const { authenticateJWT, authorizePermissions } = require("../middleware/authMiddleware");
+const {
+  authenticateJWT,
+  authorizePermissions,
+} = require("../middleware/authMiddleware");
 
 router.use(authenticateJWT);
 
-// Get activities for a task
-router.get("/", activitiesController.getActivitiesByTask);
+// List activities under a task — require view_gta OR manage_gta
+router.get(
+  "/",
+  authorizePermissions(["manage_gta", "view_gta"]),
+  activitiesController.getActivitiesByTask
+);
 
-// Create activity
+// Mutations need manage_gta
 router.post(
   "/",
-  authorizePermissions(["manage_activities"]),
+  authorizePermissions(["manage_gta"]),
   activitiesController.createActivity
 );
-
-// Update activity
 router.put(
   "/:activityId",
-  authorizePermissions(["manage_activities"]),
+  authorizePermissions(["manage_gta"]),
   activitiesController.updateActivity
 );
-
-// Delete activity
 router.delete(
   "/:activityId",
-  authorizePermissions(["manage_activities"]),
+  authorizePermissions(["manage_gta"]),
   activitiesController.deleteActivity
 );
 

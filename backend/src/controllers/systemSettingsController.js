@@ -1,44 +1,37 @@
-const db = require('../db');
+const db = require("../db");
 
+function parseVal(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "object") return v;
+  try {
+    return JSON.parse(v);
+  } catch {
+    return v;
+  }
+}
 
-// -------------------- GET ALL THE SETTINGS --------------------
 exports.getAllSettings = async (req, res) => {
-    try {
-        const { rows } = await db.query('SELECT key, value FROM "SystemSettings"');
-        const settings = rows.reduce((acc, { key, value }) => {
-            // Correctly parse the JSONB value into a native JavaScript type
-            acc[key] = JSON.parse(value);
-            return acc;
-        }, {});
-        res.status(200).json(settings);
-    } catch (error) {
-        console.error("Error fetching system settings:", error);
-        res.status(500).json({ message: "Internal server error." });
-    }
+  const { rows } = await db.query(
+    'SELECT key, value, description FROM "SystemSettings" ORDER BY key'
+  );
+  const data = rows.map((r) => ({
+    key: r.key,
+    value: parseVal(r.value),
+    description: r.description,
+  }));
+  res.json(data);
 };
 
-// -------------------- UPDATE ALL THE SETTINGS --------------------
 exports.updateSettings = async (req, res) => {
-    const settings = req.body;
-    const client = await db.connect();
-    try {
-        await client.query('BEGIN');
-        const updatePromises = Object.entries(settings).map(([key, value]) => {
-            // Correctly serialize the JavaScript value into a JSON string
-            const jsonValue = JSON.stringify(value);
-            return client.query(
-                'UPDATE "SystemSettings" SET value = $1::jsonb, "updatedAt" = NOW() WHERE key = $2',
-                [jsonValue, key]
-            );
-        });
-        await Promise.all(updatePromises);
-        await client.query('COMMIT');
-        res.status(200).json({ message: 'Settings updated successfully.' });
-    } catch (error) {
-        await client.query('ROLLBACK');
-        console.error("Error updating system settings:", error);
-        res.status(500).json({ message: 'Internal server error.' });
-    } finally {
-        client.release();
+  const updates = req.body;
+  await db.tx(async (client) => {
+    for (const [key, value] of Object.entries(updates)) {
+      await client.query(
+        `INSERT INTO "SystemSettings"(key, value) VALUES ($1, $2::jsonb)
+         ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, "updatedAt"=NOW()`,
+        [key, typeof value === "string" ? JSON.stringify(value) : value]
+      );
     }
+  });
+  res.json({ message: "Settings updated." });
 };
