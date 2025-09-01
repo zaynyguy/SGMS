@@ -1,5 +1,3 @@
-// src/helpers/reportHelper.js
-
 /**
  * Escapes HTML special characters to prevent XSS.
  * @param {*} s The input to escape.
