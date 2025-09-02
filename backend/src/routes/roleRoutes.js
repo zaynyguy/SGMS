@@ -3,7 +3,7 @@ const router = express.Router();
 const roleController = require('../controllers/roleController');
 const { authenticateJWT, authorizePermissions } = require('../middleware/authMiddleware');
 
-router.use(authenticateJWT, authorizePermissions(['manage_roles']));
+router.use(authenticateJWT, authorizePermissions(['manage_access']));
 
 router.route('/')
   .get(roleController.getAllRoles)

@@ -3,7 +3,7 @@ const router = express.Router();
 const groupsController = require("../controllers/groupsController");
 const { authenticateJWT, authorizePermissions } = require("../middleware/authMiddleware");
 
-router.use(authenticateJWT, authorizePermissions(["manage_groups"]));
+router.use(authenticateJWT, authorizePermissions(["manage_access"]));
 
 router.get("/", groupsController.getAllGroups);
 router.get("/:id", groupsController.getGroupDetails);

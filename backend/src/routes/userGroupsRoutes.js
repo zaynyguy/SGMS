@@ -3,7 +3,7 @@ const router = express.Router();
 const userGroupsController = require("../controllers/userGroupsController");
 const { authenticateJWT, authorizePermissions } = require("../middleware/authMiddleware");
 
-router.use(authenticateJWT, authorizePermissions(["manage_groups"]));
+router.use(authenticateJWT, authorizePermissions(["manage_access"]));
 
 router.post("/", userGroupsController.addUserToGroup);
 router.delete("/", userGroupsController.removeUserFromGroup);
