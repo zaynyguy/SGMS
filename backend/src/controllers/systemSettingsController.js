@@ -23,15 +23,19 @@ exports.getAllSettings = async (req, res) => {
 };
 
 exports.updateSettings = async (req, res) => {
-  const updates = req.body;
+  const updates = req.body; // { key: value, ... }
+
   await db.tx(async (client) => {
     for (const [key, value] of Object.entries(updates)) {
       await client.query(
-        `INSERT INTO "SystemSettings"(key, value) VALUES ($1, $2::jsonb)
-         ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, "updatedAt"=NOW()`,
-        [key, typeof value === "string" ? JSON.stringify(value) : value]
+        `INSERT INTO "SystemSettings"(key, value)
+         VALUES ($1, $2::jsonb)
+         ON CONFLICT (key)
+         DO UPDATE SET value = EXCLUDED.value, "updatedAt" = NOW()`,
+        [key, JSON.stringify(value)]
       );
     }
   });
+
   res.json({ message: "Settings updated." });
 };
