@@ -35,7 +35,7 @@ exports.getActivitiesByTask = async (req, res) => {
 
 exports.createActivity = async (req, res) => {
   const { taskId } = req.params;
-  const { title, description, metrics, dueDate, weight, targetMetric } = req.body;
+  const { title, description, dueDate, weight, targetMetric } = req.body; 
   if (!title) return res.status(400).json({ message: 'Title is required.' });
 
   await db.tx(async (client) => {
@@ -44,9 +44,9 @@ exports.createActivity = async (req, res) => {
       const err = new Error('Task not found'); err.status = 404; throw err;
     }
     const r = await client.query(
-      `INSERT INTO "Activities" ("taskId", title, description, metrics, "dueDate", "weight", "targetMetric")
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [taskId, title.trim(), description?.trim() || null, metrics || {}, dueDate || null, weight || 0, targetMetric || {}]
+      `INSERT INTO "Activities" ("taskId", title, description, "dueDate", "weight", "targetMetric")
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [taskId, title.trim(), description?.trim() || null, dueDate || null, weight || 0, targetMetric || {}]
     );
     // recalc because new activity changes denominators
     await recalcProgressFromActivity(client, r.rows[0].id);
@@ -56,23 +56,24 @@ exports.createActivity = async (req, res) => {
 
 exports.updateActivity = async (req, res) => {
   const { activityId } = req.params;
-  const { title, description, metrics, status, dueDate, weight, targetMetric, isDone } = req.body;
+  const { title, description, status, dueDate, weight, targetMetric, isDone } = req.body; // removed metrics
   await db.tx(async (client) => {
     const c = await client.query('SELECT id FROM "Activities" WHERE id=$1', [activityId]);
     if (!c.rows.length) { const e=new Error('Activity not found'); e.status=404; throw e; }
 
     const r = await client.query(
       `UPDATE "Activities"
-       SET title=$1, description=$2, metrics=$3, status=COALESCE($4,status), "dueDate"=$5, "weight"=COALESCE($6,"weight"),
-           "targetMetric"=COALESCE($7,"targetMetric"), "isDone"=COALESCE($8,"isDone"), "updatedAt"=NOW()
-       WHERE id=$9 RETURNING *`,
-      [title?.trim() || null, description?.trim() || null, metrics || {}, status || null, dueDate || null, weight || null, targetMetric || null, isDone !== undefined ? isDone : null, activityId]
+       SET title=$1, description=$2, status=COALESCE($3,status), "dueDate"=$4, "weight"=COALESCE($5,"weight"),
+           "targetMetric"=COALESCE($6,"targetMetric"), "isDone"=COALESCE($7,"isDone"), "updatedAt"=NOW()
+       WHERE id=$8 RETURNING *`,
+      [title?.trim() || null, description?.trim() || null, status || null, dueDate || null, weight || null, targetMetric || null, isDone !== undefined ? isDone : null, activityId]
     );
 
     await recalcProgressFromActivity(client, activityId);
     res.json({ message: 'Activity updated successfully.', activity: r.rows[0] });
   });
 };
+
 
 exports.deleteActivity = async (req, res) => {
   const { activityId } = req.params;
