@@ -43,12 +43,10 @@ async function run() {
 
     // Full permission set (keeps feature parity)
     const perms = [
-      "manage_users","manage_roles","manage_groups","view_groups",
-      "manage_goals","manage_tasks","manage_activities","manage_gta","view_gta",
-      "submit_reports","review_reports","view_reports","manage_reports",
-      "upload_attachments","manage_settings","view_settings",
-      "view_audit_logs","manage_notifications","view_analytics","manage_analytics",
-      "view_dashboard","manage_dashboard","manage_attachments"
+      "manage_gta","view_gta",
+      "submit_reports","view_reports","manage_reports","manage_settings",
+      "view_audit_logs","manage_notifications","manage_dashboard",
+      "view_dashboard","manage_attachments","manage_access"
     ];
     const permIds = {};
     for (const p of perms) {
@@ -76,13 +74,11 @@ async function run() {
     // Grants: admin gets all; manager basic; user limited
     await grant('Admin', perms);
     await grant('Manager', [
-      "view_groups","manage_groups","manage_gta","view_gta",
-      "manage_reports","view_reports","review_reports","upload_attachments",
-      "view_settings","view_analytics","view_dashboard"
+      "manage_gta","view_gta",
+      "manage_reports","view_reports","view_dashboard"
     ]);
-    await grant('User', [
-      "view_reports","submit_reports","upload_attachments","view_settings","view_gta","view_dashboard"
-    ]);
+    await grant('User', ["view_reports","view_gta","view_dashboard"]);
+
 
     // Admin user
     const adminUser = process.env.ADMIN_USERNAME || 'admin';

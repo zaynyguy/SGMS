@@ -13,6 +13,7 @@ router.use(authenticateJWT);
 router.post(
   "/activity/:activityId",
   upload.array("attachments", 5),
+  authorizePermissions(["view_reports"]),
   reportsController.submitReport
 );
 
