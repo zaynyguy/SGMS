@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Shield, Settings, Trash, AlertTriangle, X } from 'lucide-react';
 import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from '../api/admin';
@@ -12,20 +12,14 @@ const RolesManagementPage = () => {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState({ message: '', type: '', visible: false });
 
-  // Modal States
-  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
-  const [roleToEdit, setRoleToEdit] = useState(null);
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    description: '', 
-    permissions: [] 
-  });
+  // New state for inline role addition
+  const [isAddingRole, setIsAddingRole] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  
+  // State for pending permission changes
+  const [pendingPermissionChanges, setPendingPermissionChanges] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Delete Confirmation Modal State
-  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState(null);
-
-  // Show toast notification
   const showToast = (message, type = 'create') => {
     setToast({ message, type, visible: true });
   };
@@ -43,6 +37,8 @@ const RolesManagementPage = () => {
         fetchPermissions()
       ]);
       
+      // The backend returns permissions as names, but we need IDs for the UI
+      // Let's map the permission names to their IDs
       const rolesWithPermissionIds = rolesData.map(role => {
         const permissionIds = role.permissions
           .map(pName => permissionsData.find(p => p.name === pName)?.id)
@@ -52,6 +48,8 @@ const RolesManagementPage = () => {
 
       setRoles(rolesWithPermissionIds);
       setPermissions(permissionsData);
+      setPendingPermissionChanges({});
+      setHasUnsavedChanges(false);
     } catch (err) {
       setError(err.message || t('admin.roles.errors.loadError'));
       showToast(t('admin.roles.errors.loadError'), "error");
@@ -64,71 +62,88 @@ const RolesManagementPage = () => {
     loadData();
   }, [loadData]);
 
-  const handleOpenModal = (role = null) => {
-    setRoleToEdit(role);
-    setFormData({
-      name: role?.name || '',
-      description: role?.description || '',
-      permissions: role?.permissions || []
-    });
-    setShowAddRoleModal(true);
-  };
+  const handleAddRole = async () => {
+    if (!newRoleName.trim()) {
+      setIsAddingRole(false);
+      return;
+    }
 
-  const handleCloseModal = () => {
-    setShowAddRoleModal(false);
-    setRoleToEdit(null);
-  };
-
-  const handlePermissionChange = (permissionId) => {
-    setFormData(prev => ({
-      ...prev,
-      permissions: prev.permissions.includes(permissionId)
-        ? prev.permissions.filter(id => id !== permissionId)
-        : [...prev.permissions, permissionId]
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
     try {
-      if (roleToEdit) {
-        await updateRole(roleToEdit.id, formData);
-        showToast(t('admin.roles.toasts.updateSuccess', { name: formData.name }), 'update');
-      } else {
-        await createRole(formData);
-        showToast(t('admin.roles.toasts.createSuccess', { name: formData.name }), 'create');
-      }
+      await createRole({ 
+        name: newRoleName, 
+        description: '', 
+        permissions: [] 
+      });
+      showToast(t('admin.roles.toasts.createSuccess', { name: newRoleName }), 'create');
+      setNewRoleName('');
+      setIsAddingRole(false);
       await loadData();
-      handleCloseModal();
     } catch (err) {
-      console.error("Failed to save role:", err);
+      console.error("Failed to create role:", err);
       showToast(t('admin.roles.errors.saveError', { error: err.message }), "error");
     }
   };
 
-  const handleDeleteClick = (role) => {
-    setRoleToDelete(role);
-    setShowDeleteConfirmModal(true);
+  const handlePermissionChange = (roleId, permissionId, checked) => {
+    setPendingPermissionChanges(prev => {
+      const newChanges = { ...prev };
+      if (!newChanges[roleId]) newChanges[roleId] = {};
+      newChanges[roleId][permissionId] = checked;
+      return newChanges;
+    });
+    setHasUnsavedChanges(true);
   };
 
-  const confirmDelete = async () => {
-    if (!roleToDelete) return;
+  const handleSaveChanges = async () => {
     try {
-      await deleteRole(roleToDelete.id);
-      showToast(t('admin.roles.toasts.deleteSuccess', { name: roleToDelete.name }), 'delete');
+      const updatePromises = [];
+      
+      for (const roleId in pendingPermissionChanges) {
+        const role = roles.find(r => r.id === Number(roleId));  // ✅ cast to number
+        if (!role) continue;
+
+        let updatedPermissions = [...role.permissions];
+
+        for (const permissionId in pendingPermissionChanges[roleId]) {
+          const hasPermission = pendingPermissionChanges[roleId][permissionId];
+          const permIdNum = Number(permissionId); // ✅ cast to number
+
+          if (hasPermission && !updatedPermissions.includes(permIdNum)) {
+            updatedPermissions.push(permIdNum);
+          } else if (!hasPermission && updatedPermissions.includes(permIdNum)) {
+            updatedPermissions = updatedPermissions.filter(id => id !== permIdNum);
+          }
+        }
+
+        updatePromises.push(
+          updateRole(role.id, {
+            name: role.name,
+            description: role.description,
+            permissions: updatedPermissions,
+          })
+        );
+      }
+      
+      await Promise.all(updatePromises);
+      showToast(t('admin.roles.toasts.updateSuccess'), 'update');
       await loadData();
     } catch (err) {
-      console.error("Failed to delete role:", err);
-      showToast(t('admin.roles.errors.deleteError', { error: err.message }), "error");
-    } finally {
-      setShowDeleteConfirmModal(false);
-      setRoleToDelete(null);
+      console.error("Failed to save permissions:", err);
+      showToast(t('admin.roles.errors.saveError', { error: err.message }), "error");
     }
   };
 
-  const cancelDelete = () => {
-    setShowDeleteConfirmModal(false);
-    setRoleToDelete(null);
+  const handleDeleteClick = async (role) => {
+    if (window.confirm(t('admin.roles.deleteConfirm.message', { name: role.name }))) {
+      try {
+        await deleteRole(role.id);
+        showToast(t('admin.roles.toasts.deleteSuccess', { name: role.name }), 'delete');
+        await loadData();
+      } catch (err) {
+        console.error("Failed to delete role:", err);
+        showToast(t('admin.roles.errors.deleteError', { error: err.message }), "error");
+      }
+    }
   };
 
   if (loading) {
@@ -172,8 +187,16 @@ const RolesManagementPage = () => {
         />
       )}
       
-      <h1 className="sticky text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center justify-between w-full">
+      <h1 className="sticky text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 shadow-sm pb-4 flex items-center justify-between w-full">
         {t('admin.roles.title')}
+        {hasUnsavedChanges && (
+          <button
+            onClick={handleSaveChanges}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+          >
+            {t('admin.actions.saveChanges')}
+          </button>
+        )}
       </h1>
       
       <section id="roles" role="tabpanel" aria-labelledby="roles-tab" className="bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
@@ -190,17 +213,9 @@ const RolesManagementPage = () => {
                 <ul className="space-y-1 mb-4">
                   {roles.map((role) => (
                     <li key={role.id} className='flex items-center'>
-                      <button
-                        onClick={() => handleOpenModal(role)}
-                        className={`w-full text-left p-3 rounded-md transition-colors duration-150 ${
-                          roleToEdit?.id === role.id
-                            ? 'bg-blue-600 text-white shadow-md'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                        aria-label={t('admin.roles.editRole', { name: role.name })}
-                      >
+                      <div className="w-full text-left p-3 rounded-md text-gray-700 dark:text-gray-300">
                         {role.name}
-                      </button>
+                      </div>
                       <button
                         onClick={() => handleDeleteClick(role)}
                         disabled={role.name === 'Admin'}
@@ -222,12 +237,42 @@ const RolesManagementPage = () => {
                 </p>
               )}
               
-              <button
-                onClick={() => handleOpenModal()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-              >
-                <Plus size={18} /> {t('admin.roles.addRole')}
-              </button>
+              {isAddingRole ? (
+                <div className="flex items-center mb-2">
+                  <input
+                    type="text"
+                    className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
+                    placeholder={t('admin.roles.roleNamePlaceholder')}
+                    value={newRoleName}
+                    onChange={(e) => setNewRoleName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddRole();
+                      } else if (e.key === 'Escape') {
+                        setIsAddingRole(false);
+                        setNewRoleName('');
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => {
+                      setIsAddingRole(false);
+                      setNewRoleName('');
+                    }}
+                    className="ml-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsAddingRole(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                >
+                  <Plus size={18} /> {t('admin.roles.addRole')}
+                </button>
+              )}
             </div>
 
             {/* Permissions Matrix Panel */}
@@ -237,46 +282,56 @@ const RolesManagementPage = () => {
               </h2>
               
               {roles.length > 0 && permissions.length > 0 ? (
-                <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        {t('admin.roles.permission')}
-                      </th>
-                      {roles.map((role) => (
-                        <th key={role.id} className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          {role.name}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full table-auto divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">
+                          {t('admin.roles.permission')}
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {permissions.map((permission) => (
-                      <tr key={permission.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
-                          {permission.name}
-                        </td>
                         {roles.map((role) => (
-                          <td key={`perm-${permission.id}-role-${role.id}`} className="px-4 py-3 whitespace-nowrap text-center">
-                            <input
-                              type="checkbox"
-                              className="h-5 w-5 text-blue-600 rounded cursor-not-allowed focus:ring-0 focus:ring-offset-0"
-                              checked={role.permissions.includes(permission.id)}
-                              readOnly
-                              aria-label={t('admin.roles.permissionStatus', {
-                                permission: permission.name,
-                                role: role.name,
-                                status: role.permissions.includes(permission.id) 
-                                  ? t('admin.roles.enabled') 
-                                  : t('admin.roles.disabled')
-                              })}
-                            />
-                          </td>
+                          <th key={role.id} className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                            {role.name}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {permissions.map((permission) => (
+                        <tr key={permission.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200 sticky left-0 bg-white dark:bg-gray-800 z-10">
+                            {permission.name}
+                          </td>
+                          {roles.map((role) => {
+                            const hasPendingChange = pendingPermissionChanges[role.id] && 
+                                                    permission.id in pendingPermissionChanges[role.id];
+                            const isChecked = hasPendingChange 
+                              ? pendingPermissionChanges[role.id][permission.id]
+                              : role.permissions.includes(permission.id);
+                              
+                            return (
+                              <td key={`perm-${permission.id}-role-${role.id}`} className="px-4 py-3 whitespace-nowrap text-center">
+                                <input
+                                  type="checkbox"
+                                  className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent cursor-pointer"
+                                  checked={isChecked}
+                                  onChange={(e) => handlePermissionChange(role.id, permission.id, e.target.checked)}
+                                  aria-label={t('admin.roles.permissionStatus', {
+                                    permission: permission.name,
+                                    role: role.name,
+                                    status: isChecked 
+                                      ? t('admin.roles.enabled') 
+                                      : t('admin.roles.disabled')
+                                  })}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <p className="text-center text-gray-500 dark:text-gray-400 mt-8">
                   {t('admin.roles.noPermissions')}
@@ -285,126 +340,6 @@ const RolesManagementPage = () => {
             </div>
           </div>
         </div>
-
-        {/* Add/Edit Role Modal */}
-        {showAddRoleModal && (
-          <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-lg">
-              <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-                {roleToEdit ? t('admin.roles.editRoleTitle') : t('admin.roles.createRoleTitle')}
-              </h3>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="role-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {t('admin.roles.roleName')}
-                    </label>
-                    <input
-                      type="text"
-                      id="role-name"
-                      name="name"
-                      className="mt-1 block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
-                      placeholder={t('admin.roles.roleNamePlaceholder')}
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      required
-                      disabled={roleToEdit?.name === 'Admin'}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="role-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {t('admin.roles.description')} ({t('admin.roles.optional')})
-                    </label>
-                    <textarea
-                      id="role-description"
-                      name="description"
-                      rows="2"
-                      className="mt-1 block w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white"
-                      placeholder={t('admin.roles.descriptionPlaceholder')}
-                      value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    ></textarea>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {t('admin.roles.permissions')}
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-3 border border-gray-200 dark:border-gray-600 rounded-md max-h-60 overflow-y-auto">
-                      {permissions.map(permission => (
-                        <label key={permission.id} className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={formData.permissions.includes(permission.id)}
-                            onChange={() => handlePermissionChange(permission.id)}
-                            className="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent"
-                            aria-label={permission.name}
-                          />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {permission.name}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-6 flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-                  >
-                    {t('admin.actions.cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors duration-200"
-                  >
-                    {roleToEdit ? t('admin.actions.saveChanges') : t('admin.actions.create')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteConfirmModal && roleToDelete && (
-          <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-md">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/50">
-                  <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {t('admin.roles.deleteConfirm.title')}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {t('admin.roles.deleteConfirm.message', { name: roleToDelete.name })}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  onClick={cancelDelete}
-                  className="px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-                >
-                  {t('admin.actions.cancel')}
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="px-4 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-colors duration-200"
-                >
-                  {t('admin.actions.delete')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </section>
     </>
   );

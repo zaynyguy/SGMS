@@ -1,25 +1,20 @@
 // src/api/admin.js
-import { api } from './auth'; // Your generic API helper
+import { api } from './auth'; // Generic API helper
 
 // ======================
 // USER MANAGEMENT API
 // ======================
 export const fetchUsers = () => api('/api/users/', 'GET');
 
-export const createUser = (userData) => api('/api/users/', 'POST', {
-  username: userData.username,
-  name: userData.name,
-  password: userData.password,
-  roleId: userData.roleId
-});
+// Create user (supports JSON + FormData)
+export const createUser = (userData, isFormData = false) =>
+  api('/api/users/', 'POST', userData, isFormData);
 
-export const updateUser = (id, userData) => api(`/api/users/${id}/`, 'PUT', {
-  username: userData.username,
-  name: userData.name,
-  ...(userData.password && { password: userData.password }), // Only include if provided
-  roleId: userData.roleId
-});
+// Update user (supports JSON + FormData)
+export const updateUser = (id, userData, isFormData = false) =>
+  api(`/api/users/${id}/`, 'PUT', userData, isFormData);
 
+// Delete user
 export const deleteUser = (id) => api(`/api/users/${id}/`, 'DELETE');
 
 // ======================
@@ -27,16 +22,15 @@ export const deleteUser = (id) => api(`/api/users/${id}/`, 'DELETE');
 // ======================
 export const fetchRoles = () => api('/api/roles/', 'GET');
 
-export const createRole = (roleData) => api('/api/roles/', 'POST', {
-  name: roleData.name,
-  permissions: roleData.permissions
-});
+// Create role (supports JSON + FormData)
+export const createRole = (roleData, isFormData = false) =>
+  api('/api/roles/', 'POST', roleData, isFormData);
 
-export const updateRole = (id, roleData) => api(`/api/roles/${id}/`, 'PUT', {
-  name: roleData.name,
-  permissions: roleData.permissions
-});
+// Update role (supports JSON + FormData)
+export const updateRole = (id, roleData, isFormData = false) =>
+  api(`/api/roles/${id}/`, 'PUT', roleData, isFormData);
 
+// Delete role
 export const deleteRole = (id) => api(`/api/roles/${id}/`, 'DELETE');
 
 // ======================
@@ -47,13 +41,11 @@ export const fetchPermissions = () => api('/api/permissions/', 'GET');
 // ======================
 // USER STATUS MANAGEMENT
 // ======================
-export const updateUserStatus = (id, status) => api(`/api/users/${id}/status/`, 'PATCH', {
-  status: status
-});
+export const updateUserStatus = (id, status) =>
+  api(`/api/users/${id}/status/`, 'PATCH', { status });
 
 // ======================
 // UTILITY FUNCTIONS
 // ======================
-export const fetchRolePermissions = (roleId) => api(`/api/roles/${roleId}/permissions/`, 'GET');
-
-
+export const fetchRolePermissions = (roleId) =>
+  api(`/api/roles/${roleId}/permissions/`, 'GET');

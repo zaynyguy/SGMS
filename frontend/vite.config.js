@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server:{
     proxy:{
-      '/api': 'https://sgms-production.up.railway.app' // Redirects all /api requests to your backend
+      '/api': 'https://localhost:5000' // Redirects all /api requests to your backend
     }
   }
 });

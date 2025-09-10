@@ -1,121 +1,400 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, X, Search, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import { fetchGroups, createGroup, updateGroup, deleteGroup, addUserToGroup, removeUserFromGroup, fetchGroupUsers } from '../api/groups';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Plus, Edit, Trash2, X, Search, Users, ChevronDown, ChevronUp, UserPlus, UserMinus } from 'lucide-react';
+import { fetchGroups, createGroup, updateGroup, deleteGroup } from '../api/groups';
+import { addUserToGroup, removeUserFromGroup, fetchGroupUsers } from '../api/userGroups';
 import { fetchUsers } from "../api/admin";
 import Toast from '../components/common/Toast';
 
-function GroupsManager() {
-  const [groups, setGroups] = useState([]);
-  const [filteredGroups, setFilteredGroups] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentGroup, setCurrentGroup] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [toast, setToast] = useState(null);
-  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
-  const [expandedGroup, setExpandedGroup] = useState(null);
+// GroupFormModal Component
+const GroupFormModal = ({ 
+  group, 
+  onSave, 
+  onClose, 
+}) => {
+  const [name, setName] = useState(group?.name || "");
+  const [description, setDescription] = useState(group?.description || "");
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Load groups
-  const loadGroups = async () => {
-    setIsLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const newErrors = {};
+    if (!name.trim()) newErrors.name = "Group name is required";
+    if (name.length > 50) newErrors.name = "Name must be less than 50 characters";
+    if (description.length > 300) newErrors.description = "Description must be less than 300 characters";
+    if (Object.keys(newErrors).length) return setErrors(newErrors);
+
     try {
-      const data = await fetchGroups();
-      setGroups(data);
-      setFilteredGroups(data);
+      setIsLoading(true);
+      await onSave({
+        name: name.trim(),
+        description: description.trim() || null,
+      });
     } catch (err) {
-      console.error('Failed to fetch groups:', err);
-      showToast('Failed to load groups. Please try again later.', 'error');
+      console.error("Failed to save group:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            {group ? "Edit Group" : "Create Group"}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+          {/* Group name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Group Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              rows="3"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
+                errors.description ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {errors.description && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description}</p>}
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 order-2 sm:order-1">
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm order-1 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Saving...' : (group ? "Save" : "Create")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Group Members Component
+const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount }) => {
+  const [members, setMembers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(null);
+
+  // Load group members
+  const loadMembers = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const membersData = await fetchGroupUsers(group.id);
+      setMembers(membersData);
+    } catch (err) {
+      console.error('Failed to load group members:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [group.id]);
+
   useEffect(() => {
-    loadGroups();
+    loadMembers();
+  }, [loadMembers]);
+
+  // Get users not already in the group
+  const availableUsers = useMemo(() => {
+    return allUsers.filter(user => !members.some(member => member.id === user.id));
+  }, [allUsers, members]);
+
+  // Add a member to the group
+  const handleAddMember = async () => {
+  if (!selectedUser) return;
+  try {
+    setIsAdding(true);
+    await addUserToGroup(group.id, selectedUser);
+    const membersData = await fetchGroupUsers(group.id);
+    setMembers(membersData);
+    onUpdateMemberCount(group.id, membersData.length); // update parent
+    setSelectedUser('');
+  } catch (err) {
+    console.error('Failed to add member:', err);
+  } finally {
+    setIsAdding(false);
+  }
+};
+
+  // Remove a member from the group
+const handleRemoveMember = async (userId) => {
+  try {
+    setIsRemoving(userId);
+    await removeUserFromGroup(group.id, userId);
+    const membersData = await fetchGroupUsers(group.id);
+    setMembers(membersData);
+    onUpdateMemberCount(group.id, membersData.length); // update parent
+  } catch (err) {
+    console.error('Failed to remove member:', err);
+  } finally {
+    setIsRemoving(null);
+  }
+};
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Manage Members - {group.name}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+        
+        <div className="p-5">
+          {/* Add Member Section */}
+          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Add Member</h3>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-600 dark:text-white"
+                disabled={availableUsers.length === 0}
+              >
+                <option value="">Select a user</option>
+                {availableUsers.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.username})
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleAddMember}
+                disabled={!selectedUser || isAdding}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                {isAdding ? 'Adding...' : 'Add Member'}
+              </button>
+            </div>
+            {availableUsers.length === 0 && (
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">All users are already members of this group.</p>
+            )}
+          </div>
+
+          {/* Members List */}
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Current Members ({members.length})</h3>
+            
+            {isLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            ) : members.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-center py-4">No members in this group yet.</p>
+            ) : (
+              <div className="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                {members.map(member => (
+                  <div key={member.id} className="p-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{member.username}</p>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveMember(member.id)}
+                      disabled={isRemoving === member.id}
+                      className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
+                      title="Remove member"
+                    >
+                      {isRemoving === member.id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                      ) : (
+                        <UserMinus className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main GroupsManager Component
+function GroupsManager() {
+  const [groups, setGroups] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [currentGroup, setCurrentGroup] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [toast, setToast] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+  const [expandedGroup, setExpandedGroup] = useState(null);
+  const [allUsers, setAllUsers] = useState([]);
+
+  // Load groups and users
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [groupsData, usersData] = await Promise.all([
+        fetchGroups(),
+        fetchUsers()
+      ]);
+      
+      setAllUsers(usersData);
+      setGroups(groupsData);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      showToast('Failed to load data. Please try again later.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  // Search
   useEffect(() => {
-    if (!searchTerm) {
-      setFilteredGroups(groups);
-    } else {
-      const filtered = groups.filter(g =>
-        g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (g.description && g.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-      setFilteredGroups(filtered);
-    }
-  }, [searchTerm, groups]);
+    loadData();
+  }, [loadData]);
 
-  // Sort
-  useEffect(() => {
-    const sorted = [...filteredGroups].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-    setFilteredGroups(sorted);
-  }, [sortConfig]);
-
-  const showToast = (text, type = 'success') => {
+  const showToast = useCallback((text, type = 'success') => {
     setToast({ text, type });
-  };
+  }, []);
 
-  const handleToastClose = () => {
+  const handleToastClose = useCallback(() => {
     setToast(null);
-  };
+  }, []);
 
-  // Modal
-  const openCreateModal = () => { setCurrentGroup(null); setIsModalOpen(true); };
-  const openEditModal = (group) => { setCurrentGroup(group); setIsModalOpen(true); };
-  const closeModal = () => { setIsModalOpen(false); setCurrentGroup(null); };
+  // Modal functions
+  const openCreateModal = useCallback(() => { 
+    setCurrentGroup(null); 
+    setIsModalOpen(true); 
+  }, []);
 
-  // CRUD
-  const handleSaveGroup = async (groupData) => {
+  const openEditModal = useCallback((group) => { 
+    setCurrentGroup(group); 
+    setIsModalOpen(true); 
+  }, []);
+
+  const openMembersModal = useCallback((group) => { 
+    setCurrentGroup(group); 
+    setIsMembersModalOpen(true); 
+  }, []);
+
+  const closeModal = useCallback(() => { 
+    setIsModalOpen(false); 
+    setCurrentGroup(null); 
+  }, []);
+
+  const closeMembersModal = useCallback(() => { 
+    setIsMembersModalOpen(false); 
+    setCurrentGroup(null); 
+  }, []);
+
+  // CRUD operations
+  const handleSaveGroup = useCallback(async (groupData) => {
     try {
       if (currentGroup) {
         await updateGroup(currentGroup.id, groupData);
-        await loadGroups();
-        showToast('Group updated successfully!', 'update');
+        showToast('Group updated successfully!', 'success');
       } else {
         await createGroup(groupData);
-        await loadGroups();
-        showToast('Group created successfully!', 'create');
+        showToast('Group created successfully!', 'success');
       }
+      
+      await loadData();
       closeModal();
     } catch (err) {
       console.error('Error saving group:', err);
       showToast('Failed to save group.', 'error');
     }
-  };
+  }, [currentGroup, closeModal, loadData, showToast]);
 
-  const handleDeleteGroup = async (id) => {
+    // Update the member count of a group
+const handleUpdateMemberCount = useCallback((groupId, newCount) => {
+  setGroups(prevGroups =>
+    prevGroups.map(g =>
+      g.id === groupId ? { ...g, memberCount: newCount } : g
+    )
+  );
+}, []);
+
+  const handleDeleteGroup = useCallback(async (id) => {
     if (!window.confirm('Are you sure you want to delete this group?')) return;
     try {
       await deleteGroup(id);
-      await loadGroups();
-      showToast('Group deleted successfully!', 'delete');
+      await loadData();
+      showToast('Group deleted successfully!', 'success');
     } catch (err) {
       console.error('Error deleting group:', err);
       showToast('Failed to delete group.', 'error');
     }
-  };
+  }, [loadData, showToast]);
 
-  const requestSort = (key) => {
+  const requestSort = useCallback((key) => {
     let direction = 'asc';
     if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
     setSortConfig({ key, direction });
-  };
+  }, [sortConfig]);
 
-  const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
+  const formatDate = useCallback((dateString) => dateString ? new Date(dateString).toLocaleDateString() : 'N/A', []);
 
-  const toggleGroupExpand = (groupId) => {
+  const toggleGroupExpand = useCallback((groupId) => {
     setExpandedGroup(expandedGroup === groupId ? null : groupId);
-  };
+  }, [expandedGroup]);
+
+  // Filter and sort groups
+  const filteredGroups = useMemo(() => {
+    let result = groups;
+    
+    // Apply search filter
+    if (searchTerm) {
+      result = result.filter(g =>
+        g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (g.description && g.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    // Apply sorting
+    result = [...result].sort((a, b) => {
+      if (sortConfig.key === 'memberCount') {
+        if (a.memberCount < b.memberCount) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (a.memberCount > b.memberCount) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      }
+      
+      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    return result;
+  }, [groups, searchTerm, sortConfig]);
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 p-4">Groups Management</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 pb-4">Groups Management</h1>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-6 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
         <div className="max-w-7xl mx-auto">
           
@@ -169,7 +448,14 @@ function GroupsManager() {
                         <tr key={g.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                           <td className="px-4 sm:px-6 py-4 font-medium text-gray-900 dark:text-white">{g.name}</td>
                           <td className="px-4 sm:px-6 py-4 text-gray-500 dark:text-gray-400 max-w-xs truncate">{g.description || 'No description'}</td>
-                          <td className="px-4 sm:px-6 py-4 text-gray-500 dark:text-gray-400">{g.memberCount}</td>
+                          <td className="px-4 sm:px-6 py-4 text-gray-500 dark:text-gray-400">
+                            <button 
+                              onClick={() => openMembersModal(g)}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                            >
+                              {g.memberCount} members
+                            </button>
+                          </td>
                           <td className="px-4 sm:px-6 py-4 text-gray-500 dark:text-gray-400">{formatDate(g.createdAt)}</td>
                           <td className="px-4 sm:px-6 py-4 text-gray-500 dark:text-gray-400">{formatDate(g.updatedAt)}</td>
                           <td className="px-4 sm:px-6 py-4 text-right space-x-2">
@@ -203,7 +489,12 @@ function GroupsManager() {
                             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{g.description || 'No description'}</p>
                             <div className="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
                               <Users className="h-4 w-4 mr-1" />
-                              <span>{g.memberCount} members</span>
+                              <button 
+                                onClick={() => openMembersModal(g)}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                              >
+                                {g.memberCount} members
+                              </button>
                               <span className="mx-2">•</span>
                               <span>Created: {formatDate(g.createdAt)}</span>
                             </div>
@@ -231,6 +522,15 @@ function GroupsManager() {
                               </div>
                               <div>
                                 <span className="font-medium">Updated:</span> {formatDate(g.updatedAt)}
+                              </div>
+                              <div className="col-span-2 flex justify-between items-center">
+                                <span className="font-medium">Members:</span>
+                                <button 
+                                  onClick={() => openMembersModal(g)}
+                                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                >
+                                  Manage members
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -268,9 +568,17 @@ function GroupsManager() {
                           </button>
                         </div>
                       </div>
-                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
                         <span><span className="font-medium">{g.memberCount}</span> members</span>
-                        <span>Created: {formatDate(g.createdAt)}</span>
+                        <button 
+                          onClick={() => openMembersModal(g)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm"
+                        >
+                          Manage
+                        </button>
+                      </div>
+                      <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        Created: {formatDate(g.createdAt)}
                       </div>
                     </div>
                   ))
@@ -287,10 +595,25 @@ function GroupsManager() {
             </>
           )}
 
-          {/* Modal */}
+          {/* Group Form Modal */}
           {isModalOpen && (
-            <GroupFormModal group={currentGroup} onSave={handleSaveGroup} onClose={closeModal} />
+            <GroupFormModal 
+              group={currentGroup} 
+              onSave={handleSaveGroup} 
+              onClose={closeModal} 
+            />
           )}
+
+          {/* Group Members Modal */}
+          {isMembersModalOpen && currentGroup && (
+            <GroupMembers 
+              group={currentGroup} 
+              onClose={closeMembersModal} 
+              allUsers={allUsers}
+              onUpdateMemberCount={handleUpdateMemberCount} // pass callback
+            />
+          )}
+
           
           {/* Toast Component */}
           {toast && (
@@ -303,163 +626,6 @@ function GroupsManager() {
         </div>
       </div>
     </>
-  );
-}
-
-// Modal with responsive improvements
-function GroupFormModal({ group, onSave, onClose }) {
-  const [name, setName] = useState(group?.name || "");
-  const [description, setDescription] = useState(group?.description || "");
-  const [errors, setErrors] = useState({});
-  const [allUsers, setAllUsers] = useState([]);
-  const [groupUsers, setGroupUsers] = useState([]);
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load users + group members
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        setIsLoading(true);
-        const users = await fetchUsers();
-        setAllUsers(users);
-        if (group?.id) {
-          const groupMembers = await fetchGroupUsers(group.id);
-          setGroupUsers(groupMembers);
-          setSelectedUsers(groupMembers.map(u => u.id));
-        }
-      } catch (error) {
-        console.error("Failed to load users:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadUsers();
-  }, [group]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
-    if (!name.trim()) newErrors.name = "Group name is required";
-    if (name.length > 50) newErrors.name = "Name must be less than 50 characters";
-    if (description.length > 200) newErrors.description = "Description must be less than 200 characters";
-    if (Object.keys(newErrors).length) return setErrors(newErrors);
-
-    try {
-      // Save group details
-      const savedGroup = await onSave({
-        name: name.trim(),
-        description: description.trim() || null,
-      });
-
-      // Sync users to group
-      for (const userId of selectedUsers) {
-        if (!groupUsers.find(u => u.id === userId)) {
-          try {
-            await addUserToGroup({ userId, groupId: savedGroup.id });
-          } catch (err) {
-            console.error("Failed to add user:", err);
-          }
-        }
-      }
-
-      for (const u of groupUsers) {
-        if (!selectedUsers.includes(u.id)) {
-          try {
-            await removeUserFromGroup({ userId: u.id, groupId: savedGroup.id });
-          } catch (err) {
-            console.error("Failed to remove user:", err);
-          }
-        }
-      }
-
-      onClose();
-    } catch (err) {
-      console.error("Failed to save group:", err);
-    }
-  };
-
-  const toggleUser = (userId) => {
-    setSelectedUsers(prev =>
-      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-    );
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {group ? "Edit Group" : "Create Group"}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-5">
-          {/* Group name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Group Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              }`}
-            />
-            {errors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows="3"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
-                errors.description ? "border-red-500" : "border-gray-300"
-              }`}
-            />
-            {errors.description && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description}</p>}
-          </div>
-
-          {/* Users multi-select */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Users</label>
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              </div>
-            ) : (
-              <div className="max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-white dark:bg-gray-700 grid grid-cols-1 md:grid-cols-2 gap-2">
-                {allUsers.map(user => (
-                  <label key={user.id} className="flex items-center space-x-2 p-1 text-gray-700 dark:text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={selectedUsers.includes(user.id)}
-                      onChange={() => toggleUser(user.id)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600"
-                    />
-                    <span className="truncate">{user.name} ({user.username})</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 order-2 sm:order-1">
-              Cancel
-            </button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm order-1 sm:order-2">
-              {group ? "Save" : "Create"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }
 
