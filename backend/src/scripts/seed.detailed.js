@@ -1,6 +1,4 @@
-// scripts/seed.detailed.js
-// Detailed seed: multi-group, multi-user, multi-goal/task/activity/report dataset for dev/testing.
-// Usage: node scripts/seed.detailed.js
+// scr/scripts/seed.detailed.js
 
 require('dotenv').config();
 const fs = require('fs');

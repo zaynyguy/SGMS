@@ -1,3 +1,5 @@
+// src/controllers/groupsController.js
+
 const db = require("../db");
 
 // GET all groups with member count

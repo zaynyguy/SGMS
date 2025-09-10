@@ -1,3 +1,5 @@
+// src/routes/groupsRoutes.js
+
 const express = require("express");
 const router = express.Router();
 const groupsController = require("../controllers/groupsController");

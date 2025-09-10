@@ -1,6 +1,5 @@
-// scripts/seed.minimal.js
-// Minimal seed: roles, permissions, admin user, one group, basic settings.
-// Usage: node scripts/seed.minimal.js
+// src/scripts/seed.minimal.js
+
 
 require('dotenv').config();
 const fs = require('fs');

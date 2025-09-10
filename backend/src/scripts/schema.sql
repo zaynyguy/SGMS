@@ -1,4 +1,4 @@
--- schema.sql
+-- scr/scripts/schema.sql
 -- Drop existing objects (dev only)
 DROP TABLE IF EXISTS "Attachments" CASCADE;
 DROP TABLE IF EXISTS "Reports" CASCADE;
@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS "Roles" CASCADE;
 DROP TABLE IF EXISTS "Groups" CASCADE;
 DROP TABLE IF EXISTS "Notifications" CASCADE;
 DROP TABLE IF EXISTS "AuditLogs" CASCADE;
+DROP TABLE IF EXISTS "ProgressHistory" CASCADE;
 
 DROP TYPE IF EXISTS goal_status CASCADE;
 DROP TYPE IF EXISTS task_status CASCADE;
@@ -222,6 +223,23 @@ CREATE TABLE "AuditLogs" (
   "createdAt" TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX idx_auditlogs_createdAt ON "AuditLogs" ("createdAt");
+
+-- =========================
+-- PROGRESS HISTROY
+-- =========================
+
+CREATE TABLE IF NOT EXISTS "ProgressHistory" (
+  id SERIAL PRIMARY KEY,
+  entity_type VARCHAR(20) NOT NULL, -- 'Activity' | 'Task' | 'Goal'
+  entity_id INTEGER NOT NULL,
+  group_id INTEGER,
+  progress INTEGER NOT NULL DEFAULT 0,
+  metrics JSONB DEFAULT '{}'::jsonb,
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_progresshistory_entity ON "ProgressHistory"(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_progresshistory_recorded_at ON "ProgressHistory"(recorded_at);
 
 -- =========================
 -- TRIGGERS & FUNCTIONS

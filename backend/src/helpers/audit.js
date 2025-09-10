@@ -1,3 +1,5 @@
+// src/helpers/audit.js
+
 const db = require("../db");
 
 async function logAudit(userId, action, entity, entityId, details = {}) {

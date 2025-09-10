@@ -1,3 +1,5 @@
+// src/controllers/dashboardController.js
+
 const db = require('../db');
 const { hasPermission, getUserGroupIds } = require('../utils/permHelper');
 
