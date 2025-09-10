@@ -1,3 +1,5 @@
+// src/utils/generateToken.js
+
 const jwt = require('jsonwebtoken');
 const db = require('../db')
 const generateToken = async (userId) => {

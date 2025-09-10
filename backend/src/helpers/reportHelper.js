@@ -1,3 +1,5 @@
+// src/helpers/reportsHelper.js
+
 /**
  * Escapes HTML special characters to prevent XSS.
  * @param {*} s The input to escape.
@@ -263,4 +265,210 @@ function generateReportHtml(rows) {
     return html;
 }
 
-module.exports = { generateReportHtml };
+function generateReportJson(rows) {
+  const goals = new Map();
+
+  // Helper: ensure nested maps/objects exist
+  function getOrCreate(map, key, factory) {
+    if (!map.has(key)) map.set(key, factory());
+    return map.get(key);
+  }
+
+  for (const r of rows) {
+    // treat NULL/undefined ids gracefully
+    const gid = r.goal_id ?? null;
+    const tid = r.task_id ?? null;
+    const aid = r.activity_id ?? null;
+
+    // create goal
+    const goal = getOrCreate(goals, gid, () => ({
+      id: gid,
+      title: r.goal_title || null,
+      progress: r.goal_progress ?? 0,
+      status: r.goal_status || null,
+      tasks: new Map()
+    }));
+
+    // create task under goal (if exists)
+    let task = null;
+    if (tid !== null) {
+      task = getOrCreate(goal.tasks, tid, () => ({
+        id: tid,
+        title: r.task_title || null,
+        progress: r.task_progress ?? 0,
+        status: r.task_status || null,
+        assignee: r.task_assignee ?? null,
+        activities: new Map()
+      }));
+    }
+
+    // create activity under task (if exists)
+    if (aid !== null && task) {
+      const act = getOrCreate(task.activities, aid, () => ({
+        id: aid,
+        title: r.activity_title || null,
+        description: r.activity_description || null,
+        currentMetric: r.currentMetric || {},
+        targetMetric: r.targetMetric || {},
+        weight: r.activity_weight ?? 0,
+        isDone: !!r.activity_done,
+        status: r.activity_status || null,
+        reports: []
+      }));
+
+      // add report (if exists)
+      if (r.report_id) {
+        // find existing attachment entry inside newly added report if present
+        let rep = {
+          id: r.report_id,
+          narrative: r.report_narrative || null,
+          status: r.report_status || null,
+          metrics: r.report_metrics || null,
+          new_status: r.report_new_status || null,
+          createdAt: r.report_createdAt || null,
+          attachments: []
+        };
+
+        // push attachments later, but if row contains attachment info, add it
+        if (r.attachment_id) {
+          rep.attachments.push({
+            id: r.attachment_id,
+            name: r.attachment_name,
+            path: r.attachment_path,
+            type: r.attachment_type
+          });
+        }
+
+        // If a row is repeated for same report (multiple attachments), combine attachments below
+        act.reports.push(rep);
+      }
+    }
+  }
+
+  // Now convert maps -> arrays and merge duplicate report rows (attachments that came as separate rows)
+  const goalsOut = [];
+  for (const goal of goals.values()) {
+    const tasksOut = [];
+    for (const task of goal.tasks.values()) {
+      const activitiesOut = [];
+      for (const act of task.activities.values()) {
+        // merge attachments for same report id (if duplicates were pushed)
+        const mergedReportsMap = new Map();
+        for (const rep of act.reports) {
+          const id = rep.id;
+          if (!mergedReportsMap.has(id)) mergedReportsMap.set(id, JSON.parse(JSON.stringify(rep)));
+          else {
+            // merge attachments arrays (avoid duplicates)
+            const existing = mergedReportsMap.get(id);
+            const aNames = new Set(existing.attachments.map(a=>a.id));
+            for (const att of rep.attachments || []) {
+              if (!aNames.has(att.id)) {
+                existing.attachments.push(att);
+                aNames.add(att.id);
+              }
+            }
+          }
+        }
+        const mergedReports = Array.from(mergedReportsMap.values()).sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
+
+        // compute metric time series from APPROVED reports only
+        const approvedReports = mergedReports.filter(r => r.status === 'Approved' && r.metrics);
+
+        // monthly: take latest approved report metrics in each month (YYYY-MM)
+        const monthly = {};
+        for (const rep of approvedReports) {
+          const dt = new Date(rep.createdAt);
+          if (isNaN(dt)) continue;
+          const ym = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+          // if first or newer than saved one, take it
+          const prev = monthly[ym];
+          if (!prev || new Date(rep.createdAt) > new Date(prev._ts)) {
+            monthly[ym] = { _ts: rep.createdAt, metrics: rep.metrics };
+          }
+        }
+        // remove _ts from monthly and keep metrics
+        for (const k of Object.keys(monthly)) monthly[k] = monthly[k].metrics;
+
+        // quarterly: for each quarter in the months collected, take the HIGHEST numeric value for each metric key
+        const quarterly = {};
+        function qKeyFromYM(ym) {
+          const [y, m] = ym.split('-').map(Number);
+          const q = Math.floor((m-1)/3) + 1;
+          return `${y}-Q${q}`;
+        }
+        // build per metric maximum per quarter
+        const perQuarter = {};
+        for (const ym of Object.keys(monthly)) {
+          const qk = qKeyFromYM(ym);
+          const metrics = monthly[ym] || {};
+          perQuarter[qk] = perQuarter[qk] || {};
+          Object.entries(metrics).forEach(([mk, mv]) => {
+            // only numeric when computing max; otherwise keep last observed
+            const vNum = Number(mv);
+            if (!isNaN(vNum)) {
+              perQuarter[qk][mk] = perQuarter[qk][mk] === undefined ? vNum : Math.max(perQuarter[qk][mk], vNum);
+            } else {
+              // non-numeric: keep the last seen value
+              perQuarter[qk][mk] = mv;
+            }
+          });
+        }
+        Object.assign(quarterly, perQuarter);
+
+        // annual: take the latest approved report metrics in that year (latest month)
+        const annual = {};
+        const yearlyLatest = {};
+        for (const rep of approvedReports) {
+          const dt = new Date(rep.createdAt);
+          if (isNaN(dt)) continue;
+          const y = dt.getFullYear();
+          if (!yearlyLatest[y] || new Date(rep.createdAt) > new Date(yearlyLatest[y]._ts)) {
+            yearlyLatest[y] = { _ts: rep.createdAt, metrics: rep.metrics };
+          }
+        }
+        for (const y of Object.keys(yearlyLatest)) annual[y] = yearlyLatest[y].metrics;
+
+        activitiesOut.push({
+          id: act.id,
+          title: act.title,
+          description: act.description,
+          currentMetric: act.currentMetric || {},
+          targetMetric: act.targetMetric || {},
+          weight: act.weight,
+          isDone: act.isDone,
+          status: act.status,
+          reports: mergedReports,
+          metricsHistory: {
+            monthly,
+            quarterly,
+            annual
+          }
+        });
+      } // activities loop
+
+      tasksOut.push({
+        id: task.id,
+        title: task.title,
+        progress: task.progress,
+        status: task.status,
+        assignee: task.assignee,
+        activities: activitiesOut
+      });
+    } // tasks loop
+
+    goalsOut.push({
+      id: goal.id,
+      title: goal.title,
+      progress: goal.progress,
+      status: goal.status,
+      tasks: tasksOut
+    });
+  } // goals loop
+
+  return {
+    generationDate: (new Date()).toISOString(),
+    goals: goalsOut
+  };
+}
+
+module.exports = { generateReportHtml, generateReportJson };

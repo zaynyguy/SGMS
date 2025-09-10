@@ -1,3 +1,4 @@
+// src/controllers/attachmentsController.js
 const db = require("../db");
 const path = require("path");
 const fs = require("fs");

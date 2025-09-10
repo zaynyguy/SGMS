@@ -1,3 +1,5 @@
+// src/controllers/settingsController.js
+
 const db = require('../db');
 const bcrypt = require('bcrypt');
 const generateToken = require('../utils/generateToken');

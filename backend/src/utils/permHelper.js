@@ -1,3 +1,5 @@
+// src/utils/permHelper.js
+
 const db = require('../db');
 
 function hasPermission(user, perm) {

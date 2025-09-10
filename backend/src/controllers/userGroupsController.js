@@ -1,3 +1,5 @@
+// src/controllers/userGroupsController.js
+
 const db = require("../db");
 
 // ADD user to group

@@ -1,3 +1,5 @@
+// src/routes/activitiesRoutes.js
+
 const express = require("express");
 const router = express.Router({ mergeParams: true });
 const activitiesController = require("../controllers/activitiesController");

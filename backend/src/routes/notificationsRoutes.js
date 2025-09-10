@@ -1,3 +1,5 @@
+// src/routes/notificationsRoutes.js
+
 const express = require('express');
 const router = express.Router();
 const notificationsController = require('../controllers/notificationsController');

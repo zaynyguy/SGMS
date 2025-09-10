@@ -1,3 +1,5 @@
+// src/routes/goalsRoutes.js
+
 const express = require("express");
 const router = express.Router();
 const goalsController = require("../controllers/goalsController");
