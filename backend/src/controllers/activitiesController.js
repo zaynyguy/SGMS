@@ -1,5 +1,6 @@
 // src/controllers/activitiesController.js
 const db = require("../db");
+const { createNotification } = require("../services/notificationService");
 
 exports.getActivitiesByTask = async (req, res) => {
   const { taskId } = req.params;
@@ -58,6 +59,12 @@ exports.createActivity = async (req, res) => {
         targetMetric || {},
       ]
     );
+    await createNotification(client, {
+      userId: req.user.id,
+      type: "activity_created",
+      message: `Activity "${activity.title}" created.`,
+      meta: { activityId: activity.id },
+    });
     res
       .status(201)
       .json({ message: "Activity created successfully.", activity: r.rows[0] });
@@ -67,7 +74,7 @@ exports.createActivity = async (req, res) => {
 exports.updateActivity = async (req, res) => {
   const { activityId } = req.params;
   const { title, description, status, dueDate, weight, targetMetric, isDone } =
-    req.body; 
+    req.body;
   await db.tx(async (client) => {
     const c = await client.query('SELECT id FROM "Activities" WHERE id=$1', [
       activityId,
@@ -94,6 +101,13 @@ exports.updateActivity = async (req, res) => {
         activityId,
       ]
     );
+
+    await createNotification(client, {
+      userId: req.user.id,
+      type: "activity_created",
+      message: `Activity "${activity.title}" created.`,
+      meta: { activityId: activity.id },
+    });
 
     res.json({
       message: "Activity updated successfully.",

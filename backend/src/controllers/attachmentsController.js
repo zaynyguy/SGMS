@@ -4,6 +4,8 @@ const path = require("path");
 const fs = require("fs");
 const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 const { logAudit } = require("../helpers/audit");
+const { createNotification } = require("../services/notificationService");
+
 
 /**
  * Download attachment. Permissions:
