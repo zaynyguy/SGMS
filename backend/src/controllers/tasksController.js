@@ -1,11 +1,12 @@
 // src/controllers/tasksController.js
 
-const db = require('../db');
-const { logAudit } = require('../helpers/audit');
+const db = require("../db");
+const { logAudit } = require("../helpers/audit");
+const { createNotification } = require("../services/notificationService");
 
 exports.getTasksByGoal = async (req, res) => {
   const { goalId } = req.params;
-  const isManager = req.user.permissions.includes('manage_gta');
+  const isManager = req.user.permissions.includes("manage_gta");
 
   if (!isManager) {
     const check = await db.query(
@@ -15,7 +16,8 @@ exports.getTasksByGoal = async (req, res) => {
       [goalId, req.user.id]
     );
 
-    if (!check.rows.length) return res.status(403).json({ message: 'Forbidden' });
+    if (!check.rows.length)
+      return res.status(403).json({ message: "Forbidden" });
   }
 
   const { rows } = await db.query(
@@ -34,15 +36,24 @@ exports.createTask = async (req, res) => {
   const { goalId } = req.params;
   const { title, description, assigneeId, dueDate, weight } = req.body;
 
-  if (!title) return res.status(400).json({ message: 'Title is required.' });
+  if (!title) return res.status(400).json({ message: "Title is required." });
 
   const { rows } = await db.query(
     `INSERT INTO "Tasks" ("goalId", title, description, "assigneeId", "dueDate", "weight")
      VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [goalId, title.trim(), description?.trim() || null, assigneeId || null, dueDate || null, weight || 0]
+    [
+      goalId,
+      title.trim(),
+      description?.trim() || null,
+      assigneeId || null,
+      dueDate || null,
+      weight || 0,
+    ]
   );
 
-  res.status(201).json({ message: 'Task created successfully.', task: rows[0] });
+  res
+    .status(201)
+    .json({ message: "Task created successfully.", task: rows[0] });
 };
 
 exports.updateTask = async (req, res) => {
@@ -50,13 +61,17 @@ exports.updateTask = async (req, res) => {
   const { title, description, assigneeId, dueDate, status, weight } = req.body;
 
   try {
-    const { rows: currentTask } = await db.query('SELECT * FROM "Tasks" WHERE id = $1', [taskId]);
-    if (!currentTask.length) return res.status(404).json({ message: 'Task not found.' });
+    const { rows: currentTask } = await db.query(
+      'SELECT * FROM "Tasks" WHERE id = $1',
+      [taskId]
+    );
+    if (!currentTask.length)
+      return res.status(404).json({ message: "Task not found." });
 
     // Optional: audit manual status change
-    if (status === 'Done' && !req.user.permissions.includes('manage_gta')) {
-      await logAudit(req.user.id, 'manual_task_done', 'Task', taskId, {
-        note: 'Task status manually set to Done by non-manager.'
+    if (status === "Done" && !req.user.permissions.includes("manage_gta")) {
+      await logAudit(req.user.id, "manual_task_done", "Task", taskId, {
+        note: "Task status manually set to Done by non-manager.",
       });
     }
 
@@ -71,13 +86,30 @@ exports.updateTask = async (req, res) => {
            "updatedAt" = NOW()
        WHERE id = $7
        RETURNING *`,
-      [title?.trim() || null, description?.trim() || null, assigneeId || null, dueDate || null, status || null, weight || null, taskId]
+      [
+        title?.trim() || null,
+        description?.trim() || null,
+        assigneeId || null,
+        dueDate || null,
+        status || null,
+        weight || null,
+        taskId,
+      ]
     );
 
-    res.json({ message: 'Task updated successfully.', task: updated[0] });
+    if (assigneeId) {
+      await createNotification(client, {
+        userId: assigneeId,
+        type: "task_assigned",
+        message: `You were assigned to task "${task.title}".`,
+        meta: { taskId: task.id, goalId: task.goalId },
+      });
+    }
+
+    res.json({ message: "Task updated successfully.", task: updated[0] });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({ message: "Internal server error." });
   }
 };
 
@@ -85,13 +117,17 @@ exports.deleteTask = async (req, res) => {
   const { taskId } = req.params;
 
   try {
-    const { rows: currentTask } = await db.query('SELECT id FROM "Tasks" WHERE id = $1', [taskId]);
-    if (!currentTask.length) return res.status(404).json({ message: 'Task not found.' });
+    const { rows: currentTask } = await db.query(
+      'SELECT id FROM "Tasks" WHERE id = $1',
+      [taskId]
+    );
+    if (!currentTask.length)
+      return res.status(404).json({ message: "Task not found." });
 
     await db.query('DELETE FROM "Tasks" WHERE id = $1', [taskId]);
-    res.json({ message: 'Task deleted successfully.' });
+    res.json({ message: "Task deleted successfully." });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Internal server error.' });
+    res.status(500).json({ message: "Internal server error." });
   }
 };

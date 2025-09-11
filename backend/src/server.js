@@ -1,11 +1,13 @@
-// src/server.js
-
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const http = require("http");
+const { initSocket } = require("./services/socketService"); 
 
 const app = express();
+const server = http.createServer(app);
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -27,14 +29,17 @@ app.use("/api/notifications", require("./routes/notificationsRoutes"));
 app.use("/api/audit", require("./routes/auditRoutes"));
 
 app.get("/", (req, res) => {
-  res.send("The api server is running ..");
+  res.send("The API server is running...");
 });
 
 // --- Start Server ---
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, async () => {
+server.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+
+  // init socket
+  initSocket(server);
 
   try {
     console.log("Database connection established successfully.");

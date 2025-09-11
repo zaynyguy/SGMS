@@ -3,7 +3,7 @@ const db = require("../db");
 const path = require("path");
 const fs = require("fs");
 const { logAudit } = require("../helpers/audit");
-const { createNotification } = require("./notificationsController");
+const notificationService = require("../services/notificationService");
 const {
   generateReportHtml,
   generateReportJson,
@@ -76,6 +76,12 @@ exports.submitReport = async (req, res) => {
         );
       }
     }
+    await createNotification(db, {
+      userId: req.user.id,
+      type: "attachment_uploaded",
+      message: `Attachment "${attachment.filename}" uploaded.`,
+      meta: { attachmentId: attachment.id },
+    });
 
     await logAudit(req.user.id, "submit", "Report", report.id, { activityId });
     await client.query("COMMIT");
@@ -186,12 +192,12 @@ exports.reviewReport = async (req, res) => {
 
         // Send notification without relying on req.body
         try {
-          await createNotification({
+          await createNotification(client, {
             userId: report.userId,
             type: "report_review",
-            message: `Your report #${report.id} has been approved.`,
-            meta: { reportId: report.id, activityId: act.id },
-            level: "info",
+            message: `Your report #${report.id} was ${status.toLowerCase()}.`,
+            meta: { reportId },
+            level: status === "Rejected" ? "warning" : "info",
           });
         } catch (nerr) {
           console.error("notify on approval failed", nerr);
