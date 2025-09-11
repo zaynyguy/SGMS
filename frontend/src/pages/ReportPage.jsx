@@ -1,624 +1,544 @@
-import React, { useState, useEffect } from 'react';
-import { List, CheckCircle, FileText, X, Eye, Check, Download, AlertCircle, Filter, Search, User, BarChart3, ChevronDown, FileEditIcon } from 'lucide-react';
-import { fetchAllReports, reviewReport, generateMasterReport } from '../api/reports';
-import { fetchGroups } from '../api/groups';
+import React, { useState, useEffect } from "react";
+import { submitReport, fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
 
-// ---------- Main Reports Page ----------
-export default function ReportsPage() {
-  const [activeTab, setActiveTab] = useState('reports');
-  const [reports, setReports] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [darkMode, setDarkMode] = useState(false);
+/* --- Nav Component --- */
+function Nav({ current, onChange }) {
+  const items = [
+    { id: "submit", label: "Submit Report", icon: "📝" },
+    { id: "review", label: "Review Reports", icon: "👁️" },
+    { id: "master", label: "Master Report", icon: "📊" },
+  ];
+  
+  return (
+    <nav className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-2 md:p-3 flex flex-wrap gap-2 mb-6 border-t-4 border-gray-900 dark:border-gray-200">
+      {items.map((it) => (
+        <button
+          key={it.id}
+          onClick={() => onChange(it.id)}
+          className={`px-3 py-2 md:px-4 md:py-2 rounded-lg font-medium text-sm flex items-center gap-1 transition-colors ${
+            current === it.id
+              ? "bg-blue-600 text-white shadow-md"
+              : "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
+          }`}
+        >
+          <span className="text-base">{it.icon}</span>
+          <span className="hidden sm:inline">{it.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
 
-  // Modals
-  const [reportDetailModalOpen, setReportDetailModalOpen] = useState(false);
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [selectedReport, setSelectedReport] = useState(null);
+/* --- Submit Report Page --- */
+function SubmitReportPage() {
+  const [activityId, setActivityId] = useState("");
+  const [narrative, setNarrative] = useState("");
+  const [metrics, setMetrics] = useState([{ id: 1, key: "", value: "" }]);
+  const [newStatus, setNewStatus] = useState("");
+  const [message, setMessage] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadInitialData();
-  }, []);
+  function addMetric() {
+    setMetrics((m) => [...m, { id: Date.now(), key: "", value: "" }]);
+  }
+  
+  function updateMetric(id, field, value) {
+    setMetrics((m) => m.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
+  }
+  
+  function removeMetric(id) {
+    setMetrics((m) => m.filter((x) => x.id !== id));
+  }
 
-  const loadInitialData = async () => {
-    setLoading(true);
-    setError(null);
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setMessage(null);
+    if (!activityId) return setMessage({ type: "error", text: "Activity ID required" });
+
+    const form = new FormData();
+    form.append("narrative", narrative);
+    const metricsObj = metrics.reduce((acc, cur) => {
+      if (cur.key) acc[cur.key] = cur.value;
+      return acc;
+    }, {});
+    if (Object.keys(metricsObj).length)
+      form.append("metrics_data", JSON.stringify(metricsObj));
+    if (newStatus) form.append("new_status", newStatus);
+
+    setSubmitting(true);
     try {
-      const [reportsData, groupsData] = await Promise.all([
-        fetchAllReports(),
-        fetchGroups()
-      ]);
-      setReports(reportsData || []);
-      setGroups(groupsData || []);
+      const data = await submitReport(activityId, form);
+      setMessage({ type: "success", text: `Report submitted successfully (ID: ${data.id})` });
+      setActivityId("");
+      setNarrative("");
+      setMetrics([{ id: 1, key: "", value: "" }]);
+      setNewStatus("");
     } catch (err) {
-      setError(err.message || String(err));
-      console.error('Error loading data:', err);
+      setMessage({ type: "error", text: err.message });
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
-  };
-
-  const handleViewDetails = (report) => {
-    setSelectedReport(report);
-    setReportDetailModalOpen(true);
-  };
-
-  const handleOpenReview = (report) => {
-    setSelectedReport(report);
-    setReviewModalOpen(true);
-  };
-
-  const handleReviewSubmit = async (reviewData) => {
-    try {
-      setLoading(true);
-      const updatedReport = await reviewReport(
-        reviewData.reportId,
-        { status: reviewData.status, adminComment: reviewData.adminComment }
-      );
-      setReports(prev => prev.map(r => r.id === updatedReport.id ? updatedReport : r));
-      setReviewModalOpen(false);
-      setSelectedReport(null);
-    } catch (err) {
-      setError(err.message || String(err));
-      console.error('Error reviewing report:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateMasterReport = async (groupId) => {
-    try {
-      setLoading(true);
-      const reportHtml = await generateMasterReport(groupId);
-      
-      // Open the report in a new window
-      const newWindow = window.open();
-      newWindow.document.write(reportHtml);
-      newWindow.document.close();
-    } catch (err) {
-      setError(err.message);
-      console.error('Error generating master report:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const tabContent = {
-    reports: <ViewReportsTab reports={reports} onViewDetails={handleViewDetails} loading={loading} />,
-    review: <ReviewReportsTab reports={reports} onViewDetails={handleViewDetails} onOpenReview={handleOpenReview} loading={loading} />,
-    master: <MasterReportTab groups={groups} onGenerateReport={handleGenerateMasterReport} loading={loading} />
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
-      <header className="bg-gray-100 dark:bg-gray-900 shadow-sm">
-        <div className="max-w-8xl mx-auto px-2 sm:px-4 lg:px-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 gap-4">
-            <div className="flex items-center">
-              <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-600 dark:text-indigo-400 mr-2 sm:mr-3" />
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Reports Dashboard</h1>
-            </div>
-            <div className='w-full sm:w-auto bg-white dark:bg-gray-700 rounded-full px-1 py-1'>
-              {/* Tabs Navigation */}
-              <nav className="flex space-x-1 overflow-x-auto">
-                <button
-                  onClick={() => setActiveTab('reports')}
-                  className={`whitespace-nowrap py-2 px-3 sm:py-3 sm:px-4 border-2 rounded-full font-medium text-xs sm:text-sm flex items-center ${
-                    activeTab === 'reports'
-                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'
-                  }`}
-                >
-                  <List className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  All Reports
-                </button>
-                <button
-                  onClick={() => setActiveTab('review')}
-                  className={`whitespace-nowrap py-2 px-3 sm:py-3 sm:px-4 border-2 rounded-full font-medium text-xs sm:text-sm flex items-center ${
-                    activeTab === 'review'
-                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'
-                  }`}
-                >
-                  <CheckCircle className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Review
-                </button>
-                <button
-                  onClick={() => setActiveTab('master')}
-                  className={`whitespace-nowrap py-2 px-3 sm:py-3 sm:px-4 border-2 rounded-full font-medium text-xs sm:text-sm flex items-center ${
-                    activeTab === 'master'
-                      ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'
-                  }`}
-                >
-                  <FileEditIcon className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Master
-                </button>
-              </nav>
-            </div>
-          </div>
+    <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl shadow-lg border-t-4 border-gray-900 dark:border-gray-200">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
         </div>
-      </header>
-
-      <main className="max-w-8xl mx-auto px-2 sm:px-4 lg:px-6 py-4 bg-gray-100 dark:bg-gray-900">
-        {error && (
-          <div className="my-4 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-md flex items-center text-sm">
-            <AlertCircle className="mr-2" size={16} />
-            {error}
-            <button onClick={() => setError(null)} className="ml-auto">
-              <X size={16} />
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Submit Report</h2>
+      </div>
+      
+      <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Activity ID</label>
+          <input
+            value={activityId}
+            onChange={(e) => setActivityId(e.target.value)}
+            className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            placeholder="Enter activity ID"
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Narrative</label>
+          <textarea
+            value={narrative}
+            onChange={(e) => setNarrative(e.target.value)}
+            rows={4}
+            className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            placeholder="Provide a detailed narrative of your report"
+          />
+        </div>
+        
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Metrics</label>
+            <button 
+              type="button" 
+              onClick={addMetric}
+              className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Metric
             </button>
           </div>
-        )}
-
-        <div className="mt-4">
-          {tabContent[activeTab]}
+          
+          <div className="space-y-3">
+            {metrics.map((m) => (
+              <div key={m.id} className="flex gap-2 items-start">
+                <input
+                  placeholder="Metric name"
+                  value={m.key}
+                  onChange={(e) => updateMetric(m.id, "key", e.target.value)}
+                  className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                />
+                <input
+                  placeholder="Value"
+                  value={m.value}
+                  onChange={(e) => updateMetric(m.id, "value", e.target.value)}
+                  className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeMetric(m.id)}
+                  className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
-
-      {reportDetailModalOpen && selectedReport && (
-        <ReportDetailModal report={selectedReport} onClose={() => setReportDetailModalOpen(false)} />
-      )}
-
-      {reviewModalOpen && selectedReport && (
-        <ReviewModal report={selectedReport} onClose={() => setReviewModalOpen(false)} onSubmit={handleReviewSubmit} loading={loading} />
-      )}
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Status (optional)</label>
+          <select
+            value={newStatus}
+            onChange={(e) => setNewStatus(e.target.value)}
+            className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          >
+            <option value="">(no change)</option>
+            <option>Not Started</option>
+            <option>In Progress</option>
+            <option>Done</option>
+            <option>Blocked</option>
+          </select>
+        </div>
+        
+        <div className="pt-4">
+          <button
+            disabled={submitting}
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {submitting ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Submitting...
+              </span>
+            ) : (
+              "Submit Report"
+            )}
+          </button>
+        </div>
+        
+        {message && (
+          <div className={`p-4 rounded-lg ${message.type === "error" ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800" : "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"}`}>
+            <div className="flex items-start">
+              {message.type === "error" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              )}
+              <span>{message.text}</span>
+            </div>
+          </div>
+        )}
+      </form>
     </div>
   );
 }
 
-// ---------- Card Component ----------
-const Card = ({ title, icon, children, className = '' }) => (
-  <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden ${className}`}>
-    <div className="px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600 flex items-center">
-      <div className="text-indigo-600 dark:text-indigo-400">{icon}</div>
-      <h2 className="ml-2 text-base sm:text-lg font-semibold text-gray-800 dark:text-white">{title}</h2>
-    </div>
-    <div className="p-3 sm:p-4 md:p-6">{children}</div>
-  </div>
-);
+/* --- Review Reports Page --- */
+function ReviewReportsPage() {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+  const [actionState, setActionState] = useState({});
 
-// ---------- ViewReportsTab Component ----------
-const ViewReportsTab = ({ reports, onViewDetails, loading }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  useEffect(() => {
+    loadReports();
+  }, []);
 
-  const filteredReports = reports.filter(report => {
-    const matchesSearch = (
-      report.activity_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      report.narrative?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    const matchesStatus = !statusFilter || report.status === statusFilter;
-    
-    let matchesDate = true;
-    if (dateFilter) {
-      const reportDate = new Date(report.createdAt).toLocaleDateString();
-      matchesDate = reportDate === new Date(dateFilter).toLocaleDateString();
+  async function loadReports() {
+    setLoading(true);
+    try {
+      const data = await fetchReports();
+      setReports(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+  }
 
-  if (loading) {
-    return (
-      <Card title="All Reports" icon={<List size={18} />}>
-        <div className="flex justify-center py-6">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
-        </div>
-      </Card>
-    );
+  async function handleReview(id, status) {
+    const adminComment = actionState[id]?.comment || null;
+    const resubmissionDeadline = actionState[id]?.deadline || null;
+    try {
+      await reviewReport(id, { status, adminComment, resubmissionDeadline });
+      setReports((r) => r.map((x) => (x.id === id ? { ...x, status } : x)));
+      alert("Review updated successfully");
+    } catch (err) {
+      alert("Failed: " + err.message);
+    }
   }
 
   return (
-    <Card title="All Reports" icon={<List size={18} />}>
-      <div className="mb-4 space-y-3">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-          </div>
-          <input 
-            type="text" 
-            placeholder="Search reports..." 
-            className="block w-full pl-9 sm:pl-10 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-          />
+    <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
         </div>
-
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-          >
-            <Filter size={14} className="mr-1 sm:mr-2" />
-            Filters
-            <ChevronDown size={14} className={`ml-1 sm:ml-2 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showFilters && (
-            <div className="flex flex-col sm:flex-row gap-3">
-              <select 
-                className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value)}
-              >
-                <option value="">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-
-              <input
-                type="date"
-                className="rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                value={dateFilter}
-                onChange={e => setDateFilter(e.target.value)}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Activity</th>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">User</th>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {filteredReports.length > 0 ? (
-              filteredReports.map(report => <ReportRow key={report.id} report={report} onViewDetails={onViewDetails} />)
-            ) : (
-              <tr>
-                <td colSpan="5" className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
-                  <div className="flex flex-col items-center">
-                    <FileText className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mb-2" />
-                    <p className="text-sm">No reports found</p>
-                    <p className="text-xs mt-1">Try adjusting your search or filters</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  );
-};
-
-// ---------- ReviewReportsTab Component ----------
-const ReviewReportsTab = ({ reports, onViewDetails, onOpenReview, loading }) => {
-  const pendingReports = reports.filter(report => report.status === 'Pending');
-
-  if (loading) {
-    return (
-      <Card title="Review Reports" icon={<CheckCircle size={18} />}>
-        <div className="flex justify-center py-6">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
-        </div>
-      </Card>
-    );
-  }
-
-  return (
-    <Card title="Review Reports" icon={<CheckCircle size={18} />}>
-      <div className="mb-4 flex items-center">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200">
-          {pendingReports.length} Pending Reviews
-        </span>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Activity</th>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">User</th>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-              <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {pendingReports.length > 0 ? (
-              pendingReports.map(report => <ReportRow key={report.id} report={report} onViewDetails={onViewDetails} onOpenReview={onOpenReview} isReview={true} />)
-            ) : (
-              <tr>
-                <td colSpan="5" className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
-                  <div className="flex flex-col items-center">
-                    <CheckCircle className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mb-2" />
-                    <p className="text-sm">No reports pending review</p>
-                    <p className="text-xs mt-1">All reports have been reviewed</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  );
-};
-
-// ---------- MasterReportTab Component ----------
-const MasterReportTab = ({ groups, onGenerateReport, loading }) => {
-  const [selectedGroup, setSelectedGroup] = useState('');
-  const handleGenerate = () => onGenerateReport(selectedGroup || null);
-
-  return (
-    <Card title="Generate Master Report" icon={<FileEditIcon size={18} />}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label htmlFor="groupSelect" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Filter by Group (Optional)</label>
-          <select 
-            id="groupSelect" 
-            value={selectedGroup} 
-            onChange={(e) => setSelectedGroup(e.target.value)} 
-            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value="">All Groups</option>
-            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
-        </div>
-        
-        <div className="flex items-end">
-          <button 
-            onClick={handleGenerate} 
-            disabled={loading}
-            className="w-full md:w-auto inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white mr-2"></div>
-                Generating...
-              </>
-            ) : (
-              <>
-                <Download size={14} className="mr-1 sm:mr-2" />
-                Generate Report
-              </>
-            )}
-          </button>
-        </div>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Review Reports</h2>
       </div>
       
-      <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 sm:p-6 bg-gray-50 dark:bg-gray-700 min-h-[10rem] sm:min-h-[15rem] flex items-center justify-center">
-        <div className="text-center">
-          <BarChart3 className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2 sm:mb-4" />
-          <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-1">Master Report</h3>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-md">
-            Generate a comprehensive report with details about goals, tasks, activities, and reports.
-            Select a group to filter or generate for all groups.
-          </p>
+      {loading && (
+        <div className="flex justify-center py-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
-      </div>
-    </Card>
-  );
-};
-
-// ---------- ReportRow Component ----------
-const ReportRow = ({ report, onViewDetails, onOpenReview, isReview = false }) => {
-  const statusStyles = { 
-    Pending: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200', 
-    Approved: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200', 
-    Rejected: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200' 
-  };
-  
-  return (
-    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-      <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-        {new Date(report.createdAt).toLocaleDateString()}
-      </td>
-      <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm font-medium text-gray-900 dark:text-white max-w-[120px] sm:max-w-xs truncate">
-        {report.activity_title}
-      </td>
-      <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-gray-700 dark:text-gray-300 hidden sm:table-cell">
-        <div className="flex items-center">
-          <User size={12} className="mr-1 text-gray-400" />
-          {report.user_name}
+      )}
+      
+      {!loading && reports.length === 0 && (
+        <div className="text-center py-10 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="mt-4 text-gray-500 dark:text-gray-400">No reports available for review</p>
         </div>
-      </td>
-      <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm">
-        <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[report.status]}`}>
-          {report.status}
-        </span>
-      </td>
-      <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm font-medium space-x-2">
-        <button 
-          onClick={() => onViewDetails(report)} 
-          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 transition-colors inline-flex items-center"
-        >
-          <Eye size={14} className="mr-1" />
-          <span className="hidden sm:inline">View</span>
-        </button>
-        {isReview && (
-          <button 
-            onClick={() => onOpenReview(report)} 
-            className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 transition-colors inline-flex items-center"
-          >
-            <Check size={14} className="mr-1" />
-            <span className="hidden sm:inline">Review</span>
-          </button>
-        )}
-      </td>
-    </tr>
-  );
-};
-
-// ---------- ReportDetailModal Component ----------
-const ReportDetailModal = ({ report, onClose }) => {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-2 sm:p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Report Details</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="p-3 sm:p-4 md:p-6 overflow-y-auto">
-          <div className="space-y-4 sm:space-y-6">
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-4">
-              <div>
-                <h4 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{report.activity_title}</h4>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Submitted by {report.user_name} on {new Date(report.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                report.status === 'Pending' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' : 
-                report.status === 'Approved' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 
-                'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-              }`}>
-                {report.status}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <h5 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 text-sm sm:text-base">Activity Information</h5>
-                <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                  <p className="text-gray-600 dark:text-gray-400"><span className="font-medium">Goal:</span> {report.goal_title}</p>
-                  <p className="text-gray-600 dark:text-gray-400"><span className="font-medium">Task:</span> {report.task_title}</p>
+      )}
+      
+      <div className="space-y-4">
+        {reports.map((r) => (
+          <div key={r.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+            <div className="flex flex-col sm:flex-row justify-between items-start p-4 bg-white dark:bg-gray-800">
+              <div className="flex-1 mb-3 sm:mb-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="font-medium text-gray-900 dark:text-white">Report #{r.id}</span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    r.status === "Approved" ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" :
+                    r.status === "Rejected" ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300" :
+                    "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                  }`}>
+                    {r.status}
+                  </span>
                 </div>
+                <p className="text-gray-700 dark:text-gray-300 text-sm">{r.activity_title}</p>
               </div>
-
-              {report.metrics_data && Object.keys(report.metrics_data).length > 0 && (
-                <div>
-                  <h5 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 text-sm sm:text-base">Metrics</h5>
-                  <ul className="text-xs sm:text-sm space-y-1">
-                    {Object.entries(report.metrics_data).map(([key, value]) => (
-                      <li key={key} className="text-gray-600 dark:text-gray-400">
-                        <strong>{key}:</strong> {value}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <h5 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 text-sm sm:text-base">Narrative</h5>
-              <p className="text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded-md text-xs sm:text-sm">
-                {report.narrative}
-              </p>
-            </div>
-
-            {report.new_status && (
-              <div>
-                <h5 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 text-sm sm:text-base">Status Change Requested</h5>
-                <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">
-                  User requested to mark activity as: <strong>{report.new_status}</strong>
-                </p>
-              </div>
-            )}
-
-            {report.adminComment && (
-              <div>
-                <h5 className="font-semibold text-gray-700 dark:text-gray-300 mb-2 text-sm sm:text-base">Admin Comment</h5>
-                <p className="text-gray-600 dark:text-gray-400 bg-yellow-50 dark:bg-yellow-900 p-3 rounded-md border-l-4 border-yellow-400 dark:border-yellow-600 text-xs sm:text-sm">
-                  {report.adminComment}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 bg-gray-50 dark:bg-gray-700">
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto inline-flex justify-center px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-500"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ---------- ReviewModal Component ----------
-const ReviewModal = ({ report, onClose, onSubmit, loading }) => {
-  const [status, setStatus] = useState('');
-  const [comment, setComment] = useState('');
-
-  useEffect(() => { 
-    if (report) { 
-      setStatus(''); 
-      setComment(''); 
-    } 
-  }, [report]);
-
-  const handleSubmit = () => {
-    if (!status) { 
-      alert('Please select a status.'); 
-      return; 
-    }
-    onSubmit({ reportId: report.id, status, adminComment: comment });
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-2 sm:p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md flex flex-col">
-        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Review Report</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="p-3 sm:p-4 md:p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
-              <select 
-                value={status} 
-                onChange={e => setStatus(e.target.value)} 
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                disabled={loading}
+              <button
+                onClick={() => setExpanded(expanded === r.id ? null : r.id)}
+                className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium text-sm"
               >
-                <option value="">Select status...</option>
-                <option value="Approved">Approve</option>
-                <option value="Rejected">Reject</option>
-              </select>
+                {expanded === r.id ? (
+                  <>
+                    <span className="hidden sm:inline">Collapse</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Expand</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                )}
+              </button>
             </div>
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Comment</label>
-              <textarea 
-                value={comment} 
-                onChange={e => setComment(e.target.value)} 
-                rows="3" 
-                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Add comments..."
-                disabled={loading}
-              ></textarea>
-            </div>
+            
+            {expanded === r.id && (
+              <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-700/50 space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Metrics Data</h4>
+                  <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 overflow-x-auto">
+                    <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                      {JSON.stringify(r.metrics_data, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admin Comment</label>
+                  <input
+                    placeholder="Enter your comment here"
+                    value={actionState[r.id]?.comment || ""}
+                    onChange={(e) => setActionState((s) => ({ ...s, [r.id]: { ...(s[r.id] || {}), comment: e.target.value } }))}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Resubmission Deadline (optional)</label>
+                  <input
+                    type="date"
+                    value={actionState[r.id]?.deadline || ""}
+                    onChange={(e) => setActionState((s) => ({ ...s, [r.id]: { ...(s[r.id] || {}), deadline: e.target.value } }))}
+                    className="px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-sm"
+                  />
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <button 
+                    onClick={() => handleReview(r.id, "Approved")} 
+                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition text-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Approve
+                  </button>
+                  <button 
+                    onClick={() => handleReview(r.id, "Rejected")} 
+                    className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-lg transition text-sm"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Reject
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-        <div className="border-t border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-2 sm:space-x-3">
-          <button 
-            onClick={onClose} 
-            disabled={loading}
-            className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 hover:bg-gray-50 dark:hover:bg-gray-500 disabled:opacity-50 text-xs sm:text-sm"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={handleSubmit} 
-            disabled={loading}
-            className="px-3 py-2 sm:px-4 sm:py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 text-xs sm:text-sm"
-          >
-            {loading ? 'Submitting...' : 'Submit Review'}
-          </button>
-        </div>
+        ))}
       </div>
     </div>
   );
-};
+}
+
+/* --- Master Report Page --- */
+function MasterReportPage() {
+  const [groupId, setGroupId] = useState("");
+  const [generating, setGenerating] = useState(false);
+
+  async function handleGenerate() {
+    if (!groupId) {
+      alert("Please enter a Group ID");
+      return;
+    }
+    
+    setGenerating(true);
+    const w = window.open("", "_blank");
+    try {
+      const data = await fetchMasterReport(groupId);
+      const html = generateHtmlReport(data);
+      w.document.write(html);
+      w.document.close();
+    } catch (err) {
+      w.document.write("<p>Failed to generate report: " + (err.message || "Unknown error") + "</p>");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function generateHtmlReport(data) {
+    // Same implementation as before
+    const goals = data?.goals || [];
+
+    function formatMetrics(report) {
+      let metrics = report.metrics_data ?? report.metrics;
+      if (!metrics) return "-";
+
+      let obj;
+      if (typeof metrics === "string") {
+        try {
+          obj = JSON.parse(metrics);
+        } catch {
+          return metrics;
+        }
+      } else {
+        obj = metrics;
+      }
+
+      if (!obj || Object.keys(obj).length === 0) return "-";
+
+      return `<ul style="margin:0; padding-left:15px;">${
+        Object.entries(obj)
+          .map(([k, v]) => `<li><strong>${k}:</strong> ${v}</li>`)
+          .join("")
+      }</ul>`;
+    }
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<title>Master Report</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; }
+h1 { color: #2563eb; }
+h2 { color: #1d4ed8; margin-top: 30px; }
+h3 { color: #1e40af; margin-top: 20px; }
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { border: 1px solid #ddd; padding: 6px; font-size: 14px; vertical-align: top; }
+th { background: #f3f4f6; }
+</style>
+</head>
+<body>
+<h1>Master Report</h1>
+<p>Generated: ${data?.generationDate ?? "N/A"}</p>
+
+${goals.length === 0 ? "<p>No goals found.</p>" : goals.map(goal => `
+<h2>Goal: ${goal.title} (Status: ${goal.status}, Progress: ${goal.progress}%)</h2>
+${goal.tasks.length === 0 ? "<p>No tasks.</p>" : goal.tasks.map(task => `
+<h3>Task: ${task.title}</h3>
+${task.activities?.length === 0 ? "<p>No activities.</p>" : task.activities.map(activity => `
+<p><strong>Activity:</strong> ${activity.title}</p>
+${activity.reports?.length === 0 ? "<p>No reports.</p>" : `
+<table>
+<thead>
+<tr><th>Report ID</th><th>Narrative</th><th>Status</th><th>Metrics</th></tr>
+</thead>
+<tbody>
+${activity.reports.map(r => `<tr>
+<td>${r.id ?? ""}</td>
+<td>${r.narrative ?? ""}</td>
+<td>${r.status ?? ""}</td>
+<td>${formatMetrics(r)}</td>
+</tr>`).join("")}
+</tbody>
+</table>`}
+`).join("")}
+`).join("")}
+`).join("")}
+
+</body>
+</html>`;
+  }  
+
+  return (
+    <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-sky-600 dark:text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Master Report</h2>
+      </div>
+      
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6 border border-blue-100 dark:border-blue-800/30">
+        <p className="text-blue-700 dark:text-blue-300 text-sm">Generate a comprehensive master report for any group by entering the Group ID below.</p>
+      </div>
+      
+      <div className="flex flex-col sm:flex-row gap-4 items-start">
+        <div className="flex-1 w-full">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Group ID</label>
+          <input
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value)}
+            placeholder="Enter Group ID"
+            className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          />
+        </div>
+        <button 
+          onClick={handleGenerate} 
+          disabled={generating}
+          className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed mt-2 sm:mt-0"
+        >
+          {generating ? (
+            <span className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generating...
+            </span>
+          ) : (
+            "Generate Report"
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* --- Main App Wrapper --- */
+export default function ReportsUI() {
+  const [page, setPage] = useState("submit");
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 max-w-8xl mx-auto transition-colors duration-200">
+      
+      <header className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">Reports Dashboard</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1 md:mt-2">Submit, review, and generate comprehensive reports</p>
+      </header>
+      
+      <Nav current={page} onChange={setPage} />
+      {page === "submit" && <SubmitReportPage />}
+      {page === "review" && <ReviewReportsPage />}
+      {page === "master" && <MasterReportPage />}
+      
+      <footer className="mt-8 md:mt-12 text-center text-gray-500 dark:text-gray-500 text-sm">
+        <p>© {new Date().getFullYear()} Report System | v2.0</p>
+      </footer>
+    </div>
+  );
+}
