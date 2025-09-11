@@ -1,20 +1,26 @@
-// src/api/task.js
-import { api } from './auth';
+// src/api/tasks.js
+import { api } from "./auth"; // your generic fetch wrapper
 
-// -------------------- TASKS --------------------
-
-// Get all tasks for a goal
+// Get all tasks under a goal
 export const fetchTasksByGoal = (goalId) =>
-  api(`/api/goals/${goalId}/tasks`, 'GET');
+  api(`/api/goals/${goalId}/tasks`, "GET");
 
 // Create a new task under a goal
-export const createTask = (goalId, data) =>
-  api(`/api/goals/${goalId}/tasks`, 'POST', data);
+export const createTask = (goalId, taskData) =>
+  api(`/api/goals/${goalId}/tasks`, "POST", taskData);
 
 // Update a task
-export const updateTask = (taskId, data) =>
-  api(`/api/tasks/${taskId}`, 'PUT', data);
+export const updateTask = (goalId, taskId, taskData) =>
+  api(`/api/goals/${goalId}/tasks/${taskId}`, "PUT", taskData);
 
 // Delete a task
-export const deleteTask = (taskId) =>
-  api(`/api/tasks/${taskId}`, 'DELETE');
+export const deleteTask = (goalId, taskId) =>
+  api(`/api/goals/${goalId}/tasks/${taskId}`, "DELETE");
+
+// Fetch activities for a task
+export const fetchActivitiesByTask = (goalId, taskId) =>
+  api(`/api/goals/${goalId}/tasks/${taskId}/activities`, "GET");
+
+// Create an activity under a task
+export const createActivity = (goalId, taskId, activityData) =>
+  api(`/api/goals/${goalId}/tasks/${taskId}/activities`, "POST", activityData);

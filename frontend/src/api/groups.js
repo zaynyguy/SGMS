@@ -1,35 +1,17 @@
-// src/api/groups.js
-import { api } from './auth'; // Your generic API helper
+import { api } from "./auth";  // use auth.js api wrapper
 
-// ======================
-// GROUP MANAGEMENT API
-// ======================
-export const fetchGroups = () => api('/api/groups/', 'GET');
+// GET all groups
+export const fetchGroups = () => api("/api/groups", "GET");
 
-export const createGroup = (groupData) => api('/api/groups/', 'POST', {
-  name: groupData.name,
-  description: groupData.description
-});
+// GET single group
+export const fetchGroupDetails = (id) => api(`/api/groups/${id}`, "GET");
 
-export const updateGroup = (id, groupData) => api(`/api/groups/${id}/`, 'PUT', {
-  name: groupData.name,
-  description: groupData.description
-});
+// CREATE group
+export const createGroup = (groupData) => api("/api/groups", "POST", groupData);
 
-export const deleteGroup = (id) => api(`/api/groups/${id}/`, 'DELETE');
+// UPDATE group
+export const updateGroup = (id, groupData) => api(`/api/groups/${id}`, "PUT", groupData);
 
-// ===============================
-// GROUP MEMBERS MANAGEMENT API
-// ===============================
+// DELETE group
+export const deleteGroup = (id) => api(`/api/groups/${id}`, "DELETE");
 
-// Get all users in a group
-export const fetchGroupUsers = (groupId) =>
-  api(`/api/groups/${groupId}/users`, 'GET');
-
-// Add user to group
-export const addUserToGroup = (data) =>
-  api('/api/groups/addUser', 'POST', data);
-
-// Remove user from group
-export const removeUserFromGroup = (data) =>
-  api('/api/groups/removeUser', 'DELETE', data);

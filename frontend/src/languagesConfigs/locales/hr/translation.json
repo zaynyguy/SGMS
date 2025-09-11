@@ -1,20 +1,282 @@
 {
   "login": {
-    "title": "ሰለጥኹ ሐምበይሌ ዲጅኹ",
-    "subtitle": "አሲማ ኔሮት ዋ ሒስኒ አትሒዳደሮት",
-    "prompt": "ሒሳብ ዙርዙርኾው ኤስቡ",
+    "title": "ሰለጥኹ ሀምበይሌ ዲጅኹ",
+    "subtitle": "ኪም አካውቲኾ ቦኡ",
+    "prompt": "መቦአሌ መለያኾው ኤስቡ",
     "username_label": "ዚተናፈኢ ሱም",
-    "username_placeholder": "ዚተናፈኢ ሱም ኤስቡ",
+    "username_placeholder": "ዚተናፈኢ ሱምኾው ኤስቡ",
     "password_label": "ሲርሪ ጩቅቲ",
-    "password_placeholder": "ሲርሪ ጩቅቲ ኤስቡ",
-    "remember_label": "ዚቦኹቦ ኩትቤ የንበር",
-    "forgot_password": "ሲርሪ ጩቅቲው ረሰኾ ?",
-    "button_signin": "ኤስበኝ",
-    "error_default": "መቦአ ከሸፈ",
+    "password_placeholder": "ሲርሪ ጩቅቲኾው ኤስቡ",
+    "password_too_short": "ሲርሪ ጩቅቲ አነሰገር 8 ሐርፊያች መኽነ ሐለባ",
+    "remember_label": "ቀጠብ ኡሸኝ",
+    "forgot_password": "ሲርሪ ጩቅቲኾው ረሰኾ?",
+    "no_account": "አካውንት ኤለኹሚ?",
+    "signup_link": "አካውንት መክፈትሌ",
+    "button_signin": "ቦኡ",
+    "logging_in": "መቦአቤ...",
+    "error_default": "መቦአሌ አልቲፈረካም። ሐጂስቤ ጌብቱ።",
     "language_label": "ሲናን",
     "lang_en": "ኢንጊሊዝ ሲናን",
     "lang_am": "አሕመራ ሲናን",
     "lang_or": "ኦሮሞ ሲናን",
     "lang_hr": "ሐረሪ ሲናን"
+  },
+  "accessDenied": {
+    "title": "403",
+    "heading": "ዱቅቲዞ ተኸተረመሐል",
+    "message": "ኦውፊበሕ፣ ዪ ሰፍሓው መሔጀሌ ሩኽሳ ኤለኹም።",
+    "button": "ኪም ሊሚ ሰፍሐ ሌጥ"
+  },
+  "dashboard": {
+    "title": "ዪ ሊሚ ሰፍሐንታ"
+  },
+  "errorBoundary": {
+    "title": "አሐድ ኸጠእ ተኸለቀመሐል",
+    "message": "ዛልቲሔሰባ ኸጠእ ተኸለቃ። ሰፍሐዞው ሐጂስቤ አቴግሊ።",
+    "detailsTitle": "ዚኸጠእ ዙርዙረቲያች",
+    "technicalDetails": "ቴክኒካል ዙርዙርቲያች:",
+    "componentStack": "ዚፈስሊ ሐድዲ:",
+    "refreshButton": "ሰፍሐዞው ሐጂስቤ አቴግሉ"
+  },
+  "settings": {
+    "title": "መትዋዋች",
+    "loading": "መትዋዋቹው መጤነቤ ሀል...",
+    "personalInfo": "ዚሩኻድ ማእሉማት",
+    "username": "ዚተናፈኢ ሱም",
+    "name": "ሱም",
+    "appearance": "ሲፋ ኹንቲ",
+    "language": "ሉኻ",
+    "theme": "ሲፋ",
+    "lightMode": "ነጪሕ የኽኒ",
+    "darkMode": "ጠይ የኽኒ",
+    "changePassword": "ሲርሪ ጩቅቲ መናወጥሌ",
+    "oldPassword": "ዚናራ ሲርሪ ጩቅቲ",
+    "newPassword": "ሐጂስ ሲርሪ ጩቅቲ",
+    "passwordPlaceholder": "ሲርሪ ጩቅቲኾው ኤስቡ",
+    "saveChanges": "ኒውጢያቹው አንቢር",
+    "saving": "...",
+    "saveButton": "መትዋዋቹው አንቢር",
+    "saveSuccess": "መትዋዋች ሰሕቤ ተሴጀሉመሐል",
+    "connectionTesting": "ዚኢሜል ኺድማ ሜሰብሌ መጌበትቤ...",
+    "connectionSuccess": "ዚኢሜል ኺድማ ተራኦት ተቄበለመሐል",
+    "reportingPeriod": {
+      "title": "ዚሪፖርቲ ወቅቲ መትዋዋች",
+      "monthlyDueDate": "ዋሕሪዛጥ ሪፖርት አኺርታኝ አያም",
+      "fiscalYearStart": "ዚፋይናንስ ዓመት ሜገልታኝ ዋሕሪ"
+    },
+    "emailServer": {
+      "title": "ዚኢሜል ኺድማ መትዋዋች",
+      "smtpHost": "SMTP መኻደም",
+      "smtpHostPlaceholder": "ሚሳሎሌ smtp.example.com",
+      "port": "ፖርት",
+      "portPlaceholder": "ሚሳልሌ 587",
+      "username": "ዚተናፈኢ ሱም",
+      "usernamePlaceholder": "SMTP ዚተናፈኢ ሱም",
+      "password": "ሲርሪ ጩቅቲ",
+      "passwordPlaceholder": "SMTP ሲርሪ ጩቅቲ",
+      "testConnection": "መትራአሌ ጌብቲ"
+    },
+    "fileUpload": {
+      "title": "ሲጂሊ መግፈር መትዋዋች",
+      "maxFileSize": "ጊዲር ሲጂሊ ቂያስ (MB)",
+      "maxFileSizePlaceholder": "ሚሳልሌ 10",
+      "allowedFileTypes": "ሩኽሳ ዛለዩ ሲጂሊ አይናች",
+      "allowedFileTypesPlaceholder": "ሚሳልሌ .pdf,.doc,.docx,.xls,.xlsx"
+    },
+    "notifications": {
+      "title": "አቴወቆት መትዋዋች",
+      "reportDue": "ሪፖርቲ ሜሰብ አያም ዚቆረረሳ ተናፈኢያቹ አቴውቂ",
+      "onSubmission": "ሪፖርቲ ዚቦአሳ አትሒዳድሪያቹ አቴውቂ",
+      "weeklySummary": "ሳቲዛጥ መጣለልቲ ኢሜላቹ ጊፈር"
+    },
+    "emailTemplates": {
+      "title": "ዚኢሜል ሰፍሐ",
+      "placeholder": "ኢዴቤ ኢሜል ሰፍሐኾው ኤስቡ...",
+      "default": "ዚናሬኹ ኢሜል ሊሕዳኝ..."
+    },
+    "toasts": {
+      "updateSuccess": "መትዋዋች ሰሕቤ ተናወጡመሐል"
+    },
+    "errors": {
+      "loadError": "መትዋዋቹ ሰሕቤ መጤነሌ አልቲፈረካም",
+      "updateError": "መትዋዋቹ ሰሕቤ መናወጥሌ አልቲፈረካም",
+      "passwordTooShort": "ሲርሪ ጩቅቲ አነሰገር 8 ሐርፊያች መኽነ ሐለባ",
+      "missingEmailDetails": "ዚኢሜል ኺድማ ዙርዙርቲያቹ ኤስቡ",
+      "connectionFailed": "ኪም ኢሜል ኺድማ መትራኣሌ አልቲፈረካም"
+    }
+  },
+  "admin": {
+    "title": "ዚአትሒዳድሪ ሊሚ ሰፍሐ",
+    "header": "ዚአትሒዳድሪ ፓነል",
+    "mobileMenu": {
+      "toggle": "ኒውጢ ሚልሐጅ"
+    },
+    "tabs": {
+      "users": "ተናፈኢያች",
+      "roles": "ሲጃያች",
+      "settings": "መትዋዋች",
+      "auditLog": "ዚኦዲት ሲጂሊlog",
+      "switchTo": "{tab} ሉኻ መናወጥሌ"
+    },
+    "sidebar": {
+      "appName": "ዚአትሒዳድራ ፓነል",
+      "logoAlt": "ሙነዘማ አላማ",
+      "menu": {
+        "dashboard": "ሊሚ ሰፍሐ",
+        "settings": "መትዋዋ",
+        "admin": "አትሒዳድሪ"
+      },
+      "logout": "ዊጠእ",
+      "closeMenu": "ሚልሐጁ አቆፍሊ",
+      "openMenu": "ሚልሐጁ ኪፈት"
+    },
+    "actions": {
+      "cancel": "ማሽ",
+      "saveChanges": "ኒውጢያቹው አንቢር",
+      "create": "ሐጂስ ዲለግ",
+      "delete": "ማሽ",
+      "tryAgain": "ሐጂስቤ የጌብቱ"
+    },
+    "users": {
+      "addUser": "ተናፈኢ ዲበል",
+      "edit": "ቄምሲ",
+      "delete": "ማሽ",
+      "editUser": "ተናፈኢ {name} ቄምሲ",
+      "deleteUser": "ተናፈኢው {name} ማሽ",
+      "editUserTitle": "ተናፈኢ ቄምሲ",
+      "createUserTitle": "ተናፈኢ ዲበል",
+      "noUsers": "ተናፈኢዞ አልቲረኸባም",
+      "notAvailable": "አልቲረኸባም",
+      "role": "ሲጃ",
+      "changeStatus": "ኹንቲው ናውጢ",
+      "statusChanged": "ዚ{name} ኹንቲ ኪም {status} ተናወጠመሐል",
+      "status": {
+        "active": "ኑቁሕ",
+        "inactive": "ኑቁሕ ዘልታ",
+        "pending": "ሜቀቤ ሐል"
+      },
+      "tableHeaders": {
+        "username": "ተናፈኢ ሱም",
+        "name": "ሱም",
+        "role": "ሲጃ",
+        "status": "ኹንቲ",
+        "actions": "ኢሾታች"
+      },
+      "form": {
+        "username": "ተናፈኢ ሱም",
+        "usernamePlaceholder": "ተናፈኢ ሱም ኤስቡ",
+        "name": "ሙሉእ ሱም",
+        "namePlaceholder": "ሙሉእ ሱም ኤስቡ",
+        "password": "ሲርሪ ጩቅቲ",
+        "newPassword": "ሐጂስ ሲርሪ ጩቅቲ",
+        "passwordPlaceholder": "ሲርሪ ጩቅቲ ኤስቡ",
+        "role": "ሲጃ",
+        "selectRole": "ሲጃ ሚለሑ"
+      },
+      "deleteConfirm": {
+        "title": "መትማሸዞው የቂን ኡሽ",
+        "message": "ዚ{name} ተናፈኢ መማሸ መኽሸኾ የቂኒንተኹ? ተማሸጊር ዪርገብጉሜል።"
+      },
+      "toasts": {
+        "createSuccess": "ተናፈኢ {name} ሰሕቤ ተደለገመሐል!",
+        "updateSuccess": "ተናፈኢ {name} ሰሕቤ ጠብኻነመሐል!",
+        "deleteSuccess": "ተነፈኢ {name} ተማሸመሐል!"
+      },
+      "errors": {
+        "loadFailed": "ተናፈኢያች ዙርዙር መጤነሌ አልቲፈረካም፦ {error}",
+        "saveFailed": "ተናፈኢያች ተስጂል ሞሸሌ አለቲፈረካም፦ {error}",
+        "deleteFailed": "ተናፈኢያቹ መማሸሌ አልቲፈረካም፦ {error}",
+        "passwordTooShort": "ሲርሪ ጩቅቲ አነሰጊር 8 ሐርፊ መኽነ ሐልባ"
+      }
+    },
+    "roles": {
+      "title": "ዚሲጃ አትሒዳደሮት",
+      "rolesList": "ሲጃያች",
+      "permissions": "ሩኽሳች",
+      "permission": "ሩኽሳ",
+      "roleName": "ዚሲጃ ሱም",
+      "roleNamePlaceholder": "ዚሲጃ ሱም ኤስቡ",
+      "description": "መቤየንቲ",
+      "descriptionPlaceholder": "መቤየንቲ ኤስቡ",
+      "optional": "መምለሕቲ",
+      "noRoles": "ሲጃ ኤሉም",
+      "noPermissions": "ሩኽሳ ኤሉም",
+      "addRole": "ሲጃ ዲበል",
+      "editRoleTitle": "ሲጃ ቄምሲ",
+      "createRoleTitle": "ሲጃ ዲለግ",
+      "editRole": "{name} ቄምሲ",
+      "deleteRole": "{name} ማሽ",
+      "enabled": "አትፌርኪ",
+      "disabled": "አተትፌርኪ",
+      "permissionStatus": "{role} ዚ{permission} ሩኽሳ ኹንቲ {status} ኢንታ",
+      "loading": "ሲጃያቹ መጤነቤ...",
+      "deleteConfirm": {
+        "title": "ሲጃ መትማሸዞው የቂን ኡሽ",
+        "message": "ዚ'{name}' ሲጃው መማሻ መኽሸኾው የቂኒንተኹ?"
+      },
+      "toasts": {
+        "createSuccess": "ሲጃ '{name}' ሰሕቤ ተደለገማሐል",
+        "updateSuccess": "ሲጃ '{name}' ሰሕቤ ተሴጀለማሐል",
+        "deleteSuccess": "ሲጃ '{name}' ተማሸመሐል"
+      },
+      "errors": {
+        "title": "ሲጃ መእሉማት ለአይቤ ኸጠእ",
+        "loadError": "ሲጃያቹ መጤነሌ አልቲፈረካም",
+        "saveError": "ሲጃው ተስጂል ሞሸሌ አለቲፈረካም፦ {error}",
+        "deleteError": "ሲጃው መማሸሌ አለቲፈረካም፦ {error}"
+      }
+    },
+    "auditLog": {
+      "title": "ዚኦዲት ሲጂል",
+      "exportButton": "CSVቤ የውጠእ",
+      "searchPlaceholder": "ሲጂሊያቹ መፋጨቤ...",
+      "searchLabel": "ዚኦዲት ሲጂሊያቹ ፋጭ",
+      "fromDate": "አያም:",
+      "toDate": "ኢላዋ:",
+      "applyFilters": "መጥላያቹ ተናፈእ",
+      "noEntries": "ዚኦዲት ሲጂሊ አልቲረኸባም",
+      "tableHeaders": {
+        "timestamp": "ወቅቲ",
+        "user": "ተናፈኢ",
+        "entity": "ኢልሊ ፊክሪ",
+        "action": "ኢሾት",
+        "details": "ዙርዙር"
+      },
+      "actions": {
+        "submitted": "ቴሰበማሐል",
+        "created": "ተደለገማሐል",
+        "updated": "አጌየማሐል",
+        "deleted": "ተማሻማሓል",
+        "approved": "ሩኽሳ ተሰጤውማሓል",
+        "rejected": "ተኸተራማሓል"
+      },
+      "mockUsers": {
+        "alice": "አሊስ ጆንሰን",
+        "john": "ጆን ስሚት",
+        "emma": "ኤማ ዴቪስ",
+        "michael": "ሚካኤል ብራውን"
+      },
+      "mockDetails": {
+        "projectSubmitted": "ሐጂስ የፕሮጀክት አቡራ ተሰጣማሐል",
+        "reportCreated": "ዚዋሕሪ ፋይናንስ ሪፖርት ተደለቀማሓል",
+        "userUpdated": "ዚተናፈኢ ሩኽሳያች አጌዩማሓል",
+        "settingsChanged": "መትዋዋች ተናወጡማሓል"
+      },
+      "toast": {
+        "filtersApplied": "መጥላያች መድለግቤ ሐሉ",
+        "exportSuccess": "ዚኦዲት ሲጂልሊ ሰሕቤ መውጠሌ ተፈረከማሓል"
+      }
+    }
+  },
+  "sidebar": {
+    "appName": "SGMS",
+    "logoAlt": "ሙነዘማ አላማ",
+    "menu": {
+      "dashboard": "ሊሚ ሰፍሐ",
+      "settings": "መትዋዋ",
+      "admin": "አትሒዳደሮት"
+    },
+    "logout": "ዊጠእ",
+    "closeMenu": "መቆፋይ ሚልሐጅ"
   }
 }
