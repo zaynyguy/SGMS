@@ -39,7 +39,7 @@ const Sidebar = ({ children }) => {
     hasPermission('view_audit_logs') && { to: '/auditLog', icon: <ClipboardCheck size={24} />, label: 'Audit' },
     hasPermission('manage_access') && { to: '/accessmanagement', icon: <UserPen size={24} />, label: 'Access Management' },
     hasPermission('manage_reports') && { to: '/report', icon: <FileText size={24} />, label: 'Reports' },
-    hasPermission('manage_gta') && { to: '/objective', icon: <FileBarChartIcon size={24} />, label: 'Project Management' },
+    hasPermission('manage_gta') && { to: '/project', icon: <FileBarChartIcon size={24} />, label: 'Project Management' },
     hasPermission('manage_attachments') && { to: '/attachment', icon: <Paperclip size={24} />, label: 'Attachments' },
   ].filter(Boolean);
 
