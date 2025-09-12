@@ -187,6 +187,7 @@ CREATE TABLE "Attachments" (
   "fileName" VARCHAR(255) NOT NULL,
   "filePath" TEXT NOT NULL,
   "fileType" VARCHAR(100) NOT NULL,
+  "provider" VARCHAR(20) DEFAULT 'local',
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX idx_attachments_reportId ON "Attachments" ("reportId");

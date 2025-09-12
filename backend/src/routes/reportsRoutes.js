@@ -46,6 +46,14 @@ router.get(
   attachmentsController.downloadAttachment
 );
 
+// Upload attachment
+router.post(
+  "/attachments/upload",
+  upload.single("file"),
+  authorizePermissions(["manage_reports"]),
+  attachmentsController.uploadAttachment
+)
+
 // Delete attachment
 router.delete(
   "/attachments/:attachmentId",
