@@ -8,7 +8,7 @@ import { fetchGoals, createGoal, updateGoal, deleteGoal } from '../api/goals';
 import { fetchTasksByGoal, createTask, updateTask, deleteTask } from '../api/tasks';
 import { fetchActivitiesByTask, createActivity, updateActivity, deleteActivity } from '../api/activities';
 
-const ObjectiveManager = () => {
+const ProjectManagement = () => {
   // State
   const [goals, setGoals] = useState([]);
   const [tasks, setTasks] = useState({});
@@ -563,7 +563,7 @@ const ObjectiveManager = () => {
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="flex items-center">
               <Target className="h-8 w-8 text-blue-600 dark:text-blue-500 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Objective Manager</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Project Manager</h1>
             </div>
             
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
@@ -961,4 +961,4 @@ const ObjectiveManager = () => {
   );
 };
 
-export default ObjectiveManager;
+export default ProjectManagement;

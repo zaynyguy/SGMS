@@ -14,7 +14,7 @@ import SystemSettingsPage from './pages/SystemSettingsPage'
 import AuditLogPage from  './pages/AuditLogPage'
 import ReportPage from './pages/ReportPage';
 import AccessManagementPage from './pages/AccessManagementPage';
-import ObjectiveManager from './pages/objective';
+import ProjectManagement from './pages/ProjectManagementPage';
 import AttachmentManager from './pages/AttachmentPage';
 
 
@@ -72,10 +72,10 @@ function App() {
                                 }
                             />
                             <Route
-                                path="/objective"
+                                path="/project"
                                 element={
                                     <ProtectedRoute requiredPermission="manage_gta">
-                                        <ObjectiveManager />
+                                        <ProjectManagement />
                                     </ProtectedRoute>
                                 }
                             />
