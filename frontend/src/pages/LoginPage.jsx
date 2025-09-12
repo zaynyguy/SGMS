@@ -4,15 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import companyLogo from '../assets/logo.png';
-import { User, UserLock } from 'lucide-react';
+import { User, UserLock, Eye, EyeOff } from 'lucide-react'; // Added Eye and EyeOff icons
 
 const LoginPage = () => {
     const { t, i18n } = useTranslation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [remember, setRemember] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false); // Added state for password visibility
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -35,6 +35,10 @@ const LoginPage = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
     };
 
     return (
@@ -67,35 +71,29 @@ const LoginPage = () => {
                                 required
                             />
                         </div>
-                        <div>
+                        <div className="relative">
                             <label className="flex gap-1 items-end text-sm text-slate-800 dark:text-white/80">
                                 <UserLock/> {t('login.password_label')}
                             </label>
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 placeholder={t('login.password_placeholder')}
                                 className="w-full mt-2 px-4 py-3 bg-black/30 dark:bg-slate-200 rounded-lg border border-white/20 focus:outline-none transition-all duration-300 text-white dark:text-slate-800 placeholder:text-slate-200 placeholder:dark:text-slate-800"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
-                        </div>
-                        <div className="flex justify-between items-center text-sm">
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    id="keep-logged-in"
-                                    className="h-4 w-4 rounded bg-sltext-slate-800 border-white/30 focus:ring-pink-500"
-                                    checked={remember}
-                                    onChange={() => setRemember(!remember)}
-                                />
-                                <label htmlFor="keep-logged-in" className="ml-2 text-slate-800 dark:text-white/80">
-                                    {t('login.remember_label')}
-                                </label>
-                            </div>
+                            <button
+                                type="button"
+                                className="absolute right-3 top-11 text-slate-600 dark:text-slate-400 hover:bg-slate-700 rounded-full p-1"
+                                onClick={togglePasswordVisibility}
+                                aria-label={showPassword ? t('login.hide_password') : t('login.show_password')}
+                            >
+                                {showPassword ? <EyeOff size={23} /> : <Eye size={23} />}
+                            </button>
                         </div>
                         {error && <p className="text-red-400">{error}</p>}
-                        <div>
+                        <div className='pt-3'>
                             <button
                                 type="submit"
                                 disabled={loading}

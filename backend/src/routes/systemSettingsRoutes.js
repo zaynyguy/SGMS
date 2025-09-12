@@ -1,3 +1,5 @@
+// src/routes/systemSettingsRoutes.js
+
 const express = require("express");
 const router = express.Router();
 const systemSettingsController = require("../controllers/systemSettingsController");

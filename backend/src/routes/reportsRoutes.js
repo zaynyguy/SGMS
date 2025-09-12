@@ -1,3 +1,5 @@
+// src/routes/reportsRoutes.js
+
 const express = require("express");
 const router = express.Router();
 const reportsController = require("../controllers/reportsController");
@@ -13,6 +15,7 @@ router.use(authenticateJWT);
 router.post(
   "/activity/:activityId",
   upload.array("attachments", 5),
+  authorizePermissions(["view_reports"]),
   reportsController.submitReport
 );
 
@@ -42,6 +45,14 @@ router.get(
   authorizePermissions(["manage_reports", "view_reports", "view_attachments"]),
   attachmentsController.downloadAttachment
 );
+
+// Upload attachment
+router.post(
+  "/attachments/upload",
+  upload.single("file"),
+  authorizePermissions(["manage_reports"]),
+  attachmentsController.uploadAttachment
+)
 
 // Delete attachment
 router.delete(

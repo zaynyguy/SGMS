@@ -1,3 +1,5 @@
+// src/middleware/rateLimiter.js
+
 const rateLimit = require("express-rate-limit");
 
 // Limit login requests to 10 per minute per IP

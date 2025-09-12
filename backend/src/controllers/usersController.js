@@ -1,3 +1,5 @@
+// src/controllers/usersController.js
+
 const db = require('../db');
 const bcrypt = require('bcrypt');
 

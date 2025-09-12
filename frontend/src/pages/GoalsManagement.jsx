@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Edit, Trash2, X, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import { fetchGoals, fetchGroups, createGoal, updateGoal, deleteGoal } from '../api/goals';
+import { fetchGoals, createGoal, updateGoal, deleteGoal } from '../api/goals';
+import { fetchGroups } from '../api/groups'
 import Toast from '../components/common/Toast';
 
 function GoalsPage() {

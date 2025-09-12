@@ -1,5 +1,7 @@
 // src/controllers/notificationsController.js
 const db = require('../db');
+const notificationService = require('../services/notificationService');
+
 
 
 exports.listNotifications = async (req, res) => {
@@ -57,18 +59,40 @@ exports.markAllRead = async (req, res) => {
   }
 };
 
-exports.createNotification = async (req, res) => {
-  const { userId, type, message, meta, level } = req.body;
+async function _internalCreateNotificationPayload(payload) {
+  const { userId, type, message, meta = {}, level = 'info' } = payload || {};
+  if (!userId || !type || !message) {
+    const err = new Error('userId, type and message are required');
+    err.status = 400;
+    throw err;
+  }
+  // Pass a single object
+  const notification = await notificationService({ userId, type, message, meta, level });
+  return notification;
+}
+
+exports.createNotification = async function createNotification(req, res) {
   try {
-    const { rows } = await db.query(
-      `INSERT INTO "Notifications"("userId", type, message, meta, "level", "isRead", "createdAt")
-       VALUES ($1,$2,$3,$4,$5,false,now()) RETURNING *`,
-      [userId, type || 'generic', message, meta || {}, level || 'info']
-    );
-    // Hook for SMS later: if level === 'critical' push to queue.
-    res.status(201).json(rows[0]);
+    const userId = req.body.userId || req.user?.id; // fallback to authenticated user
+    const { type, message, meta, level } = req.body || {};
+
+    if (!userId || !type || !message) {
+      return res.status(400).json({ message: 'userId, type and message are required.' });
+    }
+
+    const notification = await notificationService({ userId, type, message, meta, level });
+
+    if (req.io?.to) {
+      try {
+        req.io.to(`user:${notification.userId}`).emit('notification:new', notification);
+      } catch (e) {
+        console.error('emit failed', e);
+      }
+    }
+
+    return res.status(201).json({ message: 'Notification created.', notification });
   } catch (err) {
-    console.error('notifications.create error', err);
-    res.status(500).json({ error: err.message });
+    console.error('createNotification failed:', err);
+    return res.status(err.status || 500).json({ message: err.message || 'Failed to create notification.' });
   }
 };

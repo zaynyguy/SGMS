@@ -1,6 +1,4 @@
-// scripts/seed.detailed.js
-// Detailed seed: multi-group, multi-user, multi-goal/task/activity/report dataset for dev/testing.
-// Usage: node scripts/seed.detailed.js
+// scr/scripts/seed.detailed.js
 
 require('dotenv').config();
 const fs = require('fs');
@@ -40,12 +38,10 @@ async function run() {
 
     // Permissions (comprehensive)
     const perms = [
-      "manage_users","manage_roles","manage_groups","view_groups",
-      "manage_goals","manage_tasks","manage_activities","manage_gta","view_gta",
-      "submit_reports","review_reports","view_reports","manage_reports",
-      "upload_attachments","manage_settings","view_settings",
-      "view_audit_logs","manage_notifications","view_analytics","manage_analytics",
-      "view_dashboard","manage_dashboard","manage_attachments"
+      "manage_gta","view_gta",
+      "submit_reports","view_reports","manage_reports","manage_settings",
+      "view_audit_logs","manage_notifications","manage_dashboard",
+      "view_dashboard","manage_attachments","manage_access"
     ];
     const permIds = {};
     for (const p of perms) {
@@ -62,11 +58,10 @@ async function run() {
     }
     await grant('Admin', perms);
     await grant('Manager', [
-      "view_groups","manage_groups","manage_gta","view_gta",
-      "manage_reports","view_reports","review_reports","upload_attachments",
-      "view_settings","view_analytics","view_dashboard"
+      "manage_gta","view_gta",
+      "manage_reports","view_reports","view_dashboard"
     ]);
-    await grant('User', ["view_reports","submit_reports","upload_attachments","view_settings","view_gta","view_dashboard"]);
+    await grant('User', ["view_reports","view_gta","view_dashboard"]);
 
     // Admin user
     const adminUser = process.env.ADMIN_USERNAME || 'admin';
@@ -185,14 +180,6 @@ async function run() {
                  VALUES ($1,$2,$3,$4,$5, now() - (interval '1 day' * $6)) RETURNING id`,
                 [activityId, reporter, narrative, JSON.stringify(metricVal), rStatus, randInt(0,10)]
               );
-              const repId = rr[0].id;
-              // maybe add attachment
-              if (Math.random() > 0.5) {
-                await client.query(
-                  `INSERT INTO "Attachments"("reportId","fileName","filePath","fileType") VALUES ($1,$2,$3,$4)`,
-                  [repId, `evidence_${repId}.txt`, `/uploads/evidence_${repId}.txt`, 'text/plain']
-                );
-              }
             }
           } // end activities
         } // end tasks

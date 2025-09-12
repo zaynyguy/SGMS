@@ -1,7 +1,9 @@
-const db = require('../db');
-const bcrypt = require('bcrypt');
-const generateToken = require('../utils/generateToken');
+// src/controllers/settingsController.js
 
+const db = require("../db");
+const bcrypt = require("bcrypt");
+const generateToken = require("../utils/generateToken");
+const { uploadFile } = require("../services/uploadService");
 // -------------------- GET SETTINGS --------------------
 exports.getSettings = async (req, res) => {
   const userId = req.user.id;
@@ -14,7 +16,12 @@ exports.getSettings = async (req, res) => {
     res.status(200).json(rows[0]);
   } catch (error) {
     console.error("Error fetching user settings:", error);
-    res.status(500).json({ message: "Failed to fetch user settings.", error: error.message });
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch user settings.",
+        error: error.message,
+      });
   }
 };
 
@@ -26,11 +33,15 @@ exports.updateSettings = async (req, res) => {
   try {
     if (oldPassword && newPassword) {
       // password change case
-      const { rows } = await db.query('SELECT password FROM "Users" WHERE id = $1', [userId]);
+      const { rows } = await db.query(
+        'SELECT password FROM "Users" WHERE id = $1',
+        [userId]
+      );
       if (!rows[0]) return res.status(404).json({ message: "User not found." });
 
       const isValid = await bcrypt.compare(oldPassword, rows[0].password);
-      if (!isValid) return res.status(401).json({ message: "Old password is incorrect." });
+      if (!isValid)
+        return res.status(401).json({ message: "Old password is incorrect." });
 
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await db.query(
@@ -46,41 +57,44 @@ exports.updateSettings = async (req, res) => {
     }
 
     const { token, user } = await generateToken(userId);
-    res.status(200).json({ message: "Settings updated successfully.", token, user });
+    res
+      .status(200)
+      .json({ message: "Settings updated successfully.", token, user });
   } catch (error) {
     console.error("Error updating user settings:", error);
-    res.status(500).json({ message: "Failed to update user settings.", error: error.message });
+    res
+      .status(500)
+      .json({
+        message: "Failed to update user settings.",
+        error: error.message,
+      });
   }
 };
 
 // -------------------- UPDATE PROFILE PICTURE --------------------
 exports.updateProfilePicture = async (req, res) => {
-  const userId = req.user.id;
-
   if (!req.file) {
-    return res.status(400).json({ message: "No file uploaded." });
+    return res.status(400).json({ error: "No file uploaded." });
   }
 
-  try {
-    const filePath = req.file.filename; // stored by multer in UPLOAD_DIR
+  const userId = req.user.id;
 
-    const { rows } = await db.query(
-      `UPDATE "Users" 
-       SET "profilePicture" = $1, "updatedAt" = NOW() 
-       WHERE id = $2 RETURNING id, username, name, language, "darkMode", "profilePicture"`,
-      [filePath, userId]
+  try {
+    // Use the centralized upload service
+    const uploaded = await uploadFile(req.file);
+
+    await db.query(
+      `UPDATE "Users" SET "profilePicture"=$1, "updatedAt"=NOW() WHERE id=$2`,
+      [uploaded.url, userId]
     );
 
-    if (!rows[0]) return res.status(404).json({ message: "User not found." });
-
-    const { token, user } = await generateToken(userId);
-    res.status(200).json({
+    res.json({
       message: "Profile picture updated successfully.",
-      token,
-      user: rows[0]
+      profilePicture: uploaded.url,
+      provider: uploaded.provider,
     });
-  } catch (error) {
-    console.error("Error updating profile picture:", error);
-    res.status(500).json({ message: "Failed to update profile picture.", error: error.message });
+  } catch (err) {
+    console.error("Error updating profile picture:", err);
+    res.status(500).json({ error: "Failed to update profile picture." });
   }
 };

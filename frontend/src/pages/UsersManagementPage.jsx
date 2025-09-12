@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Edit, Trash, UserPlus, X, CheckCircle, XCircle, Info } from 'lucide-react';
+import { Edit, Trash, UserPlus, X } from 'lucide-react';
 import { fetchUsers, createUser, updateUser, deleteUser, fetchRoles } from '../api/admin';
 import Toast from '../components/common/Toast'
 
@@ -168,7 +168,7 @@ const UsersManagementPage = () => {
 
   return (
     <>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 p-4">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white bg-white dark:bg-gray-800 pb-5">
         {t('admin.users.title') || 'User Management'}
       </h1>
     <section id="users" role="tabpanel" aria-labelledby="users-tab" className="p-4 sm:p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -219,7 +219,7 @@ const UsersManagementPage = () => {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-                      {user.roleName}
+                      {user.role}
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap space-x-1">
@@ -295,7 +295,7 @@ const UsersManagementPage = () => {
               </div>
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                  {user.roleName}
+                  {user.role}
                 </span>
               </div>
             </div>

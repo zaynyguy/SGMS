@@ -1,3 +1,5 @@
+// src/controllers/goalsController.js
+
 const db = require('../db');
 
 exports.getGoals = async (req, res) => {

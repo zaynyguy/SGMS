@@ -326,7 +326,7 @@ const App = () => {
       )}
 
       <h1 className="text-2xl font-bold text-black dark:text-white bg-white dark:bg-gray-800 w-full p-4">Task Management</h1>
-      <div className="container mx-auto px-10">
+      <div className="container mx-auto px-4 md:px-10">
         {/* Error message */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 dark:bg-red-900 dark:border-red-700 dark:text-red-200">
