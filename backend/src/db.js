@@ -1,17 +1,17 @@
 // src/db.js
-const { Pool } = require('pg');
+require('dotenv').config()
+const { Pool } = require("pg");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // preserve existing behavior, just safer defaults
   max: Number(process.env.PG_POOL_MAX || 20),
   idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT || 30000),
   connectionTimeoutMillis: Number(process.env.PG_CONN_TIMEOUT || 10000),
-  ssl: process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.PG_SSL === "true" ? { rejectUnauthorized: false } : false,
 });
 
-pool.on('error', (err) => {
-  console.error('Unexpected PG pool error:', err); // keep running; do not crash
+pool.on("error", (err) => {
+  console.error("Unexpected PG pool error:", err); // keep running; do not crash
 });
 
 async function query(text, params) {
@@ -26,12 +26,14 @@ async function connect() {
 async function tx(fn) {
   const client = await pool.connect();
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
     const result = await fn(client);
-    await client.query('COMMIT');
+    await client.query("COMMIT");
     return result;
   } catch (e) {
-    try { await client.query('ROLLBACK'); } catch (_) {}
+    try {
+      await client.query("ROLLBACK");
+    } catch (_) {}
     throw e;
   } finally {
     client.release();
