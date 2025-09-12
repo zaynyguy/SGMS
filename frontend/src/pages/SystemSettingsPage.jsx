@@ -1,265 +1,200 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useEffect } from "react";
+import { fetchSystemSettings, updateSystemSettings } from "../api/systemSettings";
 
-const SettingsPage = ({ showToast }) => {
-  const { t } = useTranslation();
-  const [emailTemplate, setEmailTemplate] = useState(
-    t('admin.settings.emailTemplate.default')
-  );
-  const [notifyReportDue, setNotifyReportDue] = useState(false);
-  const [notifyOnSubmission, setNotifyOnSubmission] = useState(true);
-  const [weeklySummaryEmail, setWeeklySummaryEmail] = useState(false);
-  const [monthlyReportDueDate, setMonthlyReportDueDate] = useState('2025-07-15');
-  const [fiscalYearStart, setFiscalYearStart] = useState('2025-01');
-  const [smtpHost, setSmtpHost] = useState('');
-  const [smtpPort, setSmtpPort] = useState('');
-  const [smtpUsername, setSmtpUsername] = useState('');
-  const [smtpPassword, setSmtpPassword] = useState('');
-  const [maxFileSize, setMaxFileSize] = useState('');
-  const [allowedFileTypes, setAllowedFileTypes] = useState('');
+export default function SystemSettingsPage() {
+  const [settings, setSettings] = useState({
+    allowed_attachment_types: ["application/pdf", "image/png", "image/jpeg", "text/plain"],
+    audit_retention_days: 0,
+    max_attachment_size_mb: 0,
+    reporting_active: false,
+    resubmission_deadline_days: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [darkMode, setDarkMode] = useState(false);
 
-  const handleTestConnection = () => {
-    if (!smtpHost || !smtpPort || !smtpUsername || !smtpPassword) {
-      showToast(t('admin.settings.errors.missingEmailDetails'), 'error');
-      return;
+  useEffect(() => {
+    // Check user's system preference for dark mode
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setDarkMode(true);
     }
     
-    showToast(t('admin.settings.connectionTesting'), 'info');
-    setTimeout(() => {
-      const success = Math.random() > 0.5;
-      if (success) {
-        showToast(t('admin.settings.connectionSuccess'), 'success');
-      } else {
-        showToast(t('admin.settings.errors.connectionFailed'), 'error');
+    async function loadSettings() {
+      try {
+        const data = await fetchSystemSettings();
+        setSettings(data);
+      } catch (err) {
+        setMessage("Failed to load settings");
+      } finally {
+        setLoading(false);
       }
-    }, 1500);
+    }
+    loadSettings();
+  }, []);
+
+  const handleChange = (key, value) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSaveSettings = () => {
-    const settings = {
-      monthlyReportDueDate,
-      fiscalYearStart,
-      smtpHost,
-      smtpPort,
-      smtpUsername,
-      smtpPassword,
-      maxFileSize,
-      allowedFileTypes,
-      emailTemplate,
-      notifyReportDue,
-      notifyOnSubmission,
-      weeklySummaryEmail,
-    };
-    console.log("Saving settings:", settings);
-    showToast(t('admin.settings.saveSuccess'), 'success');
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateSystemSettings(settings);
+      setMessage("Settings updated successfully!");
+    } catch (err) {
+      setMessage("Failed to update settings");
+    } finally {
+      setSaving(false);
+      setTimeout(() => setMessage(""), 4000);
+    }
   };
+
+  if (loading) return (
+    <div className="flex justify-center items-center h-screen bg-gray-200 dark:bg-gray-900">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 dark:border-blue-400"></div>
+    </div>
+  );
+  
+  if (!settings) return (
+    <div className="flex justify-center items-center h-screen bg-gray-200 dark:bg-gray-900">
+      <p className="text-red-500 dark:text-red-400">No settings found</p>
+    </div>
+  );
 
   return (
-    <>
-    <h1 className='sticky text-2xl text-gray-600 dark:text-gray-50 bg-gray-50 dark:bg-gray-800 p-4 font-semibold'>System Settings</h1>
-    <section id="settings" role="tabpanel" aria-labelledby="settings-tab" className="p-4 space-y-6 dark:bg-gray-900">
-      {/* Reporting Period */}
-      <div>
-        <h2 className="text-lg font-medium mb-2 mt-4 text-gray-800 dark:text-gray-200">
-          {t('admin.settings.reportingPeriod.title')}
-        </h2>
-        <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-sm">
-          <div>
-            <label htmlFor="monthly-report-due-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.reportingPeriod.monthlyDueDate')}
-            </label>
-            <input
-              type="date"
-              id="monthly-report-due-date"
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={monthlyReportDueDate}
-              onChange={(e) => setMonthlyReportDueDate(e.target.value)}
-            />
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 py-4 md:py-8 transition-colors duration-200">
+      <div className="max-w-8xl mx-auto px-3 sm:px-4">
+        {/* Header with theme toggle */}
+        <div className="flex justify-between items-center mb-6 px-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">System Settings</h1>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 transition-colors duration-200">
+          <div className="space-y-5">
+            {/* Allowed attachment types */}
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Allowed Attachment Types</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Enter MIME types separated by commas (e.g., application/pdf, image/png)</p>
+              <textarea
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 bg-white dark:bg-gray-600 text-gray-900 dark:text-white transition-colors duration-200"
+                value={(settings.allowed_attachment_types || []).join(", ")}
+                onChange={(e) =>
+                  handleChange(
+                    "allowed_attachment_types",
+                    e.target.value.split(",").map((v) => v.trim())
+                  )
+                }
+                placeholder="application/pdf, image/png, image/jpeg"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Audit retention days */}
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Audit Retention Days</label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">How long to keep audit logs (in days)</p>
+                <input
+                  type="number"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 bg-white dark:bg-gray-600 text-gray-900 dark:text-white transition-colors duration-200"
+                  value={settings.audit_retention_days ?? ""}
+                  onChange={(e) => handleChange("audit_retention_days", Number(e.target.value))}
+                  placeholder="Enter number of days"
+                  min="0"
+                />
+              </div>
+
+              {/* Max attachment size */}
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Attachment Size (MB)</label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Maximum file size allowed for uploads</p>
+                <input
+                  type="number"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 bg-white dark:bg-gray-600 text-gray-900 dark:text-white transition-colors duration-200"
+                  value={settings.max_attachment_size_mb ?? ""}
+                  onChange={(e) => handleChange("max_attachment_size_mb", Number(e.target.value))}
+                  placeholder="Enter size in MB"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            {/* Reporting active */}
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reporting</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Enable or disable system reporting</p>
+              <div className="flex items-center">
+                <div className="relative inline-block w-12 mr-2 align-middle select-none">
+                  <input 
+                    type="checkbox" 
+                    id="reporting-toggle"
+                    checked={!!settings.reporting_active}
+                    onChange={(e) => handleChange("reporting_active", e.target.checked)}
+                    className="sr-only"
+                  />
+                  <label 
+                    htmlFor="reporting-toggle"
+                    className={`block h-6 w-12 rounded-full cursor-pointer ${settings.reporting_active ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'} transition-colors duration-200`}
+                  >
+                    <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ${settings.reporting_active ? 'transform translate-x-6' : ''}`}></span>
+                  </label>
+                </div>
+                <span className="text-gray-700 dark:text-gray-300">{settings.reporting_active ? "Enabled" : "Disabled"}</span>
+              </div>
+            </div>
+
+            {/* Resubmission deadline */}
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 transition-colors duration-200">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Resubmission Deadline (days)</label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Number of days allowed for resubmission</p>
+              <input
+                type="number"
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 bg-white dark:bg-gray-600 text-gray-900 dark:text-white transition-colors duration-200"
+                value={settings.resubmission_deadline_days}
+                onChange={(e) => handleChange("resubmission_deadline_days", Number(e.target.value))}
+                placeholder="Enter number of days"
+                min="0"
+              />
+            </div>
           </div>
-          <div>
-            <label htmlFor="fiscal-year-start" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.reportingPeriod.fiscalYearStart')}
-            </label>
-            <input
-              type="month"
-              id="fiscal-year-start"
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={fiscalYearStart}
-              onChange={(e) => setFiscalYearStart(e.target.value)}
-            />
+
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center transition-colors duration-200 disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Save Settings
+                </>
+              )}
+            </button>
+            
+            {message && (
+              <div className={`w-full sm:w-auto px-4 py-2 rounded-lg text-center ${message.includes("Failed") ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"}`}>
+                {message}
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Email Server */}
-      <div>
-        <h2 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
-          {t('admin.settings.emailServer.title')}
-        </h2>
-        <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-sm">
-          <div>
-            <label htmlFor="smtp-host" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.emailServer.smtpHost')}
-            </label>
-            <input
-              type="text"
-              id="smtp-host"
-              placeholder={t('admin.settings.emailServer.smtpHostPlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={smtpHost}
-              onChange={(e) => setSmtpHost(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="smtp-port" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.emailServer.port')}
-            </label>
-            <input
-              type="number"
-              id="smtp-port"
-              placeholder={t('admin.settings.emailServer.portPlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={smtpPort}
-              onChange={(e) => setSmtpPort(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="smtp-username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.emailServer.username')}
-            </label>
-            <input
-              type="text"
-              id="smtp-username"
-              placeholder={t('admin.settings.emailServer.usernamePlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={smtpUsername}
-              onChange={(e) => setSmtpUsername(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="smtp-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.emailServer.password')}
-            </label>
-            <input
-              type="password"
-              id="smtp-password"
-              placeholder={t('admin.settings.emailServer.passwordPlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={smtpPassword}
-              onChange={(e) => setSmtpPassword(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={handleTestConnection}
-            className="btn-secondary px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 flex items-center gap-2"
-          >
-            {t('admin.settings.emailServer.testConnection')}
-          </button>
+        
+        <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          <p>Configure system-wide settings and preferences</p>
         </div>
       </div>
-
-      {/* File Upload Settings */}
-      <div>
-        <h2 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
-          {t('admin.settings.fileUpload.title')}
-        </h2>
-        <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-sm">
-          <div>
-            <label htmlFor="max-file-size" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.fileUpload.maxFileSize')}
-            </label>
-            <input
-              type="number"
-              id="max-file-size"
-              placeholder={t('admin.settings.fileUpload.maxFileSizePlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={maxFileSize}
-              onChange={(e) => setMaxFileSize(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="allowed-file-types" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.fileUpload.allowedFileTypes')}
-            </label>
-            <input
-              type="text"
-              id="allowed-file-types"
-              placeholder={t('admin.settings.fileUpload.allowedFileTypesPlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={allowedFileTypes}
-              onChange={(e) => setAllowedFileTypes(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Notification Settings */}
-      <div className="bg-white dark:bg-gray-700 dark:text-white p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-medium mb-3">
-          {t('admin.settings.notifications.title')}
-        </h2>
-        <div className="space-y-3">
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent"
-              checked={notifyReportDue}
-              onChange={(e) => setNotifyReportDue(e.target.checked)}
-            />
-            <span className="text-gray-700 dark:text-gray-300">
-              {t('admin.settings.notifications.reportDue')}
-            </span>
-          </label>
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent"
-              checked={notifyOnSubmission}
-              onChange={(e) => setNotifyOnSubmission(e.target.checked)}
-            />
-            <span className="text-gray-700 dark:text-gray-300">
-              {t('admin.settings.notifications.onSubmission')}
-            </span>
-          </label>
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent"
-              checked={weeklySummaryEmail}
-              onChange={(e) => setWeeklySummaryEmail(e.target.checked)}
-            />
-            <span className="text-gray-700 dark:text-gray-300">
-              {t('admin.settings.notifications.weeklySummary')}
-            </span>
-          </label>
-        </div>
-      </div>
-
-      {/* Email Templates */}
-      <div className="bg-white dark:bg-gray-700 dark:text-white p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-medium mb-3">
-          {t('admin.settings.emailTemplates.title')}
-        </h2>
-        <textarea
-          rows="6"
-          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-800 dark:text-white resize-y"
-          placeholder={t('admin.settings.emailTemplates.placeholder')}
-          value={emailTemplate}
-          onChange={(e) => setEmailTemplate(e.target.value)}
-        ></textarea>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSaveSettings}
-          className="btn-primary px-6 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors duration-200"
-        >
-          {t('admin.settings.saveButton')}
-        </button>
-      </div>
-    </section>
-</>
+    </div>
   );
-};
-export default SettingsPage;
+}

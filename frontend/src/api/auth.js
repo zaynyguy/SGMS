@@ -13,35 +13,36 @@ const API_URL = import.meta.env.VITE_API_URL;
 export const api = async (endpoint, method = 'GET', body = null) => {
   const token = localStorage.getItem('authToken');
   const headers = { 'Content-Type': 'application/json' };
-
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const config = { method, headers };
   if (body) config.body = JSON.stringify(body);
 
+  // 🔹 Debug: print full URL and config
+  console.log(`[API DEBUG] ${method} -> ${API_URL}${endpoint}`, config);
+
   try {
     const response = await fetch(`${API_URL}${endpoint}`, config);
 
-    // Try to parse JSON; if not JSON, throw readable error
-   const text = await response.text(); // read body once
-let data;
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
 
-try {
-  data = JSON.parse(text); // try to parse JSON
-} catch {
-  data = null; // fallback if not JSON
-}
+    if (!response.ok) {
+      throw new Error(data?.message || `HTTP ${response.status} error: ${text.slice(0, 100)}`);
+    }
 
-if (!response.ok) {
-  throw new Error(data?.message || `HTTP ${response.status} error: ${text.slice(0, 100)}`);
-}
-
-return data;
+    return data;
   } catch (error) {
     console.error('API call failed:', error);
     throw error;
   }
 };
+
 
 /**
  * Login function
@@ -63,3 +64,4 @@ export const loginUser = (username, password) => {
 export const updateRole = async (id, data) => {
   return api(`/api/roles/${id}`, 'PUT', data);
 };
+

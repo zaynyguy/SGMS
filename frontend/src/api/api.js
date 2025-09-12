@@ -1,22 +1,21 @@
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export const api = async (endpoint, method = 'GET', body = null) => {
-  const config = {
+export const api = async (url, method = "GET", data = null) => {
+  const token = localStorage.getItem("authToken"); // ✅ match AuthContext key
+  const options = {
     method,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
+      ...(token && { Authorization: `Bearer ${token}` }),
     },
+    ...(data && { body: JSON.stringify(data) }),
   };
 
-  if (body) {
-    config.body = JSON.stringify(body);
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || "API Error");
   }
-
-  const response = await fetch(API_URL + endpoint, config);
-
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-
-  return response.json();
+  return res.json();
 };
+

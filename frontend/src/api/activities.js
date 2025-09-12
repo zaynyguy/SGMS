@@ -1,20 +1,22 @@
-// src/api/activities.js
 import { api } from './auth';
 
-// -------------------- ACTIVITIES --------------------
+export async function fetchActivitiesByTask(taskId) {
+  if (!taskId) throw new Error('taskId required');
+  return await api(`/api/tasks/${taskId}/activities`, 'GET');
+}
 
-// Get all activities for a task
-export const fetchActivitiesByTask = (taskId) =>
-  api(`/api/tasks/${taskId}/activities`);
+export async function createActivity(taskId, payload = {}) {
+  if (!taskId) throw new Error('taskId required');
+  return await api(`/api/tasks/${taskId}/activities`, 'POST', payload);
+}
 
-// Create a new activity under a task
-export const createActivity = (taskId, data) =>
-  api(`/api/tasks/${taskId}/activities`, 'POST', data);
+export async function updateActivity(taskId, activityId, payload = {}) {
+  if (!taskId || !activityId) throw new Error('ids required');
+  return await api(`/api/tasks/${taskId}/activities/${activityId}`, 'PUT', payload);
+}
 
-// Update an activity
-export const updateActivity = (id, activityData) =>
-  api(`/api/activities/${id}/`, 'PUT', activityData);
+export async function deleteActivity(taskId, activityId) {
+  if (!taskId || !activityId) throw new Error('ids required');
+  return await api(`/api/tasks/${taskId}/activities/${activityId}`, 'DELETE');
+}
 
-// Delete an activity
-export const deleteActivity = (activityId) =>
-  api(`/api/activities/${activityId}/`, 'DELETE');
