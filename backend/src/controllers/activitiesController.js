@@ -1,9 +1,9 @@
 // src/controllers/activitiesController.js
 const db = require("../db");
 const notificationService = require("../services/notificationService");
+const { logAudit } = require("../helpers/audit");
 
 // GET /api/tasks/:taskId/activities
-
 exports.getActivitiesByTask = async (req, res) => {
   const { taskId } = req.params;
   try {
@@ -55,7 +55,6 @@ exports.createActivity = async (req, res) => {
   }
 
   try {
-  
     const activity = await db.tx(async (client) => {
       const t = await client.query('SELECT id FROM "Tasks" WHERE id=$1', [
         taskId,
@@ -81,10 +80,29 @@ exports.createActivity = async (req, res) => {
         ]
       );
       if (!r.rows || !r.rows[0]) throw new Error("Failed to create activity");
-      return r.rows[0];
+
+      const newActivity = r.rows[0];
+
+      // Audit inside the same transaction so audit rolls back if tx rolls back
+      try {
+        await logAudit({
+          userId: req.user.id,
+          action: "ACTIVITY_CREATED",
+          entity: "Activity",
+          entityId: newActivity.id,
+          details: { title: newActivity.title, taskId: newActivity.taskId },
+          client,
+          req,
+        });
+      } catch (e) {
+        console.error("ACTIVITY_CREATED audit failed (in-tx):", e);
+        // don't break the transaction for audit failure
+      }
+
+      return newActivity;
     });
 
-    
+    // Post-commit notification (best-effort)
     try {
       await notificationService({
         userId: req.user.id,
@@ -115,8 +133,12 @@ exports.updateActivity = async (req, res) => {
   const { title, description, status, dueDate, weight, targetMetric, isDone } =
     req.body;
 
+  const bRes = await db.query('SELECT * FROM "Activities" WHERE id=$1', [
+    activityId,
+  ]);
+  const beforeActivity = bRes.rows[0] || null;
+
   try {
-    
     const activity = await db.tx(async (client) => {
       const c = await client.query('SELECT id FROM "Activities" WHERE id=$1', [
         activityId,
@@ -147,10 +169,29 @@ exports.updateActivity = async (req, res) => {
         ]
       );
       if (!r.rows || !r.rows[0]) throw new Error("Failed to update activity");
-      return r.rows[0];
+
+      const updatedActivity = r.rows[0];
+
+      // Audit inside transaction with before/after snapshots
+      try {
+        await logAudit({
+          userId: req.user.id,
+          action: "ACTIVITY_UPDATED",
+          entity: "Activity",
+          entityId: updatedActivity.id,
+          before: beforeActivity,
+          after: updatedActivity,
+          client,
+          req,
+        });
+      } catch (e) {
+        console.error("ACTIVITY_UPDATED audit failed (in-tx):", e);
+      }
+
+      return updatedActivity;
     });
 
-    
+    // Post-commit notification (best-effort)
     try {
       await notificationService({
         userId: req.user.id,
@@ -179,7 +220,7 @@ exports.deleteActivity = async (req, res) => {
 
   try {
     const deleted = await db.tx(async (client) => {
-      const a = await client.query('SELECT id FROM "Activities" WHERE id=$1', [
+      const a = await client.query('SELECT * FROM "Activities" WHERE id=$1', [
         activityId,
       ]);
       if (!a.rows.length) {
@@ -187,11 +228,31 @@ exports.deleteActivity = async (req, res) => {
         e.status = 404;
         throw e;
       }
+
+      const toDelete = a.rows[0];
+
       const r = await client.query(
         'DELETE FROM "Activities" WHERE id=$1 RETURNING *',
         [activityId]
       );
-      return r.rows && r.rows[0] ? r.rows[0] : null;
+      const deletedRow = r.rows && r.rows[0] ? r.rows[0] : null;
+
+      // Audit the deletion inside the same transaction
+      try {
+        await logAudit({
+          userId: req.user.id,
+          action: "ACTIVITY_DELETED",
+          entity: "Activity",
+          entityId: activityId,
+          before: toDelete,
+          client,
+          req,
+        });
+      } catch (e) {
+        console.error("ACTIVITY_DELETED audit failed (in-tx):", e);
+      }
+
+      return deletedRow;
     });
 
     try {

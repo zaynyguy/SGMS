@@ -1,35 +1,121 @@
 // src/controllers/userGroupsController.js
-
 const db = require("../db");
+const { logAudit } = require("../helpers/audit");
+const notificationService = require("../services/notificationService");
 
 // ADD user to group
 exports.addUserToGroup = async (req, res) => {
   const { userId, groupId } = req.body;
+  if (!userId || !groupId) return res.status(400).json({ message: "userId and groupId required." });
+
   try {
-    await db.query(
-      `INSERT INTO "UserGroups" ("userId", "groupId") 
-       VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [userId, groupId]
-    );
-    res.status(201).json({ message: "User added to group." });
+    const inserted = await db.tx(async (client) => {
+      const r = await client.query(
+        `INSERT INTO "UserGroups" ("userId", "groupId") 
+         VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *`,
+        [userId, groupId]
+      );
+
+      // If inserted, audit inside tx
+      if (r.rows && r.rows[0]) {
+        try {
+          await logAudit({
+            userId: req.user.id,
+            action: "TEAM_MEMBER_ADDED",
+            entity: "UserGroup",
+            entityId: null,
+            details: { addedUserId: userId, groupId },
+            client,
+            req,
+          });
+        } catch (e) {
+          console.error("TEAM_MEMBER_ADDED audit failed (in-tx):", e);
+        }
+      }
+
+      return r.rows[0] || null;
+    });
+
+    // Post-commit: notify the user if they were added
+    if (inserted) {
+      try {
+        await notificationService({
+          userId,
+          type: "group_added",
+          message: `You were added to a group (id: ${groupId}).`,
+          meta: { groupId },
+        });
+      } catch (nerr) {
+        console.error("addUserToGroup: notification failed", nerr);
+      }
+      return res.status(201).json({ message: "User added to group." });
+    } else {
+      // already existed
+      return res.status(200).json({ message: "User already in group." });
+    }
   } catch (err) {
     console.error("Error adding user to group:", err);
-    res.status(500).json({ message: "Internal server error." });
+    res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
 
 // REMOVE user from group
 exports.removeUserFromGroup = async (req, res) => {
   const { userId, groupId } = req.body;
+  if (!userId || !groupId) return res.status(400).json({ message: "userId and groupId required." });
+
+  const client = await db.connect();
   try {
-    await db.query(
-      'DELETE FROM "UserGroups" WHERE "userId" = $1 AND "groupId" = $2',
+    await client.query("BEGIN");
+
+    const q = await client.query(
+      `SELECT * FROM "UserGroups" WHERE "userId" = $1 AND "groupId" = $2 FOR UPDATE`,
       [userId, groupId]
     );
+    if (!q.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "User not in group." });
+    }
+    const row = q.rows[0];
+
+    await client.query('DELETE FROM "UserGroups" WHERE "userId" = $1 AND "groupId" = $2', [userId, groupId]);
+
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "TEAM_MEMBER_REMOVED",
+        entity: "UserGroup",
+        entityId: null,
+        before: row,
+        details: { removedUserId: userId, groupId },
+        client,
+        req,
+      });
+    } catch (e) {
+      console.error("TEAM_MEMBER_REMOVED audit failed (in-tx):", e);
+    }
+
+    await client.query("COMMIT");
+
+    // Post-commit: notify removed user
+    try {
+      await notificationService({
+        userId,
+        type: "group_removed",
+        message: `You were removed from a group (id: ${groupId}).`,
+        meta: { groupId },
+      });
+    } catch (nerr) {
+      console.error("removeUserFromGroup: notification failed", nerr);
+    }
+
     res.json({ message: "User removed from group." });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error("Error removing user from group:", err);
-    res.status(500).json({ message: "Internal server error." });
+    res.status(500).json({ message: "Internal server error.", error: err.message });
+  } finally {
+    client.release();
   }
 };
 

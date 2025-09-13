@@ -35,13 +35,37 @@ exports.downloadAttachment = async (req, res) => {
     }
 
     if (at.provider === "cloudinary") {
+      // Audit redirect/download as well
+      try {
+        await logAudit({
+          userId: req.user.id,
+          action: "ATTACHMENT_DOWNLOADED",
+          entity: "Attachment",
+          entityId: attachmentId,
+          details: { fileName: at.fileName },
+          req,
+        });
+      } catch (e) {
+        console.error("ATTACHMENT_DOWNLOADED audit failed:", e);
+      }
       return res.redirect(at.filePath);
     } else {
       const fullPath = path.join(UPLOAD_DIR, path.basename(at.filePath));
       if (!fs.existsSync(fullPath)) {
         return res.status(404).json({ error: "File not found on server." });
       }
-      await logAudit(req.user.id, "download", "Attachment", attachmentId, { fileName: at.fileName });
+      try {
+        await logAudit({
+          userId: req.user.id,
+          action: "ATTACHMENT_DOWNLOADED",
+          entity: "Attachment",
+          entityId: attachmentId,
+          details: { fileName: at.fileName },
+          req,
+        });
+      } catch (e) {
+        console.error("ATTACHMENT_DOWNLOADED audit failed:", e);
+      }
       return res.download(fullPath, at.fileName);
     }
   } catch (err) {
@@ -85,7 +109,21 @@ exports.deleteAttachment = async (req, res) => {
       try { fs.unlinkSync(fullPath); } catch (e) {}
     }
 
-    await logAudit(req.user.id, "delete", "Attachment", attachmentId, { fileName: row.fileName });
+    // Audit deletion inside tx
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "ATTACHMENT_DELETED",
+        entity: "Attachment",
+        entityId: attachmentId,
+        before: row,
+        client,
+        req,
+      });
+    } catch (e) {
+      console.error("ATTACHMENT_DELETED audit failed (in-tx):", e);
+    }
+
     await client.query("COMMIT");
     res.json({ message: "Attachment deleted." });
   } catch (err) {
@@ -128,12 +166,24 @@ exports.uploadAttachment = async (req, res) => {
     const uploaded = await uploadFile(file);
 
     const { rows } = await db.query(
-      `INSERT INTO "Attachments" ("reportId","fileName","filePath","fileType","provider")
-       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      `INSERT INTO "Attachments" ("reportId","fileName","filePath","fileType","provider","createdAt")
+       VALUES ($1,$2,$3,$4,$5,NOW()) RETURNING *`,
       [reportId, uploaded.fileName, uploaded.url, uploaded.fileType, uploaded.provider]
     );
 
-    await logAudit(req.user.id, "upload", "Attachment", rows[0].id, { fileName: uploaded.fileName });
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "ATTACHMENT_UPLOADED",
+        entity: "Attachment",
+        entityId: rows[0].id,
+        details: { fileName: uploaded.fileName },
+        req,
+      });
+    } catch (e) {
+      console.error("ATTACHMENT_UPLOADED audit failed:", e);
+    }
+
     res.status(201).json({ message: "File uploaded", attachment: rows[0] });
   } catch (err) {
     console.error("Error uploading attachment:", err);

@@ -1,5 +1,4 @@
 // src/controllers/authController.js
-
 const db = require("../db");
 const bcrypt = require("bcrypt");
 const generateToken = require("../utils/generateToken");
@@ -37,15 +36,24 @@ exports.login = async (req, res) => {
 
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid || !rows.length) {
-      await logAudit(user.id || null, "login_failed", "Auth", null, {
-        username,
-      });
+      try {
+        await logAudit({
+          userId: user.id || null,
+          action: "USER_LOGIN_FAILED",
+          entity: "Auth",
+          entityId: null,
+          details: { username },
+          req,
+        });
+      } catch (e) {
+        console.error("USER_LOGIN_FAILED audit failed:", e);
+      }
       return res.status(401).json({ message: "Invalid username or password." });
     }
 
     const { token, user: payload } = await generateToken(user.id);
 
-    await db.query("BEGIN");
+    // Post-login notification (best-effort)
     try {
       await notificationService({
         userId: user.id,
@@ -53,13 +61,22 @@ exports.login = async (req, res) => {
         message: "You logged in successfully.",
         meta: {},
       });
-      await db.query("COMMIT");
     } catch (e) {
-      await db.query("ROLLBACK");
       console.error("Login notification failed", e);
     }
 
-    await logAudit(user.id, "login_success", "Auth", null, { username });
+    try {
+      await logAudit({
+        userId: user.id,
+        action: "USER_LOGIN_SUCCESS",
+        entity: "Auth",
+        entityId: null,
+        details: { username },
+        req,
+      });
+    } catch (e) {
+      console.error("USER_LOGIN_SUCCESS audit failed:", e);
+    }
 
     return res.status(200).json({
       message: "Login successful.",

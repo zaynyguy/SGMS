@@ -33,8 +33,8 @@ exports.submitReport = async (req, res) => {
     await client.query("BEGIN");
 
     const reportResult = await client.query(
-      `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
        RETURNING *`,
       [
         activityId,
@@ -61,6 +61,7 @@ exports.submitReport = async (req, res) => {
       });
       if (oversized.length) {
         for (const f of req.files) fs.unlinkSync(f.path);
+        await client.query("ROLLBACK");
         return res.status(400).json({
           message: `One or more files exceed the maximum allowed size of ${maxSizeMb} MB.`,
         });
@@ -73,17 +74,32 @@ exports.submitReport = async (req, res) => {
       for (let file of req.files) {
         const relativePath = path.relative(UPLOAD_DIR, file.path);
         const insertRes = await client.query(
-          `INSERT INTO "Attachments"("reportId", "fileName", "filePath", "fileType") VALUES ($1, $2, $3, $4) RETURNING *`,
+          `INSERT INTO "Attachments"("reportId", "fileName", "filePath", "fileType", "createdAt")
+           VALUES ($1, $2, $3, $4, NOW()) RETURNING *`,
           [report.id, file.originalname, relativePath, file.mimetype]
         );
         insertedAttachments.push(insertRes.rows[0]);
       }
     }
 
-    await logAudit(req.user.id, "submit", "Report", report.id, { activityId });
+    // Audit the report submission inside the same transaction
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "REPORT_SUBMITTED",
+        entity: "Report",
+        entityId: report.id,
+        details: { activityId },
+        client,
+        req,
+      });
+    } catch (e) {
+      console.error("REPORT_SUBMITTED audit failed (in-tx):", e);
+    }
 
     await client.query("COMMIT");
 
+    // Post-commit: notify about attachments (best-effort)
     for (const inserted of insertedAttachments) {
       try {
         await notificationService({
@@ -130,7 +146,7 @@ exports.reviewReport = async (req, res) => {
       await client.query("ROLLBACK");
       return res.status(404).json({ error: "Report not found." });
     }
-    const report = repRes.rows[0];
+    const beforeReport = repRes.rows[0];
 
     const { rows: updatedRows } = await client.query(
       `UPDATE "Reports"
@@ -144,10 +160,22 @@ exports.reviewReport = async (req, res) => {
     );
     const updatedReport = updatedRows[0];
 
-    await logAudit(req.user.id, "review_report", "Report", reportId, {
-      status,
-      adminComment,
-    });
+    // Audit review inside same transaction
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "REPORT_REVIEWED",
+        entity: "Report",
+        entityId: reportId,
+        before: beforeReport,
+        after: updatedReport,
+        details: { status, adminComment },
+        client,
+        req,
+      });
+    } catch (e) {
+      console.error("REPORT_REVIEWED audit failed (in-tx):", e);
+    }
 
     if (status === "Approved") {
       // Apply metrics to activity
@@ -156,7 +184,7 @@ exports.reviewReport = async (req, res) => {
           `UPDATE "Activities"
            SET "currentMetric" = COALESCE($1, "currentMetric"), "updatedAt" = NOW()
            WHERE id = $2`,
-          [updatedReport.metrics_data, report.activityId]
+          [updatedReport.metrics_data, updatedReport.activityId]
         );
       }
 
@@ -165,11 +193,11 @@ exports.reviewReport = async (req, res) => {
         const newStatus = updatedReport.new_status;
         await client.query(
           `UPDATE "Activities"
-     SET status = $1::"activity_status",
-         "isDone" = CASE WHEN $1::"activity_status"='Done' THEN true ELSE "isDone" END,
-         "updatedAt" = NOW()
-     WHERE id = $2`,
-          [newStatus, report.activityId]
+           SET status = $1::"activity_status",
+               "isDone" = CASE WHEN $1::"activity_status"='Done' THEN true ELSE "isDone" END,
+               "updatedAt" = NOW()
+           WHERE id = $2`,
+          [newStatus, updatedReport.activityId]
         );
       }
 
@@ -179,7 +207,7 @@ exports.reviewReport = async (req, res) => {
          FROM "Activities" a
          JOIN "Tasks" t ON t.id = a."taskId"
          WHERE a.id = $1 LIMIT 1`,
-        [report.activityId]
+        [updatedReport.activityId]
       );
 
       if (aRes.rows[0]) {
@@ -206,12 +234,13 @@ exports.reviewReport = async (req, res) => {
 
     await client.query("COMMIT");
 
+    // Post-commit: notify report owner
     try {
       await notificationService({
-        userId: report.userId,
+        userId: beforeReport.userId,
         type: "report_review",
-        message: `Your report #${report.id} was ${status.toLowerCase()}.`,
-        meta: { reportId: report.id },
+        message: `Your report #${beforeReport.id} was ${status.toLowerCase()}.`,
+        meta: { reportId: beforeReport.id },
         level: status === "Rejected" ? "warning" : "info",
       });
     } catch (nerr) {
