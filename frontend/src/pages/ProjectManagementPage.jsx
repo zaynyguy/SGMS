@@ -4,12 +4,16 @@ import {
   Target, List, CheckSquare, Calendar, AlertCircle, Loader,
   RefreshCw, Search, Filter, X
 } from 'lucide-react';
+import SubmitReportModal from "../components/SubmitReportModal";
+import { fetchGroups } from '../api/groups';
 import { fetchGoals, createGoal, updateGoal, deleteGoal } from '../api/goals';
 import { fetchTasksByGoal, createTask, updateTask, deleteTask } from '../api/tasks';
 import { fetchActivitiesByTask, createActivity, updateActivity, deleteActivity } from '../api/activities';
 
+
 const ProjectManagement = () => {
   // State
+  const [groups, setGroups] = useState([]);
   const [goals, setGoals] = useState([]);
   const [tasks, setTasks] = useState({});
   const [activities, setActivities] = useState({});
@@ -26,10 +30,24 @@ const ProjectManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+  loadGroups();
+}, []); // run once on mount
+
   // Load goals on mount / page change
   useEffect(() => {
     loadGoals();
   }, [currentPage, pageSize]);
+
+  const loadGroups = async () => {
+  try {
+    const list = await fetchGroups();
+    setGroups(list);
+  } catch (err) {
+    console.error('Error loading groups:', err);
+    setGroups([]);
+  }
+};
 
   const loadGoals = async () => {
     setIsLoading(true);
@@ -56,99 +74,110 @@ const ProjectManagement = () => {
     }
   };
 
-  const loadActivities = async (goalId, taskId) => {
-    if (!taskId) {
-      console.warn('loadActivities called with missing ids', { goalId, taskId });
-      setActivities(prev => ({ ...prev, [taskId]: [] }));
-      return;
-    }
-    try {
-      const response = await fetchActivitiesByTask(taskId);
-      const list = Array.isArray(response) ? response : response?.rows ?? [];
-      setActivities(prev => ({ ...prev, [taskId]: list }));
-    } catch (err) {
-      console.error('Error loading activities:', err);
-      setError('Failed to load activities. Please check the server or try again.');
-    }
-  };
+const loadActivities = async (goalId, taskId) => {
+  if (!taskId) {
+    console.warn('loadActivities called with missing taskId', { goalId, taskId });
+    setActivities(prev => ({ ...prev, [taskId]: [] }));
+    return;
+  }
 
-  // Activity handlers - FIXED VERSION
-  const handleCreateActivity = async (activityData) => {
-    try {
-      setIsSubmitting(true);
-      const { goalId, taskId } = modal.data || {};
-      if (!taskId) throw new Error('Missing taskId for activity creation');
+  try {
+    setError(null);
+    const response = await fetchActivitiesByTask(taskId);
+    // backend returns an array (rows) — but normalize just in case
+    const list = Array.isArray(response) ? response : response?.rows ?? [];
+    setActivities(prev => ({ ...prev, [taskId]: list }));
+  } catch (err) {
+    console.error('Error loading activities:', err);
+    setError(err?.message || 'Failed to load activities. Please try again.');
+    setActivities(prev => ({ ...prev, [taskId]: [] }));
+  }
+};
 
-      const createdActivity = await createActivity(taskId, activityData);
+const handleCreateActivity = async (activityData) => {
+  try {
+    setIsSubmitting(true);
+    const { goalId, taskId } = modal.data || {};
+    if (!taskId) throw new Error('Missing taskId for activity creation');
 
-      // Update local activities state immediately
-      setActivities(prev => {
-        const existing = prev[taskId] ? [...prev[taskId]] : [];
-        return { ...prev, [taskId]: [...existing, createdActivity] };
-      });
+    // POST /api/tasks/:taskId/activities
+    const res = await createActivity(taskId, activityData);
+    const created = res?.activity ?? res;
 
-      setModal({ isOpen: false, type: null, data: null });
-      setSuccess('Activity created successfully!');
-      setTimeout(() => setSuccess(null), 3000);
+    // append to activities list for the task
+    setActivities(prev => {
+      const existing = Array.isArray(prev[taskId]) ? [...prev[taskId]] : [];
+      return { ...prev, [taskId]: [...existing, created] };
+    });
 
-      // Refresh tasks to update progress
-      await loadTasks(goalId);
-    } catch (err) {
-      console.error('Error creating activity:', err);
-      setError(err?.message || 'Failed to create activity.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    setModal({ isOpen: false, type: null, data: null });
+    setFormData({});
+    setSuccess(res?.message || 'Activity created successfully!');
+    setTimeout(() => setSuccess(null), 3000);
 
-  const handleUpdateActivity = async (activityData) => {
-    try {
-      setIsSubmitting(true);
-      const { goalId, taskId, id: activityId } = modal.data || {};
-      if (!taskId || !activityId) throw new Error('Missing ids for updating activity');
+    // refresh tasks to update progress
+    await loadTasks(goalId);
+  } catch (err) {
+    console.error('Error creating activity:', err);
+    setError(err?.message || 'Failed to create activity.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
-      const updatedActivity = await updateActivity(taskId, activityId, activityData);
+const handleUpdateActivity = async (activityData) => {
+  try {
+    setIsSubmitting(true);
+    const { goalId, taskId, id: activityId } = modal.data || {};
+    if (!taskId || !activityId) throw new Error('Missing ids for updating activity');
 
-      // Update local activities state
-      setActivities(prev => {
-        const current = prev[taskId] ? [...prev[taskId]] : [];
-        const updatedList = current.map(a => 
-          a.id === activityId ? { ...a, ...updatedActivity } : a
-        );
-        return { ...prev, [taskId]: updatedList };
-      });
+    // PUT /api/tasks/:taskId/activities/:activityId
+    const res = await updateActivity(taskId, activityId, activityData);
+    const updated = res?.activity ?? res;
 
-      setModal({ isOpen: false, type: null, data: null });
-      setSuccess('Activity updated successfully!');
-      setTimeout(() => setSuccess(null), 3000);
+    // replace activity in local list
+    setActivities(prev => {
+      const current = Array.isArray(prev[taskId]) ? [...prev[taskId]] : [];
+      const updatedList = current.map(a => (a.id === activityId ? { ...a, ...updated } : a));
+      return { ...prev, [taskId]: updatedList };
+    });
 
-      // Refresh tasks to update progress
-      await loadTasks(goalId);
-    } catch (err) {
-      console.error('Error updating activity:', err);
-      setError(err?.message || 'Failed to update activity.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    setModal({ isOpen: false, type: null, data: null });
+    setFormData({});
+    setSuccess(res?.message || 'Activity updated successfully!');
+    setTimeout(() => setSuccess(null), 3000);
 
-  const handleDeleteActivity = async (goalId, taskId, activityId) => {
-    if (!window.confirm('Delete this activity?')) return;
-    try {
-      await deleteActivity(taskId, activityId);
-      setSuccess('Activity deleted successfully!');
-      setTimeout(() => setSuccess(null), 3000);
-      // remove from local activities
-      setActivities(prev => {
-        const current = prev[taskId] ? prev[taskId].filter(a => a.id !== activityId) : [];
-        return { ...prev, [taskId]: current };
-      });
-      await loadTasks(goalId);
-    } catch (err) {
-      console.error('Error deleting activity:', err);
-      setError(err?.message || 'Failed to delete activity.');
-    }
-  };
+    // refresh tasks to update progress
+    await loadTasks(goalId);
+  } catch (err) {
+    console.error('Error updating activity:', err);
+    setError(err?.message || 'Failed to update activity.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+ const handleDeleteActivity = async (goalId, taskId, activityId) => {
+  if (!window.confirm('Delete this activity?')) return;
+  try {
+    setIsSubmitting(true);
+    const res = await deleteActivity(taskId, activityId);
+    setSuccess(res?.message || 'Activity deleted successfully!');
+    setTimeout(() => setSuccess(null), 3000);
+
+    setActivities(prev => {
+      const current = Array.isArray(prev[taskId]) ? prev[taskId].filter(a => a.id !== activityId) : [];
+      return { ...prev, [taskId]: current };
+    });
+
+    await loadTasks(goalId);
+  } catch (err) {
+    console.error('Error deleting activity:', err);
+    setError(err?.message || 'Failed to delete activity.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // Goal handlers
   const handleCreateGoal = async (payload = null) => {
@@ -311,18 +340,21 @@ const ProjectManagement = () => {
       if (!modal.isOpen) return;
       const initial = modal.data || {};
       
-      if (modal.type === 'createActivity' || modal.type === 'editActivity') {
-        setLocal({
-          title: initial.title || '',
-          description: initial.description || '',
-          dueDate: initial.dueDate || '',
-          weight: initial.weight ?? 0,
-          status: initial.status || 'not-started',
-          isDone: initial.isDone ?? false,
-          targetMetric: initial.targetMetric ? 
-            (typeof initial.targetMetric === 'string' ? initial.targetMetric : JSON.stringify(initial.targetMetric, null, 2))
-            : '{}'
-        });
+if (modal.type === 'createActivity' || modal.type === 'editActivity') {
+  setLocal({
+    title: initial.title || '',
+    description: initial.description || '',
+    dueDate: initial.dueDate || '',
+    weight: initial.weight ?? 0,
+    status: initial.status || 'To Do',           // DB default is 'To Do'
+    isDone: initial.isDone ?? false,
+    targetMetric: initial.targetMetric
+      ? (typeof initial.targetMetric === 'string'
+          ? initial.targetMetric
+          : JSON.stringify(initial.targetMetric, null, 2))
+      : '{}'   // show empty object string for new activity
+  });
+
       } else if (modal.type === 'createTask' || modal.type === 'editTask') {
         setLocal({
           title: initial.title || '',
@@ -335,7 +367,7 @@ const ProjectManagement = () => {
         setLocal({
           title: initial.title || '',
           description: initial.description || '',
-          groupId: initial.groupId || '',
+          groupId: initial.groupId ? String(initial.groupId) : '', // <-- string for select
           startDate: initial.startDate || '',
           endDate: initial.endDate || '',
           weight: initial.weight ?? 100,
@@ -382,32 +414,58 @@ const ProjectManagement = () => {
         }
       }
       
-      // Prepare activity data with properly parsed targetMetric
-      if (modal.type === 'createActivity' || modal.type === 'editActivity') {
-        const activityData = { ...local };
-        
-        // Parse targetMetric JSON
-        if (activityData.targetMetric) {
-          try {
-            activityData.targetMetric = activityData.targetMetric.trim() === '' 
-              ? {} 
-              : JSON.parse(activityData.targetMetric);
-          } catch (err) {
-            setJsonError('Invalid JSON format');
-            return;
-          }
-        }
-        
-        if (modal.type === 'createActivity') {
-          await handleCreateActivity(activityData);
+// inside submitLocal()
+if (modal.type === 'createActivity' || modal.type === 'editActivity') {
+  const activityData = { ...local };
+
+  // parse targetMetric string -> object (backend expects JSONB)
+  if (activityData.targetMetric && typeof activityData.targetMetric === 'string') {
+    try {
+      activityData.targetMetric = activityData.targetMetric.trim() === '' ? {} : JSON.parse(activityData.targetMetric);
+    } catch (err) {
+      setJsonError('Invalid JSON format for Target Metric');
+      return;
+    }
+  }
+
+  if (activityData.status === '' || activityData.status === undefined) {
+  activityData.status = null;
+}
+
+// Optionally: if your UI uses different labels from DB, map them here.
+// Example mapping (adjust to your DB values):
+const statusMap = {
+  'not-started': 'To Do',
+  'in-progress': 'In Progress',
+  'completed': 'Done'
+};
+// Only map if you know DB expects different labels:
+if (statusMap[activityData.status]) {
+  activityData.status = statusMap[activityData.status];
+}
+
+  if (modal.type === 'createActivity') {
+    await handleCreateActivity(activityData);
+  } else {
+    await handleUpdateActivity(activityData);
+  }
+  return;
+}
+      
+      if (modal.type === 'createGoal' || modal.type === 'editGoal') {
+        // Convert groupId '' => null, otherwise convert string to Number
+        const prepared = {
+          ...local,
+          groupId: local.groupId === '' ? null : Number(local.groupId)
+        };
+
+        if (modal.type === 'createGoal') {
+          await handleCreateGoal(prepared);
         } else {
-          await handleUpdateActivity(activityData);
+          await handleUpdateGoal(prepared);
         }
         return;
       }
-      
-      if (modal.type === 'createGoal') await handleCreateGoal(local);
-      else if (modal.type === 'editGoal') await handleUpdateGoal(local);
       else if (modal.type === 'createTask') await handleCreateTask(local);
       else if (modal.type === 'editTask') await handleUpdateTask(local);
     };
@@ -512,6 +570,24 @@ const ProjectManagement = () => {
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
                   <textarea name="description" value={local.description || ''} onChange={onLocalChange} rows="3" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                </div>
+                {/* Group select */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Assign to group
+                  </label>
+                  <select
+                    name="groupId"
+                    value={local.groupId ?? ''}
+                    onChange={onLocalChange}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">— Unassigned —</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={String(g.id)}>{g.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Optional — choose a group to assign this goal to.</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
@@ -868,30 +944,52 @@ const ProjectManagement = () => {
                                           <div key={activity.id} className="border border-gray-200 dark:border-gray-700 rounded-md p-3 bg-gray-50 dark:bg-gray-700">
                                             <div className="flex justify-between items-start">
                                               <div>
-                                                <h6 className="font-medium text-gray-900 dark:text-white">{activity.title}</h6>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{activity.description}</p>
+                                                {/* Example inside each activity card */}
+<h6 className="font-medium text-gray-900 dark:text-white">{activity.title}</h6>
+<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{activity.description}</p>
+
+<div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-500 dark:text-gray-400">
+  <div>Due: {activity.dueDate || 'No due date'}</div>
+  <div>Weight: {activity.weight}</div>
+  <div>{activity.isDone ? 'Completed' : 'Not Completed'}</div>
+</div>
+
+{/* show targetMetric and currentMetric short preview */}
+{activity.targetMetric && (
+  <pre className="text-xs mt-2 truncate">{typeof activity.targetMetric === 'string' ? activity.targetMetric : JSON.stringify(activity.targetMetric)}</pre>
+)}
+
                                               </div>
                                               <div className="flex items-center space-x-2">
-                                                <StatusBadge status={activity.status} />
-                                                <button 
-                                                  onClick={() => {
-                                                    setModal({ 
-                                                      isOpen: true, 
-                                                      type: 'editActivity', 
-                                                      data: { goalId: goal.id, taskId: task.id, ...activity } 
-                                                    });
-                                                  }}
-                                                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1"
-                                                >
-                                                  <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button 
-                                                  onClick={() => handleDeleteActivity(goal.id, task.id, activity.id)}
-                                                  className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1"
-                                                >
-                                                  <Trash2 className="w-4 h-4" />
-                                                </button>
-                                              </div>
+  <StatusBadge status={activity.status} />
+
+  <button 
+    onClick={() => { setModal({ isOpen: true, type: 'editActivity', data: { goalId: goal.id, taskId: task.id, ...activity } }); }}
+    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-1"
+    title="Edit"
+  >
+    <Edit className="w-4 h-4" />
+  </button>
+
+  <button 
+    onClick={() => handleDeleteActivity(goal.id, task.id, activity.id)}
+    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 p-1"
+    title="Delete"
+  >
+    <Trash2 className="w-4 h-4" />
+  </button>
+
+  <button
+  type="button"
+  className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-medium"
+  title="Submit Report"
+  onClick={() => setModal({ isOpen: true, type: 'submitReport', data: { goalId: goal.id, taskId: task.id, activityId: activity.id } })}
+>
+  Submit Report
+</button>
+
+</div>
+
                                             </div>
                                             <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-gray-500 dark:text-gray-400">
                                               <div>Due: {activity.dueDate || 'No due date'}</div>
@@ -956,7 +1054,17 @@ const ProjectManagement = () => {
       </main>
 
       {/* Modal */}
-      <Modal />
+      {/* Existing Modal */}
+<Modal />
+
+{/* Submit Report modal (separate component) */}
+{modal.isOpen && modal.type === 'submitReport' && (
+  <SubmitReportModal
+    initialActivityId={modal.data?.activityId || ""}
+    onClose={() => setModal({ isOpen: false, type: null, data: null })}
+  />
+)}
+
     </div>
   );
 };

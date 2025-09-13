@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../context/AuthContext';
-import { Home, Settings, LogOut, Menu, X, UserPen, Settings2Icon, ClipboardCheck, Paperclip, FileBarChartIcon, FileText } from 'lucide-react';
+import { Home, Settings, LogOut, Menu, X, UserPen, Settings2Icon, ClipboardCheck, Paperclip, FileBarChartIcon, FileText, Bell } from 'lucide-react';
 import companyLogo from '../../assets/logo.png';
 
 const Sidebar = ({ children }) => {
@@ -41,6 +41,7 @@ const Sidebar = ({ children }) => {
     hasPermission('manage_reports') && { to: '/report', icon: <FileText size={24} />, label: 'Reports' },
     hasPermission('manage_gta') && { to: '/project', icon: <FileBarChartIcon size={24} />, label: 'Project Management' },
     hasPermission('manage_attachments') && { to: '/attachment', icon: <Paperclip size={24} />, label: 'Attachments' },
+    hasPermission('manage_notifications') && { to: '/notification', icon: <Bell size={24} />, label: 'notification' },
   ].filter(Boolean);
 
   const toggleSidebar = () => setIsExpanded(!isExpanded);
