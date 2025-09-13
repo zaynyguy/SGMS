@@ -23,7 +23,6 @@ function initSocket(server) {
 
 function emitToUser(userId, event, payload) {
   if (!io) return;
-  console.log(`Emitting ${event} to user_${userId}`, payload);
   io.to(`user_${userId}`).emit(event, payload);
 }
 

@@ -67,24 +67,36 @@ exports.submitReport = async (req, res) => {
       }
     }
 
+    const insertedAttachments = [];
+
     if (req.files && req.files.length) {
       for (let file of req.files) {
         const relativePath = path.relative(UPLOAD_DIR, file.path);
-        await client.query(
-          `INSERT INTO "Attachments"("reportId", "fileName", "filePath", "fileType") VALUES ($1, $2, $3, $4)`,
+        const insertRes = await client.query(
+          `INSERT INTO "Attachments"("reportId", "fileName", "filePath", "fileType") VALUES ($1, $2, $3, $4) RETURNING *`,
           [report.id, file.originalname, relativePath, file.mimetype]
         );
+        insertedAttachments.push(insertRes.rows[0]);
       }
     }
-    await createNotification(db, {
-      userId: req.user.id,
-      type: "attachment_uploaded",
-      message: `Attachment "${attachment.filename}" uploaded.`,
-      meta: { attachmentId: attachment.id },
-    });
 
     await logAudit(req.user.id, "submit", "Report", report.id, { activityId });
+
     await client.query("COMMIT");
+
+    for (const inserted of insertedAttachments) {
+      try {
+        await notificationService({
+          userId: req.user.id,
+          type: "attachment_uploaded",
+          message: `Attachment "${inserted.fileName}" uploaded.`,
+          meta: { attachmentId: inserted.id, reportId: report.id },
+        });
+      } catch (nerr) {
+        console.error("submitReport: attachment notification failed:", nerr);
+      }
+    }
+
     res.status(201).json(report);
   } catch (err) {
     await client.query("ROLLBACK");
@@ -189,23 +201,23 @@ exports.reviewReport = async (req, res) => {
             act.currentMetric || {},
           ]
         );
-
-        // Send notification without relying on req.body
-        try {
-          await createNotification(client, {
-            userId: report.userId,
-            type: "report_review",
-            message: `Your report #${report.id} was ${status.toLowerCase()}.`,
-            meta: { reportId },
-            level: status === "Rejected" ? "warning" : "info",
-          });
-        } catch (nerr) {
-          console.error("notify on approval failed", nerr);
-        }
       }
     }
 
     await client.query("COMMIT");
+
+    try {
+      await notificationService({
+        userId: report.userId,
+        type: "report_review",
+        message: `Your report #${report.id} was ${status.toLowerCase()}.`,
+        meta: { reportId: report.id },
+        level: status === "Rejected" ? "warning" : "info",
+      });
+    } catch (nerr) {
+      console.error("reviewReport: notify failed", nerr);
+    }
+
     res.json(updatedReport);
   } catch (err) {
     await client.query("ROLLBACK");

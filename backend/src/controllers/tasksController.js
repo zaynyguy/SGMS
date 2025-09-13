@@ -2,7 +2,7 @@
 
 const db = require("../db");
 const { logAudit } = require("../helpers/audit");
-const { createNotification } = require("../services/notificationService");
+const notificationService = require("../services/notificationService");
 
 exports.getTasksByGoal = async (req, res) => {
   const { goalId } = req.params;
@@ -51,6 +51,21 @@ exports.createTask = async (req, res) => {
     ]
   );
 
+  const task = rows[0];
+  if (task && task.assigneeId) {
+    try {
+      await notificationService({
+        userId: task.assigneeId,
+        type: "task_assigned",
+        message: `You were assigned to task "${task.title}".`,
+        meta: { taskId: task.id, goalId },
+      });
+    } catch (nerr) {
+      console.error("createTask: notification failed", nerr);
+    }
+  }
+  res.status(201).json({ message: "Task created successfully.", task });
+
   res
     .status(201)
     .json({ message: "Task created successfully.", task: rows[0] });
@@ -97,14 +112,22 @@ exports.updateTask = async (req, res) => {
       ]
     );
 
+    const updatedTask = updated[0];
+
     if (assigneeId) {
-      await createNotification(client, {
-        userId: assigneeId,
-        type: "task_assigned",
-        message: `You were assigned to task "${task.title}".`,
-        meta: { taskId: task.id, goalId: task.goalId },
-      });
+      try {
+        await notificationService({
+          userId: assigneeId,
+          type: "task_assigned",
+          message: `You were assigned to task "${updatedTask.title}".`,
+          meta: { taskId: updatedTask.id, goalId: updatedTask.goalId || null },
+        });
+      } catch (nerr) {
+        console.error("updateTask: notification failed", nerr);
+      }
     }
+
+    res.json({ message: "Task updated successfully.", task: updatedTask });
 
     res.json({ message: "Task updated successfully.", task: updated[0] });
   } catch (err) {
