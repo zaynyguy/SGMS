@@ -1,51 +1,37 @@
 // src/api/reports.js
-import { api } from './auth'; // Generic API helper
+import { api } from "./auth";
 
-// ======================
-// REPORT MANAGEMENT API
-// ======================
+// -------------------- REPORT SUBMISSION --------------------
 
-export async function submitReport(activityId, payload) {
-  try {
-    const response = await fetch(`/api/reports/activity/${activityId}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Failed to submit report: ${errText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error submitting report:", error);
-    throw error;
+// Submit a report for an activity
+// Expects FormData (narrative, metrics_data, new_status, attachments[])
+export const submitReport = (activityId, formData) => {
+  if (!activityId) throw new Error("activityId required");
+  if (!(formData instanceof FormData)) {
+    throw new Error("formData must be a FormData instance");
   }
-}
 
-
-// Fetch all reports (admin/manager)
-export const fetchReports = () => api('/api/reports', 'GET');
-
-// Review a report (approve/reject with comment & optional resubmission deadline)
-export const reviewReport = (id, reviewData) =>
-  api(`/api/reports/${id}/review`, 'PUT', reviewData);
-
-// Fetch a specific report by ID
-export const fetchReportById = (id) => api(`/api/reports/${id}`, 'GET');
-
-// ======================
-// MASTER REPORT API
-// ======================
-
-// Fetch master report as JSON
-export const fetchMasterReport = (groupId) => {
-  let qs = [];
-  if (groupId) qs.push(`groupId=${encodeURIComponent(groupId)}`);
-  return api(`/api/reports/master-report?${qs.join('&')}`, 'GET');
+  return api(`/api/reports/activity/${activityId}`, "POST", formData, {
+    isFormData: true, // <- tells api helper not to JSON.stringify or set Content-Type
+  });
 };
 
+// -------------------- REPORT MANAGEMENT --------------------
+
+// Fetch all reports
+export const fetchReports = () => api("/api/reports", "GET");
+
+// Review a report (approve/reject)
+export const reviewReport = (id, reviewData) =>
+  api(`/api/reports/${id}/review`, "PUT", reviewData);
+
+// Fetch one report by ID
+export const fetchReportById = (id) => api(`/api/reports/${id}`, "GET");
+
+// -------------------- MASTER REPORT --------------------
+
+// Fetch master report JSON (optionally filter by groupId)
+export const fetchMasterReport = (groupId) => {
+  const qs = groupId ? `?groupId=${encodeURIComponent(groupId)}` : "";
+  return api(`/api/reports/master-report${qs}`, "GET");
+};
