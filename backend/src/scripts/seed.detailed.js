@@ -274,6 +274,41 @@ async function run() {
       }
     }
 
+       // Basic system settings
+    const settings = [
+      {
+        key: "max_attachment_size_mb",
+        value: 10,
+        description: "Max attachment upload size (MB)",
+      },
+      {
+        key: "allowed_attachment_types",
+        value: ["application/pdf", "image/png", "image/jpeg", "text/plain"],
+        description: "Allowed MIME types",
+      },
+      {
+        key: "reporting_active",
+        value: true,
+        description: "Enable report submissions",
+      },
+      {
+        key: "resubmission_deadline_days",
+        value: 7,
+        description: "Days to resubmit rejected reports",
+      },
+      {
+        key: "audit_retention_days",
+        value: 365,
+        description: "Days to retain audit logs",
+      },
+    ];
+    for (const s of settings) {
+      await client.query(
+        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)`,
+        [s.key, JSON.stringify(s.value), s.description]
+      );
+    }
+
     await client.query("COMMIT");
     console.log("Seeding completed successfully!");
   } catch (err) {

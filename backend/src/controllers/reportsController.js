@@ -10,6 +10,7 @@ const {
 } = require("../helpers/reportHelper");
 const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 const { getAttachmentSettings } = require("../utils/systemSettings");
+const { uploadFile, deleteFile } = require("../services/uploadService");
 
 exports.submitReport = async (req, res) => {
   const { activityId } = req.params;
@@ -29,6 +30,10 @@ exports.submitReport = async (req, res) => {
   }
 
   const client = await db.connect();
+
+  // We'll keep track of uploaded files so we can cleanup on failure
+  const uploadedFiles = []; // each item: { uploaded, originalFile }
+
   try {
     await client.query("BEGIN");
 
@@ -47,7 +52,7 @@ exports.submitReport = async (req, res) => {
 
     const report = reportResult.rows[0];
 
-    // Validate attachments
+    // Validate attachments size (use system setting)
     if (req.files && req.files.length) {
       const { maxSizeMb } = await getAttachmentSettings();
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
@@ -60,7 +65,12 @@ exports.submitReport = async (req, res) => {
         }
       });
       if (oversized.length) {
-        for (const f of req.files) fs.unlinkSync(f.path);
+        // cleanup uploaded tmp files written by multer
+        for (const f of req.files) {
+          try {
+            fs.unlinkSync(f.path);
+          } catch (e) {}
+        }
         await client.query("ROLLBACK");
         return res.status(400).json({
           message: `One or more files exceed the maximum allowed size of ${maxSizeMb} MB.`,
@@ -71,14 +81,66 @@ exports.submitReport = async (req, res) => {
     const insertedAttachments = [];
 
     if (req.files && req.files.length) {
+      // Upload each file via uploadService.uploadFile
       for (let file of req.files) {
-        const relativePath = path.relative(UPLOAD_DIR, file.path);
-        const insertRes = await client.query(
-          `INSERT INTO "Attachments"("reportId", "fileName", "filePath", "fileType", "createdAt")
-           VALUES ($1, $2, $3, $4, NOW()) RETURNING *`,
-          [report.id, file.originalname, relativePath, file.mimetype]
-        );
-        insertedAttachments.push(insertRes.rows[0]);
+        try {
+          const uploaded = await uploadFile(file);
+          // keep uploaded info for cleanup in case of later rollback
+          uploadedFiles.push({ uploaded, originalFile: file });
+
+          // Insert into DB using uploaded.url and provider
+          const insertRes = await client.query(
+            `INSERT INTO "Attachments"("reportId", "fileName", "filePath", "fileType", "provider", "publicId", "createdAt")
+            VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
+            [
+              report.id,
+              uploaded.fileName || file.originalname,
+              uploaded.url,
+              uploaded.fileType || file.mimetype,
+              uploaded.provider || "local",
+              uploaded.public_id || null,
+            ]
+          );
+          insertedAttachments.push(insertRes.rows[0]);
+        } catch (uerr) {
+          console.error("File upload failed for one attachment:", uerr);
+          // If an upload fails, abort the transaction and cleanup earlier uploads
+          // cleanup uploaded files so far
+          for (const entry of uploadedFiles) {
+            try {
+              if (entry.uploaded && entry.uploaded.provider === "cloudinary") {
+                // attempt cloudinary cleanup using returned public_id if available
+                await deleteFile(entry.uploaded.url, {
+                  public_id: entry.uploaded.public_id,
+                });
+              } else if (
+                entry.uploaded &&
+                entry.uploaded.provider === "local"
+              ) {
+                // remove local file from uploads directory
+                try {
+                  const fname = path.basename(
+                    entry.uploaded.url || entry.originalFile.path || ""
+                  );
+                  const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
+                  if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
+                } catch (e) {}
+              }
+            } catch (cleanupErr) {
+              console.error("cleanup after failed upload error:", cleanupErr);
+            }
+          }
+
+          // remove temp files from multer for the failed file set
+          for (const f of req.files) {
+            try {
+              fs.unlinkSync(f.path);
+            } catch (e) {}
+          }
+
+          await client.query("ROLLBACK");
+          return res.status(500).json({ error: "File upload failed." });
+        }
       }
     }
 
@@ -116,9 +178,47 @@ exports.submitReport = async (req, res) => {
     res.status(201).json(report);
   } catch (err) {
     await client.query("ROLLBACK");
-    if (req.files && req.files.length) {
-      for (let file of req.files) fs.unlinkSync(file.path);
+
+    // If transaction failed after uploading files, cleanup any uploaded artifacts
+    for (const entry of uploadedFiles) {
+      try {
+        if (entry.uploaded && entry.uploaded.provider === "cloudinary") {
+          // try to remove Cloudinary upload (pass public_id when available)
+          try {
+            await deleteFile(entry.uploaded.url, {
+              public_id: entry.uploaded.public_id,
+            });
+          } catch (e) {
+            console.error(
+              "Failed to cleanup cloudinary file after tx rollback:",
+              e
+            );
+          }
+        } else if (entry.uploaded && entry.uploaded.provider === "local") {
+          try {
+            const fname = path.basename(
+              entry.uploaded.url || entry.originalFile.path || ""
+            );
+            const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
+            if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
+          } catch (e) {
+            console.error("Failed to cleanup local file after tx rollback:", e);
+          }
+        }
+      } catch (cleanupErr) {
+        console.error("cleanup after tx rollback error:", cleanupErr);
+      }
     }
+
+    // Also remove any leftover multer temp files
+    if (req.files && req.files.length) {
+      for (let file of req.files) {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (e) {}
+      }
+    }
+
     console.error("Error submitting report:", err);
     res.status(500).json({ error: err.message });
   } finally {
@@ -338,19 +438,24 @@ ORDER BY g.id, t.id, a.id, r.id
         if (isNaN(d)) continue;
 
         const monthKey = `${d.getFullYear()}-${d.getMonth() + 1}`;
-        const quarterKey = `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+        const quarterKey = `${d.getFullYear()}-Q${
+          Math.floor(d.getMonth() / 3) + 1
+        }`;
         const yearKey = `${d.getFullYear()}`;
 
         // push to monthly
-        if (!breakdowns[actId].monthly[monthKey]) breakdowns[actId].monthly[monthKey] = [];
+        if (!breakdowns[actId].monthly[monthKey])
+          breakdowns[actId].monthly[monthKey] = [];
         breakdowns[actId].monthly[monthKey].push(rep);
 
         // push to quarterly
-        if (!breakdowns[actId].quarterly[quarterKey]) breakdowns[actId].quarterly[quarterKey] = [];
+        if (!breakdowns[actId].quarterly[quarterKey])
+          breakdowns[actId].quarterly[quarterKey] = [];
         breakdowns[actId].quarterly[quarterKey].push(rep);
 
         // push to annual
-        if (!breakdowns[actId].annual[yearKey]) breakdowns[actId].annual[yearKey] = [];
+        if (!breakdowns[actId].annual[yearKey])
+          breakdowns[actId].annual[yearKey] = [];
         breakdowns[actId].annual[yearKey].push(rep);
       }
     }

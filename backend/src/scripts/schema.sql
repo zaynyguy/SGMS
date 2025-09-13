@@ -184,6 +184,7 @@ CREATE INDEX idx_reports_activityId ON "Reports" ("activityId");
 CREATE TABLE "Attachments" (
   "id" SERIAL PRIMARY KEY,
   "reportId" INT NOT NULL REFERENCES "Reports"(id) ON DELETE CASCADE,
+  "publicId" VARCHAR(255),
   "fileName" VARCHAR(255) NOT NULL,
   "filePath" TEXT NOT NULL,
   "fileType" VARCHAR(100) NOT NULL,

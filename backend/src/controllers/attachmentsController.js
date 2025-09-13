@@ -20,18 +20,22 @@ exports.downloadAttachment = async (req, res) => {
       [attachmentId]
     );
 
-    if (!rows[0]) return res.status(404).json({ error: "Attachment not found." });
+    if (!rows[0])
+      return res.status(404).json({ error: "Attachment not found." });
     const at = rows[0];
 
     const userPerms = req.user.permissions || [];
-    const isAdmin = userPerms.includes("manage_reports") || userPerms.includes("manage_attachments");
+    const isAdmin =
+      userPerms.includes("manage_reports") ||
+      userPerms.includes("manage_attachments");
 
     if (!isAdmin) {
       const gcheck = await db.query(
         `SELECT 1 FROM "UserGroups" WHERE "userId" = $1 AND "groupId" = $2 LIMIT 1`,
         [req.user.id, at.groupId]
       );
-      if (!gcheck.rows.length) return res.status(403).json({ error: "Forbidden" });
+      if (!gcheck.rows.length)
+        return res.status(403).json({ error: "Forbidden" });
     }
 
     if (at.provider === "cloudinary") {
@@ -93,20 +97,29 @@ exports.deleteAttachment = async (req, res) => {
     const row = q.rows[0];
 
     const userPerms = req.user.permissions || [];
-    const isAdmin = userPerms.includes("manage_reports") || userPerms.includes("manage_attachments");
+    const isAdmin =
+      userPerms.includes("manage_reports") ||
+      userPerms.includes("manage_attachments");
 
-    if (!isAdmin && (row.reportUserId !== req.user.id || row.reportStatus !== "Pending")) {
+    if (
+      !isAdmin &&
+      (row.reportUserId !== req.user.id || row.reportStatus !== "Pending")
+    ) {
       await client.query("ROLLBACK");
       return res.status(403).json({ error: "Forbidden" });
     }
 
-    await client.query('DELETE FROM "Attachments" WHERE id = $1', [attachmentId]);
+    await client.query('DELETE FROM "Attachments" WHERE id = $1', [
+      attachmentId,
+    ]);
 
     if (row.provider === "cloudinary") {
-      await deleteFile(row.filePath);
+      await deleteFile(row.filePath, { public_id: row.publicId || row.publicId });
     } else {
       const fullPath = path.join(UPLOAD_DIR, path.basename(row.filePath));
-      try { fs.unlinkSync(fullPath); } catch (e) {}
+      try {
+        fs.unlinkSync(fullPath);
+      } catch (e) {}
     }
 
     // Audit deletion inside tx
@@ -161,14 +174,16 @@ exports.uploadAttachment = async (req, res) => {
   try {
     const { file } = req;
     const { reportId } = req.body;
-    if (!file || !reportId) return res.status(400).json({ error: "File and reportId required." });
+    if (!file || !reportId)
+      return res.status(400).json({ error: "File and reportId required." });
 
     const uploaded = await uploadFile(file);
 
+    const { url, provider, fileName, fileType, public_id } = uploaded;
     const { rows } = await db.query(
-      `INSERT INTO "Attachments" ("reportId","fileName","filePath","fileType","provider","createdAt")
-       VALUES ($1,$2,$3,$4,$5,NOW()) RETURNING *`,
-      [reportId, uploaded.fileName, uploaded.url, uploaded.fileType, uploaded.provider]
+      `INSERT INTO "Attachments" ("reportId","fileName","filePath","fileType","provider","createdAt", "publicId")
+   VALUES ($1,$2,$3,$4,$5,NOW(), $6) RETURNING *`,
+      [reportId, fileName, url, fileType, provider, public_id || null]
     );
 
     try {
