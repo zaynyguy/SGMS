@@ -1,67 +1,49 @@
 // src/api/auth.js
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-// Use Vite environment variable or fallback to production backend
-const API_URL = import.meta.env.VITE_API_URL;
+export const api = async (endpoint, method = "GET", body = null, options = {}) => {
+  const token = localStorage.getItem("authToken");
+  const headers = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
 
-/**
- * General API request helper
- * @param {string} endpoint - API path starting with /
- * @param {string} method - HTTP method
- * @param {object|null} body - Request body
- * @returns {Promise<any>}
- */
-export const api = async (endpoint, method = 'GET', body = null) => {
-  const token = localStorage.getItem('authToken');
-  const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const fetchOptions = { method, headers };
 
-  const config = { method, headers };
-  if (body) config.body = JSON.stringify(body);
-
-  // 🔹 Debug: print full URL and config
-  console.log(`[API DEBUG] ${method} -> ${API_URL}${endpoint}`, config);
-
-  try {
-    const response = await fetch(`${API_URL}${endpoint}`, config);
-
-    const text = await response.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = null;
+  if (body != null) {
+    const isFormData = Boolean(options.isFormData) || (typeof FormData !== "undefined" && body instanceof FormData);
+    if (isFormData) {
+      fetchOptions.body = body;
+      // do NOT set Content-Type — browser will add multipart boundary
+    } else {
+      headers["Content-Type"] = "application/json";
+      fetchOptions.body = JSON.stringify(body);
     }
-
-    if (!response.ok) {
-      throw new Error(data?.message || `HTTP ${response.status} error: ${text.slice(0, 100)}`);
-    }
-
-    return data;
-  } catch (error) {
-    console.error('API call failed:', error);
-    throw error;
   }
+
+  const url = endpoint.startsWith("http") ? endpoint : `${API_URL}${endpoint}`;
+
+  const response = await fetch(url, fetchOptions);
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (e) {
+    data = text || null;
+  }
+
+  if (!response.ok) {
+    const err = new Error(data?.message || `HTTP ${response.status}`);
+    err.status = response.status;
+    err.response = data;
+    throw err;
+  }
+
+  return data;
 };
 
-
-/**
- * Login function
- * @param {string} username
- * @param {string} password
- * @returns {Promise<{token: string, user: object}>}
- */
 export const loginUser = (username, password) => {
-  // Make sure endpoint matches backend; likely /api/auth/login
-  return api('/api/auth/login', 'POST', { username, password });
+  return api("/api/auth/login", "POST", { username, password });
 };
 
-/**
- * Update role example
- * @param {number} id
- * @param {object} data
- * @returns {Promise<any>}
- */
 export const updateRole = async (id, data) => {
-  return api(`/api/roles/${id}`, 'PUT', data);
+  return api(`/api/roles/${id}`, "PUT", data);
 };
-
