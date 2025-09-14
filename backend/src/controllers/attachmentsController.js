@@ -5,6 +5,9 @@ const fs = require("fs");
 const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 const { uploadFile, deleteFile } = require("../services/uploadService");
 const { logAudit } = require("../helpers/audit");
+const http = require("http");
+const https = require("https");
+const { URL } = require("url");
 
 exports.downloadAttachment = async (req, res) => {
   const { attachmentId } = req.params;
@@ -38,40 +41,83 @@ exports.downloadAttachment = async (req, res) => {
         return res.status(403).json({ error: "Forbidden" });
     }
 
-    if (at.provider === "cloudinary") {
-      // Audit redirect/download as well
-      try {
-        await logAudit({
-          userId: req.user.id,
-          action: "ATTACHMENT_DOWNLOADED",
-          entity: "Attachment",
-          entityId: attachmentId,
-          details: { fileName: at.fileName },
-          req,
-        });
-      } catch (e) {
-        console.error("ATTACHMENT_DOWNLOADED audit failed:", e);
-      }
-      return res.redirect(at.filePath);
-    } else {
-      const fullPath = path.join(UPLOAD_DIR, path.basename(at.filePath));
-      if (!fs.existsSync(fullPath)) {
-        return res.status(404).json({ error: "File not found on server." });
-      }
-      try {
-        await logAudit({
-          userId: req.user.id,
-          action: "ATTACHMENT_DOWNLOADED",
-          entity: "Attachment",
-          entityId: attachmentId,
-          details: { fileName: at.fileName },
-          req,
-        });
-      } catch (e) {
-        console.error("ATTACHMENT_DOWNLOADED audit failed:", e);
-      }
-      return res.download(fullPath, at.fileName);
+    // Audit the download attempt
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "ATTACHMENT_DOWNLOADED",
+        entity: "Attachment",
+        entityId: attachmentId,
+        details: { fileName: at.fileName },
+        req,
+      });
+    } catch (e) {
+      console.error("ATTACHMENT_DOWNLOADED audit failed:", e);
     }
+
+    if (at.provider === "cloudinary" || /^https?:\/\//i.test(at.filePath)) {
+      // Proxy the remote file to avoid client-side CORS issues.
+      // at.filePath is expected to be a full URL for cloud files.
+      let fileUrl = at.filePath;
+      // If stored local-style (/uploads/...), try to build an absolute URL using request origin
+      if (!/^https?:\/\//i.test(fileUrl)) {
+        // If it's a relative path (local), serve it from disk below (fallback).
+        fileUrl = null;
+      }
+
+      if (fileUrl) {
+        try {
+          const parsed = new URL(fileUrl);
+          const lib = parsed.protocol === "https:" ? https : http;
+          const requestOptions = {
+            headers: {
+              // We don't send auth to cloud host — it's public URL.
+              // But copying client-accept header might improve content negotiation.
+              accept: req.headers.accept || "*/*",
+            },
+          };
+
+          lib.get(fileUrl, requestOptions, (proxRes) => {
+            if (proxRes.statusCode >= 400) {
+              return res.status(proxRes.statusCode).send("Failed to fetch remote file");
+            }
+
+            // Copy important headers
+            const ct = proxRes.headers["content-type"];
+            const cl = proxRes.headers["content-length"];
+
+            if (ct) res.setHeader("Content-Type", ct);
+            if (cl) res.setHeader("Content-Length", cl);
+
+            // Force download filename to DB's original filename
+            const safeName = String(at.fileName || `attachment-${attachmentId}`).replace(/["\\]/g, "");
+            res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
+
+            // Pipe remote response directly to our response
+            proxRes.pipe(res);
+            proxRes.on("error", (err) => {
+              console.error("Error piping remote file:", err);
+              try { res.end(); } catch (e) {}
+            });
+          }).on("error", (err) => {
+            console.error("Remote request failed:", err);
+            res.status(502).json({ error: "Failed fetching remote file." });
+          });
+
+          return;
+        } catch (err) {
+          console.error("Error proxying remote file:", err);
+          // fallback to local serve if possible below
+        }
+      }
+    }
+
+    // Local file fallback (or when provider === 'local')
+    const fullPath = path.join(UPLOAD_DIR, path.basename(at.filePath));
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ error: "File not found on server." });
+    }
+    return res.download(fullPath, at.fileName);
   } catch (err) {
     console.error("Error downloading attachment:", err);
     res.status(500).json({ error: err.message });
@@ -114,7 +160,8 @@ exports.deleteAttachment = async (req, res) => {
     ]);
 
     if (row.provider === "cloudinary") {
-      await deleteFile(row.filePath, { public_id: row.publicId || row.publicId });
+      // pass the stored publicId if present
+      await deleteFile(row.filePath, { publicId: row.publicId || null });
     } else {
       const fullPath = path.join(UPLOAD_DIR, path.basename(row.filePath));
       try {
@@ -179,11 +226,12 @@ exports.uploadAttachment = async (req, res) => {
 
     const uploaded = await uploadFile(file);
 
-    const { url, provider, fileName, fileType, public_id } = uploaded;
+    // uploaded now returns publicId (standardized)
+    const { url, provider, fileName, fileType, publicId } = uploaded;
     const { rows } = await db.query(
       `INSERT INTO "Attachments" ("reportId","fileName","filePath","fileType","provider","createdAt", "publicId")
    VALUES ($1,$2,$3,$4,$5,NOW(), $6) RETURNING *`,
-      [reportId, fileName, url, fileType, provider, public_id || null]
+      [reportId, fileName, url, fileType, provider, publicId || null]
     );
 
     try {
