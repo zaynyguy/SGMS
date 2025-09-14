@@ -24,22 +24,30 @@ export default function AttachmentsPage({ reportId }) {
     loadData();
   }, [reportId]);
 
-  const handleDownload = async (id) => {
-    try {
-      setDownloading(id);
-      const { blob, filename } = await downloadAttachment(id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setDownloading(null);
-    }
-  };
+const handleDownload = async (id) => {
+  try {
+    setDownloading(id);
+    const { blob, filename } = await downloadAttachment(id);
+
+    // create object URL and download
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || `attachment-${id}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("Download failed", err);
+    // show a user-friendly message (backend may send JSON or HTML error)
+    alert(err.message || "Failed to download attachment.");
+  } finally {
+    setDownloading(null);
+  }
+};
+
+
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this attachment?")) return;

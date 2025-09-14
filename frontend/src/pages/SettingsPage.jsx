@@ -33,10 +33,17 @@ const SettingsPage = () => {
       });
       if (!response.ok) throw new Error("Network response was not ok");
       const data = await response.json();
-      setSettings(data);
+
+      // Ensure profilePicture is absolute (if backend returns relative path)
+      let profilePic = data.profilePicture || data.user?.profilePicture || null;
+      if (profilePic && !profilePic.startsWith('http')) {
+        profilePic = `${import.meta.env.VITE_API_URL}${profilePic}`;
+      }
+
+      setSettings(prev => ({ ...prev, ...data, profilePicture: profilePic }));
 
       // Apply saved theme
-      if (data.darkMode) {
+      if ((data.darkMode || data.user?.darkMode)) {
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
@@ -47,6 +54,7 @@ const SettingsPage = () => {
       setLoading(false);
     }
   };
+
 
   const showToast = (message, type = "create") => {
     setToast({ message, type });
@@ -100,18 +108,37 @@ const SettingsPage = () => {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
+          // do NOT set Content-Type here
         },
         body: formData,
       });
-      
+
+      const result = await response.json().catch(() => null);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || t('settings.errors.uploadError'));
+        const errMsg = result?.error || result?.message || t('settings.errors.uploadError');
+        throw new Error(errMsg);
       }
-      
-      const data = await response.json();
-      updateUser(data.user, data.token);
-      setSettings(prev => ({ ...prev, profilePicture: data.user.profilePicture }));
+
+      // result may contain result.user or result.profilePicture
+      const returnedUser = result?.user;
+      const returnedPic = result?.profilePicture || returnedUser?.profilePicture;
+
+      // If backend returned a user object, update auth context
+      if (returnedUser) {
+        // If your updateUser expects (user, token) and token unchanged, call it accordingly
+        updateUser(returnedUser, token);
+      }
+
+      // Normalize absolute URL if backend gave relative path
+      let finalUrl = returnedPic || null;
+      if (finalUrl && !finalUrl.startsWith('http')) {
+        finalUrl = `${import.meta.env.VITE_API_URL}${finalUrl}`;
+      }
+
+      // Update local settings state so UI updates immediately
+      setSettings(prev => ({ ...prev, profilePicture: finalUrl }));
+
       setProfilePictureFile(null);
       setProfilePicturePreview(null);
       showToast(t('settings.toasts.pictureSuccess'), "update");
@@ -121,6 +148,7 @@ const SettingsPage = () => {
       setUploadingPicture(false);
     }
   };
+
 
   // Remove profile picture preview
   const removeProfilePicturePreview = () => {

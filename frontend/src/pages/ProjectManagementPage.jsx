@@ -15,6 +15,9 @@ import {
   RefreshCw,
   Search,
   X,
+  Menu,
+  Filter,
+  MoreVertical,
 } from "lucide-react";
 import { fetchGroups } from "../api/groups";
 import { fetchGoals, createGoal, updateGoal, deleteGoal } from "../api/goals";
@@ -179,6 +182,8 @@ const ProjectManagement = () => {
   const [success, setSuccess] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const [canManageGTA, setCanManageGTA] = useState(false);
   const [canViewGTA, setCanViewGTA] = useState(false);
@@ -511,50 +516,119 @@ const ProjectManagement = () => {
   /* ---------- Render ---------- */
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-200">
-      <header className="mb-4 max-w-screen-xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="p-3 rounded-lg bg-gradient-to-br from-purple-50 to-sky-50 dark:from-purple-900/10 dark:to-sky-900/10">
-            <Target className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">Project Manager</h1>
-            {/* description removed per request */}
-          </div>
-        </div>
-
-        {/* Right controls: keep no-wrap to avoid Add Goal wrapping */}
-        <div className="flex items-center gap-2 w-full md:w-auto flex-nowrap">
-          <div className="relative flex-1 md:flex-none min-w-0">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        ></div>
+      )}
+      
+      <header className="mb-4 min-w-8xl mx-auto">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-gradient-to-br from-purple-50 to-sky-50 dark:from-purple-900/10 dark:to-sky-900/10">
+                <Target className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">Project Manager</h1>
+                {/* description removed per request */}
+              </div>
             </div>
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search goals..."
-              className="pl-10 pr-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-sm w-full min-w-0 text-gray-900 dark:text-white"
-            />
+            
+            <button 
+              className="md:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <Menu className="h-6 w-6" />
+            </button>
           </div>
 
-          <button
-            onClick={() => loadGoals({ page: 1 })}
-            className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 dark:text-white text-sm flex items-center gap-2 whitespace-nowrap"
-          >
-            <RefreshCw className="h-4 w-4" /> Refresh
-          </button>
+          {/* Mobile menu */}
+          <div className={`${mobileMenuOpen ? 'block' : 'hidden'} md:flex md:items-center gap-2 w-full md:w-auto md:flex-nowrap mt-4 md:mt-0`}>
+            <div className="relative flex-1 md:flex-none min-w-0">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search goals..."
+                className="pl-10 pr-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-sm w-full min-w-0 text-gray-900 dark:text-white"
+              />
+            </div>
 
-          {canManageGTA && (
-            <button
-              onClick={() => setModal({ isOpen: true, type: "createGoal", data: null })}
-              className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm flex items-center gap-2 whitespace-nowrap"
-            >
-              <Plus className="h-4 w-4" /> Add Goal
-            </button>
-          )}
+            <div className="flex items-center gap-2 mt-2 md:mt-0">
+              <button
+                onClick={() => loadGoals({ page: 1 })}
+                className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 dark:text-white text-sm flex items-center gap-2 whitespace-nowrap w-full md:w-auto justify-center"
+              >
+                <RefreshCw className="h-4 w-4" /> Refresh
+              </button>
+
+              {canManageGTA && (
+                <button
+                  onClick={() => setModal({ isOpen: true, type: "createGoal", data: null })}
+                  className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm flex items-center gap-2 whitespace-nowrap w-full md:w-auto justify-center"
+                >
+                  <Plus className="h-4 w-4" /> Add Goal
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-screen-xl mx-auto">
+      <main className="min-w-8xl mx-auto">
+        {/* Filters (optional - can be expanded)
+        <div className="mb-4 flex justify-between items-center">
+          <button 
+            className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+            onClick={() => setFilterOpen(!filterOpen)}
+          >
+            <Filter className="h-4 w-4" /> Filters
+          </button>
+          
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {filteredGoals.length} of {goals.length} goals
+          </div>
+        </div>
+        
+        {filterOpen && (
+          <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                <select className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm">
+                  <option>All Statuses</option>
+                  <option>Active</option>
+                  <option>Completed</option>
+                  <option>Not Started</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Group</label>
+                <select className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm">
+                  <option>All Groups</option>
+                  {groups.map(group => (
+                    <option key={group.id} value={group.id}>{group.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date Range</label>
+                <select className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 py-2 px-3 text-sm">
+                  <option>All Time</option>
+                  <option>This Week</option>
+                  <option>This Month</option>
+                  <option>This Quarter</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )} */}
+
         {error && (
           <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 px-3 py-2 rounded relative">
             <div className="flex items-center gap-2">
@@ -594,21 +668,56 @@ const ProjectManagement = () => {
               className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded-lg mb-6 overflow-hidden"
             >
               <div className="p-5 md:p-6">
-                <div className="flex items-start md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-4 min-w-0">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-4 min-w-0 flex-1">
                     <button
                       onClick={() => toggleGoal(goal)}
-                      className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block"
                       aria-label="Toggle goal"
                     >
                       {expandedGoal === goal.id ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                     </button>
 
-                    <div className="min-w-0">
-                      <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white truncate">{goal.title}</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 truncate">{goal.description || "—"}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between">
+                        <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white break-words">{goal.title}</h3>
+                        
+                        <div className="md:hidden flex items-center gap-2 ml-2">
+                          <button
+                            onClick={() => toggleGoal(goal)}
+                            className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            aria-label="Toggle goal"
+                          >
+                            {expandedGoal === goal.id ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                          </button>
+                          
+                          {canManageGTA && (
+                            <div className="relative">
+                              <button className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <MoreVertical className="h-5 w-5" />
+                              </button>
+                              <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                <button
+                                  onClick={() => setModal({ isOpen: true, type: "editGoal", data: goal })}
+                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                  <Edit/>
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteGoal(goal.id)}
+                                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                >
+                                  <Trash2/>
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 break-words">{goal.description || "—"}</p>
 
-                      <div className="mt-3 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-300 flex-nowrap">
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-300">
                         <span className="whitespace-nowrap">
                           Group:{" "}
                           <strong className="text-gray-800 dark:text-gray-100">{goal.groupName || "Unassigned"}</strong>
@@ -620,37 +729,38 @@ const ProjectManagement = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex flex-col items-end text-xs text-gray-500 dark:text-gray-300 mr-3 w-36">
+                  <div className="flex items-center gap-3 mt-4 md:mt-0">
+                    <div className="hidden md:flex flex-col items-end text-xs text-gray-500 dark:text-gray-300 mr-3 w-36">
                       <div className="w-full">
                         <ProgressBar progress={goal.progress ?? 0} variant="goal" />
                       </div>
                     </div>
 
                     {canManageGTA && (
-                      <div className="flex items-center gap-2">
+                      <div className="hidden md:flex items-center gap-2">
                         <button
                           onClick={() => setModal({ isOpen: true, type: "editGoal", data: goal })}
                           className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-5 w-5" />
                         </button>
                         <button onClick={() => handleDeleteGoal(goal.id)} className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-5 w-5" />
                         </button>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" /> {formatDate(goal.startDate)} — {formatDate(goal.endDate)}
+                    <Calendar className="h-4 w-4 flex-shrink-0" /> 
+                    <span className="truncate">{formatDate(goal.startDate)} — {formatDate(goal.endDate)}</span>
                   </div>
                   <div>
                     Weight: <strong className="text-gray-800 dark:text-gray-100">{goal.weight ?? "-"}</strong>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 md:hidden">
                     <div className="flex-1 max-w-xs">
                       <ProgressBar progress={goal.progress ?? 0} variant="goal" />
                     </div>
@@ -658,7 +768,7 @@ const ProjectManagement = () => {
                 </div>
 
                 {expandedGoal === goal.id && (
-                  <div className="mt-6 pl-4">
+                  <div className="mt-6 pl-0 sm:pl-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         <CheckSquare className="h-4 w-4 text-sky-600" /> Tasks
@@ -669,7 +779,7 @@ const ProjectManagement = () => {
                             onClick={() => setModal({ isOpen: true, type: "createTask", data: { goalId: goal.id } })}
                             className="px-2 py-1 bg-blue-500 text-white rounded text-xs flex items-center gap-1"
                           >
-                            <Plus className="h-3 w-3" /> Add
+                            <Plus className="h-3 w-3" /> Add Task
                           </button>
                         )}
                       </div>
@@ -685,47 +795,83 @@ const ProjectManagement = () => {
                       <div className="space-y-3">
                         {tasks[goal.id].map((task) => (
                           <div key={task.id} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-100 dark:border-gray-700">
-                            <div className="flex items-start justify-between gap-3 min-w-0">
-                              <div className="flex items-start gap-3 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
+                              <div className="flex items-start gap-3 min-w-0 flex-1">
                                 <button
                                   onClick={() => toggleTask(goal, task)}
-                                  className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                  className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block"
                                   aria-label="Toggle task"
                                 >
                                   {expandedTask === task.id ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                                 </button>
 
-                                <div className="min-w-0">
-                                  <div className="font-medium text-gray-900 dark:text-white truncate">{task.title}</div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{task.description || "—"}</div>
-                                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex gap-3 whitespace-nowrap">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-start justify-between">
+                                    <div className="font-medium text-gray-900 dark:text-white break-words">{task.title}</div>
+                                    
+                                    <div className="sm:hidden flex items-center gap-2 ml-2">
+                                      <button
+                                        onClick={() => toggleTask(goal, task)}
+                                        className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        aria-label="Toggle task"
+                                      >
+                                        {expandedTask === task.id ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                                      </button>
+                                      
+                                      {canManageGTA && (
+                                        <div className="relative">
+                                          <button className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                            <MoreVertical className="h-5 w-5" />
+                                          </button>
+                                          <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                            <button
+                                              onClick={() => setModal({ isOpen: true, type: "editTask", data: { goalId: goal.id, ...task } })}
+                                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            >
+                                              <Edit/>
+                                            </button>
+                                            <button 
+                                              onClick={() => handleDeleteTask(goal.id, task.id)}
+                                              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            >
+                                              <Trash2/>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">{task.description || "—"}</div>
+                                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-3">
                                     <div>Due: {formatDate(task.dueDate)}</div>
                                     <div>Weight: {task.weight ?? "-"}</div>
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-2 whitespace-nowrap">
+                              <div className="flex items-center gap-2 whitespace-nowrap justify-between sm:justify-end">
                                 <StatusBadge status={task.status} />
                                 {canManageGTA && (
                                   <>
                                     <button
                                       onClick={() => setModal({ isOpen: true, type: "editTask", data: { goalId: goal.id, ...task } })}
-                                      className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                                      className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
                                     >
-                                      <Edit className="h-4 w-4" />
+                                      <Edit className="h-5 w-5" />
                                     </button>
-                                    <button onClick={() => handleDeleteTask(goal.id, task.id)} className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
-                                      <Trash2 className="h-4 w-4" />
+                                    <button onClick={() => handleDeleteTask(goal.id, task.id)} className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block">
+                                      <Trash2 className="h-5 w-5" />
                                     </button>
                                   </>
                                 )}
                               </div>
                             </div>
 
-                            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300 pl-6">
+                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300 pl-0 sm:pl-6">
                               <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4" /> {formatDate(task.dueDate)}
+                                <Calendar className="h-4 w-4 flex-shrink-0" /> 
+                                <span className="truncate">{formatDate(task.dueDate)}</span>
                               </div>
                               <div>
                                 Weight: <strong>{task.weight ?? "-"}</strong>
@@ -738,7 +884,7 @@ const ProjectManagement = () => {
                             </div>
 
                             {expandedTask === task.id && (
-                              <div className="mt-4 pl-6">
+                              <div className="mt-4 pl-0 sm:pl-6">
                                 <div className="flex items-center justify-between mb-2">
                                   <h6 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                                     <List className="h-4 w-4 text-sky-600" /> Activities
@@ -749,7 +895,7 @@ const ProjectManagement = () => {
                                         onClick={() => setModal({ isOpen: true, type: "createActivity", data: { goalId: goal.id, taskId: task.id } })}
                                         className="px-2 py-1 text-xs bg-blue-500 text-white rounded"
                                       >
-                                        Add
+                                        Add Activity
                                       </button>
                                     )}
                                   </div>
@@ -764,12 +910,12 @@ const ProjectManagement = () => {
                                 ) : (
                                   <div className="space-y-2">
                                     {activities[task.id].map((activity) => (
-                                      <div key={activity.id} className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 flex justify-between gap-3">
-                                        <div className="min-w-0">
-                                          <div className="font-medium text-gray-900 dark:text-white truncate">{activity.title}</div>
-                                          <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 truncate">{activity.description || "—"}</div>
+                                      <div key={activity.id} className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-3">
+                                        <div className="min-w-0 flex-1">
+                                          <div className="font-medium text-gray-900 dark:text-white break-words">{activity.title}</div>
+                                          <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 break-words">{activity.description || "—"}</div>
 
-                                          <div className="mt-2 text-xs text-gray-500 dark:text-gray-300 grid grid-cols-1 md:grid-cols-3 gap-2">
+                                          <div className="mt-2 text-xs text-gray-500 dark:text-gray-300 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                             <div>Due: {formatDate(activity.dueDate)}</div>
                                             <div>Weight: {activity.weight ?? "-"}</div>
                                             <div>{activity.isDone ? "Completed" : "Open"}</div>
@@ -783,19 +929,19 @@ const ProjectManagement = () => {
                                           )}
                                         </div>
 
-                                        <div className="flex flex-col items-end gap-2">
+                                        <div className="flex flex-col sm:items-end gap-2 mt-2 sm:mt-0">
                                           <StatusBadge status={activity.status} />
-                                          <div className="flex items-center gap-2 whitespace-nowrap">
+                                          <div className="flex items-center gap-2 whitespace-nowrap justify-between sm:justify-end">
                                             {canManageGTA && (
                                               <>
                                                 <button
                                                   onClick={() => setModal({ isOpen: true, type: "editActivity", data: { goalId: goal.id, taskId: task.id, ...activity } })}
-                                                  className="p-1 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                                                  className="p-1 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
                                                 >
-                                                  <Edit className="h-4 w-4" />
+                                                  <Edit className="h-5 w-5" />
                                                 </button>
-                                                <button onClick={() => handleDeleteActivity(goal.id, task.id, activity.id)} className="p-1 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md">
-                                                  <Trash2 className="h-4 w-4" />
+                                                <button onClick={() => handleDeleteActivity(goal.id, task.id, activity.id)} className="p-1 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block">
+                                                  <Trash2 className="h-5 w-5" />
                                                 </button>
                                               </>
                                             )}
@@ -804,6 +950,28 @@ const ProjectManagement = () => {
                                               <button onClick={() => openSubmitModal(goal.id, task.id, activity.id)} className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs">
                                                 Submit Report
                                               </button>
+                                            )}
+                                            
+                                            {canManageGTA && (
+                                              <div className="sm:hidden relative">
+                                                <button className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                  <MoreVertical className="h-4 w-4" />
+                                                </button>
+                                                <div className="flex mt-1 w-fit bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                                  <button
+                                                    onClick={() => setModal({ isOpen: true, type: "editActivity", data: { goalId: goal.id, taskId: task.id, ...activity } })}
+                                                    className="block w-fit text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                  >
+                                                    <Edit/>
+                                                  </button>
+                                                  <button 
+                                                    onClick={() => handleDeleteActivity(goal.id, task.id, activity.id)}
+                                                    className="block w-fit text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                  >
+                                                    <Trash2/>
+                                                  </button>
+                                                </div>
+                                              </div>
                                             )}
                                           </div>
                                         </div>
@@ -825,7 +993,7 @@ const ProjectManagement = () => {
         )}
 
         {/* pagination footer */}
-        <div className="mt-4 flex items-center justify-between gap-4">
+        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-sm text-gray-700 dark:text-gray-300">
             Showing {Math.min((currentPage - 1) * pageSize + 1, goals.length)} - {Math.min(currentPage * pageSize, goals.length)} of {goals.length}
           </div>

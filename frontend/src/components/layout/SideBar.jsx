@@ -17,6 +17,8 @@ import {
   Bell,
 } from "lucide-react";
 import companyLogo from "../../assets/logo.png";
+import NotificationPage from "../../pages/NotificationPage"; // adjust path if needed
+
 
 const Sidebar = ({ children }) => {
   const { user, logout } = useAuth();
@@ -155,29 +157,39 @@ const Sidebar = ({ children }) => {
           </div>
 
           {/* Menu Items */}
-          <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
-            {mainMenuItems.map((item, idx) => (
-              <NavLink
-                key={`main-${idx}`}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center p-3 rounded-md transition-colors duration-500  ${
-                    isActive
-                      ? "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                  } ${showExpanded ? "justify-normal" : "justify-center"}`
-                }
-                aria-label={item.label}
-              >
-                <div className="flex-shrink-0 flex items-center justify-center w-6">
-                  {item.icon}
-                </div>
-                {showExpanded && (
-                  <span className="ml-3 truncate">{item.label}</span>
-                )}
-              </NavLink>
-            ))}
-          </nav>
+<nav className="flex-1 space-y-1 p-2 overflow-y-auto">
+  {mainMenuItems.map((item, idx) => {
+    // Render the notification item with hover preview
+    if (item.to === "/notification") {
+      return (
+        <div key={`main-${idx}`} className={`${showExpanded ? "" : "flex justify-center"}`}>
+          <NotificationPage item={item} showExpanded={showExpanded} />
+        </div>
+      );
+    }
+
+    return (
+      <NavLink
+        key={`main-${idx}`}
+        to={item.to}
+        className={({ isActive }) =>
+          `flex items-center p-3 rounded-md transition-colors duration-500  ${
+            isActive
+              ? "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+              : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+          } ${showExpanded ? "justify-normal" : "justify-center"}`
+        }
+        aria-label={item.label}
+      >
+        <div className="flex-shrink-0 flex items-center justify-center w-6">
+          {item.icon}
+        </div>
+        {showExpanded && <span className="ml-3 truncate">{item.label}</span>}
+      </NavLink>
+    );
+  })}
+</nav>
+
 
           {/* User Info */}
           <div className="mt-auto p-3 ">

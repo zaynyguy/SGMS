@@ -45,7 +45,7 @@ function renderMetricsList(metrics) {
 }
 
 /* -------------------------
-   Top-right tab group (unchanged)
+   Top-right tab group
 ------------------------- */
 function TopRightTabs({ value, onChange }) {
   const options = [
@@ -93,17 +93,13 @@ function TopRightTabs({ value, onChange }) {
 
 /* -------------------------
    REVIEW PAGE
-   - per-report action loading states (button shows spinner & disabled while processing)
-   - metrics rendered in a presentable list (not raw JSON)
-   - search input made responsive (flex-1 + min-w-0, parent allows wrap)
-   - expand arrow colored: text-gray-900 dark:text-white
 ------------------------- */
 function ReviewReportsPage() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [actionState, setActionState] = useState({});
-  const [actionLoading, setActionLoading] = useState({}); // id -> bool
+  const [actionLoading, setActionLoading] = useState({});
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -141,12 +137,9 @@ function ReviewReportsPage() {
     const adminComment = actionState[id]?.comment || null;
     const resubmissionDeadline = actionState[id]?.deadline || null;
     try {
-      // set per-item loading
       setActionLoading((s) => ({ ...s, [id]: true }));
       await reviewReport(id, { status, adminComment, resubmissionDeadline });
-      // reload the list (keeps the canonical source)
       await loadReports();
-      // small feedback - we avoid alert UI in favor of small inline success mark
       setActionState((s) => ({ ...s, [id]: { ...(s[id] || {}), _lastResult: `Updated to ${status}` } }));
     } catch (err) {
       console.error("review error", err);
@@ -171,22 +164,21 @@ function ReviewReportsPage() {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-5 md:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-      <div className="flex items-center justify-between mb-5">
+    <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
         <div>
-          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100">Review & Moderate</h2>
+          <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">Review & Moderate</h2>
           <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">Approve or reject incoming reports</p>
         </div>
 
-        {/* Responsive controls: allow wrap and let input shrink */}
-        <div className="flex gap-2 items-center flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full lg:w-auto">
           <div className="flex-1 min-w-0">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={onSearchKeyDown}
               placeholder="Search reports (press Enter)"
-              className="w-full px-3 py-2 rounded border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 min-w-0"
+              className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 min-w-0 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
             />
           </div>
 
@@ -195,11 +187,11 @@ function ReviewReportsPage() {
               setPage(1);
               loadReports({ page: 1, q: search });
             }}
-            className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap"
+            className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             Search
           </button>
-          <button onClick={handleRefresh} className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap flex items-center gap-2">
+          <button onClick={handleRefresh} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="opacity-80">
               <path d="M21 12A9 9 0 1 0 6 20.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -209,27 +201,28 @@ function ReviewReportsPage() {
         </div>
       </div>
 
-      <div className="flex gap-3 items-center mb-4">
-        {["All", "Pending", "Approved", "Rejected"].map((s) => (
-          <button
-            key={s}
-            onClick={() => {
-              setPage(1);
-              setStatusFilter(s);
-            }}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-              statusFilter === s ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-            }`}
-          >
-            {s}
-          </button>
-        ))}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <div className="flex flex-wrap gap-2">
+          {["All", "Pending", "Approved", "Rejected"].map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setPage(1);
+                setStatusFilter(s);
+              }}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                statusFilter === s ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
         <div className="ml-auto text-xs text-gray-500 dark:text-gray-400">Showing page {page} of {totalPages} • {total} reports</div>
       </div>
 
       <div className="space-y-4">
         {loading ? (
-          // skeleton placeholders
           Array.from({ length: Math.min(5, pageSize) }).map((_, i) => (
             <div key={`skeleton-${i}`} className="border rounded-lg overflow-hidden animate-pulse">
               <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
@@ -253,13 +246,13 @@ function ReviewReportsPage() {
         ) : (
           <>
             {reports.map((r) => (
-              <div key={r.id} className="border rounded-lg overflow-hidden">
+              <div key={r.id} className="border rounded-lg overflow-hidden transition-all">
                 <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
                       <div className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">Report #{r.id}</div>
                       <div
-                        className={`px-3 py-1.5 rounded-full text-xs md:text-sm font-medium ${
+                        className={`px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs md:text-sm font-medium ${
                           r.status === "Approved"
                             ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                             : r.status === "Rejected"
@@ -277,7 +270,7 @@ function ReviewReportsPage() {
                     <button
                       onClick={() => setExpanded(expanded === r.id ? null : r.id)}
                       aria-expanded={expanded === r.id}
-                      className="flex items-center gap-2 px-3 py-1 rounded bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                      className="flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
                       <svg className={`transition-transform ${expanded === r.id ? "rotate-180" : "rotate-0"}`} width="18" height="18" viewBox="0 0 24 24" fill="none">
                         <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -303,20 +296,20 @@ function ReviewReportsPage() {
                         placeholder="Admin comment"
                         value={actionState[r.id]?.comment || ""}
                         onChange={(e) => setActionState((s) => ({ ...s, [r.id]: { ...(s[r.id] || {}), comment: e.target.value } }))}
-                        className="px-3 py-2 rounded border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                         disabled={!!actionLoading[r.id]}
                       />
                       <input
                         type="date"
                         value={actionState[r.id]?.deadline || ""}
                         onChange={(e) => setActionState((s) => ({ ...s, [r.id]: { ...(s[r.id] || {}), deadline: e.target.value } }))}
-                        className="px-3 py-2 rounded border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                         disabled={!!actionLoading[r.id]}
                       />
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleReview(r.id, "Approved")}
-                          className="flex-1 bg-green-600 text-white px-3 py-2 rounded flex items-center justify-center gap-2"
+                          className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
                           disabled={!!actionLoading[r.id]}
                           aria-busy={!!actionLoading[r.id]}
                         >
@@ -324,7 +317,7 @@ function ReviewReportsPage() {
                         </button>
                         <button
                           onClick={() => handleReview(r.id, "Rejected")}
-                          className="flex-1 bg-red-600 text-white px-3 py-2 rounded flex items-center justify-center gap-2"
+                          className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
                           disabled={!!actionLoading[r.id]}
                           aria-busy={!!actionLoading[r.id]}
                         >
@@ -351,15 +344,15 @@ function ReviewReportsPage() {
         )}
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             disabled={page <= 1}
             onClick={() => {
               setPage(1);
               loadReports({ page: 1 });
             }}
-            className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-sm"
+            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             First
           </button>
@@ -369,18 +362,18 @@ function ReviewReportsPage() {
               setPage((p) => Math.max(1, p - 1));
               loadReports({ page: Math.max(1, page - 1) });
             }}
-            className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-sm"
+            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Prev
           </button>
-          <div className="px-3 py-1 text-sm">{page} / {totalPages}</div>
+          <div className="px-3 py-1.5 text-sm">{page} / {totalPages}</div>
           <button
             disabled={page >= totalPages}
             onClick={() => {
               setPage((p) => Math.min(totalPages, p + 1));
               loadReports({ page: Math.min(totalPages, page + 1) });
             }}
-            className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-sm"
+            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next
           </button>
@@ -390,7 +383,7 @@ function ReviewReportsPage() {
               setPage(totalPages);
               loadReports({ page: totalPages });
             }}
-            className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-sm"
+            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Last
           </button>
@@ -404,7 +397,7 @@ function ReviewReportsPage() {
               setPageSize(Number(e.target.value));
               setPage(1);
             }}
-            className="px-2 py-1 rounded bg-white dark:bg-gray-700 text-sm"
+            className="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent"
           >
             {[10, 20, 50, 100].map((n) => (
               <option key={n} value={n}>
@@ -419,7 +412,7 @@ function ReviewReportsPage() {
 }
 
 /* -------------------------
-   Master report helpers & table row (metrics formatting improved)
+   Master report helpers & table row
 ------------------------- */
 function fmtMonthKey(date) {
   const [y, m] = String(date).split("-");
@@ -536,7 +529,7 @@ function ActivityRow({ activity, periods, granularity }) {
 }
 
 /* -------------------------
-   Master Report page wrapper (metrics presentation improved)
+   Master Report page wrapper
 ------------------------- */
 function MasterReportPageWrapper() {
   const [groupId, setGroupId] = useState("");
@@ -713,7 +706,7 @@ th{background:#f3f4f6}
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-5 md:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-4 mb-5">
         <div className="bg-gradient-to-br from-purple-100 to-sky-50 dark:from-purple-900/20 dark:to-sky-900/10 dark:text-gray-100 dark:border-gray-300 dark:border-2 p-3 rounded-lg">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -721,7 +714,7 @@ th{background:#f3f4f6}
           </svg>
         </div>
         <div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-gray-100">Master Report</h2>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-gray-100">Master Report</h2>
           <div className="text-sm text-gray-500 dark:text-gray-300">Narratives and a compact data table. Export PDF or CSV.</div>
         </div>
       </div>
@@ -729,24 +722,24 @@ th{background:#f3f4f6}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5">
         <div className="md:col-span-3">
           <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Group ID (optional)</label>
-          <input value={groupId} onChange={(e) => setGroupId(e.target.value)} placeholder="Enter Group ID or leave blank for all" className="w-full px-3 py-2 rounded border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100" />
+          <input value={groupId} onChange={(e) => setGroupId(e.target.value)} placeholder="Enter Group ID or leave blank for all" className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
           {error && <div className="text-sm text-red-600 dark:text-red-400 mt-2">{error}</div>}
         </div>
-        <div className="md:col-span-2 flex gap-2 items-end">
-          <button onClick={handleFetch} disabled={loading} className="w-full md:w-auto px-4 py-2 bg-sky-600 text-white rounded shadow flex items-center justify-center gap-2">
+        <div className="md:col-span-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+          <button onClick={handleFetch} disabled={loading} className="px-4 py-2 bg-sky-600 text-white rounded-lg shadow flex items-center justify-center gap-2 hover:bg-sky-700 transition-colors">
             {loading ? <Loader className="h-4 w-4 animate-spin" /> : "Load Report"}
           </button>
-          <button onClick={exportPDF} className="w-full md:w-auto px-4 py-2 bg-emerald-600 text-white rounded">Export PDF</button>
-          <button onClick={exportCSV} className="w-full md:w-auto px-4 py-2 bg-indigo-600 text-white rounded">Export CSV</button>
+          <button onClick={exportPDF} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">Export PDF</button>
+          <button onClick={exportCSV} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Export CSV</button>
         </div>
       </div>
 
-      <div className="flex gap-4 items-center mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
         <div>
           <label className="text-sm text-gray-600 dark:text-gray-300">Granularity</label>
           <div className="flex gap-2 mt-1">
             {["monthly", "quarterly", "annual"].map((g) => (
-              <button key={g} onClick={() => setGranularity(g)} className={`px-3 py-1 rounded ${granularity === g ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"}`}>{g}</button>
+              <button key={g} onClick={() => setGranularity(g)} className={`px-3 py-1.5 rounded-lg transition-colors ${granularity === g ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}>{g}</button>
             ))}
           </div>
         </div>
@@ -755,7 +748,7 @@ th{background:#f3f4f6}
       </div>
 
       <div className="mb-6">
-        <h3 className="text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">Narratives</h3>
+        <h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">Narratives</h3>
         {!master && <div className="text-sm text-gray-500 dark:text-gray-400">No data loaded.</div>}
         {master && master.goals && master.goals.length === 0 && <div className="text-sm text-gray-500 dark:text-gray-400">No goals found.</div>}
         {master && master.goals && master.goals.length > 0 && (
@@ -776,7 +769,7 @@ th{background:#f3f4f6}
                       <div className="pl-3 mt-3 space-y-3">
                         {(t.activities || []).map((a) => (
                           <div key={a.id} className="p-3 bg-white dark:bg-gray-800 rounded border">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                               <div>
                                 <div className="text-base md:text-lg font-medium text-gray-800 dark:text-gray-100">{a.title}</div>
                                 <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">
@@ -795,7 +788,7 @@ th{background:#f3f4f6}
                               ) : (
                                 (a.reports || []).map((r) => (
                                   <div key={r.id} className="text-sm border rounded p-2 bg-gray-50 dark:bg-gray-900">
-                                    <div className="flex justify-between">
+                                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
                                       <div className="text-sm font-medium">#{r.id} • <span className="text-gray-600 dark:text-gray-300">{r.status}</span></div>
                                       <div className="text-xs text-gray-400">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</div>
                                     </div>
@@ -823,7 +816,7 @@ th{background:#f3f4f6}
       </div>
 
       <div>
-        <h3 className="text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">Data Table</h3>
+        <h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">Data Table</h3>
         <div className="overflow-auto border rounded">
           <table className="min-w-full">
             <thead>
@@ -888,12 +881,12 @@ export default function ReportsUI() {
   const [page, setPage] = useState("review");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-5 md:p-8 max-w-8xl mx-auto transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 lg:p-8 max-w-8xl mx-auto transition-colors duration-200">
       <header className="mb-6 md:mb-8">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-gray-100">Reports Dashboard</h1>
-            <p className="text-base md:text-lg text-gray-600 dark:text-gray-300 mt-2">Load, review and generate comprehensive reports</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-gray-100">Reports Dashboard</h1>
+            <p className="text-base text-gray-600 dark:text-gray-300 mt-2">Load, review and generate comprehensive reports</p>
           </div>
           <div className="hidden md:block">
             <TopRightTabs value={page} onChange={setPage} />

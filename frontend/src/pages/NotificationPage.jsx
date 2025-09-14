@@ -1,122 +1,183 @@
-import React, { useEffect, useState } from "react";
-import {
-  fetchNotifications,
-  fetchUnreadCount,
-  markNotificationRead,
-  markAllNotificationsRead,
-} from "../api/notifications";
-import { CheckCircle, Info, AlertTriangle } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { Bell, CheckCircle, Info, AlertTriangle } from "lucide-react";
+import { fetchNotifications, fetchUnreadCount } from "../api/notifications";
 
-function NotificationsCenter() {
+/**
+ * NotificationPreview
+ * - Shows unread count badge on bell
+ * - On hover (desktop) fetches and shows latest 5 notifications
+ * - Clicking the bell routes to /notification (NavLink)
+ */
+export default function NotificationPage({ item, showExpanded }) {
+  const [showPreview, setShowPreview] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
-  const [filter, setFilter] = useState("all");
+  const hideTimer = useRef(null);
+  const wrapperRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchNotifications(1, 50).then((res) => setNotifications(res.rows || []));
-    fetchUnreadCount().then((res) => setUnread(res.unread));
+    // initial unread count fetch
+    let mounted = true;
+    fetchUnreadCount().then((res) => {
+      if (mounted) setUnread(res?.unread ?? 0);
+    }).catch(() => {});
+    return () => (mounted = false);
   }, []);
 
-  const handleMarkAllRead = async () => {
-    await markAllNotificationsRead();
-    setUnread(0);
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  // helper to fetch top 5
+  const loadPreview = async () => {
+    try {
+      const res = await fetchNotifications(1, 5);
+      setNotifications(res.rows || []);
+      const unreadCountRes = await fetchUnreadCount();
+      setUnread(unreadCountRes?.unread ?? 0);
+    } catch (err) {
+      // swallow -- optional: set an error state
+      console.error("Failed loading notification preview", err);
+    }
   };
 
-  const handleMarkRead = async (id) => {
-    await markNotificationRead(id);
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
-    setUnread((prev) => Math.max(prev - 1, 0));
+  const handleMouseEnter = () => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    setShowPreview(true);
+    // fetch fresh preview each hover
+    loadPreview();
+  };
+
+  const handleMouseLeave = () => {
+    // small delay so the user can move mouse into the popover
+    hideTimer.current = setTimeout(() => setShowPreview(false), 150);
+  };
+
+  // keyboard accessibility: show preview on focus, hide on blur
+  const handleFocus = () => {
+    setShowPreview(true);
+    loadPreview();
+  };
+  const handleBlur = (e) => {
+    // if focusing inside the wrapper, don't hide
+    if (wrapperRef.current && wrapperRef.current.contains(e.relatedTarget)) return;
+    setShowPreview(false);
   };
 
   const getIcon = (level) => {
     switch (level) {
       case "success":
-        return <CheckCircle className="text-green-500 w-5 h-5" />;
+        return <CheckCircle className="w-4 h-4" />;
       case "warning":
-        return <AlertTriangle className="text-yellow-500 w-5 h-5" />;
+        return <AlertTriangle className="w-4 h-4" />;
       case "error":
-        return <AlertTriangle className="text-red-500 w-5 h-5" />;
+        return <AlertTriangle className="w-4 h-4" />;
       default:
-        return <Info className="text-blue-500 w-5 h-5" />;
+        return <Info className="w-4 h-4" />;
     }
   };
 
-  const filtered = notifications.filter((n) => {
-    if (filter === "unread") return !n.isRead;
-    if (filter === "read") return n.isRead;
-    return true;
-  });
-
-  return (
-    <div className="max-w-3xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-gray-800">
-          Notifications ({unread} unread)
-        </h2>
-        {unread > 0 && (
-          <button
-            onClick={handleMarkAllRead}
-            className="px-3 py-1 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Mark all as read
-          </button>
-        )}
-      </div>
-
-      {/* Filters */}
-      <div className="flex gap-3 mb-4">
-        {["all", "unread", "read"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-1 rounded-lg text-sm font-medium ${
-              filter === f
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Notifications List */}
-      <div className="bg-white rounded-xl shadow border divide-y">
-        {filtered.length === 0 && (
-          <div className="p-6 text-center text-gray-500">
-            No notifications to display
-          </div>
-        )}
-        {filtered.map((n) => (
-          <div
-            key={n.id}
-            className={`flex items-start gap-3 p-4 cursor-pointer ${
-              n.isRead ? "bg-white" : "bg-blue-50"
-            } hover:bg-gray-50`}
-            onClick={() => handleMarkRead(n.id)}
-          >
-            {getIcon(n.level)}
-            <div className="flex-1">
-              <p
-                className={`text-sm ${
-                  n.isRead ? "text-gray-600" : "text-gray-900 font-medium"
-                }`}
-              >
-                {n.message}
-              </p>
-              <span className="text-xs text-gray-400">
-                {new Date(n.createdAt).toLocaleString()}
-              </span>
-            </div>
-          </div>
-        ))}
+  // render little message line
+  const renderItem = (n) => (
+    <div
+      key={n.id}
+      className={`flex items-start gap-3 p-2 rounded-md cursor-pointer ${
+        n.isRead ? "bg-white" : "bg-blue-50"
+      } hover:bg-gray-100`}
+      onClick={() => {
+        // when a preview item clicked, navigate to notification page (or ideally deep link)
+        navigate("/notification");
+      }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && navigate("/notification")}
+    >
+      <div className="flex-shrink-0 mt-0.5">{getIcon(n.level)}</div>
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm truncate ${n.isRead ? "text-gray-600" : "font-medium text-gray-900"}`}>
+          {n.message}
+        </div>
+        <div className="text-xs text-gray-400 mt-0.5">
+          {new Date(n.createdAt).toLocaleString()}
+        </div>
       </div>
     </div>
   );
-}
 
-export default NotificationsCenter;
+  return (
+    <div
+      className="relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      ref={wrapperRef}
+    >
+      {/* The clickable bell (routes on click) */}
+      <NavLink
+        to={item.to}
+        className={`flex items-center p-3 rounded-md transition-colors duration-200 ${
+          showExpanded ? "justify-normal" : "justify-center"
+        }`}
+        aria-label={item.label}
+      >
+        <div className="relative flex items-center justify-center w-6">
+          {/* actual Bell icon */}
+          <Bell size={24} />
+          {/* unread badge */}
+          {unread > 0 && (
+            <span
+              className="absolute top-1 right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold leading-none text-white bg-red-600 rounded-full"
+              aria-label={`${unread} unread notifications`}
+            >
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </div>
+        {showExpanded && <span className="ml-3 truncate">{item.label}</span>}
+      </NavLink>
+
+      {/* Preview popover (desktop) */}
+      {showPreview && (
+        <div
+          className="absolute left-full top-0 ml-3 w-80 max-h-96 overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 z-50"
+          role="dialog"
+          aria-label="Recent notifications preview"
+        >
+          <div className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-semibold">Recent notifications</div>
+              <div className="text-xs text-gray-500">{unread} unread</div>
+            </div>
+
+            <div className="divide-y overflow-y-auto max-h-72">
+              {notifications.length === 0 && (
+                <div className="p-4 text-sm text-gray-500">No notifications</div>
+              )}
+              {notifications.map(renderItem)}
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <button
+                className="text-sm px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200"
+                onClick={() => navigate("/notification")}
+              >
+                View all
+              </button>
+              <button
+                className="text-sm px-3 py-1 rounded-md text-gray-600 hover:text-gray-900"
+                onClick={() => {
+                  // refresh preview
+                  loadPreview();
+                }}
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -21,7 +21,7 @@ export default function AccessManagement() {
       <nav className="bg-gray-200 dark:bg-gray-900">
         <div className="max-w-8xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-50">Access Management</h1>
+            <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-50">Access Management</h1>
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex space-x-3 rounded-full bg-white dark:bg-gray-700">

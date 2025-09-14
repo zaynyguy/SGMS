@@ -17,8 +17,10 @@ export const updateMySettings = (settings) => {
 // Update profile picture
 export const updateProfilePicture = (file) => {
   const formData = new FormData();
-  formData.append('file', file);
+  // MUST match multer's upload.single("profilePicture")
+  formData.append("profilePicture", file);
 
-  // Some api helpers may need a flag to skip JSON headers
-  return api('/api/settings/profile-picture', 'PUT', formData, { isFormData: true });
+  return api("/api/settings/profile-picture", "PUT", formData, { isFormData: true });
 };
+
+
