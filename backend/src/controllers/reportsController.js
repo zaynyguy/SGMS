@@ -359,21 +359,61 @@ exports.reviewReport = async (req, res) => {
 
 exports.getAllReports = async (req, res) => {
   try {
-    const { rows } = await db.query(`
+    const page = Math.max(parseInt(req.query.page || "1", 10), 1);
+    const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || "20", 10), 1), 200);
+    const offset = (page - 1) * pageSize;
+    const status = req.query.status ? String(req.query.status) : null;
+    const qRaw = req.query.q ? String(req.query.q).trim() : null;
+
+    const whereClauses = [];
+    const params = [pageSize, offset];
+
+    if (status) {
+      params.push(status);
+      whereClauses.push(`r.status = $${params.length}`);
+    }
+
+    if (qRaw) {
+      // search across id, user name, activity title, narrative
+      params.push(`%${qRaw}%`);
+      const idx = params.length;
+      whereClauses.push(
+        `(r.id::text ILIKE $${idx} OR u.name ILIKE $${idx} OR a.title ILIKE $${idx} OR r.narrative ILIKE $${idx})`
+      );
+    }
+
+    const where = whereClauses.length ? "WHERE " + whereClauses.join(" AND ") : "";
+
+    const sql = `
       SELECT r.*, u.name as user_name,
              a.title as activity_title,
              t.title as task_title,
-             g.title as goal_title
+             g.title as goal_title,
+             COUNT(*) OVER() AS total_count
       FROM "Reports" r
       LEFT JOIN "Users" u ON r."userId" = u.id
       LEFT JOIN "Activities" a ON r."activityId" = a.id
       LEFT JOIN "Tasks" t ON a."taskId" = t.id
       LEFT JOIN "Goals" g ON t."goalId" = g.id
+      ${where}
       ORDER BY r."createdAt" DESC
-    `);
-    res.json(rows);
+      LIMIT $1 OFFSET $2
+    `;
+
+    const { rows } = await db.query(sql, params);
+    const total = rows.length ? Number(rows[0].total_count || 0) : 0;
+
+    // strip total_count from each row before returning (optional)
+    const cleaned = rows.map(({ total_count, ...r }) => r);
+
+    return res.json({
+      rows: cleaned,
+      page,
+      pageSize,
+      total,
+    });
   } catch (err) {
-    console.error("Error fetching all reports:", err);
+    console.error("Error fetching all reports (paginated):", err);
     res.status(500).json({ error: err.message });
   }
 };

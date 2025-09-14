@@ -19,7 +19,15 @@ export const submitReport = (activityId, formData) => {
 // -------------------- REPORT MANAGEMENT --------------------
 
 // Fetch all reports
-export const fetchReports = () => api("/api/reports", "GET");
+
+export const fetchReports = (page = 1, pageSize = 20, status, q) => {
+  const params = new URLSearchParams();
+  params.append("page", page);
+  params.append("pageSize", pageSize);
+  if (status) params.append("status", status);
+  if (q) params.append("q", q);
+  return api(`/api/reports?${params.toString()}`, "GET");
+};
 
 // Review a report (approve/reject)
 export const reviewReport = (id, reviewData) =>
