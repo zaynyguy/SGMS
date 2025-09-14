@@ -1,13 +1,63 @@
-import React, { useEffect, useState } from "react";
+// src/pages/SettingsPage.jsx
+import React, { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
-import { Moon, Sun, Upload, X, User, Save, Shield, Palette, UserCircle } from "lucide-react";
+import {
+  Moon,
+  Sun,
+  Upload,
+  X,
+  User,
+  Save,
+  Shield,
+  Palette,
+  UserCircle,
+} from "lucide-react";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import Toast from "../components/common/Toast";
 
+/* -------------------------
+   Helpers
+------------------------- */
+const formatBytes = (n) => {
+  if (!n) return "0 B";
+  const sizes = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  let num = n;
+  while (num >= 1024 && i < sizes.length - 1) {
+    num /= 1024;
+    i += 1;
+  }
+  return `${Math.round(num * 10) / 10} ${sizes[i]}`;
+};
+
+const initialsFromName = (name, fallback) => {
+  const n = (name || "").trim();
+  if (!n) {
+    const u = (fallback || "").trim();
+    return (u[0] || "?").toUpperCase();
+  }
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const gradientFromString = (s) => {
+  let hash = 0;
+  for (let i = 0; i < (s || "").length; i += 1) hash = (hash << 5) - hash + s.charCodeAt(i);
+  const a = Math.abs(hash);
+  const h1 = a % 360;
+  const h2 = (180 + h1) % 360;
+  return `linear-gradient(135deg, hsl(${h1} 70% 60%), hsl(${h2} 70% 40%))`;
+};
+
+/* -------------------------
+   Main component
+------------------------- */
 const SettingsPage = () => {
   const { t } = useTranslation();
   const { token, updateUser } = useAuth();
+
   const [settings, setSettings] = useState({
     username: "",
     name: "",
@@ -15,6 +65,7 @@ const SettingsPage = () => {
     darkMode: false,
     profilePicture: null,
   });
+
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(true);
@@ -23,173 +74,157 @@ const SettingsPage = () => {
   const [passwordError, setPasswordError] = useState("");
   const [oldPasswordError, setOldPasswordError] = useState("");
   const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null); // local blob url
   const [uploadingPicture, setUploadingPicture] = useState(false);
 
+  const previewObjectUrlRef = useRef(null);
+
+  /* Load settings */
   const fetchSettings = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error("Network response was not ok");
-      const data = await response.json();
-
-      // Ensure profilePicture is absolute (if backend returns relative path)
-      let profilePic = data.profilePicture || data.user?.profilePicture || null;
-      if (profilePic && !profilePic.startsWith('http')) {
-        profilePic = `${import.meta.env.VITE_API_URL}${profilePic}`;
-      }
-
-      setSettings(prev => ({ ...prev, ...data, profilePicture: profilePic }));
-
-      // Apply saved theme
-      if ((data.darkMode || data.user?.darkMode)) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      const url = `${import.meta.env.VITE_API_URL}/api/settings`;
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!resp.ok) throw new Error("Network response was not ok");
+      const data = await resp.json();
+      setSettings((prev) => ({ ...prev, ...data }));
+      const local = localStorage.getItem("theme");
+      const wantDark = local !== null ? local === "dark" : Boolean(data.darkMode);
+      applyDarkClass(wantDark);
+      setSettings((prev) => ({ ...prev, darkMode: wantDark }));
     } catch (err) {
-      showToast(t('settings.errors.loadError'), "error");
+      showToast(t("settings.errors.loadError") || "Failed to load settings", "error");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchSettings();
+    return () => {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+        previewObjectUrlRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showToast = (message, type = "create") => {
     setToast({ message, type });
   };
+  const handleToastClose = () => setToast(null);
 
-  const handleToastClose = () => {
-    setToast(null);
+  const applyDarkClass = (isDark) => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
   };
 
-  useEffect(() => { 
-    fetchSettings(); 
-  }, []);
+  const toggleDarkMode = () => {
+    setSettings((prev) => {
+      const newDarkMode = !prev.darkMode;
+      applyDarkClass(newDarkMode);
+      return { ...prev, darkMode: newDarkMode };
+    });
+  };
 
-  // Handle profile picture selection
+  /* Profile picture selection */
   const handleProfilePictureChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check if file is an image
-    if (!file.type.startsWith('image/')) {
-      showToast(t('settings.errors.invalidImage'), "error");
+    if (!file.type.startsWith("image/")) {
+      showToast(t("settings.errors.invalidImage") || "Invalid image file", "error");
       return;
     }
-
-    // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      showToast(t('settings.errors.imageTooLarge'), "error");
+      showToast(t("settings.errors.imageTooLarge") || `Image too large (max ${formatBytes(5 * 1024 * 1024)})`, "error");
       return;
     }
 
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = null;
+    }
+
+    const url = URL.createObjectURL(file);
+    previewObjectUrlRef.current = url;
+    setProfilePicturePreview(url);
     setProfilePictureFile(file);
-    
-    // Create preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setProfilePicturePreview(e.target.result);
-    };
-    reader.readAsDataURL(file);
   };
 
-  // Upload profile picture
+  const removeProfilePicturePreview = () => {
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = null;
+    }
+    setProfilePictureFile(null);
+    setProfilePicturePreview(null);
+  };
+
   const uploadProfilePicture = async () => {
     if (!profilePictureFile) return;
-
     setUploadingPicture(true);
     try {
-      const formData = new FormData();
-      formData.append('profilePicture', profilePictureFile);
+      const fd = new FormData();
+      fd.append("profilePicture", profilePictureFile);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings/profile-picture`, {
+      const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/settings/profile-picture`, {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // do NOT set Content-Type here
-        },
-        body: formData,
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
       });
 
-      const result = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        const errMsg = result?.error || result?.message || t('settings.errors.uploadError');
-        throw new Error(errMsg);
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => null);
+        throw new Error(errBody?.message || t("settings.errors.uploadError") || "Upload failed");
       }
 
-      // result may contain result.user or result.profilePicture
-      const returnedUser = result?.user;
-      const returnedPic = result?.profilePicture || returnedUser?.profilePicture;
-
-      // If backend returned a user object, update auth context
-      if (returnedUser) {
-        // If your updateUser expects (user, token) and token unchanged, call it accordingly
-        updateUser(returnedUser, token);
-      }
-
-      // Normalize absolute URL if backend gave relative path
-      let finalUrl = returnedPic || null;
-      if (finalUrl && !finalUrl.startsWith('http')) {
-        finalUrl = `${import.meta.env.VITE_API_URL}${finalUrl}`;
-      }
-
-      // Update local settings state so UI updates immediately
-      setSettings(prev => ({ ...prev, profilePicture: finalUrl }));
-
-      setProfilePictureFile(null);
-      setProfilePicturePreview(null);
-      showToast(t('settings.toasts.pictureSuccess'), "update");
+      const data = await resp.json();
+      const newUser = { ...(data.user || {}), profilePicture: data.profilePicture || data.user?.profilePicture || settings.profilePicture };
+      updateUser(newUser, data.token || undefined);
+      setSettings((s) => ({ ...s, profilePicture: newUser.profilePicture }));
+      removeProfilePicturePreview();
+      showToast(t("settings.toasts.pictureSuccess") || "Profile picture updated", "update");
     } catch (err) {
-      showToast(err.message, "error");
+      console.error("uploadProfilePicture error:", err);
+      showToast(err.message || "Upload failed", "error");
     } finally {
       setUploadingPicture(false);
     }
   };
 
-
-  // Remove profile picture preview
-  const removeProfilePicturePreview = () => {
-    setProfilePictureFile(null);
-    setProfilePicturePreview(null);
-  };
-
-  // Password validation function
   const validatePassword = () => {
     let isValid = true;
-    
-    // Validate old password if new password is provided
+
     if (newPassword && !oldPassword) {
-      setOldPasswordError(t('settings.errors.oldPasswordRequired'));
+      setOldPasswordError(t("settings.errors.oldPasswordRequired") || "Old password required");
       isValid = false;
     } else {
       setOldPasswordError("");
     }
-    
-    // Validate new password length
+
     if (newPassword && newPassword.length < 8) {
-      setPasswordError(t('settings.errors.passwordTooShort'));
+      setPasswordError(t("settings.errors.passwordTooShort") || "Password too short");
       isValid = false;
     } else {
       setPasswordError("");
     }
-    
+
     return isValid;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Validate passwords before submission
-    if (!validatePassword()) {
-      return;
-    }
+    if (!validatePassword()) return;
 
     setSaving(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
+      const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -203,89 +238,129 @@ const SettingsPage = () => {
           newPassword: newPassword || undefined,
         }),
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || t('settings.errors.updateError'));
+
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => null);
+        throw new Error(errBody?.message || t("settings.errors.updateError") || "Update failed");
       }
-      
-      const data = await response.json();
-      updateUser(data.user, data.token);
-      showToast(t('settings.toasts.updateSuccess'), "update");
+
+      const data = await resp.json();
+      if (data.user) updateUser(data.user, data.token);
+      showToast(t("settings.toasts.updateSuccess") || "Settings updated", "update");
       setOldPassword("");
       setNewPassword("");
     } catch (err) {
-      showToast(err.message, "error");
+      console.error("update settings error:", err);
+      showToast(err.message || "Update failed", "error");
     } finally {
       setSaving(false);
     }
   };
 
-  const toggleDarkMode = () => {
-    setSettings(prev => {
-      const newDarkMode = !prev.darkMode;
-      // Apply immediately to the page
-      if (newDarkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-      return { ...prev, darkMode: newDarkMode };
-    });
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-6">
         <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-500 mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400">{t('settings.loading')}</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-500 mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">{t("settings.loading") || "Loading..."}</p>
         </div>
       </div>
     );
   }
 
+  const avatarUrl = profilePicturePreview || settings.profilePicture || null;
+  const initials = initialsFromName(settings.name || "", settings.username || "");
+  const gradient = gradientFromString(settings.name || settings.username || "user");
+
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-      <header className="sticky bg-gray-200 dark:bg-gray-900  z-10 p-5">
-        <div className="max-w-8xl mx-auto">
-          <h1 className="text-2xl font-bold flex items-center">
-            <UserCircle className="mr-2" size={24} />
-            {t('settings.title')}
-          </h1>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+      <header className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900/60 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-8xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 rounded-full bg-gradient-to-br from-purple-50 to-sky-50 dark:from-purple-900/10 dark:to-sky-900/10">
+              <UserCircle size={20} className="text-sky-600 dark:text-sky-300" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
+            </div>
+          </div>
+
+          <div className="ml-auto flex items-center gap-3 flex-shrink-0">
+            <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-300">Theme</div>
+
+            {/* SINGLE polished toggle (kept in header only) */}
+            <button
+              onClick={toggleDarkMode}
+              aria-pressed={settings.darkMode}
+              className="relative inline-flex items-center p-1 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
+              title={settings.darkMode ? "Switch to light" : "Switch to dark"}
+            >
+              <span className="sr-only">Toggle theme</span>
+
+              {/* small sun icon (left) */}
+              <Sun className={`h-4 w-4 ${settings.darkMode ? "text-gray-400" : "text-yellow-500"}`} />
+
+              {/* track: width 48px (w-12), height 24px (h-6), padding 1 (p-1) */}
+              <div
+                className={`mx-2 w-12 h-6  rounded-full transition-colors ${settings.darkMode ? "bg-sky-600" : "bg-gray-300"}`}
+                aria-hidden
+              >
+                {/* knob: w-6 h-6, moves by translate-x-4 when dark (48 - 24 - 8 = 16px -> translate-x-4) */}
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-sm transform transition-transform ${settings.darkMode ? "translate-x-6" : "translate-x-0"}`}
+                />
+              </div>
+
+              {/* moon icon (right) */}
+              <Moon className={`h-4 w-4 ${settings.darkMode ? "text-white" : "text-gray-400"}`} />
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="container max-w-8xl mx-auto px-4 py-3">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-200 dark:divide-gray-700">
-          <form onSubmit={handleSubmit}>
-            
+      <main className="max-w-8xl mx-auto px-4 py-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+          <form onSubmit={handleSubmit} className="space-y-0">
             {/* Profile Picture */}
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 mr-3">
+            <section className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300">
                   <User size={18} />
                 </div>
-                <h2 className="font-semibold text-lg">{t('settings.profilePicture')}</h2>
+                <h2 className="text-lg font-semibold">{t("settings.profilePicture") || "Profile picture"}</h2>
               </div>
-              <div className="flex flex-col sm:flex-row items-center gap-6">
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                 <div className="relative">
-                  <img
-                    src={profilePicturePreview || settings.profilePicture || "/default-avatar.png"}
-                    alt="Profile"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
-                  />
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt="Profile"
+                      className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm"
+                    />
+                  ) : (
+                    <div
+                      className="w-28 h-28 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-sm"
+                      style={{ background: gradient }}
+                      aria-hidden
+                    >
+                      {initials}
+                    </div>
+                  )}
+
                   {profilePicturePreview && (
                     <button
                       type="button"
                       onClick={removeProfilePicturePreview}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"
+                      aria-label="Remove preview"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   )}
                 </div>
-                <div className="flex flex-col sm:flex-row gap-3">
+
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                   <div>
                     <input
                       type="file"
@@ -296,81 +371,100 @@ const SettingsPage = () => {
                     />
                     <label
                       htmlFor="profile-picture"
-                      className="inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      className="inline-flex items-center px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                     >
                       <Upload className="w-4 h-4 mr-2" />
-                      {t('settings.chooseImage')}
+                      {t("settings.chooseImage") || "Choose image"}
                     </label>
                   </div>
-                  {profilePictureFile && (
-                    <button
-                      type="button"
-                      onClick={uploadProfilePicture}
-                      disabled={uploadingPicture}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                    >
-                      {uploadingPicture ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          {t('settings.uploading')}
-                        </>
-                      ) : (
-                        t('settings.upload')
-                      )}
-                    </button>
-                  )}
+
+                  <div className="flex items-center gap-2">
+                    {profilePictureFile ? (
+                      <div className="text-sm text-gray-600 dark:text-gray-300">
+                        {profilePictureFile.name} • {formatBytes(profilePictureFile.size)}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {t("settings.pictureHint") || "Square image works best (max 5 MB)"}
+                      </div>
+                    )}
+
+                    {profilePictureFile && (
+                      <button
+                        type="button"
+                        onClick={uploadProfilePicture}
+                        disabled={uploadingPicture}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                      >
+                        {uploadingPicture ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                            <span>{t("settings.uploading") || "Uploading..."}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            <span>{t("settings.upload") || "Upload"}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* Personal Info */}
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 mr-3">
+            <section className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300">
                   <UserCircle size={18} />
                 </div>
-                <h2 className="font-semibold text-lg">{t('settings.personalInfo')}</h2>
+                <h2 className="text-lg font-semibold">{t("settings.personalInfo") || "Personal info"}</h2>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('settings.username')}
+                    {t("settings.username") || "Username"}
                   </label>
                   <input
                     type="text"
                     value={settings.username}
                     readOnly
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                    className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                   />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('settings.usernameHelp')}</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.usernameHelp")}</p>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('settings.name')}
+                    {t("settings.name") || "Full name"}
                   </label>
                   <input
                     type="text"
                     value={settings.name}
                     onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={t('settings.namePlaceholder')}
+                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder={t("settings.namePlaceholder") || "Your display name"}
                   />
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* Appearance */}
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 mr-3">
+            <section className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300">
                   <Palette size={18} />
                 </div>
-                <h2 className="font-semibold text-lg">{t('settings.appearance')}</h2>
+                <h2 className="text-lg font-semibold">{t("settings.appearance") || "Appearance"}</h2>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('settings.language')}
+                    {t("settings.language") || "Language"}
                   </label>
                   <LanguageSwitcher
                     compact
@@ -378,129 +472,85 @@ const SettingsPage = () => {
                     onChange={(lang) => setSettings({ ...settings, language: lang })}
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('settings.theme')}
+                    {t("settings.theme") || "Theme"}
                   </label>
-                  <button
-                    type="button"
-                    onClick={toggleDarkMode}
-                    className="flex items-center justify-between w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <span>
-                      {settings.darkMode ? t('settings.lightMode') : t('settings.darkMode')}
-                    </span>
-                    {settings.darkMode ? (
-                      <Sun className="w-4 h-4" />
-                    ) : (
-                      <Moon className="w-4 h-4" />
-                    )}
-                  </button>
+                  <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{settings.darkMode ? t("settings.darkMode") : t("settings.lightMode")}</div>
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* Password */}
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="p-2 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 mr-3">
+            <section className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">
                   <Shield size={18} />
                 </div>
-                <h2 className="font-semibold text-lg">{t('settings.changePassword')}</h2>
+                <h2 className="text-lg font-semibold">{t("settings.changePassword") || "Change password"}</h2>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('settings.oldPassword')}
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.oldPassword") || "Old password"}</label>
                   <input
                     type="password"
                     value={oldPassword}
                     onChange={(e) => {
                       setOldPassword(e.target.value);
-                      if (e.target.value && oldPasswordError) {
-                        setOldPasswordError("");
-                      }
+                      if (e.target.value && oldPasswordError) setOldPasswordError("");
                     }}
-                    placeholder={t('settings.passwordPlaceholder')}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      oldPasswordError 
-                        ? "border-red-500 dark:border-red-400" 
-                        : "border-gray-300 dark:border-gray-600"
-                    } bg-white dark:bg-gray-700`}
+                    placeholder={t("settings.passwordPlaceholder") || "••••••••"}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${oldPasswordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`}
                   />
-                  {oldPasswordError && (
-                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">
-                      {oldPasswordError}
-                    </p>
-                  )}
+                  {oldPasswordError && <p className="mt-1 text-xs text-red-500">{oldPasswordError}</p>}
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('settings.newPassword')}
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.newPassword") || "New password"}</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => {
                       setNewPassword(e.target.value);
-                      if (e.target.value && e.target.value.length < 8) {
-                        setPasswordError(t('settings.errors.passwordTooShort'));
-                      } else {
-                        setPasswordError("");
-                      }
+                      if (e.target.value && e.target.value.length < 8) setPasswordError(t("settings.errors.passwordTooShort") || "Password too short");
+                      else setPasswordError("");
                     }}
-                    placeholder={t('settings.passwordPlaceholder')}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      passwordError 
-                        ? "border-red-500 dark:border-red-400" 
-                        : "border-gray-300 dark:border-gray-600"
-                    } bg-white dark:bg-gray-700`}
+                    placeholder={t("settings.passwordPlaceholder") || "••••••••"}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${passwordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`}
                   />
-                  {passwordError && (
-                    <p className="mt-1 text-xs text-red-500 dark:text-red-400">
-                      {passwordError}
-                    </p>
-                  )}
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {t('settings.passwordRequirements')}
-                  </p>
+                  {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.passwordRequirements") || "Minimum 8 characters."}</p>
                 </div>
               </div>
-            </div>
+            </section>
 
             {/* Submit */}
-            <div className="p-6 bg-gray-50 dark:bg-gray-700/50">
+            <section className="p-6 bg-gray-50 dark:bg-gray-700/50 flex justify-end">
               <button
                 type="submit"
                 disabled={saving || (newPassword && newPassword.length < 8) || (newPassword && !oldPassword)}
-                className="w-full md:w-auto flex items-center justify-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors"
               >
                 {saving ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    {t('settings.saving')}
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <span>{t("settings.saving") || "Saving..."}</span>
                   </>
                 ) : (
                   <>
-                    <Save className="w-5 h-5 mr-2" />
-                    {t('settings.saveChanges')}
+                    <Save className="w-4 h-4" />
+                    <span>{t("settings.saveChanges") || "Save changes"}</span>
                   </>
                 )}
               </button>
-            </div>
+            </section>
           </form>
         </div>
-      </div>
+      </main>
 
-      {/* Toast Component */}
-      {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={handleToastClose} 
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={handleToastClose} />}
     </div>
   );
 };
