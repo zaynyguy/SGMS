@@ -52,41 +52,42 @@ const formatDate = (d) => {
 };
 
 /* -------------------------
-   Clean ProgressBar
-   - single percentage label centered inside the filled area
-   - border on track, good contrast
-   - variant "goal" gives larger height
+   Slim / minimalist ProgressBar
+   - slimmer heights
+   - single subtle gradient
+   - small centered label (text-xs)
+   - subtle border for contrast
 ------------------------- */
 const ProgressBar = ({ progress = 0, variant = "normal" }) => {
   const pct = Math.max(0, Math.min(100, Number(progress || 0)));
   const isGoal = variant === "goal";
-  const heightClass = isGoal ? "h-6" : "h-4";
-  const trackBg = "bg-white dark:bg-gray-800";
-  const trackBorder = "border border-gray-200 dark:border-gray-700";
+  // slimmer sizes per request (slick/minimal)
+  const heightClass = isGoal ? "h-5" : "h-4";
   const fillGradient = isGoal
-    ? "bg-gradient-to-r from-indigo-500 to-purple-600"
+    ? "bg-gradient-to-r from-indigo-500 to-indigo-600"
     : "bg-gradient-to-r from-sky-400 to-indigo-500";
 
-  // Choose text color based on fill contrast
-  const labelInFill = pct >= 30; // if filled enough, draw white text atop filled area
-  const labelClass = labelInFill ? "text-white font-medium text-sm" : "text-gray-700 dark:text-gray-200 font-medium text-sm";
+  const labelInFill = pct >= 30;
+  const labelClass = labelInFill
+    ? "text-white font-medium text-xs"
+    : "text-gray-800 dark:text-gray-200 font-medium text-xs";
 
   return (
     <div
-      className={`relative ${heightClass} rounded-md overflow-hidden ${trackBg} ${trackBorder}`}
+      className={`relative ${heightClass} rounded-md overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700`}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={pct}
       aria-label={`Progress ${pct}%`}
     >
-      {/* filled portion */}
       <div
-        className={`absolute left-0 top-0 bottom-0 ${fillGradient} transition-all duration-600 ease-out`}
-        style={{ width: `${pct}%` }}
+        className={`absolute left-0 top-0 bottom-0 ${fillGradient} transition-all duration-500 ease-out`}
+        style={{
+          width: `${pct}%`,
+        }}
       />
 
-      {/* centered percentage label */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-2">
         <span className={labelClass}>{pct}%</span>
       </div>
@@ -95,7 +96,7 @@ const ProgressBar = ({ progress = 0, variant = "normal" }) => {
 };
 
 /* -------------------------
-   Status badge unchanged but ensures dark-mode text
+   Status badge consistent in dark mode
 ------------------------- */
 const StatusBadge = ({ status }) => {
   const normalized = (status || "")
@@ -125,9 +126,9 @@ const SkeletonCard = ({ rows = 3 }) => (
   <div className="animate-pulse w-full">
     <div className="bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-100 dark:border-gray-700 shadow-sm mb-4">
       <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded bg-gray-300 dark:bg-gray-700" />
+        <div className="w-10 h-10 rounded bg-gray-300 dark:bg-gray-700" />
         <div className="flex-1 space-y-3 py-1">
-          <div className="h-6 w-2/3 bg-gray-300 dark:bg-gray-700 rounded" />
+          <div className="h-5 w-2/3 bg-gray-300 dark:bg-gray-700 rounded" />
           <div className="h-4 w-1/3 bg-gray-300 dark:bg-gray-700 rounded" />
           <div className="flex gap-2 items-center">
             <div className="h-3 w-20 bg-gray-300 dark:bg-gray-700 rounded" />
@@ -140,7 +141,7 @@ const SkeletonCard = ({ rows = 3 }) => (
       <div className="mt-4 space-y-2">
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded bg-gray-300 dark:bg-gray-700" />
+            <div className="w-5 h-5 rounded bg-gray-300 dark:bg-gray-700" />
             <div className="flex-1 space-y-2 py-1">
               <div className="h-4 w-2/3 bg-gray-300 dark:bg-gray-700 rounded" />
               <div className="h-3 w-1/3 bg-gray-300 dark:bg-gray-700 rounded" />
@@ -624,7 +625,6 @@ const ProjectManagement = () => {
                       <div className="w-full">
                         <ProgressBar progress={goal.progress ?? 0} variant="goal" />
                       </div>
-                      {/* removed duplicate percentage label (now inside the bar) */}
                     </div>
 
                     {canManageGTA && (
@@ -654,7 +654,6 @@ const ProjectManagement = () => {
                     <div className="flex-1 max-w-xs">
                       <ProgressBar progress={goal.progress ?? 0} variant="goal" />
                     </div>
-                    {/* removed duplicate percentage label (clean look, shown within bar) */}
                   </div>
                 </div>
 
@@ -685,7 +684,7 @@ const ProjectManagement = () => {
                     ) : (
                       <div className="space-y-3">
                         {tasks[goal.id].map((task) => (
-                          <div key={task.id} className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700">
+                          <div key={task.id} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-100 dark:border-gray-700">
                             <div className="flex items-start justify-between gap-3 min-w-0">
                               <div className="flex items-start gap-3 min-w-0">
                                 <button
@@ -735,7 +734,6 @@ const ProjectManagement = () => {
                                 <div className="flex-1 max-w-xs">
                                   <ProgressBar progress={task.progress ?? 0} />
                                 </div>
-                                {/* removed duplicate percentage label */}
                               </div>
                             </div>
 
@@ -849,12 +847,15 @@ const ProjectManagement = () => {
         </div>
       </main>
 
-      {/* Generic modal */}
+      {/* Generic modal: pass tasks+goals+activities so modal can validate weights */}
       {modal.isOpen && modal.type && modal.type !== "submitReport" && (
         <GenericModal
           modal={modal}
           setModal={setModal}
           groups={groups}
+          tasks={tasks}
+          goals={goals}
+          activities={activities}
           onCreateGoal={handleCreateGoal}
           onUpdateGoal={handleUpdateGoal}
           onCreateTask={handleCreateTask}
@@ -876,13 +877,16 @@ const ProjectManagement = () => {
 export default ProjectManagement;
 
 /* ---------------------------
-   GenericModal (improved styling for dark mode)
-   (unchanged from previous, kept for completeness)
+   GenericModal (improved styling + weight validation)
+   Receives: modal, setModal, groups, tasks, goals, activities, handlers...
 ----------------------------*/
 function GenericModal({
   modal,
   setModal,
   groups = [],
+  tasks = {},
+  goals = [],
+  activities = {},
   onCreateGoal,
   onUpdateGoal,
   onCreateTask,
@@ -893,6 +897,7 @@ function GenericModal({
 }) {
   const [local, setLocal] = React.useState({});
   const [jsonError, setJsonError] = React.useState(null);
+  const [inlineError, setInlineError] = React.useState(null);
 
   const metricsObjectToArray = (tm) => {
     try {
@@ -913,6 +918,7 @@ function GenericModal({
   React.useEffect(() => {
     if (!modal.isOpen) return;
     const initial = modal.data || {};
+    setInlineError(null);
     if (modal.type === "createActivity" || modal.type === "editActivity") {
       setLocal({
         title: initial.title || "",
@@ -953,6 +959,7 @@ function GenericModal({
     const { name, value, type, checked } = e.target;
     setLocal((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
     if (name === "targetMetric" && jsonError) setJsonError(null);
+    if (inlineError) setInlineError(null);
   };
 
   const updateMetricRow = (idx, field, value) => {
@@ -983,17 +990,97 @@ function GenericModal({
     });
   };
 
+  const computeGoalWeightAvailable = (goalId, excludeTaskId = null) => {
+    const g = goals.find((x) => String(x.id) === String(goalId) || x.id === goalId);
+    const goalWeight = Number(g?.weight ?? 100);
+    const list = tasks[goalId] || [];
+    const sumOther = list.reduce((s, t) => {
+      if (excludeTaskId && (String(t.id) === String(excludeTaskId))) return s;
+      return s + Number(t.weight || 0);
+    }, 0);
+    return { goalWeight, used: sumOther, available: Math.max(0, goalWeight - sumOther) };
+  };
+
+  const computeTaskWeightAvailable = (taskId, excludeActivityId = null) => {
+    const // find task and its weight fallback
+      allTasksLists = Object.values(tasks).flat();
+    const task = allTasksLists.find((t) => String(t.id) === String(taskId) || t.id === taskId);
+    const taskWeight = Number(task?.weight ?? 0);
+    const list = activities[taskId] || [];
+    const sumOther = list.reduce((s, a) => {
+      if (excludeActivityId && (String(a.id) === String(excludeActivityId))) return s;
+      return s + Number(a.weight || 0);
+    }, 0);
+    return { taskWeight, used: sumOther, available: Math.max(0, taskWeight - sumOther) };
+  };
+
   const submitLocal = async (e) => {
     if (e) e.preventDefault();
     try {
+      setInlineError(null);
+
+      // Task create/edit weight validation (client-side)
+      if (modal.type === "createTask" || modal.type === "editTask") {
+        const goalId = modal.data?.goalId;
+        if (!goalId) {
+          setInlineError("Missing goal id for task.");
+          return;
+        }
+        const newWeight = Number(local.weight || 0);
+        const excludeTaskId = modal.type === "editTask" ? modal.data?.id : null;
+        const { goalWeight, used, available } = computeGoalWeightAvailable(goalId, excludeTaskId);
+
+        if (newWeight < 0) {
+          setInlineError("Task weight must be >= 0.");
+          return;
+        }
+
+        if (newWeight > available) {
+          setInlineError(
+            `Cannot set task weight to ${newWeight}. Goal total is ${goalWeight} and ${used} is already used by other tasks. Available: ${available}.`
+          );
+          return;
+        }
+      }
+
+      // Activity create/edit weight validation (client-side)
+      if (modal.type === "createActivity" || modal.type === "editActivity") {
+        const taskId = modal.data?.taskId;
+        if (!taskId) {
+          setInlineError("Missing task id for activity.");
+          return;
+        }
+        const newWeight = Number(local.weight || 0);
+        const excludeActivityId = modal.type === "editActivity" ? modal.data?.id : null;
+        const { taskWeight, used, available } = computeTaskWeightAvailable(taskId, excludeActivityId);
+
+        if (newWeight < 0) {
+          setInlineError("Activity weight must be >= 0.");
+          return;
+        }
+
+        if (newWeight > available) {
+          setInlineError(
+            `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${used} is already used by other activities. Available: ${available}.`
+          );
+          return;
+        }
+      }
+
       if (modal.type === "createGoal") {
-        const payload = { ...local, groupId: local.groupId === "" ? null : Number(local.groupId) };
+        const payload = {
+          ...local,
+          groupId: local.groupId === "" ? null : Number(local.groupId),
+        };
         await onCreateGoal(payload);
         return;
       }
       if (modal.type === "editGoal") {
         const { id } = modal.data || {};
-        const payload = { ...local, groupId: local.groupId === "" ? null : Number(local.groupId) };
+        const payload = {
+          ...local,
+          groupId: local.groupId === "" ? null : Number(local.groupId),
+        };
         await onUpdateGoal(id, payload);
         return;
       }
@@ -1042,6 +1129,7 @@ function GenericModal({
       }
     } catch (err) {
       console.error("modal submit error", err);
+      setInlineError(err?.message || "Failed to submit");
     }
   };
 
@@ -1089,6 +1177,20 @@ function GenericModal({
                 <option value="completed">Completed</option>
               </select>
 
+              {/* show available space for activity within task */}
+              {modal.data?.taskId && (
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  {(() => {
+                    const { taskWeight, used, available } = computeTaskWeightAvailable(modal.data.taskId, modal.type === "editActivity" ? modal.data?.id : null);
+                    return (
+                      <span>
+                        Task total: <strong className="text-gray-800 dark:text-gray-100">{taskWeight}</strong>. Used by other activities: <strong>{used}</strong>. Available: <strong>{available}</strong>.
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
+
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Target Metrics</label>
                 <div className="mt-2 space-y-2">
@@ -1116,6 +1218,18 @@ function GenericModal({
               <input name="dueDate" value={local.dueDate || ""} onChange={(e) => onLocalChange(e)} type="date" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Weight</label>
               <input name="weight" value={local.weight ?? 0} onChange={(e) => onLocalChange(e)} type="number" min="0" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+              {modal.type === "createTask" && modal.data?.goalId && (
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  {(() => {
+                    const { goalWeight, used, available } = computeGoalWeightAvailable(modal.data.goalId, null);
+                    return (
+                      <span>
+                        Goal total: <strong className="text-gray-800 dark:text-gray-100">{goalWeight}</strong>. Used by other tasks: <strong>{used}</strong>. Available: <strong>{available}</strong>.
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
             </>
           )}
 
@@ -1148,6 +1262,9 @@ function GenericModal({
               <input name="weight" value={local.weight ?? 100} onChange={(e) => onLocalChange(e)} type="number" min="1" max="100" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
             </>
           )}
+
+          {/* inline error for validation */}
+          {inlineError && <div className="text-sm text-red-600 dark:text-red-400">{inlineError}</div>}
         </form>
 
         <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 bg-white dark:bg-gray-800 sticky bottom-0">
@@ -1165,7 +1282,7 @@ function GenericModal({
 }
 
 /* ---------------------------
-   SubmitReportInline (improved dark-mode contrast & file input label)
+   SubmitReportInline (unchanged styling)
 ----------------------------*/
 function SubmitReportInline({ data, onClose, onSubmit, loading }) {
   const { goalId, taskId, activityId } = data || {};
