@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { submitReport, fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
+import { fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
+import { Eye, FileText } from "lucide-react";
 
 /* --- Nav Component --- */
 function Nav({ current, onChange }) {
   const items = [
-    { id: "submit", label: "Submit Report", icon: "📝" },
-    { id: "review", label: "Review Reports", icon: "👁️" },
-    { id: "master", label: "Master Report", icon: "📊" },
+    { id: "review", label: "Review Reports", icon: <Eye/> },
+    { id: "master", label: "Master Report", icon: <FileText/> },
   ];
   
   return (
@@ -29,189 +29,7 @@ function Nav({ current, onChange }) {
   );
 }
 
-/* --- Submit Report Page --- */
-function SubmitReportPage() {
-  const [activityId, setActivityId] = useState("");
-  const [narrative, setNarrative] = useState("");
-  const [metrics, setMetrics] = useState([{ id: 1, key: "", value: "" }]);
-  const [newStatus, setNewStatus] = useState("");
-  const [message, setMessage] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  function addMetric() {
-    setMetrics((m) => [...m, { id: Date.now(), key: "", value: "" }]);
-  }
-  
-  function updateMetric(id, field, value) {
-    setMetrics((m) => m.map((x) => (x.id === id ? { ...x, [field]: value } : x)));
-  }
-  
-  function removeMetric(id) {
-    setMetrics((m) => m.filter((x) => x.id !== id));
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setMessage(null);
-    if (!activityId) return setMessage({ type: "error", text: "Activity ID required" });
-
-    const form = new FormData();
-    form.append("narrative", narrative);
-    const metricsObj = metrics.reduce((acc, cur) => {
-      if (cur.key) acc[cur.key] = cur.value;
-      return acc;
-    }, {});
-    if (Object.keys(metricsObj).length)
-      form.append("metrics_data", JSON.stringify(metricsObj));
-    if (newStatus) form.append("new_status", newStatus);
-
-    setSubmitting(true);
-    try {
-      const data = await submitReport(activityId, form);
-      setMessage({ type: "success", text: `Report submitted successfully (ID: ${data.id})` });
-      setActivityId("");
-      setNarrative("");
-      setMetrics([{ id: 1, key: "", value: "" }]);
-      setNewStatus("");
-    } catch (err) {
-      setMessage({ type: "error", text: err.message });
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-xl shadow-lg border-t-4 border-gray-900 dark:border-gray-200">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </div>
-        <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Submit Report</h2>
-      </div>
-      
-      <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Activity ID</label>
-          <input
-            value={activityId}
-            onChange={(e) => setActivityId(e.target.value)}
-            className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="Enter activity ID"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Narrative</label>
-          <textarea
-            value={narrative}
-            onChange={(e) => setNarrative(e.target.value)}
-            rows={4}
-            className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-            placeholder="Provide a detailed narrative of your report"
-          />
-        </div>
-        
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Metrics</label>
-            <button 
-              type="button" 
-              onClick={addMetric}
-              className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Metric
-            </button>
-          </div>
-          
-          <div className="space-y-3">
-            {metrics.map((m) => (
-              <div key={m.id} className="flex gap-2 items-start">
-                <input
-                  placeholder="Metric name"
-                  value={m.key}
-                  onChange={(e) => updateMetric(m.id, "key", e.target.value)}
-                  className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                />
-                <input
-                  placeholder="Value"
-                  value={m.value}
-                  onChange={(e) => updateMetric(m.id, "value", e.target.value)}
-                  className="flex-1 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeMetric(m.id)}
-                  className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-        
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Status (optional)</label>
-          <select
-            value={newStatus}
-            onChange={(e) => setNewStatus(e.target.value)}
-            className="w-full px-4 py-2.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-          >
-            <option value="">(no change)</option>
-            <option>Not Started</option>
-            <option>In Progress</option>
-            <option>Done</option>
-            <option>Blocked</option>
-          </select>
-        </div>
-        
-        <div className="pt-4">
-          <button
-            disabled={submitting}
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {submitting ? (
-              <span className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Submitting...
-              </span>
-            ) : (
-              "Submit Report"
-            )}
-          </button>
-        </div>
-        
-        {message && (
-          <div className={`p-4 rounded-lg ${message.type === "error" ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800" : "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"}`}>
-            <div className="flex items-start">
-              {message.type === "error" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              )}
-              <span>{message.text}</span>
-            </div>
-          </div>
-        )}
-      </form>
-    </div>
-  );
-}
 
 /* --- Review Reports Page --- */
 function ReviewReportsPage() {
@@ -521,7 +339,7 @@ ${activity.reports.map(r => `<tr>
 
 /* --- Main App Wrapper --- */
 export default function ReportsUI() {
-  const [page, setPage] = useState("submit");
+  const [page, setPage] = useState("review");
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 max-w-8xl mx-auto transition-colors duration-200">
@@ -532,13 +350,8 @@ export default function ReportsUI() {
       </header>
       
       <Nav current={page} onChange={setPage} />
-      {page === "submit" && <SubmitReportPage />}
       {page === "review" && <ReviewReportsPage />}
       {page === "master" && <MasterReportPage />}
-      
-      <footer className="mt-8 md:mt-12 text-center text-gray-500 dark:text-gray-500 text-sm">
-        <p>© {new Date().getFullYear()} Report System | v2.0</p>
-      </footer>
     </div>
   );
 }
