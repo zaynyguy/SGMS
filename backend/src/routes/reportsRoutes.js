@@ -25,7 +25,7 @@ router.put(
   reportsController.reviewReport
 );
 
-// Admin generates the master HTML report (optional groupId query)
+// Admin generates the master json report (optional groupId query)
 router.get(
   "/master-report",
   authorizePermissions(["manage_reports"]),
