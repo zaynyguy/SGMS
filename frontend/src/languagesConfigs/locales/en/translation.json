@@ -5,16 +5,27 @@
     "message": "Sorry, you do not have the required permissions to view this page.",
     "button": "Go to Dashboard"
   },
-  "dashboard": {
-    "title": "This is a Dashboard"
+  "access": {
+    "title": "Access Management",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close navigation menu",
+    "nav": {
+      "users": "Users",
+      "roles": "Roles",
+      "groups": "Groups"
+    }
   },
-  "errorBoundary": {
-    "title": "Something went wrong",
-    "message": "An unexpected error occurred. Please try refreshing the page.",
-    "detailsTitle": "Error Details",
-    "technicalDetails": "Technical Details:",
-    "componentStack": "Component Stack:",
-    "refreshButton": "Refresh Page"
+  "app": {
+    "title": "Reports Dashboard",
+    "subtitle": "Load, review and generate comprehensive reports",
+    "systemName": "Report System"
+  },
+  "tabs": {
+    "review": "Review",
+    "master": "Master"
+  },
+  "common": {
+    "dash": "—"
   },
   "login": {
     "title": "Welcome Back",
@@ -33,6 +44,86 @@
     "no_account": "Don't have an account?",
     "signup_link": "Sign up here"
   },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "An unexpected error occurred. Please try refreshing the page.",
+    "detailsTitle": "Error Details",
+    "technicalDetails": "Technical Details:",
+    "componentStack": "Component Stack:",
+    "refreshButton": "Refresh Page"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "refresh": "Refresh",
+    "aria": {
+      "refresh": "Refresh dashboard",
+      "loading": "Loading dashboard data",
+      "loaded": "Dashboard data loaded"
+    },
+    "failedLoadPrefix": "Failed to load: ",
+    "errors": {
+      "summary": "Summary data",
+      "groupCharts": "Group charts",
+      "taskCharts": "Task charts",
+      "reports": "Reports data",
+      "overdue": "Overdue tasks",
+      "notifications": "Notifications",
+      "audit": "Audit logs"
+    },
+    "cards": {
+      "goals": {
+        "title": "Goals progress",
+        "fromLast": "from last month",
+        "noComparison": "No comparison data"
+      },
+      "tasks": {
+        "title": "Tasks progress",
+        "subtitle": "Tasks completed"
+      },
+      "activities": {
+        "title": "Activities progress",
+        "subtitle": "Activity health"
+      },
+      "pendingReports": {
+        "title": "Pending Reports",
+        "subtitle": "Click to open reports"
+      }
+    },
+    "groupProgress": "Group progress",
+    "topTasks": "Top tasks",
+    "reportsDistribution": "Reports distribution",
+    "overdueTitle": "Overdue tasks",
+    "tasks": "tasks",
+    "open": "Open",
+    "noOverdue": "No overdue tasks.",
+    "noNotifications": "No notifications",
+    "notifications": {
+      "title": "Recent Notifications",
+      "markAll": "Mark all read",
+      "marking": "Marking..."
+    },
+    "audit": {
+      "title": "Recent Audit",
+      "noPermission": "You do not have permission to view audit logs.",
+      "noLogs": "No audit logs."
+    },
+    "table": {
+      "task": "Task",
+      "due": "Due",
+      "daysOverdue": "Days overdue",
+      "assignee": "Assignee",
+      "goal": "Goal",
+      "group": "Group",
+      "link": "Link"
+    },
+    "cards_small": {
+      "goals": {
+        "title": "Goals",
+        "subtitle": "Progress"
+      }
+    },
+    "failedLoadPrefixLabel": "Failed to load"
+  },
   "settings": {
     "title": "User Settings",
     "loading": "Loading settings...",
@@ -50,14 +141,52 @@
     "passwordPlaceholder": "Enter your password",
     "saveChanges": "Save Changes",
     "saving": "Saving...",
+    "passwordRequirements": "Minimum 8 characters.",
+    "profilePicture": "Profile Picture",
+    "themeLabel": "Theme",
+    "chooseImage": "Choose Image",
+    "pictureHint": "Upload a square image for best results",
+    "usernameHelp": "This will be visible to other users",
+    "minimumCharacter": "Minimum 3 characters required",
     "toasts": {
-      "updateSuccess": "Settings updated successfully!"
+      "updateSuccess": "Settings updated successfully!",
+      "pictureSuccess": "Profile picture updated",
+      "updateSuccessShort": "Settings updated"
     },
     "errors": {
       "loadError": "Failed to load settings",
       "updateError": "Failed to update settings",
-      "passwordTooShort": "Password must be at least 8 characters long"
+      "passwordTooShort": "Password must be at least 8 characters long",
+      "invalidImage": "Invalid image file.",
+      "imageTooLarge": "Image too large (max {{max}}).",
+      "uploadError": "Failed to upload image.",
+      "oldPasswordRequired": "Old password is required to set a new password.",
+      "updateErrorDetailed": "Failed to update settings."
     }
+  },
+  "sidebar": {
+    "appName": "SGMS",
+    "logoAlt": "Company Logo",
+    "menu": {
+      "dashboard": "Dashboard",
+      "settings": "Settings",
+      "admin": "Admin",
+      "systemSettings": "System Settings",
+      "audit": "Audit Logs",
+      "accessManagement": "Access Management",
+      "reports": "Reports",
+      "projectManagement": "Project Management",
+      "attachments": "Attachments",
+      "notifications": "Notifications"
+    },
+    "logout": "Logout",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu",
+    "openMenuAria": "Open sidebar menu",
+    "closeMenuAria": "Close sidebar menu",
+    "profileAlt": "User profile picture",
+    "logoAltText": "Company logo",
+    "appNameAlt": "Your App"
   },
   "admin": {
     "title": "Admin Dashboard",
@@ -71,6 +200,15 @@
       "settings": "Settings",
       "auditLog": "Audit Log",
       "switchTo": "Switch to {tab} tab"
+    },
+    "user": {
+      "title": "User Management",
+      "table": {
+        "username": "Username",
+        "name": "Full Name",
+        "role": "Role",
+        "action": "Action"
+      }
     },
     "sidebar": {
       "appName": "Admin Panel",
@@ -89,7 +227,11 @@
       "saveChanges": "Save Changes",
       "create": "Create",
       "delete": "Delete",
-      "tryAgain": "Try Again"
+      "tryAgain": "Try Again",
+      "processing": "Processing...",
+      "deleting": "Deleting...",
+      "close": "Close",
+      "edit": "Edit"
     },
     "users": {
       "addUser": "Add User",
@@ -140,7 +282,13 @@
         "loadFailed": "Failed to load users: {error}",
         "saveFailed": "Failed to save user: {error}",
         "deleteFailed": "Failed to delete user: {error}",
-        "passwordTooShort": "Password must be at least 8 characters long"
+        "passwordTooShort": "Password must be at least 8 characters long",
+        "usernameRequired": "Username is required",
+        "nameRequired": "Name is required",
+        "passwordRequired": "Password is required",
+        "roleRequired": "Role is required",
+        "formValidation": "Please fix the form errors",
+        "deleteFailedDetailed": "Failed to delete user: {{error}}"
       }
     },
     "roles": {
@@ -177,7 +325,8 @@
         "title": "Error Loading Roles",
         "loadError": "Failed to load roles data",
         "saveError": "Failed to save role: {error}",
-        "deleteError": "Failed to delete role: {error}"
+        "deleteError": "Failed to delete role: {error}",
+        "noPermissionsFound": "No permissions found"
       }
     },
     "settings": {
@@ -231,59 +380,441 @@
       "toasts": {
         "updateSuccess": "Settings updated successfully"
       }
-    },
-    "auditLog": {
-      "title": "Audit Log",
-      "exportButton": "Export CSV",
-      "searchPlaceholder": "Search logs...",
-      "searchLabel": "Search audit logs",
-      "fromDate": "From:",
-      "toDate": "To:",
-      "applyFilters": "Apply Filters",
-      "noEntries": "No audit log entries found",
-      "tableHeaders": {
-        "timestamp": "Timestamp",
-        "user": "User",
-        "entity": "Entity",
-        "action": "Action",
-        "details": "Details"
-      },
-      "actions": {
-        "submitted": "Submitted",
-        "created": "Created",
-        "updated": "Updated",
-        "deleted": "Deleted",
-        "approved": "Approved",
-        "rejected": "Rejected"
-      },
-      "mockUsers": {
-        "alice": "Alice Johnson",
-        "john": "John Smith",
-        "emma": "Emma Davis",
-        "michael": "Michael Brown"
-      },
-      "mockDetails": {
-        "projectSubmitted": "Submitted new project proposal",
-        "reportCreated": "Generated monthly financial report",
-        "userUpdated": "Updated user permissions",
-        "settingsChanged": "Modified system settings"
-      },
-      "toast": {
-        "filtersApplied": "Filters applied successfully",
-        "exportSuccess": "Audit log exported successfully"
-      }
     }
   },
-  "sidebar": {
-    "appName": "SGMS",
-    "logoAlt": "Company Logo",
-    "menu": {
-      "dashboard": "Dashboard",
-      "settings": "Settings",
-      "admin": "Admin"
+  "audit": {
+    "title": "Audit Log",
+    "exportCsv": "Export CSV",
+    "searchPlaceholder": "Search logs by user, entity, action, or details...",
+    "searchAria": "Search audit logs",
+    "loading": "Loading...",
+    "loadFailed": "Error fetching audit logs",
+    "na": "N/A",
+    "csv": {
+      "filename": "audit_log.csv"
     },
-    "logout": "Logout",
-    "closeMenu": "Close menu",
-    "openMenu": "Open menu"
+    "export": {
+      "success": "Export successful!"
+    },
+    "filters": {
+      "show": "Show Filters",
+      "hide": "Hide Filters",
+      "title": "Filter Logs",
+      "fromDate": "From Date",
+      "toDate": "To Date",
+      "apply": "Apply Filters",
+      "clear": "Clear",
+      "applied": "Filters applied",
+      "cleared": "Filters cleared"
+    },
+    "results": {
+      "showing": "Showing {{filtered}} of {{total}} log entries"
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "entity": "Entity",
+      "action": "Action",
+      "details": "Details"
+    },
+    "noLogs": {
+      "title": "No audit log entries found",
+      "tryAdjust": "Try adjusting your search or filter criteria",
+      "none": "There are no audit log entries to display"
+    },
+    "expanded": {
+      "fullDetails": "Full Details",
+      "additionalInfo": "Additional Information",
+      "idLabel": "ID:",
+      "entityLabel": "Entity:",
+      "ipLabel": "IP Address:",
+      "userAgentLabel": "User Agent:"
+    },
+    "pagination": {
+      "range": "Showing {{from}} to {{to}} of {{total}} results",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "toast": {
+      "filtersApplied": "Filters applied successfully",
+      "exportSuccess": "Audit log exported successfully"
+    }
+  },
+  "attachments": {
+    "title": "Attachments",
+    "searchPlaceholder": "Search files, id or type...",
+    "searchAria": "Search attachments",
+    "clearSearchTitle": "Clear search",
+    "clearSearchAria": "Clear search",
+    "view": {
+      "grid": "Grid",
+      "table": "Table",
+      "gridTitle": "Grid view",
+      "tableTitle": "Table view"
+    },
+    "loading": "Loading attachments...",
+    "noAttachmentsTitle": "No attachments found",
+    "noAttachmentsSubtitle": "No files match your search or there are no files attached",
+    "table": {
+      "file": "File",
+      "type": "Type",
+      "uploaded": "Uploaded",
+      "actions": "Actions"
+    },
+    "download": "Download",
+    "preview": "Preview",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this attachment?",
+    "messages": {
+      "failedLoad": "Failed to load attachments.",
+      "downloadFailed": "Download failed",
+      "deleteFailed": "Failed to delete",
+      "noFileReturned": "No file returned from server"
+    },
+    "idPrefix": "ID:",
+    "uploadedPrefix": "Uploaded:",
+    "closePreview": "Close preview",
+    "empty": "—"
+  },
+  "groups": {
+    "title": "Groups Management",
+    "searchPlaceholder": "Search groups...",
+    "searchAria": "Search groups",
+    "newGroup": "New Group",
+    "loading": "Loading groups...",
+    "noResults": "No groups found",
+    "noDescription": "No description",
+    "na": "N/A",
+    "confirmDelete": "Are you sure you want to delete this group?",
+    "createdPrefix": "Created:",
+    "updatedPrefix": "Updated:",
+    "table": {
+      "name": "Group Name",
+      "description": "Description",
+      "members": "Members",
+      "created": "Created",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "actions": {
+      "edit": "Edit group",
+      "delete": "Delete group",
+      "toggle": "Toggle details"
+    },
+    "members": {
+      "label": "Members",
+      "linkText": "{{count}} members",
+      "manage": "Manage members",
+      "title": {
+        "manage": "Manage Members"
+      },
+      "add": {
+        "title": "Add Member",
+        "selectUser": "Select a user",
+        "button": "Add Member",
+        "adding": "Adding...",
+        "noAvailable": "All users are already members of this group."
+      },
+      "current": {
+        "title": "Current Members ({{count}})",
+        "empty": "No members in this group yet."
+      },
+      "remove": {
+        "title": "Remove member"
+      }
+    },
+    "form": {
+      "title": {
+        "create": "Create Group",
+        "edit": "Edit Group"
+      },
+      "labels": {
+        "name": "Group Name",
+        "description": "Description"
+      },
+      "buttons": {
+        "cancel": "Cancel",
+        "create": "Create",
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "errors": {
+        "nameRequired": "Group name is required",
+        "nameTooLong": "Name must be less than 50 characters",
+        "descriptionTooLong": "Description must be less than 300 characters"
+      },
+      "close": "Close"
+    },
+    "messages": {
+      "loadFailed": "Failed to load data. Please try again later.",
+      "created": "Group created successfully!",
+      "updated": "Group updated successfully!",
+      "saveFailed": "Failed to save group.",
+      "deleted": "Group deleted successfully!",
+      "deleteFailed": "Failed to delete group."
+    }
+  },
+  "reports": {
+    "review": {
+      "heading": "Review & Moderate",
+      "subheading": "Approve or reject incoming reports",
+      "searchPlaceholder": "Search reports (press Enter)",
+      "searchButton": "Search",
+      "refresh": "Refresh",
+      "narrative": "Narrative",
+      "noNarrative": "No narrative",
+      "metrics": "Metrics",
+      "adminComment": "Admin comment",
+      "approve": "Approve",
+      "reject": "Reject",
+      "updatedTo": "Updated to {{status}}",
+      "failed": "Failed to update",
+      "noReports": "No reports found.",
+      "showingPage": "Showing page {{page}} of {{totalPages}} • {{total}} reports"
+    },
+    "status": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Pending": "Pending",
+      "action": {
+      "updatedTo": "Updated to {{status}}",
+      "failed": "Failed"
+    },
+    "pagination": {
+      "first": "First",
+      "prev": "Prev",
+      "next": "Next",
+      "last": "Last",
+      "pageSize": "Page size",
+      "showingPage": "Showing page {{page}} of {{totalPages}} • {{total}} reports"
+    },
+    "master": {
+      "title": "Master Report",
+      "subtitle": "Narratives and a compact data table. Export PDF or CSV.",
+      "groupLabel": "Group",
+      "groupIdLabel": "Group ID (optional)",
+      "groupIdPlaceholder": "Enter Group ID or leave blank for all",
+      "groupIdPlaceholderAlt": "Enter Group ID or leave blank for all",
+      "loadReport": "Load Report",
+      "loadButton": "Load Report",
+      "exportPdf": "Export PDF",
+      "exportPDF": "Export PDF",
+      "exportCsv": "Export CSV",
+      "exportCSV": "Export CSV",
+      "granularity": "Granularity",
+      "granularityLabel": "Granularity",
+      "granularities": {
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "annual": "Annual"
+      },
+      "periodColumns": "Period columns: {{count}} • {{granularity}}",
+      "narrativesHeading": "Narratives",
+      "narrativesTitle": "Narratives",
+      "narratives": "Narratives",
+      "dataTableHeading": "Data Table",
+      "dataTable": "Data Table",
+      "noDataLoaded": "No data loaded.",
+      "noData": "No data loaded.",
+      "noDataToDisplay": "No data to display",
+      "noGoals": "No goals found.",
+      "targetShort": "Target",
+      "targetLabel": "Target",
+      "targetText": "Target",
+      "done": "Done",
+      "open": "Open",
+      "noReports": "No reports."
+    },
+    "table": {
+      "title": "Title",
+      "weight": "Weight",
+      "metric": "Metric",
+      "target": "Target",
+      "type": "Type",
+      "goal": "Goal",
+      "task": "Task",
+      "activity": "Activity",
+      "titleFull": "Data Table",
+      "noData": "No data to display"
+    },
+    "csv": {
+      "type": "Type",
+      "goal": "Goal",
+      "task": "Task",
+      "activity": "Activity",
+      "weight": "Weight",
+      "metric": "Metric",
+      "target": "Target"
+    },
+    "granularity": {
+      "monthly": "monthly",
+      "quarterly": "quarterly",
+      "annual": "annual"
+    },
+    "header": {
+      "title": "Reports Dashboard",
+      "subtitle": "Load, review and generate comprehensive reports"
+    },
+    "tabs": {
+      "review": "Review",
+      "master": "Master"
+    },
+    "search": {
+      "placeholder": "Search reports (press Enter)",
+      "button": "Search"
+    },
+    "refresh": "Refresh",
+    "filters": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "reportLabel": "Report #{{id}}",
+    "noReports": "No reports found.",
+    "narrative": "Narrative",
+    "noNarrative": "No narrative",
+    "metrics": "Metrics",
+    "adminComment": {
+      "placeholder": "Admin comment"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "updatedTo": "Updated to {{status}}",
+      "failed": "Failed"
+    },
+    "pageSize": "Page size",
+    "noDataToDisplay": "No data to display",
+    "noReportsSmall": "No reports.",
+    "footer": {
+      "systemName": "Report System"
+    }    
+    }
+  },
+  "projectManager": {
+    "projectManager": "Project Manager",
+    "searchGoalsPlaceholder": "Search goals...",
+    "refresh": "Refresh",
+    "addGoal": "Add Goal",
+    "addTask": "Add Task",
+    "addActivity": "Add Activity",
+    "noGoalsFoundCreate": "No goals found. Create your first goal.",
+    "noGoalsMatchSearch": "No goals match your search.",
+    "noTasksForGoal": "No tasks for this goal.",
+    "noActivitiesForTask": "No activities for this task.",
+    "tasksTitle": "Tasks",
+    "activitiesTitle": "Activities",
+    "submitReports": "Submit Report",
+    "targetMetrics": "Target Metrics",
+    "labels": {
+      "group": "Group",
+      "unassigned": "Unassigned",
+      "weight": "Weight",
+      "due": "Due"
+    },
+    "status": {
+      "completed": "Completed",
+      "open": "Open"
+    },
+    "pagination": {
+      "showing": "Showing {{from}} - {{to}} of {{total}}",
+      "perPage": "per page"
+    },
+    "previous": "Previous",
+    "next": "Next",
+    "aria": {
+      "toggleGoal": "Toggle goal",
+      "toggleTask": "Toggle task"
+    },
+    "success": {
+      "goalCreated": "Goal created",
+      "goalUpdated": "Goal updated",
+      "goalDeleted": "Goal deleted",
+      "taskCreated": "Task created",
+      "taskUpdated": "Task updated",
+      "taskDeleted": "Task deleted",
+      "activityCreated": "Activity created",
+      "activityUpdated": "Activity updated",
+      "activityDeleted": "Activity deleted",
+      "reportSubmitted": "Report submitted"
+    },
+    "errors": {
+      "failedToLoadGoals": "Failed to load goals",
+      "failedToLoadGroups": "Failed to load groups",
+      "failedToLoadTasks": "Failed to load tasks",
+      "failedToLoadActivities": "Failed to load activities",
+      "failedToCreateGoal": "Failed to create goal",
+      "failedToUpdateGoal": "Failed to update goal",
+      "failedToDeleteGoal": "Failed to delete goal",
+      "failedToCreateTask": "Failed to create task",
+      "failedToUpdateTask": "Failed to update task",
+      "failedToDeleteTask": "Failed to delete task",
+      "failedToCreateActivity": "Failed to create activity",
+      "failedToUpdateActivity": "Failed to update activity",
+      "failedToDeleteActivity": "Failed to delete activity",
+      "failedToSubmitReport": "Failed to submit report"
+    },
+    "confirm": {
+      "deleteGoal": "Delete this goal and all children?",
+      "deleteTask": "Delete this task and activities?",
+      "deleteActivity": "Delete this activity?"
+    },
+    "modal": {
+      "createGoal": "Create Goal",
+      "editGoal": "Edit Goal",
+      "createTask": "Create Task",
+      "editTask": "Edit Task",
+      "createActivity": "Create Activity",
+      "editActivity": "Edit Activity",
+      "title": "Title",
+      "description": "Description",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "dueDate": "Due Date",
+      "status": "Status",
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create"
+    },
+    "submitReport": {
+      "activity": "Activity",
+      "narrative": "Narrative",
+      "targetMetrics": "Target / Metrics",
+      "addMetric": "+ Add Metric",
+      "metricsHelp": "Add metrics as key/value pairs.",
+      "newStatusOptional": "New Status (optional)",
+      "noChange": "— No change —",
+      "done": "Done",
+      "inProgress": "In Progress",
+      "notStarted": "Not Started",
+      "attachments": "Attachments",
+      "maxFilesNote": "Max files: server-side limit applies.",
+      "metricKeyEmpty": "Metric keys cannot be empty when a value is provided."
+    }
+  },
+  "systemSettings": {
+    "current": "Current",
+    "auditRetention": {
+      "label": "Audit log retention (days)",
+      "help": "How many days to keep audit logs"
+    },
+    "maxAttachmentSize": {
+      "label": "Max attachment size (MB)",
+      "help": "Maximum allowed attachment size in megabytes"
+    },
+    "disabled": "Disabled",
+    "resubmissionDeadline": {
+      "label": "Resubmission deadline",
+      "help": "Deadline for reports to be resubmitted"
+    },
+    "saveButton": "Save"
   }
 }

@@ -84,7 +84,7 @@ exports.createNotification = async function createNotification(req, res) {
 
     if (req.io?.to) {
       try {
-        req.io.to(`user:${notification.userId}`).emit('notification:new', notification);
+        req.io.to(`user_${notification.userId}`).emit('notification:new', notification);
       } catch (e) {
         console.error('emit failed', e);
       }

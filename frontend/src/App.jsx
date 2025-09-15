@@ -16,6 +16,7 @@ import ReportPage from './pages/ReportPage';
 import AccessManagementPage from './pages/AccessManagementPage';
 import ProjectManagement from './pages/ProjectManagementPage';
 import AttachmentManager from './pages/AttachmentPage';
+import NotificationsPanel from './pages/NotificationPage';
 
 
 function App() {
@@ -84,6 +85,14 @@ function App() {
                                 element={
                                     <ProtectedRoute requiredPermission="manage_attachments">
                                         <AttachmentManager />
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/notification"
+                                element={
+                                    <ProtectedRoute requiredPermission="manage_attachments">
+                                        <NotificationsPanel />
                                     </ProtectedRoute>
                                 }
                             />
