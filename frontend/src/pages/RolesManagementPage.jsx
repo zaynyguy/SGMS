@@ -1,11 +1,12 @@
+// src/pages/RolesManagementPage.jsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Shield, Settings, Trash, AlertTriangle, X } from 'lucide-react';
 import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from '../api/admin';
-import Toast from '../components/common/Toast'; 
+import Toast from '../components/common/Toast';
 
 const RolesManagementPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ const RolesManagementPage = () => {
   const [pendingPermissionChanges, setPendingPermissionChanges] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const showToast = (message, type = 'create') => {
+  const showToast = (message, type = 'info') => {
     setToast({ message, type, visible: true });
   };
 
@@ -37,21 +38,21 @@ const RolesManagementPage = () => {
         fetchPermissions()
       ]);
       
-      // The backend returns permissions as names, but we need IDs for the UI
-      // Let's map the permission names to their IDs
-      const rolesWithPermissionIds = rolesData.map(role => {
-        const permissionIds = role.permissions
+      // Map permission names -> ids for role.permissions if backend returns names
+      const rolesWithPermissionIds = (rolesData || []).map(role => {
+        const permissionIds = (role.permissions || [])
           .map(pName => permissionsData.find(p => p.name === pName)?.id)
           .filter(Boolean);
         return { ...role, permissions: permissionIds };
       });
 
       setRoles(rolesWithPermissionIds);
-      setPermissions(permissionsData);
+      setPermissions(permissionsData || []);
       setPendingPermissionChanges({});
       setHasUnsavedChanges(false);
     } catch (err) {
-      setError(err.message || t('admin.roles.errors.loadError'));
+      const msg = err?.message || t('admin.roles.errors.loadError');
+      setError(msg);
       showToast(t('admin.roles.errors.loadError'), "error");
     } finally {
       setLoading(false);
@@ -74,13 +75,13 @@ const RolesManagementPage = () => {
         description: '', 
         permissions: [] 
       });
-      showToast(t('admin.roles.toasts.createSuccess', { name: newRoleName }), 'create');
+      showToast(t('admin.roles.toasts.createSuccess', { name: newRoleName }), 'success');
       setNewRoleName('');
       setIsAddingRole(false);
       await loadData();
     } catch (err) {
       console.error("Failed to create role:", err);
-      showToast(t('admin.roles.errors.saveError', { error: err.message }), "error");
+      showToast(t('admin.roles.errors.saveError', { error: err?.message || '' }), "error");
     }
   };
 
@@ -99,14 +100,14 @@ const RolesManagementPage = () => {
       const updatePromises = [];
       
       for (const roleId in pendingPermissionChanges) {
-        const role = roles.find(r => r.id === Number(roleId));  // ✅ cast to number
+        const role = roles.find(r => r.id === Number(roleId));
         if (!role) continue;
 
-        let updatedPermissions = [...role.permissions];
+        let updatedPermissions = [...(role.permissions || [])];
 
         for (const permissionId in pendingPermissionChanges[roleId]) {
           const hasPermission = pendingPermissionChanges[roleId][permissionId];
-          const permIdNum = Number(permissionId); // ✅ cast to number
+          const permIdNum = Number(permissionId);
 
           if (hasPermission && !updatedPermissions.includes(permIdNum)) {
             updatedPermissions.push(permIdNum);
@@ -125,24 +126,34 @@ const RolesManagementPage = () => {
       }
       
       await Promise.all(updatePromises);
-      showToast(t('admin.roles.toasts.updateSuccess'), 'update');
+      showToast(t('admin.roles.toasts.updateSuccess'), 'success');
       await loadData();
     } catch (err) {
       console.error("Failed to save permissions:", err);
-      showToast(t('admin.roles.errors.saveError', { error: err.message }), "error");
+      showToast(t('admin.roles.errors.saveError', { error: err?.message || '' }), "error");
     }
   };
 
   const handleDeleteClick = async (role) => {
+    // Keep server canonical role name check (e.g. "Admin") — don't localize stored role name
     if (window.confirm(t('admin.roles.deleteConfirm.message', { name: role.name }))) {
       try {
         await deleteRole(role.id);
-        showToast(t('admin.roles.toasts.deleteSuccess', { name: role.name }), 'delete');
+        showToast(t('admin.roles.toasts.deleteSuccess', { name: role.name }), 'success');
         await loadData();
       } catch (err) {
         console.error("Failed to delete role:", err);
-        showToast(t('admin.roles.errors.deleteError', { error: err.message }), "error");
+        showToast(t('admin.roles.errors.deleteError', { error: err?.message || '' }), "error");
       }
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return t('admin.na');
+    try {
+      return new Date(dateString).toLocaleDateString(i18n.language || undefined);
+    } catch {
+      return dateString;
     }
   };
 
@@ -225,6 +236,7 @@ const RolesManagementPage = () => {
                             : 'text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50'
                         }`}
                         aria-label={t('admin.roles.deleteRole', { name: role.name })}
+                        title={role.name === 'Admin' ? t('admin.roles.deleteDisabled') : undefined}
                       >
                         <Trash size={16} />
                       </button>
@@ -254,6 +266,7 @@ const RolesManagementPage = () => {
                       }
                     }}
                     autoFocus
+                    aria-label={t('admin.roles.roleNameAria')}
                   />
                   <button
                     onClick={() => {
@@ -261,6 +274,7 @@ const RolesManagementPage = () => {
                       setNewRoleName('');
                     }}
                     className="ml-2 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                    aria-label={t('admin.actions.cancel')}
                   >
                     <X size={18} />
                   </button>
@@ -269,6 +283,7 @@ const RolesManagementPage = () => {
                 <button
                   onClick={() => setIsAddingRole(true)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                  aria-label={t('admin.roles.addRole')}
                 >
                   <Plus size={18} /> {t('admin.roles.addRole')}
                 </button>
@@ -307,7 +322,7 @@ const RolesManagementPage = () => {
                                                     permission.id in pendingPermissionChanges[role.id];
                             const isChecked = hasPendingChange 
                               ? pendingPermissionChanges[role.id][permission.id]
-                              : role.permissions.includes(permission.id);
+                              : (role.permissions || []).includes(permission.id);
                               
                             return (
                               <td key={`perm-${permission.id}-role-${role.id}`} className="px-4 py-3 whitespace-nowrap text-center">

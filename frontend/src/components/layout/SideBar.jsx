@@ -17,6 +17,7 @@ import {
   Bell,
 } from "lucide-react";
 import companyLogo from "../../assets/logo.png";
+import NotificationPage from "../../pages/NotificationPage"; // adjust path if needed
 
 const Sidebar = ({ children }) => {
   const { user, logout } = useAuth();
@@ -59,37 +60,37 @@ const Sidebar = ({ children }) => {
     hasPermission("manage_settings") && {
       to: "/systemsettings",
       icon: <Settings2Icon size={24} />,
-      label: "System Settings",
+      label: t("sidebar.menu.systemSettings"),
     },
     hasPermission("view_audit_logs") && {
       to: "/auditLog",
       icon: <ClipboardCheck size={24} />,
-      label: "Audit",
+      label: t("sidebar.menu.audit"),
     },
     hasPermission("manage_access") && {
       to: "/accessmanagement",
       icon: <UserPen size={24} />,
-      label: "Access Management",
+      label: t("sidebar.menu.accessManagement"),
     },
     hasPermission("manage_reports") && {
       to: "/report",
       icon: <FileText size={24} />,
-      label: "Reports",
+      label: t("sidebar.menu.reports"),
     },
     (hasPermission("manage_gta") || hasPermission("view_gta")) && {
       to: "/project",
       icon: <FileBarChartIcon size={24} />,
-      label: "Project Management",
+      label: t("sidebar.menu.projectManagement"),
     },
     hasPermission("manage_attachments") && {
       to: "/attachment",
       icon: <Paperclip size={24} />,
-      label: "Attachments",
+      label: t("sidebar.menu.attachments"),
     },
     hasPermission("manage_notifications") && {
       to: "/notification",
       icon: <Bell size={24} />,
-      label: "notification",
+      label: t("sidebar.menu.notifications"),
     },
   ].filter(Boolean);
 
@@ -122,9 +123,7 @@ const Sidebar = ({ children }) => {
         <button
           onClick={toggleSidebar}
           className="md:hidden top-4 right-3 fixed z-50 p-2 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 shadow-md"
-          aria-label={
-            isExpanded ? t("sidebar.closeMenu") : t("sidebar.openMenu")
-          }
+          aria-label={isExpanded ? t("sidebar.closeMenu") : t("sidebar.openMenu")}
         >
           {isExpanded ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -156,35 +155,42 @@ const Sidebar = ({ children }) => {
 
           {/* Menu Items */}
           <nav className="flex-1 space-y-1 p-2 overflow-y-auto">
-            {mainMenuItems.map((item, idx) => (
-              <NavLink
-                key={`main-${idx}`}
-                to={item.to}
-                className={({ isActive }) =>
-                  `flex items-center p-3 rounded-md transition-colors duration-500  ${
-                    isActive
-                      ? "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                  } ${showExpanded ? "justify-normal" : "justify-center"}`
-                }
-                aria-label={item.label}
-              >
-                <div className="flex-shrink-0 flex items-center justify-center w-6">
-                  {item.icon}
-                </div>
-                {showExpanded && (
-                  <span className="ml-3 truncate">{item.label}</span>
-                )}
-              </NavLink>
-            ))}
+            {mainMenuItems.map((item, idx) => {
+              // Render the notification item with hover preview
+              if (item.to === "/notification") {
+                return (
+                  <div key={`main-${idx}`} className={`${showExpanded ? "" : "flex justify-center"}`}>
+                    <NotificationPage item={item} showExpanded={showExpanded} position="right" />
+                  </div>
+                );
+              }
+
+              return (
+                <NavLink
+                  key={`main-${idx}`}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `flex items-center p-3 rounded-md transition-colors duration-500  ${
+                      isActive
+                        ? "bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                        : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    } ${showExpanded ? "justify-normal" : "justify-center"}`
+                  }
+                  aria-label={item.label}
+                >
+                  <div className="flex-shrink-0 flex items-center justify-center w-6">
+                    {item.icon}
+                  </div>
+                  {showExpanded && <span className="ml-3 truncate">{item.label}</span>}
+                </NavLink>
+              );
+            })}
           </nav>
 
           {/* User Info */}
           <div className="mt-auto p-3 ">
             <div
-              className={`flex items-center ${
-                showExpanded ? "justify-start" : "justify-center"
-              }`}
+              className={`flex items-center ${showExpanded ? "justify-start" : "justify-center"}`}
             >
               {showExpanded ? (
                 <div className="flex items-center min-w-0">
@@ -192,7 +198,7 @@ const Sidebar = ({ children }) => {
                     {user?.profilePicture && !profilePictureError ? (
                       <img
                         src={user.profilePicture}
-                        alt="Profile"
+                        alt={t("sidebar.profileAlt")}
                         className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
                         onError={() => setProfilePictureError(true)}
                       />
@@ -216,7 +222,7 @@ const Sidebar = ({ children }) => {
                   {user?.profilePicture && !profilePictureError ? (
                     <img
                       src={user.profilePicture}
-                      alt="Profile"
+                      alt={t("sidebar.profileAlt")}
                       className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
                       onError={() => setProfilePictureError(true)}
                     />

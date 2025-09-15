@@ -1,161 +1,226 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/pages/DashboardPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   fetchDashboardSummary,
   fetchDashboardCharts,
   fetchOverdueTasks,
-  fetchNotifications as fetchNotificationsHelper,
+  fetchNotifications,
   fetchAuditLogs,
 } from "../api/dashboard";
-import { fetchGroups } from "../api/groups";
+import { markAllNotificationsRead } from "../api/notifications";
 
-// Loading Skeleton Component
-const LoadingSkeleton = ({ className = "h-6 bg-gray-200 rounded animate-pulse" }) => (
+// --- Small UI helpers ---
+const LoadingSkeleton = ({ className = "h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" }) => (
   <div className={className} aria-hidden />
 );
 
-// Card Component
-const Card = ({ title, children, onClick, ariaLabel, className = "" }) => (
+const Card = ({ title, children, onClick, className = "" }) => (
   <button
     onClick={onClick}
-    className={`text-left p-4 rounded-2xl shadow-sm bg-white hover:shadow-md focus:shadow-outline focus:outline-none ${className}`}
-    aria-label={ariaLabel || title}
+    className={`text-left p-4 rounded-2xl shadow-sm bg-white dark:bg-gray-800 hover:shadow-md focus:shadow-outline focus:outline-none ${className}`}
+    aria-label={title}
   >
-    <div className="text-sm text-gray-500 mb-2">{title}</div>
+    <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{title}</div>
     <div>{children}</div>
   </button>
 );
 
-// Format date utility
 function formatDate(d) {
   if (!d) return "-";
   const dt = new Date(d);
   return dt.toLocaleDateString();
 }
 
-// In-memory cache hook
-const useApiWithCache = (apiBase) => {
-  const cacheRef = useRef(new Map());
+/* ---------------------------
+   Group bar chart (vertical) - enhanced
+   - axis baseline
+   - labels at bottom (rotated small)
+   - simple transition on load
+---------------------------- */
+const GroupBarChart = ({ data = [], height = 120, maxOverride = null }) => {
+  if (!data || !data.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
 
-  const fetchWithCache = async (path, { force = false } = {}) => {
-    const key = path;
-    if (!force && cacheRef.current.has(key)) {
-      return cacheRef.current.get(key);
-    }
-    const full = `${apiBase}${path}`;
-    const res = await fetch(full);
-    if (!res.ok) throw new Error(`API ${full} responded ${res.status}`);
-    const json = await res.json();
-    cacheRef.current.set(key, json);
-    return json;
-  };
+  const values = data.map((d) => Number(d.value ?? d.progress ?? 0));
+  const max = Number(maxOverride ?? Math.max(...values, 1));
+  const barWidth = Math.max(28, Math.floor(360 / Math.max(1, data.length)));
 
-  const invalidate = () => cacheRef.current.clear();
-
-  return { fetchWithCache, invalidate };
-};
-
-// Chart Components
-const GroupBarChart = ({ data = [], height = 120 }) => {
-  if (!data.length) return <div className="text-sm text-gray-500">No chart data</div>;
-  const max = Math.max(...data.map((d) => Number(d.value ?? d.progress ?? 0)), 1);
-  const barWidth = Math.max(12, Math.floor(300 / data.length));
-  
   return (
-    <svg viewBox={`0 0 ${data.length * barWidth} ${height}`} className="w-full h-32">
-      {data.map((d, i) => {
-        const val = Number(d.value ?? d.progress ?? 0);
-        const h = (val / max) * (height - 20);
-        const x = i * barWidth + 4;
-        const y = height - h - 8;
-        return (
-          <g key={i}>
-            <rect x={x} y={y} width={barWidth - 8} height={h} rx="4" fill="currentColor" className="text-indigo-500" />
-            <text x={x + (barWidth - 8) / 2} y={height - 2} fontSize="10" textAnchor="middle" fill="currentColor" className="text-gray-600">
-              {d.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+    <div className="w-full overflow-x-auto">
+      <svg viewBox={`0 0 ${data.length * barWidth} ${height + 1}`} className="w-full h-[180px]">
+        {/* baseline */}
+        <line x1="0" y1={height} x2={data.length * barWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="1" />
+        {data.map((d, i) => {
+          const val = Number(d.value ?? d.progress ?? 0);
+          const barH = Math.max(2, (val / max) * (height - 10));
+          const x = i * barWidth + 8;
+          const w = barWidth - 16;
+          const y = height - barH;
+          const color = d.color || `hsl(${(i * 45) % 360}, 70%, 50%)`;
+
+          return (
+            <g key={i} transform={`translate(${x},0)`}>
+              <rect
+                x={0}
+                y={y}
+                width={w}
+                height={barH}
+                rx="6"
+                fill={color}
+                style={{ transition: "height 600ms ease, y 600ms ease" }}
+                role="img"
+                aria-label={`${d.name ?? d.label}: ${val}`}
+              />
+              <text
+                x={w / 2}
+                y={height + 14}
+                fontSize="10"
+                textAnchor="middle"
+                fill="#6B7280"
+                className="text-xs dark:fill-gray-400"
+                style={{ transformOrigin: "center", whiteSpace: "nowrap" }}
+              >
+                {d.name ?? d.label}
+              </text>
+              <text
+                x={w / 2}
+                y={y - 6}
+                fontSize="10"
+                textAnchor="middle"
+                fill="#111827"
+                className="text-xs font-medium dark:fill-gray-200"
+              >
+                {String(val)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 };
 
-const PieChart = ({ slices = [] }) => {
-  if (!slices.length) return <div className="text-sm text-gray-500">No data</div>;
+/* ---------------------------
+   Horizontal Task Bar Chart
+   - shows task label and progress as horizontal bar
+   - accessible title tooltip, percent badge
+   - scrollable if many tasks
+---------------------------- */
+const TaskBarChart = ({ items = [], maxItems = 8 }) => {
+  if (!items || !items.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No tasks</div>;
+
+  // Clip long labels with CSS (UI chooses to show first `maxItems` by default)
+  const display = items.slice(0, maxItems);
+
+  return (
+    <div className="space-y-3">
+      {display.map((it, idx) => {
+        const value = Number(it.progress ?? it.value ?? 0);
+        const pct = Math.max(0, Math.min(100, value));
+        const color = it.color || `hsl(${(idx * 50) % 360}, 70%, 50%)`;
+        return (
+          <div key={idx} className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-700 dark:text-gray-300 truncate">{it.label}</div>
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 ml-2">{pct}%</div>
+              </div>
+
+              <div className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${it.label} progress`}>
+                <div
+                  title={`${it.label}: ${pct}%`}
+                  style={{ width: `${pct}%`, background: color, transition: "width 700ms ease" }}
+                  className="h-3 rounded-full"
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {items.length > maxItems && <div className="text-xs text-gray-500 dark:text-gray-400">+{items.length - maxItems} more</div>}
+    </div>
+  );
+};
+
+/* ---------------------------
+   Pie chart with legend
+---------------------------- */
+const PieChart = ({ slices = [], size = 140 }) => {
+  if (!slices || !slices.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No data</div>;
   const total = slices.reduce((s, x) => s + Number(x.value ?? x.count ?? 0), 0) || 1;
   let angle = 0;
-  const cx = 60, cy = 60, r = 50;
-  
+  const cx = size / 2, cy = size / 2, r = Math.min(60, size / 2 - 8);
+
   return (
-    <svg width="200" height="220" viewBox="0 0 140 140">
-      {slices.map((s, i) => {
-        const portion = Number(s.value ?? s.count ?? 0) / total;
-        const startAngle = angle;
-        const endAngle = angle + portion * Math.PI * 2;
-        angle = endAngle;
-        const large = endAngle - startAngle > Math.PI ? 1 : 0;
-        const x1 = cx + r * Math.cos(startAngle);
-        const y1 = cy + r * Math.sin(startAngle);
-        const x2 = cx + r * Math.cos(endAngle);
-        const y2 = cy + r * Math.sin(endAngle);
-        const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-        
-        return (
-          <path 
-            key={i} 
-            d={d} 
-            fill={s.color || `hsl(${(i * 70) % 360}, 70%, 60%)`}
-            stroke="#fff"
-            strokeWidth="1"
-          />
-        );
-      })}
-    </svg>
+    <div className="flex items-center gap-4">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
+        {slices.map((s, i) => {
+          const portion = Number(s.value ?? s.count ?? 0) / total;
+          const startAngle = angle;
+          const endAngle = angle + portion * Math.PI * 2;
+          angle = endAngle;
+          const large = endAngle - startAngle > Math.PI ? 1 : 0;
+          const x1 = cx + r * Math.cos(startAngle);
+          const y1 = cy + r * Math.sin(startAngle);
+          const x2 = cx + r * Math.cos(endAngle);
+          const y2 = cy + r * Math.sin(endAngle);
+          const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+          return <path key={i} d={d} fill={s.color || `hsl(${(i * 70) % 360}, 70%, 60%)`} stroke="#fff" className="dark:stroke-gray-800" strokeWidth="1" />;
+        })}
+        <circle cx={cx} cy={cy} r={r - 18} fill="#fff" className="dark:fill-gray-800" />
+        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="12" className="text-gray-700 dark:text-gray-300 font-semibold">{total}</text>
+      </svg>
+
+      <div className="flex flex-col gap-2">
+        {slices.map((s, i) => (
+          <div key={i} className="flex items-center gap-2 text-sm">
+            <span style={{ background: s.color || `hsl(${(i * 70) % 360}, 70%, 60%)` }} className="w-3 h-3 rounded-sm inline-block" />
+            <span className="text-gray-700 dark:text-gray-300 truncate max-w-[140px]">{s.label}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({Math.round(((s.value ?? s.count ?? 0) / total) * 100)}%)</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };
 
-// Table Components
-const OverdueTable = ({ rows = [], loading }) => {
+/* ---------------------------
+   Overdue Table, Notifications, AuditPanel (unchanged, just reused)
+---------------------------- */
+const OverdueTable = ({ rows = [], loading, t }) => {
   if (loading) return <LoadingSkeleton className="h-48 w-full" />;
-  if (!rows.length) return <div className="p-4 text-sm text-gray-500">No overdue tasks.</div>;
-  
+  if (!rows.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.noOverdue")}</div>;
   return (
     <div className="overflow-auto">
       <table className="w-full text-sm">
-        <thead className="text-left text-xs text-gray-500 bg-gray-50">
+        <thead className="text-left text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
           <tr>
-            <th className="p-2">Task</th>
-            <th className="p-2">Due</th>
-            <th className="p-2">Days overdue</th>
-            <th className="p-2">Assignee</th>
-            <th className="p-2">Goal</th>
-            <th className="p-2">Group</th>
-            <th className="p-2">Link</th>
+            <th className="p-2">{t("dashboard.table.task")}</th>
+            <th className="p-2">{t("dashboard.table.due")}</th>
+            <th className="p-2">{t("dashboard.table.daysOverdue")}</th>
+            <th className="p-2">{t("dashboard.table.assignee")}</th>
+            <th className="p-2">{t("dashboard.table.goal")}</th>
+            <th className="p-2">{t("dashboard.table.group")}</th>
+            <th className="p-2">{t("dashboard.table.link")}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="border-t hover:bg-gray-50">
-              <td className="p-2">{r.taskTitle}</td>
-              <td className="p-2">{formatDate(r.dueDate)}</td>
+            <tr key={r.id} className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td className="p-2 dark:text-gray-300">{r.taskTitle}</td>
+              <td className="p-2 dark:text-gray-300">{formatDate(r.dueDate)}</td>
               <td className="p-2">
-                <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-                  {r.daysOverdue}
-                </span>
+                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs">{r.daysOverdue}</span>
               </td>
               <td className="p-2 flex items-center gap-2">
-                <img src={r.assigneeAvatar} alt="" className="w-6 h-6 rounded-full" />
-                <span>{r.assigneeName}</span>
+                {r.assigneeAvatar && <img src={r.assigneeAvatar} alt="" className="w-6 h-6 rounded-full" />}
+                <span className="dark:text-gray-300">{r.assigneeName}</span>
               </td>
-              <td className="p-2">{r.goalTitle}</td>
-              <td className="p-2">{r.groupName}</td>
+              <td className="p-2 dark:text-gray-300">{r.goalTitle}</td>
+              <td className="p-2 dark:text-gray-300">{r.groupName}</td>
               <td className="p-2">
-                <a 
-                  href={`/tasks/${r.id}`} 
-                  className="text-indigo-600 hover:underline font-medium"
-                >
-                  Open
-                </a>
+                <a href={`/tasks/${r.id}`} className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium">{t("dashboard.open")}</a>
               </td>
             </tr>
           ))}
@@ -165,35 +230,31 @@ const OverdueTable = ({ rows = [], loading }) => {
   );
 };
 
-// Panel Components
-const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsRead }) => {
+const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsRead, marking, t }) => {
   if (loading) return <LoadingSkeleton className="h-40 w-full" />;
-  if (!notifications.length) return <div className="p-4 text-sm text-gray-500">No notifications</div>;
-  
+  if (!notifications.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.noNotifications")}</div>;
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h4 className="font-semibold">Recent Notifications</h4>
+        <h4 className="font-semibold dark:text-gray-300">{t("dashboard.notifications.title")}</h4>
         <div className="flex items-center gap-2">
           <span className="text-xs text-white bg-red-500 px-2 py-0.5 rounded-full">{unread}</span>
           {unread > 0 && (
-            <button 
+            <button
               onClick={onMarkAsRead}
-              className="text-xs text-indigo-600 hover:underline"
+              disabled={marking}
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
             >
-              Mark all read
+              {marking ? t("dashboard.notifications.marking") : t("dashboard.notifications.markAll")}
             </button>
           )}
         </div>
       </div>
       <ul className="space-y-2">
         {notifications.map((n) => (
-          <li 
-            key={n.id} 
-            className={`p-3 rounded-lg border ${n.read ? 'border-gray-200' : 'border-indigo-200 bg-indigo-50'}`}
-          >
-            <div className="text-sm mb-1">{n.message}</div>
-            <div className="text-xs text-gray-400">{new Date(n.time).toLocaleString()}</div>
+          <li key={n.id} className={`p-3 rounded-lg border ${n.isRead ? "border-gray-200 dark:border-gray-700" : "border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30"}`}>
+            <div className="text-sm mb-1 dark:text-gray-300">{n.message || n.type}</div>
+            <div className="text-xs text-gray-400 dark:text-gray-500">{new Date(n.createdAt || n.time || n._raw?.createdAt).toLocaleString()}</div>
           </li>
         ))}
       </ul>
@@ -201,25 +262,23 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
   );
 };
 
-const AuditPanel = ({ logs = [], loading }) => {
+const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
   if (loading) return <LoadingSkeleton className="h-40 w-full" />;
-  if (!logs.length) return <div className="p-4 text-sm text-gray-500">No audit logs.</div>;
-  
+  if (auditPermDenied) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.audit.noPermission")}</div>;
+  if (!logs.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.audit.noLogs")}</div>;
   return (
     <div>
-      <h4 className="font-semibold mb-3">Recent Audit</h4>
+      <h4 className="font-semibold mb-3 dark:text-gray-300">{t("dashboard.audit.title")}</h4>
       <ul className="space-y-2">
-        {logs.map((l, i) => (
-          <li key={i} className="p-3 bg-white rounded-lg border border-gray-200">
+        {logs.map((l) => (
+          <li key={l.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-start">
               <div>
-                <span className="font-medium text-gray-900">{l.userName}</span>
-                <span className="text-gray-700"> {l.action} </span>
-                <span className="text-gray-500">{l.entity}</span>
+                <span className="font-medium text-gray-900 dark:text-gray-300">{l.userName || `User ${l.userId}`}</span>
+                <span className="text-gray-700 dark:text-gray-400"> {l.action} </span>
+                <span className="text-gray-500 dark:text-gray-500">{l.entity}</span>
               </div>
-              <div className="text-xs text-gray-400 whitespace-nowrap">
-                {new Date(l.time).toLocaleString()}
-              </div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{new Date(l.createdAt || l._raw?.createdAt).toLocaleString()}</div>
             </div>
           </li>
         ))}
@@ -228,76 +287,10 @@ const AuditPanel = ({ logs = [], loading }) => {
   );
 };
 
-// Filter Bar Component
-const FilterBar = ({ groups = [], filters, setFilters, isManager }) => {
-  const clearFilters = () => {
-    setFilters({ group: "", dateFrom: "", dateTo: "", status: "" });
-  };
-  
-  const hasActiveFilters = filters.group || filters.dateFrom || filters.dateTo || filters.status;
-  
-  return (
-    <div className="flex flex-wrap gap-3 items-center">
-      {isManager && (
-        <select
-          value={filters.group || ""}
-          onChange={(e) => setFilters((f) => ({ ...f, group: e.target.value }))}
-          className="px-3 py-2 bg-white rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          aria-label="Group selector"
-        >
-          <option value="">All groups</option>
-          {groups.map((g) => (
-            <option value={g.id} key={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
-      )}
-      
-      <input
-        type="date"
-        value={filters.dateFrom || ""}
-        onChange={(e) => setFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-        className="px-3 py-2 bg-white rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        aria-label="Start date"
-      />
-      
-      <input
-        type="date"
-        value={filters.dateTo || ""}
-        onChange={(e) => setFilters((f) => ({ ...f, dateTo: e.target.value }))}
-        className="px-3 py-2 bg-white rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        aria-label="End date"
-      />
-      
-      <select
-        value={filters.status || ""}
-        onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-        className="px-3 py-2 bg-white rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        aria-label="Status filter"
-      >
-        <option value="">Any status</option>
-        <option value="pending">Pending</option>
-        <option value="approved">Approved</option>
-        <option value="rejected">Rejected</option>
-      </select>
-      
-      {hasActiveFilters && (
-        <button
-          onClick={clearFilters}
-          className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
-        >
-          Clear filters
-        </button>
-      )}
-    </div>
-  );
-};
-
-// Main Dashboard Component
-export default function BentoDashboard({ currentUser = { permissions: [] }, apiBase = "/api" }) {
-  const isManager = currentUser.permissions.includes("manage_dashboard");
-  const { fetchWithCache, invalidate } = useApiWithCache(apiBase);
+// --- Main Dashboard Component ---
+export default function DashboardPage() {
+  const { t } = useTranslation();
+  const [darkMode, setDarkMode] = useState(false);
 
   const [dashboardData, setDashboardData] = useState({
     summary: null,
@@ -307,112 +300,95 @@ export default function BentoDashboard({ currentUser = { permissions: [] }, apiB
     overdueRows: [],
     notifications: [],
     auditLogs: [],
-    groups: []
+    groups: [],
   });
-  
+
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ 
-    group: "", 
-    dateFrom: "", 
-    dateTo: "", 
-    status: "" 
-  });
+  const [filters, setFilters] = useState({ group: "", dateFrom: "", dateTo: "", status: "" });
   const [error, setError] = useState(null);
+  const [auditPermDenied, setAuditPermDenied] = useState(false);
+  const [marking, setMarking] = useState(false);
 
-  const loadAll = async ({ force = false } = {}) => {
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    document.documentElement.classList.toggle('dark');
+  };
+
+  // Check for saved theme preference or respect OS preference
+  useEffect(() => {
+    if (localStorage.getItem('theme') === 'dark' || 
+        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      setDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  // Save theme preference
+  useEffect(() => {
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    setError(null);
+    setAuditPermDenied(false);
+
     try {
-      setLoading(true);
-      setError(null);
-
-      // Fetch all data in parallel for better performance
-      const [
-        summaryData,
-        groupBarsData,
-        taskBarsData,
-        reportsData,
-        overdueData,
-        notificationsData,
-        groupsData,
-        auditData
-      ] = await Promise.allSettled([
-        fetchDashboardSummary({ 
-          groupId: filters.group, 
-          dateFrom: filters.dateFrom, 
-          dateTo: filters.dateTo, 
-          status: filters.status 
-        }),
-        fetchDashboardCharts({ 
-          type: "group", 
-          groupId: filters.group, 
-          dateFrom: filters.dateFrom, 
-          dateTo: filters.dateTo 
-        }),
-        fetchDashboardCharts({ 
-          type: "task", 
-          groupId: filters.group, 
-          top: 8 
-        }),
-        fetchDashboardCharts({ 
-          type: "reports", 
-          groupId: filters.group 
-        }),
-        fetchOverdueTasks({ 
-          limit: 10, 
-          groupId: filters.group 
-        }),
-        fetchNotificationsHelper({ 
-          limit: 10 
-        }),
-        // <-- replaced fetchWithCache('/groups') with shared API
-        fetchGroups(),
-        isManager ? fetchAuditLogs({ limit: 10 }) : Promise.resolve([])
+      const results = await Promise.allSettled([
+        fetchDashboardSummary({ groupId: filters.group, dateFrom: filters.dateFrom, dateTo: filters.dateTo, status: filters.status }),
+        fetchDashboardCharts({ type: "group", groupId: filters.group, dateFrom: filters.dateFrom, dateTo: filters.dateTo }),
+        fetchDashboardCharts({ type: "task", groupId: filters.group, top: 8 }),
+        fetchDashboardCharts({ type: "reports", groupId: filters.group }),
+        fetchOverdueTasks({ limit: 10, groupId: filters.group }),
+        fetchNotifications({ limit: 5 }),
+        fetchAuditLogs({ limit: 5 }),
       ]);
 
-      // Handle results
+      const [summaryRes, groupRes, taskRes, reportsRes, overdueRes, notifsRes, auditRes] = results;
+
       const newData = {
-        summary: summaryData.status === 'fulfilled' ? summaryData.value : null,
-        groupBars: groupBarsData.status === 'fulfilled' ? groupBarsData.value : [],
-        taskBars: taskBarsData.status === 'fulfilled' ? taskBarsData.value : [],
-        reportsPie: reportsData.status === 'fulfilled' ? 
-          (Array.isArray(reportsData.value) 
-            ? reportsData.value.map(x => ({ 
-                label: x.label, 
-                count: Number(x.count ?? x.value ?? 0), 
-                color: x.color 
-              }))
-            : Object.keys(reportsData.value || {}).map(k => ({ 
-                label: k, 
-                count: Number(reportsData.value[k] ?? 0) 
-              }))
-          ) : [],
-        overdueRows: overdueData.status === 'fulfilled' ? overdueData.value : [],
-        notifications: notificationsData.status === 'fulfilled' ? notificationsData.value : [],
-        groups: groupsData.status === 'fulfilled' ? groupsData.value : [],
-        auditLogs: auditData.status === 'fulfilled' 
-          ? (auditData.value || []).map(x => ({ ...x, time: x.createdAt ?? x.time })) 
-          : []
+        summary: summaryRes.status === "fulfilled" ? summaryRes.value : null,
+        groupBars: groupRes.status === "fulfilled" ? groupRes.value : [],
+        taskBars: taskRes.status === "fulfilled" ? taskRes.value : [],
+        reportsPie:
+          reportsRes.status === "fulfilled"
+            ? Array.isArray(reportsRes.value)
+              ? reportsRes.value.map((x) => ({ label: x.label, count: Number(x.count ?? x.value ?? 0), color: x.color }))
+              : Object.keys(reportsRes.value || {}).map((k) => ({ label: k, count: Number(reportsRes.value[k] ?? 0) }))
+            : [],
+        overdueRows: overdueRes.status === "fulfilled" ? overdueRes.value : [],
+        notifications: notifsRes.status === "fulfilled" ? notifsRes.value : [],
+        auditLogs: auditRes.status === "fulfilled" ? auditRes.value : [],
       };
 
+      newData.groups = Array.isArray(newData.groupBars) ? newData.groupBars.map((g) => ({ groupId: g.groupId ?? g.id, name: g.name })) : [];
+
+      if (auditRes.status === "rejected") {
+        const reason = auditRes.reason;
+        if (reason && reason.status === 403) setAuditPermDenied(true);
+        else console.warn("Audit fetch failed", reason);
+      }
+
       setDashboardData(newData);
-      
-      // Check for any errors
+
       const errors = [
-        summaryData.status === 'rejected' && 'Summary data',
-        groupBarsData.status === 'rejected' && 'Group charts',
-        taskBarsData.status === 'rejected' && 'Task charts',
-        reportsData.status === 'rejected' && 'Reports data',
-        overdueData.status === 'rejected' && 'Overdue tasks',
-        notificationsData.status === 'rejected' && 'Notifications',
-        groupsData.status === 'rejected' && 'Groups list',
-        isManager && auditData.status === 'rejected' && 'Audit logs'
+        summaryRes.status === "rejected" && t("dashboard.errors.summary"),
+        groupRes.status === "rejected" && t("dashboard.errors.groupCharts"),
+        taskRes.status === "rejected" && t("dashboard.errors.taskCharts"),
+        reportsRes.status === "rejected" && t("dashboard.errors.reports"),
+        overdueRes.status === "rejected" && t("dashboard.errors.overdue"),
+        notifsRes.status === "rejected" && t("dashboard.errors.notifications"),
+        auditRes.status === "rejected" && t("dashboard.errors.audit"),
       ].filter(Boolean);
 
-      if (errors.length) {
-        setError(`Failed to load: ${errors.join(', ')}`);
-      }
+      if (errors.length) setError(t("dashboard.failedLoadPrefix") + errors.join(", "));
     } catch (err) {
-      console.error("Failed to load dashboard", err);
-      setError("Failed to load dashboard data. Please try again.");
+      console.error("Unexpected dashboard error", err);
+      setError(String(err));
     } finally {
       setLoading(false);
     }
@@ -423,258 +399,180 @@ export default function BentoDashboard({ currentUser = { permissions: [] }, apiB
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
-  const handleRefresh = async () => {
-    invalidate();
-    await loadAll({ force: true });
-  };
-
-  const handleCardClick = (type) => {
-    const routes = {
-      goals: "/goals",
-      tasks: "/tasks",
-      activities: "/activities",
-      reports: "/reports",
-    };
-    
-    if (routes[type]) {
-      window.location.href = routes[type];
-    }
-  };
+  const handleRefresh = () => loadAll();
 
   const handleMarkNotificationsRead = async () => {
-    // This would typically call an API endpoint to mark notifications as read
-    console.log("Marking all notifications as read");
-    // After marking as read, we would refresh the notifications
-    // For now, we'll just simulate it by filtering out unread status
-    setDashboardData(prev => ({
-      ...prev,
-      notifications: prev.notifications.map(n => ({ ...n, read: true })),
-      summary: prev.summary ? { ...prev.summary, unread: 0 } : null
-    }));
+    setMarking(true);
+    try {
+      await markAllNotificationsRead();
+      setDashboardData((prev) => ({
+        ...prev,
+        notifications: prev.notifications.map((n) => ({ ...n, read: true })),
+        summary: prev.summary ? { ...prev.summary, unread: 0 } : null,
+      }));
+    } catch (err) {
+      console.error("❌ Failed to mark notifications read:", err);
+    } finally {
+      setMarking(false);
+    }
   };
 
   const goalDelta = useMemo(() => {
     if (!dashboardData.summary) return null;
-    const d = dashboardData.summary.overall_goal_delta;
+    const d = dashboardData.summary.overall_goal_delta ?? null;
     if (d == null) return null;
     const sign = d >= 0 ? "+" : "";
     return `${sign}${d}%`;
   }, [dashboardData.summary]);
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-200 dark:bg-gray-900 min-h-screen transition-colors duration-300">
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("dashboard.title")}</h1>
           <div className="flex gap-2 items-center">
             <button
+              onClick={toggleDarkMode}
+              className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center transition-colors duration-300"
+              aria-label="Toggle dark mode"
+            >
+              {darkMode ? (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+              )}
+            </button>
+            <button
               onClick={handleRefresh}
-              className="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 shadow-sm hover:bg-gray-50 flex items-center gap-2"
-              aria-label="Refresh dashboard"
+              className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors duration-300"
+              aria-label={t("dashboard.aria.refresh")}
               disabled={loading}
             >
-              <svg 
-                className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
+              <svg className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              Refresh
+              {t("dashboard.refresh")}
             </button>
           </div>
         </div>
-        
-        <FilterBar 
-          groups={dashboardData.groups} 
-          filters={filters} 
-          setFilters={setFilters} 
-          isManager={isManager} 
-        />
-        
+
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+          <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 rounded-lg">
             {error}
-            <button 
-              onClick={() => setError(null)} 
-              className="ml-2 text-red-800 hover:text-red-900 font-medium"
-            >
-              Dismiss
-            </button>
           </div>
         )}
       </div>
 
       {/* BENTO GRID */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Top row: 4 cards across on large screens */}
+        {/* Top cards */}
         <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card 
-            title="Goals progress" 
-            onClick={() => handleCardClick("goals")}
-            className="hover:ring-2 hover:ring-indigo-100"
-          >
+          <Card title={t("dashboard.cards.goals.title")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl font-bold text-gray-900">
-                  {dashboardData.summary?.overall_goal_progress ?? "-"}%
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  {goalDelta ? <span className={goalDelta.startsWith('+') ? 'text-green-600' : 'text-red-600'}>
-                    {goalDelta} from last month
-                  </span> : "No comparison data"}
-                </div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_goal_progress ?? "-"}%</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{goalDelta ? <span className={goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>{goalDelta} {t("dashboard.cards.goals.fromLast")}</span> : t("dashboard.cards.goals.noComparison")}</div>
               </div>
             )}
           </Card>
 
-          <Card 
-            title="Tasks progress" 
-            onClick={() => handleCardClick("tasks")}
-            className="hover:ring-2 hover:ring-indigo-100"
-          >
+          <Card title={t("dashboard.cards.tasks.title")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl font-bold text-gray-900">
-                  {dashboardData.summary?.overall_task_progress ?? "-"}%
-                </div>
-                <div className="text-sm text-gray-500">Tasks completed</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_task_progress ?? "-"}%</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t("dashboard.cards.tasks.subtitle")}</div>
               </div>
             )}
           </Card>
 
-          <Card 
-            title="Activities progress" 
-            onClick={() => handleCardClick("activities")}
-            className="hover:ring-2 hover:ring-indigo-100"
-          >
+          <Card title={t("dashboard.cards.activities.title")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl font-bold text-gray-900">
-                  {dashboardData.summary?.overall_activity_progress ?? "-"}%
-                </div>
-                <div className="text-sm text-gray-500">Activity health</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_activity_progress ?? "-"}%</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t("dashboard.cards.activities.subtitle")}</div>
               </div>
             )}
           </Card>
 
-          <Card 
-            title="Pending Reports" 
-            onClick={() => handleCardClick("reports")}
-            className="hover:ring-2 hover:ring-indigo-100"
-          >
+          <Card title={t("dashboard.cards.pendingReports.title")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl font-bold text-gray-900">
-                  {dashboardData.summary?.pending_reports ?? 0}
-                </div>
-                <div className="text-sm text-gray-500">Click to open reports</div>
+                <div className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.pending_reports ?? 0}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">{t("dashboard.cards.pendingReports.subtitle")}</div>
               </div>
             )}
           </Card>
         </div>
 
-        {/* Second row: charts */}
+        {/* Charts */}
         <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-5 rounded-2xl bg-white shadow-sm border border-gray-100">
-            <div className="text-sm text-gray-500 mb-3 font-medium">Group progress</div>
+          <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+            <div className="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">{t("dashboard.groupProgress")}</div>
+            {loading ? <LoadingSkeleton className="h-28" /> : <GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress }))} />}
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+            <div className="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">{t("dashboard.topTasks")}</div>
             {loading ? (
               <LoadingSkeleton className="h-28" />
             ) : (
-              <GroupBarChart 
-                data={(dashboardData.groupBars || []).map((g) => ({ 
-                  label: g.name, 
-                  value: g.progress 
-                }))} 
-              />
+              // NEW: TaskBarChart replaces the small list. It provides horizontal progress bars.
+              <TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={6} />
             )}
           </div>
 
-          <div className="p-5 rounded-2xl bg-white shadow-sm border border-gray-100">
-            <div className="text-sm text-gray-500 mb-3 font-medium">Top tasks</div>
-            {loading ? (
-              <LoadingSkeleton className="h-28" />
-            ) : (
-              <div>
-                <ul className="space-y-3">
-                  {(dashboardData.taskBars || []).slice(0, 6).map((t, i) => (
-                    <li key={i} className="flex items-center justify-between">
-                      <div className="text-sm text-gray-700 truncate max-w-[70%]">{t.label}</div>
-                      <div className="text-xs font-medium px-2 py-1 bg-gray-100 text-gray-700 rounded-full">
-                        {t.progress}%
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="p-5 rounded-2xl bg-white shadow-sm border border-gray-100">
-            <div className="text-sm text-gray-500 mb-3 font-medium">Reports distribution</div>
-            {loading ? (
-              <LoadingSkeleton className="h-28" />
-            ) : (
-              <div className="flex justify-center">
-                <PieChart 
-                  slices={(dashboardData.reportsPie || []).map((r, i) => ({ 
-                    value: r.count, 
-                    label: r.label,
-                    color: r.color
-                  }))} 
-                />
-              </div>
-            )}
+          <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+            <div className="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">{t("dashboard.reportsDistribution")}</div>
+            {loading ? <LoadingSkeleton className="h-28" /> : <div className="flex justify-center"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
           </div>
         </div>
 
-        {/* Third row: Overdue table + Notifications */}
+        {/* Overdue + Notifications */}
         <div className="lg:col-span-8">
-          <div className="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 h-full">
+          <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 h-full transition-colors duration-300">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Overdue tasks</h3>
-              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
-                {dashboardData.overdueRows.length} tasks
-              </span>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{t("dashboard.overdueTitle")}</h3>
+              <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">{dashboardData.overdueRows.length} {t("dashboard.tasks")}</span>
             </div>
-            <OverdueTable rows={dashboardData.overdueRows} loading={loading} />
+            <OverdueTable rows={dashboardData.overdueRows} loading={loading} t={t} />
           </div>
         </div>
 
         <div className="lg:col-span-4">
-          <div className="p-5 rounded-2xl bg-white shadow-sm border border-gray-100 h-full">
-            <NotificationsPanel 
-              notifications={dashboardData.notifications} 
-              unread={dashboardData.summary?.unread || 0} 
+          <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 h-full transition-colors duration-300">
+            <NotificationsPanel
+              notifications={dashboardData.notifications}
+              unread={dashboardData.summary?.unread || 0}
               loading={loading}
               onMarkAsRead={handleMarkNotificationsRead}
+              marking={marking}
+              t={t}
             />
           </div>
         </div>
 
-        {/* Bottom row: Audit panel (manager only) */}
-        {isManager && (
-          <div className="lg:col-span-12">
-            <div className="p-5 rounded-2xl bg-white shadow-sm border border-gray-100">
-              <AuditPanel logs={dashboardData.auditLogs} loading={loading} />
-            </div>
+        {/* Audit panel (always visible; backend enforces permission) */}
+        <div className="lg:col-span-12">
+          <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
+            <AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} />
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Accessibility live region for important changes */}
       <div aria-live="polite" className="sr-only">
-        {loading ? "Loading dashboard data" : "Dashboard data loaded"}
+        {loading ? t("dashboard.aria.loading") : t("dashboard.aria.loaded")}
       </div>
     </div>
   );

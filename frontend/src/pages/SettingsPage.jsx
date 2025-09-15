@@ -92,7 +92,7 @@ const SettingsPage = () => {
       applyDarkClass(wantDark);
       setSettings((prev) => ({ ...prev, darkMode: wantDark }));
     } catch (err) {
-      showToast(t("settings.errors.loadError") || "Failed to load settings", "error");
+      showToast(t("settings.errors.loadError"), "error");
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ const SettingsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showToast = (message, type = "create") => {
+  const showToast = (message, type = "info") => {
     setToast({ message, type });
   };
   const handleToastClose = () => setToast(null);
@@ -138,11 +138,11 @@ const SettingsPage = () => {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      showToast(t("settings.errors.invalidImage") || "Invalid image file", "error");
+      showToast(t("settings.errors.invalidImage"), "error");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      showToast(t("settings.errors.imageTooLarge") || `Image too large (max ${formatBytes(5 * 1024 * 1024)})`, "error");
+      showToast(t("settings.errors.imageTooLarge", { max: formatBytes(5 * 1024 * 1024) }), "error");
       return;
     }
 
@@ -181,7 +181,7 @@ const SettingsPage = () => {
 
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => null);
-        throw new Error(errBody?.message || t("settings.errors.uploadError") || "Upload failed");
+        throw new Error(errBody?.message || t("settings.errors.uploadError"));
       }
 
       const data = await resp.json();
@@ -189,10 +189,10 @@ const SettingsPage = () => {
       updateUser(newUser, data.token || undefined);
       setSettings((s) => ({ ...s, profilePicture: newUser.profilePicture }));
       removeProfilePicturePreview();
-      showToast(t("settings.toasts.pictureSuccess") || "Profile picture updated", "update");
+      showToast(t("settings.toasts.pictureSuccess"), "success");
     } catch (err) {
       console.error("uploadProfilePicture error:", err);
-      showToast(err.message || "Upload failed", "error");
+      showToast(err.message || t("settings.errors.uploadError"), "error");
     } finally {
       setUploadingPicture(false);
     }
@@ -202,14 +202,14 @@ const SettingsPage = () => {
     let isValid = true;
 
     if (newPassword && !oldPassword) {
-      setOldPasswordError(t("settings.errors.oldPasswordRequired") || "Old password required");
+      setOldPasswordError(t("settings.errors.oldPasswordRequired"));
       isValid = false;
     } else {
       setOldPasswordError("");
     }
 
     if (newPassword && newPassword.length < 8) {
-      setPasswordError(t("settings.errors.passwordTooShort") || "Password too short");
+      setPasswordError(t("settings.errors.passwordTooShort"));
       isValid = false;
     } else {
       setPasswordError("");
@@ -241,17 +241,17 @@ const SettingsPage = () => {
 
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => null);
-        throw new Error(errBody?.message || t("settings.errors.updateError") || "Update failed");
+        throw new Error(errBody?.message || t("settings.errors.updateError"));
       }
 
       const data = await resp.json();
       if (data.user) updateUser(data.user, data.token);
-      showToast(t("settings.toasts.updateSuccess") || "Settings updated", "update");
+      showToast(t("settings.toasts.updateSuccess"), "success");
       setOldPassword("");
       setNewPassword("");
     } catch (err) {
       console.error("update settings error:", err);
-      showToast(err.message || "Update failed", "error");
+      showToast(err.message || t("settings.errors.updateError"), "error");
     } finally {
       setSaving(false);
     }
@@ -262,7 +262,7 @@ const SettingsPage = () => {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-6">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-500 mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">{t("settings.loading") || "Loading..."}</p>
+          <p className="text-gray-500 dark:text-gray-400">{t("settings.loading")}</p>
         </div>
       </div>
     );
@@ -271,47 +271,40 @@ const SettingsPage = () => {
   const avatarUrl = profilePicturePreview || settings.profilePicture || null;
   const initials = initialsFromName(settings.name || "", settings.username || "");
   const gradient = gradientFromString(settings.name || settings.username || "user");
+  const themeToggleTitle = settings.darkMode ? t("settings.switchToLight") : t("settings.switchToDark");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-      <header className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900/60 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+      <header className="sticky top-0 z-20 bg-gray-200 dark:bg-gray-900/60 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-8xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 rounded-full bg-gradient-to-br from-purple-50 to-sky-50 dark:from-purple-900/10 dark:to-sky-900/10">
               <UserCircle size={20} className="text-sky-600 dark:text-sky-300" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
+              <h1 className="text-xl sm:text-2xl font-extrabold truncate">{t("settings.title")}</h1>
             </div>
           </div>
 
           <div className="ml-auto flex items-center gap-3 flex-shrink-0">
-            <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-300">Theme</div>
+            <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-300">{t("settings.themeLabel")}</div>
 
-            {/* SINGLE polished toggle (kept in header only) */}
             <button
               onClick={toggleDarkMode}
               aria-pressed={settings.darkMode}
               className="relative inline-flex items-center p-1 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
-              title={settings.darkMode ? "Switch to light" : "Switch to dark"}
+              title={themeToggleTitle}
             >
-              <span className="sr-only">Toggle theme</span>
-
-              {/* small sun icon (left) */}
+              <span className="sr-only">{t("settings.toggleThemeAria")}</span>
               <Sun className={`h-4 w-4 ${settings.darkMode ? "text-gray-400" : "text-yellow-500"}`} />
-
-              {/* track: width 48px (w-12), height 24px (h-6), padding 1 (p-1) */}
               <div
                 className={`mx-2 w-12 h-6  rounded-full transition-colors ${settings.darkMode ? "bg-sky-600" : "bg-gray-300"}`}
                 aria-hidden
               >
-                {/* knob: w-6 h-6, moves by translate-x-4 when dark (48 - 24 - 8 = 16px -> translate-x-4) */}
                 <div
                   className={`bg-white w-6 h-6 rounded-full shadow-sm transform transition-transform ${settings.darkMode ? "translate-x-6" : "translate-x-0"}`}
                 />
               </div>
-
-              {/* moon icon (right) */}
               <Moon className={`h-4 w-4 ${settings.darkMode ? "text-white" : "text-gray-400"}`} />
             </button>
           </div>
@@ -327,7 +320,7 @@ const SettingsPage = () => {
                 <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300">
                   <User size={18} />
                 </div>
-                <h2 className="text-lg font-semibold">{t("settings.profilePicture") || "Profile picture"}</h2>
+                <h2 className="text-lg font-semibold">{t("settings.profilePicture")}</h2>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-6">
@@ -335,7 +328,7 @@ const SettingsPage = () => {
                   {avatarUrl ? (
                     <img
                       src={avatarUrl}
-                      alt="Profile"
+                      alt={t("settings.profilePictureAlt")}
                       className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm"
                     />
                   ) : (
@@ -353,7 +346,7 @@ const SettingsPage = () => {
                       type="button"
                       onClick={removeProfilePicturePreview}
                       className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"
-                      aria-label="Remove preview"
+                      aria-label={t("settings.removePreview")}
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -374,7 +367,7 @@ const SettingsPage = () => {
                       className="inline-flex items-center px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                     >
                       <Upload className="w-4 h-4 mr-2" />
-                      {t("settings.chooseImage") || "Choose image"}
+                      {t("settings.chooseImage")}
                     </label>
                   </div>
 
@@ -385,7 +378,7 @@ const SettingsPage = () => {
                       </div>
                     ) : (
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {t("settings.pictureHint") || "Square image works best (max 5 MB)"}
+                        {t("settings.pictureHint")}
                       </div>
                     )}
 
@@ -399,12 +392,12 @@ const SettingsPage = () => {
                         {uploadingPicture ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                            <span>{t("settings.uploading") || "Uploading..."}</span>
+                            <span>{t("settings.uploading")}</span>
                           </>
                         ) : (
                           <>
                             <Save className="w-4 h-4" />
-                            <span>{t("settings.upload") || "Upload"}</span>
+                            <span>{t("settings.upload")}</span>
                           </>
                         )}
                       </button>
@@ -420,13 +413,13 @@ const SettingsPage = () => {
                 <div className="p-2 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300">
                   <UserCircle size={18} />
                 </div>
-                <h2 className="text-lg font-semibold">{t("settings.personalInfo") || "Personal info"}</h2>
+                <h2 className="text-lg font-semibold">{t("settings.personalInfo")}</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("settings.username") || "Username"}
+                    {t("settings.username")}
                   </label>
                   <input
                     type="text"
@@ -439,14 +432,14 @@ const SettingsPage = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("settings.name") || "Full name"}
+                    {t("settings.name")}
                   </label>
                   <input
                     type="text"
                     value={settings.name}
                     onChange={(e) => setSettings({ ...settings, name: e.target.value })}
                     className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={t("settings.namePlaceholder") || "Your display name"}
+                    placeholder={t("settings.namePlaceholder")}
                   />
                 </div>
               </div>
@@ -458,13 +451,13 @@ const SettingsPage = () => {
                 <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300">
                   <Palette size={18} />
                 </div>
-                <h2 className="text-lg font-semibold">{t("settings.appearance") || "Appearance"}</h2>
+                <h2 className="text-lg font-semibold">{t("settings.appearance")}</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("settings.language") || "Language"}
+                    {t("settings.language")}
                   </label>
                   <LanguageSwitcher
                     compact
@@ -475,7 +468,7 @@ const SettingsPage = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("settings.theme") || "Theme"}
+                    {t("settings.theme")}
                   </label>
                   <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{settings.darkMode ? t("settings.darkMode") : t("settings.lightMode")}</div>
                 </div>
@@ -488,12 +481,12 @@ const SettingsPage = () => {
                 <div className="p-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">
                   <Shield size={18} />
                 </div>
-                <h2 className="text-lg font-semibold">{t("settings.changePassword") || "Change password"}</h2>
+                <h2 className="text-lg font-semibold">{t("settings.changePassword")}</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.oldPassword") || "Old password"}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.oldPassword")}</label>
                   <input
                     type="password"
                     value={oldPassword}
@@ -501,27 +494,27 @@ const SettingsPage = () => {
                       setOldPassword(e.target.value);
                       if (e.target.value && oldPasswordError) setOldPasswordError("");
                     }}
-                    placeholder={t("settings.passwordPlaceholder") || "••••••••"}
+                    placeholder={t("settings.passwordPlaceholder")}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${oldPasswordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`}
                   />
                   {oldPasswordError && <p className="mt-1 text-xs text-red-500">{oldPasswordError}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.newPassword") || "New password"}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.newPassword")}</label>
                   <input
                     type="password"
                     value={newPassword}
                     onChange={(e) => {
                       setNewPassword(e.target.value);
-                      if (e.target.value && e.target.value.length < 8) setPasswordError(t("settings.errors.passwordTooShort") || "Password too short");
+                      if (e.target.value && e.target.value.length < 8) setPasswordError(t("settings.errors.passwordTooShort"));
                       else setPasswordError("");
                     }}
-                    placeholder={t("settings.passwordPlaceholder") || "••••••••"}
+                    placeholder={t("settings.passwordPlaceholder")}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${passwordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`}
                   />
                   {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.passwordRequirements") || "Minimum 8 characters."}</p>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.passwordRequirements")}</p>
                 </div>
               </div>
             </section>
@@ -536,12 +529,12 @@ const SettingsPage = () => {
                 {saving ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    <span>{t("settings.saving") || "Saving..."}</span>
+                    <span>{t("settings.saving")}</span>
                   </>
                 ) : (
                   <>
                     <Save className="w-4 h-4" />
-                    <span>{t("settings.saveChanges") || "Save changes"}</span>
+                    <span>{t("settings.saveChanges")}</span>
                   </>
                 )}
               </button>
