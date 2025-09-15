@@ -1,5 +1,5 @@
-// src/pages/AttachmentsPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Loader2,
   Trash,
@@ -33,7 +33,7 @@ function IconForType({ fileType }) {
 }
 
 /* Pill toggle (keeps visible and compact) */
-function PillToggle({ value, onChange }) {
+function PillToggle({ value, onChange, t }) {
   return (
     <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1 shadow-sm" role="tablist">
       <button
@@ -44,10 +44,10 @@ function PillToggle({ value, onChange }) {
             ? "bg-white dark:bg-gray-700 shadow text-sky-700 dark:text-sky-300"
             : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
         }`}
-        title="Grid"
+        title={t("attachments.view.gridTitle")}
       >
         <Grid className="h-4 w-4" />
-        <span className="hidden sm:inline">Grid</span>
+        <span className="hidden sm:inline">{t("attachments.view.grid")}</span>
       </button>
       <button
         onClick={() => onChange("table")}
@@ -57,23 +57,25 @@ function PillToggle({ value, onChange }) {
             ? "bg-white dark:bg-gray-700 shadow text-sky-700 dark:text-sky-300"
             : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
         }`}
-        title="Table"
+        title={t("attachments.view.tableTitle")}
       >
         <List className="h-4 w-4" />
-        <span className="hidden sm:inline">Table</span>
+        <span className="hidden sm:inline">{t("attachments.view.table")}</span>
       </button>
     </div>
   );
 }
 
-function ImagePreviewModal({ src, name, onClose }) {
+function ImagePreviewModal({ src, name, onClose, t }) {
   if (!src) return null;
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-900 rounded-lg overflow-auto max-w-[95vw] max-h-[95vh] shadow-2xl">
         <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-700">
           <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[60vw]">{name}</div>
-          <button onClick={onClose} className="text-gray-600 dark:text-gray-300 px-2 py-1 text-xl leading-none" aria-label="Close preview">&times;</button>
+          <button onClick={onClose} className="text-gray-600 dark:text-gray-300 px-2 py-1 text-xl leading-none" aria-label={t("attachments.closePreview")} title={t("attachments.closePreview")}>
+            &times;
+          </button>
         </div>
         <div className="p-4 flex items-center justify-center">
           <img src={src} alt={name} className="max-w-full max-h-[80vh] object-contain rounded" />
@@ -84,6 +86,8 @@ function ImagePreviewModal({ src, name, onClose }) {
 }
 
 export default function AttachmentsPage({ reportId }) {
+  const { t } = useTranslation();
+
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(null);
@@ -109,7 +113,7 @@ export default function AttachmentsPage({ reportId }) {
       setAttachments(items);
     } catch (err) {
       console.error("Error loading attachments:", err);
-      setError(err?.message || "Failed to load attachments");
+      setError(err?.message || t("attachments.messages.failedLoad"));
       setAttachments([]);
     } finally {
       setLoading(false);
@@ -129,7 +133,7 @@ export default function AttachmentsPage({ reportId }) {
       }
 
       const { blob, filename } = res;
-      if (!blob) throw new Error("No file returned");
+      if (!blob) throw new Error(t("attachments.messages.noFileReturned"));
       const name = filename || at.fileName || `attachment-${at.id}`;
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -141,21 +145,22 @@ export default function AttachmentsPage({ reportId }) {
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (err) {
       console.error("Download error:", err);
-      alert(err?.message || "Download failed");
+      // show friendly message localized
+      alert(err?.message || t("attachments.messages.downloadFailed"));
     } finally {
       setDownloading(null);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this attachment?")) return;
+    if (!window.confirm(t("attachments.confirmDelete"))) return;
     try {
       setDeleting(id);
       await deleteAttachment(id);
       setAttachments((p) => p.filter((x) => x.id !== id));
     } catch (err) {
       console.error("Delete error:", err);
-      alert(err?.message || "Failed to delete");
+      alert(err?.message || t("attachments.messages.deleteFailed"));
     } finally {
       setDeleting(null);
     }
@@ -180,13 +185,12 @@ export default function AttachmentsPage({ reportId }) {
   }, [attachments, searchTerm]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 sm:p-6 transition-colors duration-200">
       <div className="max-w-8xl mx-auto">
         {/* Header row: left title, right controls. We force them to stay in one line by using flex, min-w-0 on search. */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Attachments</h1>
-            {/* description removed */}
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("attachments.title")}</h1>
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -197,16 +201,16 @@ export default function AttachmentsPage({ reportId }) {
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search files, id or type..."
+                placeholder={t("attachments.searchPlaceholder")}
                 className="pl-10 pr-9 py-2 w-full sm:w-72 rounded-md border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white min-w-0"
-                aria-label="Search attachments"
+                aria-label={t("attachments.searchAria")}
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm("")}
                   className="absolute right-1 top-1.5 p-1.5 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  aria-label="Clear search"
-                  title="Clear"
+                  aria-label={t("attachments.clearSearchAria")}
+                  title={t("attachments.clearSearchTitle")}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -214,7 +218,7 @@ export default function AttachmentsPage({ reportId }) {
             </div>
 
             <div className="flex-shrink-0">
-              <PillToggle value={viewMode} onChange={setViewMode} />
+              <PillToggle value={viewMode} onChange={setViewMode} t={t} />
             </div>
           </div>
         </div>
@@ -223,23 +227,23 @@ export default function AttachmentsPage({ reportId }) {
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center">
               <Loader2 className="animate-spin h-10 w-10 text-indigo-600 dark:text-indigo-400 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">Loading attachments...</p>
+              <p className="text-gray-500 dark:text-gray-400">{t("attachments.loading")}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center">
               <File className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
-              <div className="text-lg font-medium text-gray-700 dark:text-gray-200">No attachments found</div>
-              <div className="text-sm text-gray-400 dark:text-gray-500 mt-1">No files match your search or there are no files attached</div>
+              <div className="text-lg font-medium text-gray-700 dark:text-gray-200">{t("attachments.noAttachmentsTitle")}</div>
+              <div className="text-sm text-gray-400 dark:text-gray-500 mt-1">{t("attachments.noAttachmentsSubtitle")}</div>
             </div>
           ) : viewMode === "table" ? (
             <div className="overflow-auto">
               <table className="min-w-full table-auto">
                 <thead className="bg-gray-50 dark:bg-gray-700 text-left">
                   <tr>
-                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">File</th>
-                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Type</th>
-                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">Uploaded</th>
-                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-right">Actions</th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("attachments.table.file")}</th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("attachments.table.type")}</th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">{t("attachments.table.uploaded")}</th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-right">{t("attachments.table.actions")}</th>
                   </tr>
                 </thead>
 
@@ -255,19 +259,19 @@ export default function AttachmentsPage({ reportId }) {
                             <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[60ch]" title={at.fileName}>
                               {at.fileName}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">ID: {at.id}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{t("attachments.idPrefix")} {at.id}</div>
                           </div>
                         </div>
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 max-w-[22ch] truncate" title={at.fileType}>
-                          {at.fileType || "—"}
+                          {at.fileType || t("attachments.empty")}
                         </div>
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
-                        {formatDate(at.createdAt)}
+                        {t("attachments.uploadedPrefix")} {formatDate(at.createdAt)}
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -275,32 +279,35 @@ export default function AttachmentsPage({ reportId }) {
                           <button
                             onClick={() => handleDownload(at)}
                             disabled={downloading === at.id}
-                            title="Download"
+                            title={t("attachments.download")}
+                            aria-label={t("attachments.download")}
                             className="inline-flex items-center px-2.5 py-1.5 rounded-md text-sm bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/50 disabled:opacity-50 transition-colors"
                           >
                             {downloading === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
-                            <span className="hidden md:inline ml-2">Download</span>
+                            <span className="hidden md:inline ml-2">{t("attachments.download")}</span>
                           </button>
 
                           {String(at.fileType || "").includes("image") && (
                             <button
                               onClick={() => openPreview(at)}
-                              title="Preview"
+                              title={t("attachments.preview")}
+                              aria-label={t("attachments.preview")}
                               className="inline-flex items-center px-2.5 py-1.5 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                             >
                               <Eye className="h-4 w-4" />
-                              <span className="hidden md:inline ml-2">Preview</span>
+                              <span className="hidden md:inline ml-2">{t("attachments.preview")}</span>
                             </button>
                           )}
 
                           <button
                             onClick={() => handleDelete(at.id)}
                             disabled={deleting === at.id}
-                            title="Delete"
+                            title={t("attachments.delete")}
+                            aria-label={t("attachments.delete")}
                             className="inline-flex items-center px-2.5 py-1.5 rounded-md text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/50 disabled:opacity-50 transition-colors"
                           >
                             {deleting === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash className="h-4 w-4" />}
-                            <span className="hidden md:inline ml-2">Delete</span>
+                            <span className="hidden md:inline ml-2">{t("attachments.delete")}</span>
                           </button>
                         </div>
                       </td>
@@ -323,12 +330,12 @@ export default function AttachmentsPage({ reportId }) {
                         <div className="text-sm font-semibold text-gray-900 dark:text-white truncate" title={at.fileName}>
                           {at.fileName}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">ID: {at.id}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">Uploaded: {formatDate(at.createdAt)}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{t("attachments.idPrefix")} {at.id}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{t("attachments.uploadedPrefix")} {formatDate(at.createdAt)}</div>
 
                         <div className="mt-2">
                           <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 max-w-[18ch] truncate" title={at.fileType}>
-                            {at.fileType || "—"}
+                            {at.fileType || t("attachments.empty")}
                           </span>
                         </div>
                       </div>
@@ -338,32 +345,32 @@ export default function AttachmentsPage({ reportId }) {
                       <button
                         onClick={() => handleDownload(at)}
                         disabled={downloading === at.id}
-                        title="Download"
+                        title={t("attachments.download")}
                         className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-800/50 disabled:opacity-60"
                       >
                         {downloading === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Download className="h-4 w-4" />}
-                        <span className="hidden md:inline">Download</span>
+                        <span className="hidden md:inline">{t("attachments.download")}</span>
                       </button>
 
                       {String(at.fileType || "").includes("image") && (
                         <button
                           onClick={() => openPreview(at)}
-                          title="Preview"
+                          title={t("attachments.preview")}
                           className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                         >
                           <Eye className="h-4 w-4" />
-                          <span className="hidden md:inline">Preview</span>
+                          <span className="hidden md:inline">{t("attachments.preview")}</span>
                         </button>
                       )}
 
                       <button
                         onClick={() => handleDelete(at.id)}
                         disabled={deleting === at.id}
-                        title="Delete"
+                        title={t("attachments.delete")}
                         className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/50 disabled:opacity-60"
                       >
                         {deleting === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash className="h-4 w-4" />}
-                        <span className="hidden md:inline">Delete</span>
+                        <span className="hidden md:inline">{t("attachments.delete")}</span>
                       </button>
                     </div>
                   </div>
@@ -373,7 +380,7 @@ export default function AttachmentsPage({ reportId }) {
           )}
         </div>
 
-        <ImagePreviewModal src={preview?.src} name={preview?.name} onClose={() => setPreview(null)} />
+        <ImagePreviewModal src={preview?.src} name={preview?.name} onClose={() => setPreview(null)} t={t} />
       </div>
     </div>
   );

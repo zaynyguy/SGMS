@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Loader } from "lucide-react";
 import { fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
+import { useTranslation } from "react-i18next";
 
 /* -------------------------
    Small helper: render metrics nicely (object or JSON)
@@ -48,26 +49,20 @@ function renderMetricsList(metrics) {
    Top-right tab group
 ------------------------- */
 function TopRightTabs({ value, onChange }) {
+  const { t } = useTranslation();
+
   const options = [
-    {
-      id: "review",
-      label: "Review",
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M12 5v14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <path d="M5 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      ),
-    },
-    {
-      id: "master",
-      label: "Master",
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 11h7v6H3z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
+    { id: "review", labelKey: "reports.tabs.review", icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M12 5v14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M5 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    ) },
+    { id: "master", labelKey: "reports.tabs.master", icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 11h7v6H3z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ) },
   ];
 
   return (
@@ -83,7 +78,7 @@ function TopRightTabs({ value, onChange }) {
             }`}
           >
             <span className="opacity-90">{opt.icon}</span>
-            <span className="hidden sm:inline">{opt.label}</span>
+            <span className="hidden sm:inline">{t(opt.labelKey)}</span>
           </button>
         ))}
       </div>
@@ -95,6 +90,8 @@ function TopRightTabs({ value, onChange }) {
    REVIEW PAGE
 ------------------------- */
 function ReviewReportsPage() {
+  const { t } = useTranslation();
+
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
@@ -140,10 +137,10 @@ function ReviewReportsPage() {
       setActionLoading((s) => ({ ...s, [id]: true }));
       await reviewReport(id, { status, adminComment, resubmissionDeadline });
       await loadReports();
-      setActionState((s) => ({ ...s, [id]: { ...(s[id] || {}), _lastResult: `Updated to ${status}` } }));
+      setActionState((s) => ({ ...s, [id]: { ...(s[id] || {}), _lastResult: t("reports.action.updatedTo", { status }) } }));
     } catch (err) {
       console.error("review error", err);
-      setActionState((s) => ({ ...s, [id]: { ...(s[id] || {}), _lastError: err?.message || "Failed" } }));
+      setActionState((s) => ({ ...s, [id]: { ...(s[id] || {}), _lastError: err?.message || t("reports.action.failed") } }));
     } finally {
       setActionLoading((s) => ({ ...s, [id]: false }));
     }
@@ -163,12 +160,19 @@ function ReviewReportsPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
+  const statusOptions = [
+    { id: "All", key: "reports.filters.all" },
+    { id: "Pending", key: "reports.filters.pending" },
+    { id: "Approved", key: "reports.filters.approved" },
+    { id: "Rejected", key: "reports.filters.rejected" },
+  ];
+
   return (
     <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
         <div>
-          <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">Review & Moderate</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">Approve or reject incoming reports</p>
+          <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">{t("reports.review.title")}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">{t("reports.review.subtitle")}</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full lg:w-auto">
@@ -177,7 +181,7 @@ function ReviewReportsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={onSearchKeyDown}
-              placeholder="Search reports (press Enter)"
+              placeholder={t("reports.search.placeholder")}
               className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 min-w-0 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
             />
           </div>
@@ -189,36 +193,36 @@ function ReviewReportsPage() {
             }}
             className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
-            Search
+            {t("reports.search.button")}
           </button>
           <button onClick={handleRefresh} className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="opacity-80">
               <path d="M21 12A9 9 0 1 0 6 20.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Refresh
+            {t("reports.refresh")}
           </button>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
         <div className="flex flex-wrap gap-2">
-          {["All", "Pending", "Approved", "Rejected"].map((s) => (
+          {statusOptions.map((s) => (
             <button
-              key={s}
+              key={s.id}
               onClick={() => {
                 setPage(1);
-                setStatusFilter(s);
+                setStatusFilter(s.id);
               }}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                statusFilter === s ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                statusFilter === s.id ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             >
-              {s}
+              {t(s.key)}
             </button>
           ))}
         </div>
-        <div className="ml-auto text-xs text-gray-500 dark:text-gray-400">Showing page {page} of {totalPages} • {total} reports</div>
+        <div className="ml-auto text-xs text-gray-500 dark:text-gray-400">{t("reports.pagination.showingPage", { page, totalPages, total })}</div>
       </div>
 
       <div className="space-y-4">
@@ -260,7 +264,7 @@ function ReviewReportsPage() {
                             : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                         }`}
                       >
-                        {r.status}
+                        {t(`reports.status.${r.status}`, { defaultValue: r.status })}
                       </div>
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">{r.activity_title} • {r.user_name}</div>
@@ -282,18 +286,18 @@ function ReviewReportsPage() {
                 {expanded === r.id && (
                   <div className="p-4 bg-gray-50 dark:bg-gray-800 space-y-3">
                     <div>
-                      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Narrative</div>
-                      <div className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1">{r.narrative || <em className="text-gray-400">No narrative</em>}</div>
+                      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.narrative")}</div>
+                      <div className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1">{r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}</div>
                     </div>
 
                     <div>
-                      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">Metrics</div>
+                      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.metrics")}</div>
                       <div className="mt-2">{renderMetricsList(r.metrics_data)}</div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       <input
-                        placeholder="Admin comment"
+                        placeholder={t("reports.adminComment.placeholder")}
                         value={actionState[r.id]?.comment || ""}
                         onChange={(e) => setActionState((s) => ({ ...s, [r.id]: { ...(s[r.id] || {}), comment: e.target.value } }))}
                         className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
@@ -313,7 +317,7 @@ function ReviewReportsPage() {
                           disabled={!!actionLoading[r.id]}
                           aria-busy={!!actionLoading[r.id]}
                         >
-                          {actionLoading[r.id] ? <Loader className="h-4 w-4 animate-spin" /> : "Approve"}
+                          {actionLoading[r.id] ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.approve")}
                         </button>
                         <button
                           onClick={() => handleReview(r.id, "Rejected")}
@@ -321,7 +325,7 @@ function ReviewReportsPage() {
                           disabled={!!actionLoading[r.id]}
                           aria-busy={!!actionLoading[r.id]}
                         >
-                          {actionLoading[r.id] ? <Loader className="h-4 w-4 animate-spin" /> : "Reject"}
+                          {actionLoading[r.id] ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.reject")}
                         </button>
                       </div>
                     </div>
@@ -338,7 +342,7 @@ function ReviewReportsPage() {
               </div>
             ))}
             {reports.length === 0 && !loading && (
-              <div className="text-center text-gray-500 dark:text-gray-400 py-6">No reports found.</div>
+              <div className="text-center text-gray-500 dark:text-gray-400 py-6">{t("reports.noReports")}</div>
             )}
           </>
         )}
@@ -354,7 +358,7 @@ function ReviewReportsPage() {
             }}
             className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            First
+            {t("reports.pagination.first")}
           </button>
           <button
             disabled={page <= 1}
@@ -364,7 +368,7 @@ function ReviewReportsPage() {
             }}
             className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Prev
+            {t("reports.pagination.prev")}
           </button>
           <div className="px-3 py-1.5 text-sm">{page} / {totalPages}</div>
           <button
@@ -375,7 +379,7 @@ function ReviewReportsPage() {
             }}
             className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Next
+            {t("reports.pagination.next")}
           </button>
           <button
             disabled={page >= totalPages}
@@ -385,12 +389,12 @@ function ReviewReportsPage() {
             }}
             className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Last
+            {t("reports.pagination.last")}
           </button>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-500 dark:text-gray-400">Page size</label>
+          <label className="text-sm text-gray-500 dark:text-gray-400">{t("reports.pageSize")}</label>
           <select
             value={pageSize}
             onChange={(e) => {
@@ -488,6 +492,8 @@ function getLatestMetricValueInPeriod(activity, periodKey, granularity, metricKe
 
 /* ActivityRow updated so metrics look clean and readable (not raw JSON) */
 function ActivityRow({ activity, periods, granularity }) {
+  const { t } = useTranslation();
+
   const metricKey = pickMetricForActivity(activity, null);
   const targetObj = activity.targetMetric || {};
   const targetValue = metricKey && metricKey in targetObj ? targetObj[metricKey] : typeof targetObj === "number" ? targetObj : targetObj.target ?? null;
@@ -532,6 +538,8 @@ function ActivityRow({ activity, periods, granularity }) {
    Master Report page wrapper
 ------------------------- */
 function MasterReportPageWrapper() {
+  const { t } = useTranslation();
+
   const [groupId, setGroupId] = useState("");
   const [loading, setLoading] = useState(false);
   const [master, setMaster] = useState(null);
@@ -545,7 +553,7 @@ function MasterReportPageWrapper() {
       const data = await fetchMasterReport(groupId || undefined);
       setMaster(data);
     } catch (err) {
-      setError(err.message || "Failed to fetch");
+      setError(err.message || t("reports.master.fetchFailed"));
       setMaster(null);
     } finally {
       setLoading(false);
@@ -597,11 +605,17 @@ function MasterReportPageWrapper() {
         return `<tr><td style="padding:8px;border:1px solid #ddd;padding-left:34px">${row.title}</td><td style="padding:8px;border:1px solid #ddd">${row.weight}</td><td style="padding:8px;border:1px solid #ddd">${mk ?? "-"}</td><td style="padding:8px;border:1px solid #ddd">${targetVal ?? "-"}</td>${periodCells}</tr>`;
       }
     }).join("");
+    const title = t("reports.master.title");
+    const groupLabel = t("reports.master.groupLabel");
+    const narratives = t("reports.master.narratives");
+    const dataTable = t("reports.master.dataTable");
+    const generated = t("reports.master.generatedAt", { date: new Date().toLocaleString() });
+
     return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Master Report</title>
+<title>${title}</title>
 <style>
 body{font-family:Inter,Arial,Helvetica,sans-serif;padding:20px;color:#111;background:#fff}
 h1{font-size:24px;margin-bottom:4px}
@@ -615,11 +629,11 @@ th{background:#f3f4f6}
 </style>
 </head>
 <body>
-<h1>Master Report</h1>
-<p style="margin-top:2px;margin-bottom:8px">Group: ${groupId || "All"} • Generated: ${new Date().toLocaleString()}</p>
+<h1>${title}</h1>
+<p style="margin-top:2px;margin-bottom:8px">${groupLabel}: ${groupId || "All"} • ${generated}</p>
 
 <section>
-  <h2>Narratives</h2>
+  <h2>${narratives}</h2>
   ${data.goals.map((g) => `
     <div style="margin-bottom:12px;padding:10px;border:1px solid #eee;border-radius:6px;background:#fbfbfb">
       <div style="font-weight:700;font-size:15px">${g.title} <span style="font-weight:400;color:#6b7280">• ${g.status} • ${g.progress ?? 0}%</span></div>
@@ -630,7 +644,7 @@ th{background:#f3f4f6}
             ${(t.activities || []).map((a) => `
               <div style="margin-left:16px;margin-top:6px;padding:8px;border:1px solid #f1f5f9;border-radius:4px;background:#fff">
                 <div style="font-weight:600">${a.title}</div>
-                <div style="color:#6b7280;margin-top:6px">Target: ${a.targetMetric ? JSON.stringify(a.targetMetric) : "-"}</div>
+                <div style="color:#6b7280;margin-top:6px">${t("reports.master.targetLabel")}: ${a.targetMetric ? JSON.stringify(a.targetMetric) : "-"}</div>
                 <div style="margin-top:8px">${(a.reports || []).map((r) => `<div style="padding:6px;border-top:1px dashed #eee"><strong>#${r.id}</strong> • ${r.status} • ${r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}<div style="margin-top:4px">${r.narrative || ""}</div></div>`).join("")}</div>
               </div>
             `).join("")}
@@ -642,9 +656,9 @@ th{background:#f3f4f6}
 </section>
 
 <section style="margin-top:18px">
-  <h2>Data Table</h2>
+  <h2>${dataTable}</h2>
   <table>
-    <thead><tr><th>Title</th><th>Weight</th><th>Metric</th><th>Target</th>${columnsHtml}</tr></thead>
+    <thead><tr><th>${t("reports.table.title")}</th><th>${t("reports.table.weight")}</th><th>${t("reports.table.metric")}</th><th>${t("reports.table.target")}</th>${columnsHtml}</tr></thead>
     <tbody>${rowsHtml}</tbody>
   </table>
 </section>
@@ -654,15 +668,15 @@ th{background:#f3f4f6}
   }
 
   function exportCSV() {
-    if (!master) return alert("Load a report first");
+    if (!master) return alert(t("reports.master.loadFirstAlert"));
     const periods = periodColumns;
-    const headers = ["Type", "Goal", "Task", "Activity", "Weight", "Metric", "Target", ...periods];
+    const headers = [t("reports.table.type"), t("reports.table.goal"), t("reports.table.task"), t("reports.table.activity"), t("reports.table.weight"), t("reports.table.metric"), t("reports.table.target"), ...periods];
     const rows = [];
     master.goals.forEach((g) => {
-      const goalRow = ["Goal", g.title, "", "", g.weight ?? "", "", "", ...periods.map(() => "")];
+      const goalRow = [t("reports.table.goal"), g.title, "", "", g.weight ?? "", "", "", ...periods.map(() => "")];
       rows.push(goalRow);
       (g.tasks || []).forEach((t) => {
-        const taskRow = ["Task", g.title, t.title, "", t.weight ?? "", "", "", ...periods.map(() => "")];
+        const taskRow = [t("reports.table.task"), g.title, t.title, "", t.weight ?? "", "", "", ...periods.map(() => "")];
         rows.push(taskRow);
         (t.activities || []).forEach((a) => {
           const mk = pickMetricForActivity(a, null);
@@ -671,7 +685,7 @@ th{background:#f3f4f6}
             const v = getLatestMetricValueInPeriod(a, p, granularity, mk);
             return v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
           });
-          const actRow = ["Activity", g.title, t.title, a.title, a.weight ?? "", mk ?? "", target ?? "", ...periodVals];
+          const actRow = [t("reports.table.activity"), g.title, t.title, a.title, a.weight ?? "", mk ?? "", target ?? "", ...periodVals];
           rows.push(actRow);
         });
       });
@@ -693,7 +707,7 @@ th{background:#f3f4f6}
   }
 
   async function exportPDF() {
-    if (!master) return alert("Load a report first");
+    if (!master) return alert(t("reports.master.loadFirstAlert"));
     const w = window.open("", "_blank");
     w.document.write(generateHtmlForPrint());
     w.document.close();
@@ -714,43 +728,43 @@ th{background:#f3f4f6}
           </svg>
         </div>
         <div>
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-gray-100">Master Report</h2>
-          <div className="text-sm text-gray-500 dark:text-gray-300">Narratives and a compact data table. Export PDF or CSV.</div>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-gray-100">{t("reports.master.title")}</h2>
+          <div className="text-sm text-gray-500 dark:text-gray-300">{t("reports.master.subtitle")}</div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5">
         <div className="md:col-span-3">
-          <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Group ID (optional)</label>
-          <input value={groupId} onChange={(e) => setGroupId(e.target.value)} placeholder="Enter Group ID or leave blank for all" className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
+          <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">{t("reports.master.groupIdLabel")}</label>
+          <input value={groupId} onChange={(e) => setGroupId(e.target.value)} placeholder={t("reports.master.groupIdPlaceholder")} className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent" />
           {error && <div className="text-sm text-red-600 dark:text-red-400 mt-2">{error}</div>}
         </div>
         <div className="md:col-span-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
           <button onClick={handleFetch} disabled={loading} className="px-4 py-2 bg-sky-600 text-white rounded-lg shadow flex items-center justify-center gap-2 hover:bg-sky-700 transition-colors">
-            {loading ? <Loader className="h-4 w-4 animate-spin" /> : "Load Report"}
+            {loading ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.master.loadButton")}
           </button>
-          <button onClick={exportPDF} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">Export PDF</button>
-          <button onClick={exportCSV} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Export CSV</button>
+          <button onClick={exportPDF} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">{t("reports.master.exportPDF")}</button>
+          <button onClick={exportCSV} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">{t("reports.master.exportCSV")}</button>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-300">Granularity</label>
+          <label className="text-sm text-gray-600 dark:text-gray-300">{t("reports.master.granularityLabel")}</label>
           <div className="flex gap-2 mt-1">
             {["monthly", "quarterly", "annual"].map((g) => (
-              <button key={g} onClick={() => setGranularity(g)} className={`px-3 py-1.5 rounded-lg transition-colors ${granularity === g ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}>{g}</button>
+              <button key={g} onClick={() => setGranularity(g)} className={`px-3 py-1.5 rounded-lg transition-colors ${granularity === g ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}>{t(`reports.master.granularities.${g}`)}</button>
             ))}
           </div>
         </div>
 
-        <div className="ml-auto text-sm text-gray-500 dark:text-gray-400">Period columns: {periodColumns.length} • {granularity}</div>
+        <div className="ml-auto text-sm text-gray-500 dark:text-gray-400">{t("reports.master.periodColumns", { count: periodColumns.length, granularity })}</div>
       </div>
 
       <div className="mb-6">
-        <h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">Narratives</h3>
-        {!master && <div className="text-sm text-gray-500 dark:text-gray-400">No data loaded.</div>}
-        {master && master.goals && master.goals.length === 0 && <div className="text-sm text-gray-500 dark:text-gray-400">No goals found.</div>}
+        <h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">{t("reports.master.narrativesTitle")}</h3>
+        {!master && <div className="text-sm text-gray-500 dark:text-gray-400">{t("reports.master.noData")}</div>}
+        {master && master.goals && master.goals.length === 0 && <div className="text-sm text-gray-500 dark:text-gray-400">{t("reports.master.noGoals")}</div>}
         {master && master.goals && master.goals.length > 0 && (
           <div className="space-y-4">
             {master.goals.map((g) => (
@@ -773,18 +787,18 @@ th{background:#f3f4f6}
                               <div>
                                 <div className="text-base md:text-lg font-medium text-gray-800 dark:text-gray-100">{a.title}</div>
                                 <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">
-                                  Target: <span className="font-medium text-gray-800 dark:text-gray-100">{a.targetMetric ? "" : "-"}</span>
+                                  {t("reports.master.targetText")}: <span className="font-medium text-gray-800 dark:text-gray-100">{a.targetMetric ? "" : "-"}</span>
                                 </div>
                                 <div className="mt-2">
                                   {a.targetMetric ? renderMetricsList(a.targetMetric) : null}
                                 </div>
                               </div>
-                              <div className="text-sm text-gray-400">{a.status} • {a.isDone ? "Done" : "Open"}</div>
+                              <div className="text-sm text-gray-400">{a.status} • {a.isDone ? t("reports.master.done") : t("reports.master.open")}</div>
                             </div>
 
                             <div className="mt-3 space-y-2">
                               {(a.reports || []).length === 0 ? (
-                                <div className="text-xs text-gray-400">No reports.</div>
+                                <div className="text-xs text-gray-400">{t("reports.master.noReports")}</div>
                               ) : (
                                 (a.reports || []).map((r) => (
                                   <div key={r.id} className="text-sm border rounded p-2 bg-gray-50 dark:bg-gray-900">
@@ -792,10 +806,10 @@ th{background:#f3f4f6}
                                       <div className="text-sm font-medium">#{r.id} • <span className="text-gray-600 dark:text-gray-300">{r.status}</span></div>
                                       <div className="text-xs text-gray-400">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</div>
                                     </div>
-                                    <div className="mt-1 text-sm text-gray-700 dark:text-gray-200">{r.narrative || <em className="text-gray-400">No narrative</em>}</div>
+                                    <div className="mt-1 text-sm text-gray-700 dark:text-gray-200">{r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}</div>
                                     {r.metrics && (
                                       <div className="mt-2">
-                                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Metrics</div>
+                                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t("reports.metrics")}</div>
                                         <div className="mt-1">{renderMetricsList(r.metrics)}</div>
                                       </div>
                                     )}
@@ -816,15 +830,15 @@ th{background:#f3f4f6}
       </div>
 
       <div>
-        <h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">Data Table</h3>
+        <h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">{t("reports.table.titleFull")}</h3>
         <div className="overflow-auto border rounded">
           <table className="min-w-full">
             <thead>
               <tr>
-                <th className="border px-3 py-3 text-left text-base text-gray-900 dark:text-gray-100">Title</th>
-                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">Weight</th>
-                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">Metric</th>
-                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">Target</th>
+                <th className="border px-3 py-3 text-left text-base text-gray-900 dark:text-gray-100">{t("reports.table.title")}</th>
+                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">{t("reports.table.weight")}</th>
+                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">{t("reports.table.metric")}</th>
+                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">{t("reports.table.target")}</th>
                 {periodColumns.map((p) => (
                   <th key={p} className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">
                     {granularity === "monthly" ? fmtMonthKey(p) : granularity === "quarterly" ? fmtQuarterKey(p) : p}
@@ -862,7 +876,7 @@ th{background:#f3f4f6}
               {tableRows.length === 0 && (
                 <tr>
                   <td className="p-6 text-center text-gray-500 dark:text-gray-400" colSpan={4 + periodColumns.length}>
-                    No data to display
+                    {t("reports.table.noData")}
                   </td>
                 </tr>
               )}
@@ -878,15 +892,16 @@ th{background:#f3f4f6}
    Main wrapper - switch between review & master
 ------------------------- */
 export default function ReportsUI() {
+  const { t } = useTranslation();
   const [page, setPage] = useState("review");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 lg:p-8 max-w-8xl mx-auto transition-colors duration-200">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 md:p-6 lg:p-8 max-w-8xl mx-auto transition-colors duration-200">
       <header className="mb-6 md:mb-8">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-gray-100">Reports Dashboard</h1>
-            <p className="text-base text-gray-600 dark:text-gray-300 mt-2">Load, review and generate comprehensive reports</p>
+            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-gray-100">{t("reports.header.title")}</h1>
+            <p className="text-base text-gray-600 dark:text-gray-300 mt-2">{t("reports.header.subtitle")}</p>
           </div>
           <div className="hidden md:block">
             <TopRightTabs value={page} onChange={setPage} />
@@ -901,7 +916,7 @@ export default function ReportsUI() {
       {page === "master" && <MasterReportPageWrapper />}
 
       <footer className="mt-10 md:mt-14 text-center text-gray-500 dark:text-gray-400 text-sm">
-        <p>© {new Date().getFullYear()} Report System | v2.0</p>
+        <p>© {new Date().getFullYear()} {t("reports.footer.systemName")} | v2.0</p>
       </footer>
     </div>
   );
