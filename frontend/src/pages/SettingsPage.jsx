@@ -1,4 +1,3 @@
-// src/pages/SettingsPage.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -15,7 +14,7 @@ import {
 } from "lucide-react";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import Toast from "../components/common/Toast";
-import { api, rawFetch } from "../api/auth";
+import { api } from "../api/auth";
 
 /* -------------------------
    Helpers
@@ -174,8 +173,14 @@ const SettingsPage = () => {
       const fd = new FormData();
       fd.append("profilePicture", profilePictureFile);
 
-      // use rawFetch so FormData is preserved and api wrapper handles credentials & tokens
-      const resp = await rawFetch("/api/settings/profile-picture", "PUT", fd, { isFormData: true });
+      // send with credentials; include Authorization header if available
+      const token = (typeof window !== "undefined" && window.__ACCESS_TOKEN) ? window.__ACCESS_TOKEN : localStorage.getItem("authToken");
+      const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/settings/profile-picture`, {
+        method: "PUT",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+        body: fd,
+      });
 
       if (!resp.ok) {
         const errBody = await resp.text().catch(() => null);
@@ -185,9 +190,26 @@ const SettingsPage = () => {
       }
 
       const data = await resp.json();
-      const newUser = { ...(data.user || {}), profilePicture: data.profilePicture || data.user?.profilePicture || settings.profilePicture };
-      updateUser(newUser, data.token || undefined);
-      setSettings((s) => ({ ...s, profilePicture: newUser.profilePicture }));
+
+      // robust merge: prefer a full user from server if present, otherwise merge into existing stored user
+      let returnedUser = data.user || null;
+      if (!returnedUser || !Array.isArray(returnedUser.permissions)) {
+        try {
+          const stored = JSON.parse(localStorage.getItem("user") || "{}");
+          returnedUser = { ...stored };
+        } catch (e) {
+          returnedUser = {};
+        }
+      }
+
+      const mergedUser = {
+        ...returnedUser,
+        profilePicture: data.profilePicture || returnedUser.profilePicture || settings.profilePicture || ""
+      };
+
+      // update context + storage (updateUser handles theme/lang etc)
+      updateUser(mergedUser, data.token || undefined);
+      setSettings((s) => ({ ...s, profilePicture: mergedUser.profilePicture }));
       removeProfilePicturePreview();
       showToast(t("settings.toasts.pictureSuccess") || "Profile picture updated", "update");
     } catch (err) {
@@ -234,7 +256,19 @@ const SettingsPage = () => {
 
       const data = await api("/api/settings", "PUT", payload);
 
-      if (data.user) updateUser(data.user, data.token);
+      if (data?.user) {
+        // If backend returns a partial user, merge instead of replacing
+        let returnedUser = data.user;
+        if (!returnedUser || !Array.isArray(returnedUser.permissions)) {
+          try {
+            const stored = JSON.parse(localStorage.getItem("user") || "{}");
+            returnedUser = { ...stored, ...returnedUser };
+          } catch (e) {
+            returnedUser = { ...returnedUser };
+          }
+        }
+        updateUser(returnedUser, data.token);
+      }
       showToast(t("settings.toasts.updateSuccess") || "Settings updated", "update");
       setOldPassword("");
       setNewPassword("");
@@ -286,21 +320,17 @@ const SettingsPage = () => {
             >
               <span className="sr-only">Toggle theme</span>
 
-              {/* small sun icon (left) */}
               <Sun className={`h-4 w-4 ${settings.darkMode ? "text-gray-400" : "text-yellow-500"}`} />
 
-              {/* track: width 48px (w-12), height 24px (h-6), padding 1 (p-1) */}
               <div
                 className={`mx-2 w-12 h-6  rounded-full transition-colors ${settings.darkMode ? "bg-sky-600" : "bg-gray-300"}`}
                 aria-hidden
               >
-                {/* knob: w-6 h-6, moves by translate-x-6 when dark */}
                 <div
                   className={`bg-white w-6 h-6 rounded-full shadow-sm transform transition-transform ${settings.darkMode ? "translate-x-6" : "translate-x-0"}`}
                 />
               </div>
 
-              {/* moon icon (right) */}
               <Moon className={`h-4 w-4 ${settings.darkMode ? "text-white" : "text-gray-400"}`} />
             </button>
           </div>

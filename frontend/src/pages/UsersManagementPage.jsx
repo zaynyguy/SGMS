@@ -1,10 +1,32 @@
 // src/pages/UsersManagementPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Edit, Trash, UserPlus, X } from 'lucide-react';
 import { fetchUsers, createUser, updateUser, deleteUser, fetchRoles } from '../api/admin';
 import Toast from '../components/common/Toast';
 
+/* ---------- Helpers ---------- */
+const initialsFromName = (name, fallback) => {
+  const n = (name || "").trim();
+  if (!n) {
+    const u = (fallback || "").trim();
+    return (u[0] || "?").toUpperCase();
+  }
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const gradientFromString = (s) => {
+  let hash = 0;
+  for (let i = 0; i < (s || "").length; i += 1) hash = (hash << 5) - hash + s.charCodeAt(i);
+  const a = Math.abs(hash);
+  const h1 = a % 360;
+  const h2 = (180 + h1) % 360;
+  return `linear-gradient(135deg, hsl(${h1} 70% 60%), hsl(${h2} 70% 40%))`;
+};
+
+/* ---------- Component ---------- */
 const UsersManagementPage = () => {
   const { t } = useTranslation();
   const [users, setUsers] = useState([]);
@@ -24,14 +46,14 @@ const UsersManagementPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState({ message: '', type: '', visible: false });
 
-  // Show toast notification
-  const showToast = (message, type = 'info') => {
-    setToast({ message, type, visible: true });
-  };
+  // For profile picture selection (file or URL)
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null); // dataURL or URL
+  const previewRef = useRef(null);
 
-  const handleToastClose = () => {
-    setToast({ message: '', type: '', visible: false });
-  };
+  // Toast helpers
+  const showToast = (message, type = 'info') => setToast({ message, type, visible: true });
+  const handleToastClose = () => setToast({ message: '', type: '', visible: false });
 
   useEffect(() => {
     const loadData = async () => {
@@ -43,6 +65,7 @@ const UsersManagementPage = () => {
         const rolesData = await fetchRoles();
         setRoles(rolesData || []);
       } catch (error) {
+        console.error("load users error:", error);
         showToast(t('admin.users.errors.loadFailed', { error: error?.message || error }), 'error');
       } finally {
         setLoading(false);
@@ -51,27 +74,23 @@ const UsersManagementPage = () => {
     loadData();
   }, [t]);
 
+  // cleanup object URL
+  React.useEffect(() => {
+    return () => {
+      if (previewRef.current) {
+        URL.revokeObjectURL(previewRef.current);
+        previewRef.current = null;
+      }
+    };
+  }, []);
+
   const validateForm = () => {
     const errors = {};
-
-    if (!formData.username.trim()) {
-      errors.username = t('admin.users.errors.usernameRequired');
-    }
-
-    if (!formData.name.trim()) {
-      errors.name = t('admin.users.errors.nameRequired');
-    }
-
-    if (!userToEdit && !formData.password) {
-      errors.password = t('admin.users.errors.passwordRequired');
-    } else if (formData.password && formData.password.length < 8) {
-      errors.password = t('admin.users.errors.passwordTooShort');
-    }
-
-    if (!formData.roleId) {
-      errors.roleId = t('admin.users.errors.roleRequired');
-    }
-
+    if (!formData.username.trim()) errors.username = t('admin.users.errors.usernameRequired');
+    if (!formData.name.trim()) errors.name = t('admin.users.errors.nameRequired');
+    if (!userToEdit && !formData.password) errors.password = t('admin.users.errors.passwordRequired');
+    else if (formData.password && formData.password.length < 8) errors.password = t('admin.users.errors.passwordTooShort');
+    if (!formData.roleId) errors.roleId = t('admin.users.errors.roleRequired');
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -82,12 +101,16 @@ const UsersManagementPage = () => {
         username: user.username || '',
         name: user.name || '',
         password: '',
-        roleId: user.roleId || ''
+        roleId: user.role?.id || user.roleId || ''
       });
       setUserToEdit(user);
+      setProfilePicturePreview(user.profilePicture || user.profilePictureUrl || null);
+      setProfilePictureFile(null);
     } else {
       setFormData({ username: '', name: '', password: '', roleId: '' });
       setUserToEdit(null);
+      setProfilePictureFile(null);
+      setProfilePicturePreview(null);
     }
     setFormErrors({});
     setShowUserModal(true);
@@ -95,20 +118,61 @@ const UsersManagementPage = () => {
 
   const handleCloseUserModal = () => {
     setShowUserModal(false);
+    if (previewRef.current) {
+      URL.revokeObjectURL(previewRef.current);
+      previewRef.current = null;
+    }
+    setProfilePictureFile(null);
   };
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: '' }));
-    }
+    if (formErrors[name]) setFormErrors(prev => ({ ...prev, [name]: '' }));
   };
+
+  // file -> objectURL preview
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast(t('admin.users.errors.invalidImage') || "Invalid image file", "error");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(t('admin.users.errors.imageTooLarge') || "Image too large (max 5 MB)", "error");
+      return;
+    }
+    if (previewRef.current) {
+      URL.revokeObjectURL(previewRef.current);
+      previewRef.current = null;
+    }
+    const url = URL.createObjectURL(file);
+    previewRef.current = url;
+    setProfilePicturePreview(url);
+    setProfilePictureFile(file);
+  };
+
+  const removeProfilePreview = () => {
+    if (previewRef.current) {
+      URL.revokeObjectURL(previewRef.current);
+      previewRef.current = null;
+    }
+    setProfilePicturePreview(null);
+    setProfilePictureFile(null);
+  };
+
+  // Convert file -> base64 dataURL (so controller receiving profilePicture string works)
+  const fileToDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
 
   const handleSaveUser = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) {
       showToast(t('admin.users.errors.formValidation'), 'error');
       return;
@@ -116,17 +180,37 @@ const UsersManagementPage = () => {
 
     try {
       setSubmitting(true);
+
+      // If file selected, convert to dataURL and send as profilePicture string.
+      // If preview is a normal URL string (no file), that will be sent as-is.
+      let profilePictureValue = null;
+      if (profilePictureFile) {
+        profilePictureValue = await fileToDataUrl(profilePictureFile);
+      } else if (profilePicturePreview) {
+        profilePictureValue = profilePicturePreview;
+      }
+
+      const payload = {
+        username: formData.username.trim(),
+        name: formData.name.trim(),
+        roleId: Number(formData.roleId),
+        ...(formData.password ? { password: formData.password } : {}),
+        ...(profilePictureValue ? { profilePicture: profilePictureValue } : {}),
+      };
+
       if (userToEdit) {
-        await updateUser(userToEdit.id, formData);
+        await updateUser(userToEdit.id, payload);
         showToast(t('admin.users.toasts.updateSuccess', { name: formData.name }), 'success');
       } else {
-        await createUser(formData);
+        await createUser(payload);
         showToast(t('admin.users.toasts.createSuccess', { name: formData.name }), 'success');
       }
+
       const updatedUsers = await fetchUsers();
       setUsers(updatedUsers || []);
       handleCloseUserModal();
     } catch (error) {
+      console.error("save user error:", error);
       showToast(t('admin.users.errors.saveFailed', { error: error?.message || error }), 'error');
     } finally {
       setSubmitting(false);
@@ -146,6 +230,7 @@ const UsersManagementPage = () => {
       setUsers(updatedUsers || []);
       showToast(t('admin.users.toasts.deleteSuccess', { name: userToDelete.name }), 'success');
     } catch (error) {
+      console.error("delete user error:", error);
       showToast(t('admin.users.errors.deleteFailed', { error: error?.message || error }), 'error');
     } finally {
       setSubmitting(false);
@@ -173,16 +258,8 @@ const UsersManagementPage = () => {
         {t('admin.users.title')}
       </h1>
       <section id="users" role="tabpanel" aria-labelledby="users-tab" className="p-4 sm:p-6 min-h-screen bg-gray-50 dark:bg-gray-900">
-        {/* Toast Notification */}
-        {toast.visible && (
-          <Toast
-            message={toast.message}
-            type={toast.type}
-            onClose={handleToastClose}
-          />
-        )}
+        {toast.visible && <Toast message={toast.message} type={toast.type} onClose={handleToastClose} />}
 
-        {/* Add User Button */}
         <div className="flex justify-end mb-6">
           <button
             onClick={() => handleOpenUserModal(null)}
@@ -194,50 +271,68 @@ const UsersManagementPage = () => {
           </button>
         </div>
 
-        {/* Desktop Table View */}
+        {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           {users.length > 0 ? (
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('admin.users.table.username')}</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('admin.users.table.name')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('admin.users.table.user')}</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('admin.users.table.role')}</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t('admin.users.table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{user.username}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">{user.name}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap space-x-1">
-                      <button
-                        onClick={() => handleOpenUserModal(user)}
-                        className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
-                        title={t('admin.actions.edit')}
-                        disabled={submitting}
-                        aria-label={t('admin.actions.edit')}
-                      >
-                        <Edit size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(user)}
-                        className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-150 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                        title={t('admin.actions.delete')}
-                        disabled={submitting}
-                        aria-label={t('admin.actions.delete')}
-                      >
-                        <Trash size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {users.map((user) => {
+                  const avatar = user.profilePicture || user.profilePictureUrl || null;
+                  const roleLabel = user.role || user.role?.name || user.roleId || t('admin.users.noRole');
+                  return (
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        <div className="flex items-center gap-3">
+                          {avatar ? (
+                            <img src={avatar} alt={user.name || user.username} className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: gradientFromString(user.name || user.username || "user") }}>
+                              {initialsFromName(user.name || "", user.username || "")}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <div className="font-medium text-gray-900 dark:text-white truncate">{user.name || user.username}</div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
+                          {roleLabel}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3 whitespace-nowrap space-x-1 text-right">
+                        <button
+                          onClick={() => handleOpenUserModal(user)}
+                          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-150 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white"
+                          title={t('admin.actions.edit')}
+                          disabled={submitting}
+                          aria-label={t('admin.actions.edit')}
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(user)}
+                          className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-150 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                          title={t('admin.actions.delete')}
+                          disabled={submitting}
+                          aria-label={t('admin.actions.delete')}
+                        >
+                          <Trash size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
@@ -262,37 +357,51 @@ const UsersManagementPage = () => {
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4">
           {users.length > 0 ? (
-            users.map((user) => (
-              <div key={user.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">{user.name}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</div>
+            users.map((user) => {
+              const avatar = user.profilePicture || user.profilePictureUrl || null;
+              const roleLabel = user.role || user.role?.name || user.roleId || t('admin.users.noRole');
+              return (
+                <div key={user.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      {avatar ? (
+                        <img src={avatar} alt={user.name || user.username} className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: gradientFromString(user.name || user.username || "user") }}>
+                          {initialsFromName(user.name || "", user.username || "")}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold text-gray-900 dark:text-white">{user.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</div>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleOpenUserModal(user)}
+                        className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150 text-blue-600 dark:text-blue-400"
+                        disabled={submitting}
+                        aria-label={t('admin.actions.edit')}
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(user)}
+                        className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-150 text-red-600 dark:text-red-400"
+                        disabled={submitting}
+                        aria-label={t('admin.actions.delete')}
+                      >
+                        <Trash size={18} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleOpenUserModal(user)}
-                      className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-150 text-blue-600 dark:text-blue-400"
-                      disabled={submitting}
-                      aria-label={t('admin.actions.edit')}
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(user)}
-                      className="p-2 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-150 text-red-600 dark:text-red-400"
-                      disabled={submitting}
-                      aria-label={t('admin.actions.delete')}
-                    >
-                      <Trash size={18} />
-                    </button>
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">{roleLabel}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">{user.role}</span>
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="text-gray-400 dark:text-gray-500 mb-4">
@@ -331,6 +440,36 @@ const UsersManagementPage = () => {
               </div>
 
               <form onSubmit={handleSaveUser} className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    {profilePicturePreview ? (
+                      <img src={profilePicturePreview} alt="preview" className="w-20 h-20 rounded-full object-cover border border-gray-100 dark:border-gray-700" />
+                    ) : userToEdit?.profilePicture ? (
+                      <img src={userToEdit.profilePicture} alt={userToEdit.name} className="w-20 h-20 rounded-full object-cover border border-gray-100 dark:border-gray-700" />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: gradientFromString(formData.name || formData.username || "user") }}>
+                        {initialsFromName(formData.name || "", formData.username || "")}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {t('admin.users.form.picture')}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input id="user-picture" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+                      <label htmlFor="user-picture" className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Upload
+                      </label>
+                      {profilePicturePreview && (
+                        <button type="button" onClick={removeProfilePreview} className="text-sm text-red-600 dark:text-red-400">Remove</button>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('admin.users.form.pictureHint') || 'You can upload an image (sent as data URL) or leave blank.'}</p>
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t('admin.users.form.username')} *

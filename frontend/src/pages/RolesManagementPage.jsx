@@ -1,9 +1,75 @@
-// src/pages/RolesManagementPage.jsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Shield, Settings, Trash, AlertTriangle, X } from 'lucide-react';
+import { Plus, Shield, Settings, Trash, AlertTriangle, X, FileText, Eye, Send, Zap, Bell, Monitor, Folder } from 'lucide-react';
 import { fetchRoles, fetchPermissions, createRole, updateRole, deleteRole } from '../api/admin';
 import Toast from '../components/common/Toast';
+
+/**
+ * Friendly mapping for permission keys -> label, description, icon
+ * Add/adjust items here to match your permission keys exactly.
+ */
+const PERMISSION_META = {
+  manage_gta: {
+    label: "Manage GTA",
+    description: "Create & edit GTA items",
+    Icon: Settings,
+  },
+  view_gta: {
+    label: "View GTA",
+    description: "View GTA items",
+    Icon: Eye,
+  },
+  submit_reports: {
+    label: "Submit Reports",
+    description: "Create and submit reports for activities",
+    Icon: Send,
+  },
+  view_reports: {
+    label: "View Reports",
+    description: "View submitted reports",
+    Icon: FileText,
+  },
+  manage_reports: {
+    label: "Manage Reports",
+    description: "Approve/Reject or manage reports",
+    Icon: Zap,
+  },
+  manage_settings: {
+    label: "Manage Settings",
+    description: "Access and modify system settings",
+    Icon: Shield,
+  },
+  view_audit_logs: {
+    label: "View Audit Logs",
+    description: "See audit log entries",
+    Icon: FileText,
+  },
+  manage_notifications: {
+    label: "Manage Notifications",
+    description: "Create and manage notifications",
+    Icon: Bell,
+  },
+  manage_dashboard: {
+    label: "Manage Dashboard",
+    description: "Edit dashboards & widgets",
+    Icon: Monitor,
+  },
+  view_dashboard: {
+    label: "View Dashboard",
+    description: "View dashboards",
+    Icon: Monitor,
+  },
+  manage_attachments: {
+    label: "Manage Attachments",
+    description: "Add/remove attachments",
+    Icon: Folder,
+  },
+  manage_access: {
+    label: "Manage Access",
+    description: "Role & group management controls",
+    Icon: Shield,
+  }
+};
 
 const RolesManagementPage = () => {
   const { t, i18n } = useTranslation();
@@ -13,11 +79,9 @@ const RolesManagementPage = () => {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState({ message: '', type: '', visible: false });
 
-  // New state for inline role addition
   const [isAddingRole, setIsAddingRole] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
-  
-  // State for pending permission changes
+
   const [pendingPermissionChanges, setPendingPermissionChanges] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -25,9 +89,7 @@ const RolesManagementPage = () => {
     setToast({ message, type, visible: true });
   };
 
-  const handleToastClose = () => {
-    setToast({ message: '', type: '', visible: false });
-  };
+  const handleToastClose = () => setToast({ message: '', type: '', visible: false });
 
   const loadData = useCallback(async () => {
     try {
@@ -37,11 +99,15 @@ const RolesManagementPage = () => {
         fetchRoles(),
         fetchPermissions()
       ]);
-      
-      // Map permission names -> ids for role.permissions if backend returns names
+
+      // If backend returns permission names on roles.reduce -> normalize to IDs
       const rolesWithPermissionIds = (rolesData || []).map(role => {
         const permissionIds = (role.permissions || [])
-          .map(pName => permissionsData.find(p => p.name === pName)?.id)
+          .map(pName => {
+            // if backend gives permission names, map to id
+            const found = (permissionsData || []).find(p => p.name === pName || p.id === pName);
+            return found ? found.id : null;
+          })
           .filter(Boolean);
         return { ...role, permissions: permissionIds };
       });
@@ -70,11 +136,7 @@ const RolesManagementPage = () => {
     }
 
     try {
-      await createRole({ 
-        name: newRoleName, 
-        description: '', 
-        permissions: [] 
-      });
+      await createRole({ name: newRoleName.trim(), description: '', permissions: [] });
       showToast(t('admin.roles.toasts.createSuccess', { name: newRoleName }), 'success');
       setNewRoleName('');
       setIsAddingRole(false);
@@ -98,7 +160,7 @@ const RolesManagementPage = () => {
   const handleSaveChanges = async () => {
     try {
       const updatePromises = [];
-      
+
       for (const roleId in pendingPermissionChanges) {
         const role = roles.find(r => r.id === Number(roleId));
         if (!role) continue;
@@ -124,7 +186,7 @@ const RolesManagementPage = () => {
           })
         );
       }
-      
+
       await Promise.all(updatePromises);
       showToast(t('admin.roles.toasts.updateSuccess'), 'success');
       await loadData();
@@ -135,7 +197,6 @@ const RolesManagementPage = () => {
   };
 
   const handleDeleteClick = async (role) => {
-    // Keep server canonical role name check (e.g. "Admin") — don't localize stored role name
     if (window.confirm(t('admin.roles.deleteConfirm.message', { name: role.name }))) {
       try {
         await deleteRole(role.id);
@@ -189,7 +250,6 @@ const RolesManagementPage = () => {
 
   return (
     <>
-      {/* Toast Notification */}
       {toast.visible && (
         <Toast 
           message={toast.message} 
@@ -212,9 +272,7 @@ const RolesManagementPage = () => {
       
       <section id="roles" role="tabpanel" aria-labelledby="roles-tab" className="bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          
           <div className="grid grid-cols-12 gap-6">
-            {/* Roles List Panel */}
             <div className="col-span-12 md:col-span-4 lg:col-span-3 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <Shield size={20} /> {t('admin.roles.rolesList')}
@@ -223,23 +281,25 @@ const RolesManagementPage = () => {
               {roles.length > 0 ? (
                 <ul className="space-y-1 mb-4">
                   {roles.map((role) => (
-                    <li key={role.id} className='flex items-center'>
+                    <li key={role.id} className='flex items-center justify-between'>
                       <div className="w-full text-left p-3 rounded-md text-gray-700 dark:text-gray-300">
                         {role.name}
                       </div>
-                      <button
-                        onClick={() => handleDeleteClick(role)}
-                        disabled={role.name === 'Admin'}
-                        className={`ml-2 p-2 rounded-md ${
-                          role.name === 'Admin' 
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50'
-                        }`}
-                        aria-label={t('admin.roles.deleteRole', { name: role.name })}
-                        title={role.name === 'Admin' ? t('admin.roles.deleteDisabled') : undefined}
-                      >
-                        <Trash size={16} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleDeleteClick(role)}
+                          disabled={role.name === 'Admin'}
+                          className={`ml-2 p-2 rounded-md ${
+                            role.name === 'Admin' 
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50'
+                          }`}
+                          aria-label={t('admin.roles.deleteRole', { name: role.name })}
+                          title={role.name === 'Admin' ? t('admin.roles.deleteDisabled') : undefined}
+                        >
+                          <Trash size={16} />
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -290,7 +350,6 @@ const RolesManagementPage = () => {
               )}
             </div>
 
-            {/* Permissions Matrix Panel */}
             <div className="col-span-12 md:col-span-8 lg:col-span-9 overflow-x-auto bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <Settings size={20} /> {t('admin.roles.permissions')}
@@ -312,38 +371,50 @@ const RolesManagementPage = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {permissions.map((permission) => (
-                        <tr key={permission.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200 sticky left-0 bg-white dark:bg-gray-800 z-10">
-                            {permission.name}
-                          </td>
-                          {roles.map((role) => {
-                            const hasPendingChange = pendingPermissionChanges[role.id] && 
-                                                    permission.id in pendingPermissionChanges[role.id];
-                            const isChecked = hasPendingChange 
-                              ? pendingPermissionChanges[role.id][permission.id]
-                              : (role.permissions || []).includes(permission.id);
-                              
-                            return (
-                              <td key={`perm-${permission.id}-role-${role.id}`} className="px-4 py-3 whitespace-nowrap text-center">
-                                <input
-                                  type="checkbox"
-                                  className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent cursor-pointer"
-                                  checked={isChecked}
-                                  onChange={(e) => handlePermissionChange(role.id, permission.id, e.target.checked)}
-                                  aria-label={t('admin.roles.permissionStatus', {
-                                    permission: permission.name,
-                                    role: role.name,
-                                    status: isChecked 
-                                      ? t('admin.roles.enabled') 
-                                      : t('admin.roles.disabled')
-                                  })}
-                                />
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
+                      {permissions.map((permission) => {
+                        const meta = PERMISSION_META[permission.name] || { label: permission.name, description: permission.description || "", Icon: FileText };
+                        const Icon = meta.Icon || FileText;
+                        return (
+                          <tr key={permission.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200 sticky left-0 bg-white dark:bg-gray-800 z-10">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 rounded-md bg-gray-100 dark:bg-gray-700/30">
+                                  <Icon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-medium text-gray-900 dark:text-white truncate">{meta.label}</div>
+                                  {meta.description && <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{meta.description}</div>}
+                                </div>
+                              </div>
+                            </td>
+
+                            {roles.map((role) => {
+                              const hasPendingChange = pendingPermissionChanges[role.id] && permission.id in pendingPermissionChanges[role.id];
+                              const isChecked = hasPendingChange 
+                                ? pendingPermissionChanges[role.id][permission.id]
+                                : (role.permissions || []).includes(permission.id);
+
+                              return (
+                                <td key={`perm-${permission.id}-role-${role.id}`} className="px-4 py-3 whitespace-nowrap text-center">
+                                  <input
+                                    type="checkbox"
+                                    className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent cursor-pointer"
+                                    checked={Boolean(isChecked)}
+                                    onChange={(e) => handlePermissionChange(role.id, permission.id, e.target.checked)}
+                                    aria-label={t('admin.roles.permissionStatus', {
+                                      permission: permission.name,
+                                      role: role.name,
+                                      status: isChecked 
+                                        ? t('admin.roles.enabled') 
+                                        : t('admin.roles.disabled')
+                                    })}
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

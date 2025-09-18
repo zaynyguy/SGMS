@@ -1,8 +1,9 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { loginUser as apiLoginUser } from "../api/auth";
 import { applyTheme } from "../uites/applyTheme";
+
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 const AuthContext = createContext(null);
 
@@ -34,30 +35,74 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, [token, i18n]);
 
+  // helper: fetch canonical /api/auth/me (returns user) — used only as a fallback
+  const fetchMe = useCallback(
+    async (accessToken) => {
+      try {
+        const resp = await fetch(`${API_URL}/api/auth/me`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          credentials: "include",
+        });
+        if (!resp.ok) return null;
+        const d = await resp.json();
+        return d;
+      } catch (e) {
+        return null;
+      }
+    },
+    [API_URL]
+  );
+
   // call the backend login endpoint (apiLoginUser) and handle tokens/cookies
-  const login = useCallback(async (username, password) => {
-    try {
-      const response = await apiLoginUser(username, password);
-      // backend returns { token, user }
-      const { token: newToken, user: loggedInUser } = response;
+  const login = useCallback(
+    async (username, password) => {
+      try {
+        const response = await apiLoginUser(username, password);
+        // backend usually returns { token, user }
+        const { token: newToken, user: loggedInUser } = response || {};
 
-      // keep localStorage for compatibility with code that expects it
-      localStorage.setItem("authToken", newToken);
-      localStorage.setItem("user", JSON.stringify(loggedInUser));
-      setToken(newToken);
-      setUser(loggedInUser);
+        // if user is partial (e.g. only { profilePicture: ... }) try to fetch canonical /me
+        let fullUser = loggedInUser;
+        if (!fullUser || !Array.isArray(fullUser.permissions)) {
+          const me = await fetchMe(newToken);
+          if (me) fullUser = me;
+        }
 
-      // set in-memory access token (preferred by api layer)
-      window.__ACCESS_TOKEN = newToken;
+        // create a safe user object to persist (avoid storing unexpected fields)
+        const safeUser = {
+          id: fullUser?.id,
+          username: fullUser?.username,
+          name: fullUser?.name,
+          role: fullUser?.role,
+          permissions: Array.isArray(fullUser?.permissions) ? fullUser.permissions : [],
+          language: fullUser?.language,
+          darkMode: fullUser?.darkMode,
+          profilePicture: fullUser?.profilePicture || fullUser?.profilePic || "",
+        };
 
-      if (loggedInUser?.language) i18n.changeLanguage(loggedInUser.language);
-      applyTheme(loggedInUser?.darkMode ?? "system");
-      return response;
-    } catch (error) {
-      console.error("Login failed:", error);
-      throw error;
-    }
-  }, [i18n]);
+        // keep localStorage for compatibility with code that expects it
+        localStorage.setItem("authToken", newToken);
+        localStorage.setItem("user", JSON.stringify(safeUser));
+        setToken(newToken);
+        setUser(safeUser);
+
+        // set in-memory access token (preferred by api layer)
+        window.__ACCESS_TOKEN = newToken;
+
+        if (safeUser?.language) i18n.changeLanguage(safeUser.language);
+        applyTheme(safeUser?.darkMode ?? "system");
+        return { token: newToken, user: safeUser };
+      } catch (error) {
+        console.error("Login failed:", error);
+        throw error;
+      }
+    },
+    [fetchMe, i18n]
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -72,40 +117,60 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Trying to refresh access token using the refresh cookie
-  const tryRefresh = useCallback(async () => {
-    // guarding to prevent concurrent refreshes
-    if (refreshing) return false;
-    setRefreshing(true);
-    try {
-      const r = await fetch("/api/auth/refresh", {
-        method: "POST",
-        credentials: "include", // sends httpOnly refresh cookie
-        headers: { Accept: "application/json" },
-      });
-      if (!r.ok) {
+  const tryRefresh = useCallback(
+    async () => {
+      // guarding to prevent concurrent refreshes
+      if (refreshing) return false;
+      setRefreshing(true);
+      try {
+        const r = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "include", // sends httpOnly refresh cookie
+          headers: { Accept: "application/json" },
+        });
+        if (!r.ok) {
+          setRefreshing(false);
+          await logout();
+          return false;
+        }
+        const data = await r.json();
+        const newToken = data.token;
+        let newUser = data.user;
+
+        // If server returned a partial user, try to fetch canonical /me
+        if (!newUser || !Array.isArray(newUser.permissions)) {
+          const me = await fetchMe(newToken);
+          if (me) newUser = me;
+        }
+
+        const safeUser = {
+          id: newUser?.id,
+          username: newUser?.username,
+          name: newUser?.name,
+          role: newUser?.role,
+          permissions: Array.isArray(newUser?.permissions) ? newUser.permissions : [],
+          language: newUser?.language,
+          darkMode: newUser?.darkMode,
+          profilePicture: newUser?.profilePicture || "",
+        };
+
+        // updates both in-memory and localStorage for compatibility
+        window.__ACCESS_TOKEN = newToken;
+        localStorage.setItem("authToken", newToken);
+        localStorage.setItem("user", JSON.stringify(safeUser));
+        setToken(newToken);
+        setUser(safeUser);
+        setRefreshing(false);
+        return true;
+      } catch (err) {
+        console.error("Refresh failed", err);
         setRefreshing(false);
         await logout();
         return false;
       }
-      const data = await r.json();
-      const newToken = data.token;
-      const newUser = data.user;
-
-      // updates both in-memory and localStorage for compatibility
-      window.__ACCESS_TOKEN = newToken;
-      localStorage.setItem("authToken", newToken);
-      localStorage.setItem("user", JSON.stringify(newUser));
-      setToken(newToken);
-      setUser(newUser);
-      setRefreshing(false);
-      return true;
-    } catch (err) {
-      console.error("Refresh failed", err);
-      setRefreshing(false);
-      await logout();
-      return false;
-    }
-  }, [refreshing, logout]);
+    },
+    [refreshing, logout, fetchMe]
+  );
 
   // Low-level fetch wrapper: adds Authorization header and attempts one refresh on 401
   const apiFetch = useCallback(
@@ -130,6 +195,7 @@ export const AuthProvider = ({ children }) => {
   );
 
   const updateUser = useCallback((updatedUserData, newToken) => {
+    // updatedUserData might be a full user or a partial patch. We persist what is passed.
     setUser(updatedUserData);
     localStorage.setItem("user", JSON.stringify(updatedUserData));
     if (newToken) {

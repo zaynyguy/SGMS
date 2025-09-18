@@ -30,19 +30,6 @@ CREATE TYPE activity_status AS ENUM ('To Do', 'In Progress', 'Done');
 CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 
 'Rejected');
 
--- =========================
--- REFRESH JWT TOKENS
--- =========================
-CREATE TABLE "RefreshTokens" (
-  id SERIAL PRIMARY KEY,
-  "userId" INTEGER NOT NULL REFERENCES "Users"(id) ON DELETE CASCADE,
-  token_hash TEXT NOT NULL,
-  "expiresAt" TIMESTAMPTZ NOT NULL,
-  revoked BOOLEAN DEFAULT false,
-  createdAt TIMESTAMPTZ DEFAULT now()
-);
-CREATE INDEX idx_refresh_tokens_userid ON "RefreshTokens"("userId");
-
 
 -- =========================
 -- ROLES & PERMISSIONS
@@ -93,6 +80,7 @@ CREATE TABLE "Groups" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
   "description" TEXT,
+  "profilePicture" TEXT,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -241,6 +229,20 @@ CREATE TABLE "AuditLogs" (
   "createdAt" TIMESTAMPTZ DEFAULT now()
 );
 CREATE INDEX idx_auditlogs_createdAt ON "AuditLogs" ("createdAt");
+
+-- =========================
+-- REFRESH JWT TOKENS
+-- =========================
+CREATE TABLE "RefreshTokens" (
+  id SERIAL PRIMARY KEY,
+  "userId" INTEGER NOT NULL REFERENCES "Users"(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,
+  "expiresAt" TIMESTAMPTZ NOT NULL,
+  revoked BOOLEAN DEFAULT false,
+  createdAt TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX idx_refresh_tokens_userid ON "RefreshTokens"("userId");
+
 
 -- =========================
 -- PROGRESS HISTROY
