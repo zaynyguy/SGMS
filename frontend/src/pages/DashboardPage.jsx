@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/pages/DashboardPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   fetchDashboardSummary,
   fetchDashboardCharts,
@@ -6,7 +8,8 @@ import {
   fetchNotifications,
   fetchAuditLogs,
 } from "../api/dashboard";
-import { fetchGroups } from "../api/groups";
+import { markAllNotificationsRead } from "../api/notifications";
+import { api } from "../api/auth";
 
 // --- Small UI helpers ---
 const LoadingSkeleton = ({ className = "h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" }) => (
@@ -30,38 +33,19 @@ function formatDate(d) {
   return dt.toLocaleDateString();
 }
 
-// In-memory cache hook
-const useApiWithCache = (apiBase) => {
-  const cacheRef = useRef(new Map());
+/* ---------------------------
+   Group bar chart (vertical) - enhanced
+---------------------------- */
+const GroupBarChart = ({ data = [], height = 120, maxOverride = null }) => {
+  if (!data || !data.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
 
-  const fetchWithCache = async (path, { force = false } = {}) => {
-    const key = path;
-    if (!force && cacheRef.current.has(key)) {
-      return cacheRef.current.get(key);
-    }
-    const full = `${apiBase}${path}`;
-    const res = await fetch(full);
-    if (!res.ok) throw new Error(`API ${full} responded ${res.status}`);
-    const json = await res.json();
-    cacheRef.current.set(key, json);
-    return json;
-  };
+  const values = data.map((d) => Number(d.value ?? d.progress ?? 0));
+  const max = Number(maxOverride ?? Math.max(...values, 1));
+  const barWidth = Math.max(28, Math.floor(360 / Math.max(1, data.length)));
 
-  const invalidate = () => cacheRef.current.clear();
-
-  return { fetchWithCache, invalidate };
-};
-
-// Chart Components
-const GroupBarChart = ({ data = [], height = 120 }) => {
-  if (!data.length) return <div className="text-sm text-gray-500">No chart data</div>;
-  const max = Math.max(...data.map((d) => Number(d.value ?? d.progress ?? 0)), 1);
-  const barWidth = Math.max(12, Math.floor(300 / data.length));
-  
   return (
     <div className="w-full overflow-x-auto">
       <svg viewBox={`0 0 ${data.length * barWidth} ${height + 1}`} className="w-full h-[180px]">
-        {/* baseline */}
         <line x1="0" y1={height} x2={data.length * barWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="1" />
         {data.map((d, i) => {
           const val = Number(d.value ?? d.progress ?? 0);
@@ -114,15 +98,10 @@ const GroupBarChart = ({ data = [], height = 120 }) => {
 };
 
 /* ---------------------------
-   Horizontal Task Bar Chart
-   - shows task label and progress as horizontal bar
-   - accessible title tooltip, percent badge
-   - scrollable if many tasks
+   TaskBarChart (horizontal)
 ---------------------------- */
 const TaskBarChart = ({ items = [], maxItems = 8 }) => {
   if (!items || !items.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No tasks</div>;
-
-  // Clip long labels with CSS (UI chooses to show first `maxItems` by default)
   const display = items.slice(0, maxItems);
 
   return (
@@ -199,7 +178,7 @@ const PieChart = ({ slices = [], size = 140 }) => {
 };
 
 /* ---------------------------
-   Overdue Table, Notifications, AuditPanel (unchanged, just reused)
+   Overdue Table, Notifications, AuditPanel (unchanged)
 ---------------------------- */
 const OverdueTable = ({ rows = [], loading, t }) => {
   if (loading) return <LoadingSkeleton className="h-48 w-full" />;
@@ -303,7 +282,17 @@ const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
 // --- Main Dashboard Component ---
 export default function DashboardPage() {
   const { t } = useTranslation();
-  const [darkMode, setDarkMode] = useState(false);
+
+  // initialize darkMode from stored preference or OS preference
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem("theme");
+      if (stored) return stored === "dark";
+    } catch (e) {
+      // ignore
+    }
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
 
   const [dashboardData, setDashboardData] = useState({
     summary: null,
@@ -319,57 +308,46 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ group: "", dateFrom: "", dateTo: "", status: "" });
   const [error, setError] = useState(null);
+  const [auditPermDenied, setAuditPermDenied] = useState(false);
+  const [marking, setMarking] = useState(false);
 
-  const loadAll = async ({ force = false } = {}) => {
+  // keep DOM class and persist preference when darkMode changes
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     try {
-      setLoading(true);
-      setError(null);
+      localStorage.setItem("theme", darkMode ? "dark" : "light");
+    } catch (e) {
+      // ignore localStorage errors (e.g. private mode)
+    }
+  }, [darkMode]);
 
-      // Fetch all data in parallel for better performance
-      const [
-        summaryData,
-        groupBarsData,
-        taskBarsData,
-        reportsData,
-        overdueData,
-        notificationsData,
-        groupsData,
-        auditData
-      ] = await Promise.allSettled([
-        fetchDashboardSummary({ 
-          groupId: filters.group, 
-          dateFrom: filters.dateFrom, 
-          dateTo: filters.dateTo, 
-          status: filters.status 
-        }),
-        fetchDashboardCharts({ 
-          type: "group", 
-          groupId: filters.group, 
-          dateFrom: filters.dateFrom, 
-          dateTo: filters.dateTo 
-        }),
-        fetchDashboardCharts({ 
-          type: "task", 
-          groupId: filters.group, 
-          top: 8 
-        }),
-        fetchDashboardCharts({ 
-          type: "reports", 
-          groupId: filters.group 
-        }),
-        fetchOverdueTasks({ 
-          limit: 10, 
-          groupId: filters.group 
-        }),
-        fetchNotificationsHelper({ 
-          limit: 10 
-        }),
-        // <-- replaced fetchWithCache('/groups') with shared API
-        fetchGroups(),
-        isManager ? fetchAuditLogs({ limit: 10 }) : Promise.resolve([])
+  // Toggle dark mode (state only)
+  const toggleDarkMode = () => {
+    setDarkMode((prev) => !prev);
+  };
+
+  const loadAll = async () => {
+    setLoading(true);
+    setError(null);
+    setAuditPermDenied(false);
+
+    try {
+      const results = await Promise.allSettled([
+        fetchDashboardSummary({ groupId: filters.group, dateFrom: filters.dateFrom, dateTo: filters.dateTo, status: filters.status }),
+        fetchDashboardCharts({ type: "group", groupId: filters.group, dateFrom: filters.dateFrom, dateTo: filters.dateTo }),
+        fetchDashboardCharts({ type: "task", groupId: filters.group, top: 8 }),
+        fetchDashboardCharts({ type: "reports", groupId: filters.group }),
+        fetchOverdueTasks({ limit: 10, groupId: filters.group }),
+        fetchNotifications({ limit: 5 }),
+        fetchAuditLogs({ limit: 5 }),
       ]);
 
-      // Handle results
+      const [summaryRes, groupRes, taskRes, reportsRes, overdueRes, notifsRes, auditRes] = results;
+
       const newData = {
         summary: summaryRes.status === "fulfilled" ? summaryRes.value : null,
         groupBars: groupRes.status === "fulfilled" ? groupRes.value : [],
@@ -424,7 +402,13 @@ export default function DashboardPage() {
   const handleMarkNotificationsRead = async () => {
     setMarking(true);
     try {
-      await markAllNotificationsRead();
+      try {
+        await markAllNotificationsRead();
+      } catch (err) {
+        console.warn("markAllNotificationsRead helper failed, falling back to api()", err);
+        await api("/api/notifications/mark-all-read", "POST");
+      }
+
       setDashboardData((prev) => ({
         ...prev,
         notifications: prev.notifications.map((n) => ({ ...n, read: true })),
@@ -548,7 +532,6 @@ export default function DashboardPage() {
             {loading ? (
               <LoadingSkeleton className="h-28" />
             ) : (
-              // NEW: TaskBarChart replaces the small list. It provides horizontal progress bars.
               <TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={6} />
             )}
           </div>
