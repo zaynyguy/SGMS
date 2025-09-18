@@ -1,10 +1,8 @@
 // src/api/dashboard.js
 import { api } from "./auth";
 
-
 /**
  * Build a querystring from an object, skipping null/undefined/empty values.
- * keys are encoded.
  */
 const buildQs = (params = {}) => {
   const keys = Object.keys(params).filter(
@@ -31,9 +29,7 @@ const asString = (v) => {
 };
 
 /**
- * GET /api/dashboard/summary
- * Query params: groupId?, dateFrom?, dateTo?, status?
- * Returns a normalized object where counts/progress are strings for UI bindings.
+ * Fetch dashboard summary.
  */
 export const fetchDashboardSummary = async ({
   groupId = null,
@@ -43,34 +39,24 @@ export const fetchDashboardSummary = async ({
 } = {}) => {
   const qs = buildQs({ groupId, dateFrom, dateTo, status });
   const res = await api(`/api/dashboard/summary${qs}`, "GET");
-
-  // controller returns unread_notifications field (see controller),
-  // and various numeric fields. Normalize them to strings for binding.
   return {
-    overall_goal_progress: asString(res.overall_goal_progress ?? res.overall_goal_progress ?? "0"),
-    overall_goal_delta: res.overall_goal_delta ?? null, // keep numeric if available
+    overall_goal_progress: asString(res.overall_goal_progress ?? "0"),
+    overall_goal_delta: res.overall_goal_delta ?? null,
     overall_task_progress: asString(res.overall_task_progress ?? "0"),
     overall_activity_progress: asString(res.overall_activity_progress ?? "0"),
     pending_reports: asString(res.pending_reports ?? "0"),
     goals_count: asString(res.goals_count ?? "0"),
     tasks_count: asString(res.tasks_count ?? "0"),
     activities_count: asString(res.activities_count ?? "0"),
-    // controller uses unread_notifications name
     unread: res.unread_notifications ?? res.unread ?? 0,
-    // include raw payload for any extra fields
     _raw: res,
   };
 };
 
 /**
- * GET /api/dashboard/charts
- * Query params: type=group|task|reports|history, groupId?, dateFrom?, dateTo?, top?
- *
- * Normalizes common fields:
- *  - For type=group: returns [{ groupId, name, progress }] with progress as string
- *  - For type=task: returns [{ taskId, title, progress }] with progress string
- *  - For type=reports: controller returns an object {Pending: n, Approved: n, Rejected: n}
- *      — this helper returns an array [{ label, count }]
+ * Fetch chart data.
+ * IMPORTANT: when type === 'group', we normalize each item to:
+ *   { groupId: string, name: string, progress: string }
  */
 export const fetchDashboardCharts = async ({
   type = "group",
@@ -82,14 +68,20 @@ export const fetchDashboardCharts = async ({
   const qs = buildQs({ type, groupId, dateFrom, dateTo, top });
   const res = await api(`/api/dashboard/charts${qs}`, "GET");
 
-  // type-specific normalization
   if (type === "group") {
     if (!Array.isArray(res)) return [];
-    return res.map((g) => ({
-      groupId: g.groupId ?? g.id ?? null,
-      name: g.name ?? g.label ?? "",
-      progress: asString(g.progress ?? g.value ?? "0"),
-    }));
+    return res.map((item) => {
+      const rawId = item.groupId ?? item.id ?? item.group_id ?? item.group ?? null;
+      const groupIdStr = rawId !== null && rawId !== undefined ? String(rawId) : null;
+      const name = item.name ?? item.label ?? item.groupName ?? "";
+      const progress = asString(item.progress ?? item.value ?? 0);
+      return {
+        groupId: groupIdStr,
+        name,
+        progress,
+        _raw: item,
+      };
+    });
   }
 
   if (type === "task") {
@@ -97,36 +89,32 @@ export const fetchDashboardCharts = async ({
     return res.map((t) => ({
       taskId: t.taskId ?? t.id ?? null,
       label: t.title ?? t.label ?? t.name ?? "",
-      progress: asString(t.progress ?? t.value ?? "0"),
+      progress: asString(t.progress ?? t.value ?? 0),
+      _raw: t,
     }));
   }
 
   if (type === "reports") {
-    // controller returns an object like { Pending: n, Approved: n, Rejected: n }
-    // some backends may return array of { label, count } — support both.
+    // Support both: object { Pending: n } or array [{ label, count }]
     if (Array.isArray(res)) {
-      return res.map((r) => ({ label: r.label, count: Number(r.count ?? r.value ?? 0) }));
+      return res.map((r) => ({ label: r.label, count: Number(r.count ?? r.value ?? 0), color: r.color }));
     }
-    if (typeof res === "object" && res !== null) {
-      const labels = Object.keys(res);
-      return labels.map((lbl) => ({ label: lbl, count: Number(res[lbl] ?? 0) }));
+    if (res && typeof res === "object") {
+      return Object.keys(res).map((k) => ({ label: k, count: Number(res[k] ?? 0) }));
     }
     return [];
   }
 
-  // history and others: pass through
+  // history or other types: return as-is (caller expects array)
   return res;
 };
 
 /**
- * GET /api/dashboard/overdue
- * Query params: limit?, groupId?
- * Controller returns rows with fields like taskId, taskTitle, dueDate, days_overdue, assigneeName, groupName.
+ * Fetch overdue tasks.
  */
 export const fetchOverdueTasks = async ({ limit = 5, groupId = null } = {}) => {
   const qs = buildQs({ limit, groupId });
   const res = await api(`/api/dashboard/overdue${qs}`, "GET");
-
   if (!Array.isArray(res)) return [];
   return res.map((r) => ({
     id: r.taskId ?? r.id,
@@ -145,21 +133,25 @@ export const fetchOverdueTasks = async ({ limit = 5, groupId = null } = {}) => {
 };
 
 /**
- * GET /api/dashboard/notifications
- * Query params: limit?, userId?
- * Controller returns array of notifications.
+ * Notifications
  */
 export const fetchNotifications = async ({ limit = 10, userId = null } = {}) => {
   const qs = buildQs({ limit, userId });
   const res = await api(`/api/dashboard/notifications${qs}`, "GET");
-  if (!Array.isArray(res)) return res?.items ?? [];
-  return res;
+  return Array.isArray(res) ? res : res?.items ?? [];
 };
 
 /**
- * GET /api/dashboard/audit
- * Query params: limit?
- * Requires manage_dashboard permission server-side; UI should hide audit panel unless permitted.
+ * Mark notifications read (mark all or per-user)
+ * NOTE: backend endpoint must exist. This calls POST /api/dashboard/notifications/mark-read
+ */
+export const markNotificationsRead = async ({ userId = null } = {}) => {
+  const qs = buildQs({ userId });
+  return api(`/api/dashboard/notifications/mark-read${qs}`, "POST");
+};
+
+/**
+ * Audit logs (manager-only)
  */
 export const fetchAuditLogs = async ({ limit = 25 } = {}) => {
   const qs = buildQs({ limit });
@@ -176,28 +168,4 @@ export const fetchAuditLogs = async ({ limit = 25 } = {}) => {
     createdAt: r.createdAt ?? r.time ?? null,
     _raw: r,
   }));
-};
-
-/**
- * Optional drilldown helpers — the controller you posted doesn't include these endpoints,
- * but typical dashboard flows use them. If your backend exposes /api/goals, /api/tasks etc. keep them.
- */
-export const fetchGoals = async (qsParams = {}) => {
-  const qs = buildQs(qsParams);
-  return await api(`/api/goals${qs}`, "GET");
-};
-
-export const fetchTasks = async (qsParams = {}) => {
-  const qs = buildQs(qsParams);
-  return await api(`/api/tasks${qs}`, "GET");
-};
-
-export const fetchActivities = async (qsParams = {}) => {
-  const qs = buildQs(qsParams);
-  return await api(`/api/activities${qs}`, "GET");
-};
-
-export const fetchReports = async (qsParams = {}) => {
-  const qs = buildQs(qsParams);
-  return await api(`/api/reports${qs}`, "GET");
 };
