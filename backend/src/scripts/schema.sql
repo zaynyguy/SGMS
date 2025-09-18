@@ -27,7 +27,22 @@ DROP TYPE IF EXISTS report_status CASCADE;
 CREATE TYPE goal_status AS ENUM ('Not Started', 'In Progress', 'Completed', 'On Hold');
 CREATE TYPE task_status AS ENUM ('To Do', 'In Progress', 'Done', 'Blocked');
 CREATE TYPE activity_status AS ENUM ('To Do', 'In Progress', 'Done');
-CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 'Rejected');
+CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 
+'Rejected');
+
+-- =========================
+-- REFRESH JWT TOKENS
+-- =========================
+CREATE TABLE "RefreshTokens" (
+  id SERIAL PRIMARY KEY,
+  "userId" INTEGER NOT NULL REFERENCES "Users"(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,
+  "expiresAt" TIMESTAMPTZ NOT NULL,
+  revoked BOOLEAN DEFAULT false,
+  createdAt TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX idx_refresh_tokens_userid ON "RefreshTokens"("userId");
+
 
 -- =========================
 -- ROLES & PERMISSIONS
@@ -57,6 +72,7 @@ CREATE TABLE "Users" (
   "roleId" INTEGER REFERENCES "Roles"("id") ON DELETE SET NULL,
   "language" VARCHAR(10) DEFAULT 'en',
   "darkMode" BOOLEAN DEFAULT false,
+  "token_version" INTEGER DEFAULT 0 NOT NULL,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

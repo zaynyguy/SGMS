@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import Toast from "../components/common/Toast";
+import { api, rawFetch } from "../api/auth";
 
 /* -------------------------
    Helpers
@@ -56,7 +57,7 @@ const gradientFromString = (s) => {
 ------------------------- */
 const SettingsPage = () => {
   const { t } = useTranslation();
-  const { token, updateUser } = useAuth();
+  const { updateUser } = useAuth();
 
   const [settings, setSettings] = useState({
     username: "",
@@ -78,36 +79,6 @@ const SettingsPage = () => {
   const [uploadingPicture, setUploadingPicture] = useState(false);
 
   const previewObjectUrlRef = useRef(null);
-
-  /* Load settings */
-  const fetchSettings = async () => {
-    try {
-      const url = `${import.meta.env.VITE_API_URL}/api/settings`;
-      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!resp.ok) throw new Error("Network response was not ok");
-      const data = await resp.json();
-      setSettings((prev) => ({ ...prev, ...data }));
-      const local = localStorage.getItem("theme");
-      const wantDark = local !== null ? local === "dark" : Boolean(data.darkMode);
-      applyDarkClass(wantDark);
-      setSettings((prev) => ({ ...prev, darkMode: wantDark }));
-    } catch (err) {
-      showToast(t("settings.errors.loadError") || "Failed to load settings", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSettings();
-    return () => {
-      if (previewObjectUrlRef.current) {
-        URL.revokeObjectURL(previewObjectUrlRef.current);
-        previewObjectUrlRef.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const showToast = (message, type = "create") => {
     setToast({ message, type });
@@ -131,6 +102,36 @@ const SettingsPage = () => {
       return { ...prev, darkMode: newDarkMode };
     });
   };
+
+  /* Load settings */
+  const fetchSettings = async () => {
+    try {
+      const data = await api("/api/settings", "GET");
+      if (data) {
+        setSettings((prev) => ({ ...prev, ...data }));
+        const local = localStorage.getItem("theme");
+        const wantDark = local !== null ? local === "dark" : Boolean(data.darkMode);
+        applyDarkClass(wantDark);
+        setSettings((prev) => ({ ...prev, darkMode: wantDark }));
+      }
+    } catch (err) {
+      console.error("Failed to load settings", err);
+      showToast(t("settings.errors.loadError") || "Failed to load settings", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    return () => {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+        previewObjectUrlRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Profile picture selection */
   const handleProfilePictureChange = (e) => {
@@ -173,15 +174,14 @@ const SettingsPage = () => {
       const fd = new FormData();
       fd.append("profilePicture", profilePictureFile);
 
-      const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/settings/profile-picture`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
+      // use rawFetch so FormData is preserved and api wrapper handles credentials & tokens
+      const resp = await rawFetch("/api/settings/profile-picture", "PUT", fd, { isFormData: true });
 
       if (!resp.ok) {
-        const errBody = await resp.json().catch(() => null);
-        throw new Error(errBody?.message || t("settings.errors.uploadError") || "Upload failed");
+        const errBody = await resp.text().catch(() => null);
+        let parsed;
+        try { parsed = errBody ? JSON.parse(errBody) : null; } catch { parsed = errBody; }
+        throw new Error(parsed?.message || t("settings.errors.uploadError") || "Upload failed");
       }
 
       const data = await resp.json();
@@ -224,27 +224,16 @@ const SettingsPage = () => {
 
     setSaving(true);
     try {
-      const resp = await fetch(`${import.meta.env.VITE_API_URL}/api/settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: settings.name,
-          language: settings.language,
-          darkMode: settings.darkMode,
-          oldPassword: oldPassword || undefined,
-          newPassword: newPassword || undefined,
-        }),
-      });
+      const payload = {
+        name: settings.name,
+        language: settings.language,
+        darkMode: settings.darkMode,
+        oldPassword: oldPassword || undefined,
+        newPassword: newPassword || undefined,
+      };
 
-      if (!resp.ok) {
-        const errBody = await resp.json().catch(() => null);
-        throw new Error(errBody?.message || t("settings.errors.updateError") || "Update failed");
-      }
+      const data = await api("/api/settings", "PUT", payload);
 
-      const data = await resp.json();
       if (data.user) updateUser(data.user, data.token);
       showToast(t("settings.toasts.updateSuccess") || "Settings updated", "update");
       setOldPassword("");
@@ -305,7 +294,7 @@ const SettingsPage = () => {
                 className={`mx-2 w-12 h-6  rounded-full transition-colors ${settings.darkMode ? "bg-sky-600" : "bg-gray-300"}`}
                 aria-hidden
               >
-                {/* knob: w-6 h-6, moves by translate-x-4 when dark (48 - 24 - 8 = 16px -> translate-x-4) */}
+                {/* knob: w-6 h-6, moves by translate-x-6 when dark */}
                 <div
                   className={`bg-white w-6 h-6 rounded-full shadow-sm transform transition-transform ${settings.darkMode ? "translate-x-6" : "translate-x-0"}`}
                 />

@@ -3,13 +3,17 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { initSocket } = require("./services/socketService"); 
+const db = require("./db")
+const cookieParser = require('cookie-parser');
+
 
 const app = express();
 const server = http.createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_ORIGIN, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 // --- API Routes ---
 app.use("/api/auth", require("./routes/authRoutes"));
@@ -42,6 +46,7 @@ server.listen(PORT, async () => {
   initSocket(server);
 
   try {
+    db.query("Select now()")
     console.log("Database connection established successfully.");
   } catch (error) {
     console.error("Unable to connect to the database:", error);

@@ -50,6 +50,7 @@ exports.createActivity = async (req, res) => {
   const { taskId } = req.params;
   const { title, description, dueDate, weight, targetMetric } = req.body;
 
+
   if (!title || String(title).trim() === "") {
     return res.status(400).json({ message: "Title is required." });
   }

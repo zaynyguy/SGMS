@@ -1,3 +1,4 @@
+// src/pages/Dashboard.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   fetchDashboardSummary,
@@ -7,6 +8,7 @@ import {
   fetchAuditLogs,
 } from "../api/dashboard";
 import { fetchGroups } from "../api/groups";
+import { api } from "../api/auth"; // <--- ensure this import exists
 
 // Loading Skeleton Component
 const LoadingSkeleton = ({ className = "h-6 bg-gray-200 rounded animate-pulse" }) => (
@@ -32,7 +34,7 @@ function formatDate(d) {
   return dt.toLocaleDateString();
 }
 
-// In-memory cache hook
+// In-memory cache hook (now uses shared api() so cookies and refresh work)
 const useApiWithCache = (apiBase) => {
   const cacheRef = useRef(new Map());
 
@@ -41,12 +43,11 @@ const useApiWithCache = (apiBase) => {
     if (!force && cacheRef.current.has(key)) {
       return cacheRef.current.get(key);
     }
-    const full = `${apiBase}${path}`;
-    const res = await fetch(full);
-    if (!res.ok) throw new Error(`API ${full} responded ${res.status}`);
-    const json = await res.json();
-    cacheRef.current.set(key, json);
-    return json;
+    const endpoint = `${apiBase}${path}`;
+    // use shared api helper which handles credentials + refresh-on-401
+    const res = await api(endpoint, "GET");
+    cacheRef.current.set(key, res);
+    return res;
   };
 
   const invalidate = () => cacheRef.current.clear();
@@ -363,7 +364,7 @@ export default function BentoDashboard({ currentUser = { permissions: [] }, apiB
         fetchNotificationsHelper({ 
           limit: 10 
         }),
-        // <-- replaced fetchWithCache('/groups') with shared API
+        // <-- fetchGroups uses api() under the hood
         fetchGroups(),
         isManager ? fetchAuditLogs({ limit: 10 }) : Promise.resolve([])
       ]);
