@@ -157,19 +157,16 @@ async function run() {
         description: "Enable report submissions",
       },
       {
-        key: "resubmission_deadline_days",
-        value: 7,
-        description: "Days to resubmit rejected reports",
-      },
-      {
         key: "audit_retention_days",
         value: 365,
         description: "Days to retain audit logs",
       },
     ];
+
     for (const s of settings) {
       await client.query(
-        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)`,
+        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description`,
         [s.key, JSON.stringify(s.value), s.description]
       );
     }

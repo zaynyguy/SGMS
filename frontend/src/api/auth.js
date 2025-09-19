@@ -135,11 +135,29 @@ export async function api(endpoint, method = "GET", body = null, options = {}) {
   }
 
   if (!res.ok) {
-    const err = new Error(data?.message || `HTTP ${res.status}`);
+    // build an Error with rich metadata for callers to act on (401 handling, etc.)
+    const err = new Error(
+      (data && (data.message || data.error)) ||
+        (res.status === 401 ? "Unauthorized" : `HTTP ${res.status}`)
+    );
     err.status = res.status;
     err.response = data;
+    // convenience flag
+    err.isAuthError = res.status === 401;
+
+    // If 401, clear local client-side tokens so app state stays consistent.
+    if (res.status === 401 && typeof window !== "undefined") {
+      try {
+        window.__ACCESS_TOKEN = null;
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("user");
+      } catch (e) {
+        /* ignore */
+      }
+    }
     throw err;
   }
+
   return data;
 }
 

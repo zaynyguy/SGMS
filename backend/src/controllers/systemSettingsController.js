@@ -1,5 +1,3 @@
-// src/controllers/systemSettingsController.js
-
 const db = require("../db");
 
 function parseVal(v) {
@@ -25,10 +23,16 @@ exports.getAllSettings = async (req, res) => {
 };
 
 exports.updateSettings = async (req, res) => {
-  const updates = req.body; // { key: value, ... }
+  const updates = req.body; // expected shape: { key: value, ... }
+
+  if (!updates || typeof updates !== "object") {
+    return res.status(400).json({ error: "Invalid payload" });
+  }
 
   await db.tx(async (client) => {
     for (const [key, value] of Object.entries(updates)) {
+      if (!key || typeof key !== "string") continue; // defensive
+      // skip if explicitly removing — use delete route if you need deletions
       await client.query(
         `INSERT INTO "SystemSettings"(key, value)
          VALUES ($1, $2::jsonb)

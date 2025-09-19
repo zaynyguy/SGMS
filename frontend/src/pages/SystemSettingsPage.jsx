@@ -1,3 +1,4 @@
+// src/pages/SystemSettingsPage.jsx
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchSystemSettings, updateSystemSettings } from "../api/systemSettings";
@@ -79,14 +80,14 @@ export default function SystemSettingsPage() {
     audit_retention_days: 0,
     max_attachment_size_mb: 0,
     reporting_active: false,
-    resubmission_deadline_days: 0,
+    // resubmission_deadline_days removed
   };
 
   const [settings, setSettings] = useState({ ...defaults });
   const [descriptions, setDescriptions] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // message is now an object { text, type } where type is 'success'|'error'|'info'
+  // message: { text, type } where type is 'success'|'error'|'info'
   const [message, setMessage] = useState({ text: "", type: "" });
   const lastSavedRef = useRef(null); // keep the last successfully fetched/saved settings for diffing
 
@@ -104,7 +105,7 @@ export default function SystemSettingsPage() {
         lastSavedRef.current = merged;
       } catch (err) {
         console.error("fetchSystemSettings failed:", err);
-        setMessage({ text: t("systemSettings.messages.failedLoad"), type: "error" });
+        setMessage({ text: t("systemSettings.messages.failedLoad") || "Failed to load system settings", type: "error" });
         // keep defaults in UI so the page remains usable
         lastSavedRef.current = { ...defaults };
       } finally {
@@ -120,6 +121,7 @@ export default function SystemSettingsPage() {
   const handleChange = (key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
+
   const handleAllowedTypesChange = useCallback(
     (arr) => {
       // avoid unnecessary state updates by checking shallow equality
@@ -136,7 +138,7 @@ export default function SystemSettingsPage() {
     const original = lastSavedRef.current || {};
     const diffs = diffObjects(original, settings);
     if (Object.keys(diffs).length === 0) {
-      setMessage({ text: t("systemSettings.messages.noChanges"), type: "info" });
+      setMessage({ text: t("systemSettings.messages.noChanges") || "No changes to save", type: "info" });
       setTimeout(() => setMessage({ text: "", type: "" }), 2500);
       return;
     }
@@ -156,12 +158,12 @@ export default function SystemSettingsPage() {
       // update lastSavedRef and UI to reflect saved data
       const newSaved = { ...original, ...diffs };
       lastSavedRef.current = newSaved;
-      setMessage({ text: t("systemSettings.messages.saved"), type: "success" });
+      setMessage({ text: t("systemSettings.messages.saved") || "Settings saved", type: "success" });
       // keep UI state consistent
       setSettings((prev) => ({ ...prev, ...diffs }));
     } catch (err) {
       console.error("updateSystemSettings failed:", err);
-      setMessage({ text: t("systemSettings.messages.failedSave"), type: "error" });
+      setMessage({ text: t("systemSettings.messages.failedSave") || "Failed to save settings", type: "error" });
     } finally {
       setSaving(false);
       setTimeout(() => setMessage({ text: "", type: "" }), 4000);
@@ -189,6 +191,18 @@ export default function SystemSettingsPage() {
     );
   }
 
+  // message color helpers
+  const messageBgClass = message.type === "error"
+    ? "bg-red-100 dark:bg-red-900/30"
+    : message.type === "info"
+      ? "bg-blue-100 dark:bg-blue-900/30"
+      : "bg-green-100 dark:bg-green-900/30";
+  const messageTextClass = message.type === "error"
+    ? "text-red-700 dark:text-red-400"
+    : message.type === "info"
+      ? "text-blue-700 dark:text-blue-400"
+      : "text-green-700 dark:text-green-400";
+
   return (
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 py-4 md:py-8 transition-colors duration-200">
       <div className="max-w-8xl mx-auto px-3 sm:px-4">
@@ -207,7 +221,6 @@ export default function SystemSettingsPage() {
                 onChange={handleAllowedTypesChange}
                 placeholder={t("systemSettings.allowedAttachmentTypes.placeholder")}
               />
-
 
               <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 <div>{t("systemSettings.current")} <code className="text-xs">{JSON.stringify(lastSavedRef.current?.allowed_attachment_types ?? settings.allowed_attachment_types)}</code></div>
@@ -271,22 +284,6 @@ export default function SystemSettingsPage() {
               <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t("systemSettings.current")} <code>{JSON.stringify(lastSavedRef.current?.reporting_active ?? settings.reporting_active)}</code></div>
               {descriptions.reporting_active && <div className="mt-1 italic text-xs">{descriptions.reporting_active}</div>}
             </div>
-
-            {/* Resubmission deadline */}
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("systemSettings.resubmissionDeadline.label")}</label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t("systemSettings.resubmissionDeadline.help")}</p>
-              <input
-                type="number"
-                min="0"
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-600 text-gray-900 dark:text-white"
-                value={settings.resubmission_deadline_days ?? ""}
-                onChange={(e) => handleChange("resubmission_deadline_days", e.target.value === "" ? "" : Number(e.target.value))}
-                placeholder={t("systemSettings.resubmissionDeadline.placeholder")}
-              />
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t("systemSettings.current")} <code>{JSON.stringify(lastSavedRef.current?.resubmission_deadline_days ?? settings.resubmission_deadline_days)}</code></div>
-              {descriptions.resubmission_deadline_days && <div className="mt-1 italic text-xs">{descriptions.resubmission_deadline_days}</div>}
-            </div>
           </div>
 
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
@@ -302,20 +299,20 @@ export default function SystemSettingsPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  {t("systemSettings.saving")}
+                  {t("systemSettings.saving") || "Saving..."}
                 </>
               ) : (
                 <>
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  {t("systemSettings.saveButton")}
+                  {t("systemSettings.saveButton") || "Save settings"}
                 </>
               )}
             </button>
 
             {message.text && (
-              <div className={`w-full sm:w-auto px-4 py-2 rounded-lg text-center ${message.type === "error" ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"}`}>
+              <div className={`w-full sm:w-auto px-4 py-2 rounded-lg text-center ${messageBgClass} ${messageTextClass}`}>
                 {message.text}
               </div>
             )}

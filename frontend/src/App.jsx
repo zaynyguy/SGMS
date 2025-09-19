@@ -75,7 +75,7 @@ function App() {
                             <Route
                                 path="/project"
                                 element={
-                                    <ProtectedRoute requiredPermission="manage_gta">
+                                    <ProtectedRoute requiredPermission="view_gta">
                                         <ProjectManagement />
                                     </ProtectedRoute>
                                 }

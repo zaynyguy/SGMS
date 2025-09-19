@@ -1,4 +1,3 @@
-// src/controllers/tasksController.js
 const db = require("../db");
 const { logAudit } = require("../helpers/audit");
 const notificationService = require("../services/notificationService");
@@ -44,6 +43,39 @@ exports.createTask = async (req, res) => {
 
   try {
     const task = await db.tx(async (client) => {
+      // lock goal row
+      const g = await client.query(
+        'SELECT id, weight FROM "Goals" WHERE id=$1 FOR UPDATE',
+        [goalId]
+      );
+      if (!g.rows.length) {
+        const err = new Error("Goal not found");
+        err.status = 404;
+        throw err;
+      }
+
+      const goalWeight = Number(g.rows[0].weight ?? 100);
+      const newWeight = Number(weight ?? 0);
+      if (newWeight < 0) {
+        const err = new Error("Task weight must be >= 0");
+        err.status = 400;
+        throw err;
+      }
+
+      const sumRes = await client.query(
+        'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Tasks" WHERE "goalId"=$1',
+        [goalId]
+      );
+      const sumOther = Number(sumRes.rows[0].sum || 0);
+
+      if (newWeight + sumOther > goalWeight) {
+        const err = new Error(
+          `Cannot set task weight to ${newWeight}. Goal total is ${goalWeight} and ${sumOther} is already used.`
+        );
+        err.status = 400;
+        throw err;
+      }
+
       const insertRes = await client.query(
         `INSERT INTO "Tasks" ("goalId", title, description, "assigneeId", "dueDate", "weight", "createdAt", "updatedAt")
          VALUES ($1,$2,$3,$4,$5,$6, NOW(), NOW()) RETURNING *`,
@@ -53,12 +85,12 @@ exports.createTask = async (req, res) => {
           description?.trim() || null,
           assigneeId || null,
           dueDate || null,
-          weight || 0,
+          newWeight,
         ]
       );
       const newTask = insertRes.rows[0];
 
-      // Audit inside tx
+      // Audit
       try {
         await logAudit({
           userId: req.user.id,
@@ -80,7 +112,6 @@ exports.createTask = async (req, res) => {
       return newTask;
     });
 
-    // Post-commit notification to assignee (best-effort)
     if (task && task.assigneeId) {
       try {
         await notificationService({
@@ -99,6 +130,10 @@ exports.createTask = async (req, res) => {
       .json({ message: "Task created successfully.", task });
   } catch (err) {
     console.error("createTask error:", err);
+    if (err && err.status === 404)
+      return res.status(404).json({ message: err.message });
+    if (err && err.status === 400)
+      return res.status(400).json({ message: err.message });
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
@@ -107,7 +142,6 @@ exports.updateTask = async (req, res) => {
   const { taskId } = req.params;
   const { title, description, assigneeId, dueDate, status, weight } = req.body;
 
-  // fetch before snapshot
   const beforeTaskRes = await db.query(
     'SELECT * FROM "Tasks" WHERE id = $1 LIMIT 1',
     [taskId]
@@ -126,6 +160,35 @@ exports.updateTask = async (req, res) => {
         throw e;
       }
 
+      let newWeight = weight ?? currentRes.rows[0].weight;
+      newWeight = Number(newWeight);
+      if (newWeight < 0) {
+        const err = new Error("Task weight must be >= 0");
+        err.status = 400;
+        throw err;
+      }
+
+      const goalId = currentRes.rows[0].goalId;
+      const gRes = await client.query(
+        'SELECT weight FROM "Goals" WHERE id=$1 FOR UPDATE',
+        [goalId]
+      );
+      const goalWeight = Number(gRes.rows[0].weight ?? 100);
+
+      const sumRes = await client.query(
+        'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Tasks" WHERE "goalId"=$1 AND id<>$2',
+        [goalId, taskId]
+      );
+      const sumOther = Number(sumRes.rows[0].sum || 0);
+
+      if (newWeight + sumOther > goalWeight) {
+        const err = new Error(
+          `Cannot set task weight to ${newWeight}. Goal total is ${goalWeight} and ${sumOther} is already used.`
+        );
+        err.status = 400;
+        throw err;
+      }
+
       const r = await client.query(
         `UPDATE "Tasks" 
          SET title = COALESCE($1, title),
@@ -133,7 +196,7 @@ exports.updateTask = async (req, res) => {
              "assigneeId" = COALESCE($3, "assigneeId"),
              "dueDate" = COALESCE($4, "dueDate"),
              status = COALESCE($5, status),
-             weight = COALESCE($6, weight),
+             weight = $6,
              "updatedAt" = NOW()
          WHERE id = $7
          RETURNING *`,
@@ -143,14 +206,13 @@ exports.updateTask = async (req, res) => {
           assigneeId || null,
           dueDate || null,
           status || null,
-          weight || null,
+          newWeight,
           taskId,
         ]
       );
 
       const updated = r.rows[0];
 
-      // Audit inside tx with before/after
       try {
         await logAudit({
           userId: req.user.id,
@@ -169,7 +231,6 @@ exports.updateTask = async (req, res) => {
       return updated;
     });
 
-    // Post-commit: notify assignee if present (best-effort)
     if (assigneeId) {
       try {
         await notificationService({
@@ -187,6 +248,7 @@ exports.updateTask = async (req, res) => {
   } catch (err) {
     console.error("updateTask error:", err);
     if (err && err.status === 404) return res.status(404).json({ message: err.message });
+    if (err && err.status === 400) return res.status(400).json({ message: err.message });
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
@@ -214,7 +276,6 @@ exports.deleteTask = async (req, res) => {
       );
       const deletedRow = r.rows[0] || null;
 
-      // Audit deletion inside tx
       try {
         await logAudit({
           userId: req.user.id,
