@@ -15,6 +15,7 @@ import {
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import Toast from "../components/common/Toast";
 import { api } from "../api/auth";
+import TopBar from "../components/layout/TopBar";
 
 /* -------------------------
    Helpers
@@ -94,13 +95,7 @@ const SettingsPage = () => {
     }
   };
 
-  const toggleDarkMode = () => {
-    setSettings((prev) => {
-      const newDarkMode = !prev.darkMode;
-      applyDarkClass(newDarkMode);
-      return { ...prev, darkMode: newDarkMode };
-    });
-  };
+
 
   /* Load settings */
   const fetchSettings = async () => {
@@ -297,43 +292,18 @@ const SettingsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-      <header className="sticky top-0 z-20 bg-gray-50 dark:bg-gray-900/60 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-8xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+      <header className="static top-0 z-20 bg-gray-50 dark:bg-gray-900/60 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
+        <div className="max-w-8xl justify-between mx-auto px-4 py-4 flex sm:flex-row sm:items-center gap-3 sm:gap-6">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 rounded-full bg-gradient-to-br from-purple-50 to-sky-50 dark:from-purple-900/10 dark:to-sky-900/10">
               <UserCircle size={20} className="text-sky-600 dark:text-sky-300" />
             </div>
-            <div className="min-w-0">
+            <div className="flex space-x-[6rem] md:space-x-[67rem] items-center min-w-0">
               <h1 className="text-xl sm:text-2xl font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-3 flex-shrink-0">
-            <div className="hidden sm:block text-sm text-gray-600 dark:text-gray-300">Theme</div>
-
-            {/* SINGLE polished toggle (kept in header only) */}
-            <button
-              onClick={toggleDarkMode}
-              aria-pressed={settings.darkMode}
-              className="relative inline-flex items-center p-1 rounded-full bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600"
-              title={settings.darkMode ? "Switch to light" : "Switch to dark"}
-            >
-              <span className="sr-only">Toggle theme</span>
-
-              <Sun className={`h-4 w-4 ${settings.darkMode ? "text-gray-400" : "text-yellow-500"}`} />
-
-              <div
-                className={`mx-2 w-12 h-6  rounded-full transition-colors ${settings.darkMode ? "bg-sky-600" : "bg-gray-300"}`}
-                aria-hidden
-              >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-sm transform transition-transform ${settings.darkMode ? "translate-x-6" : "translate-x-0"}`}
-                />
-              </div>
-
-              <Moon className={`h-4 w-4 ${settings.darkMode ? "text-white" : "text-gray-400"}`} />
-            </button>
-          </div>
+              <TopBar className="flex"/>
         </div>
       </header>
 
@@ -480,7 +450,7 @@ const SettingsPage = () => {
                 <h2 className="text-lg font-semibold">{t("settings.appearance") || "Appearance"}</h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t("settings.language") || "Language"}
@@ -490,13 +460,6 @@ const SettingsPage = () => {
                     value={settings.language}
                     onChange={(lang) => setSettings({ ...settings, language: lang })}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("settings.theme") || "Theme"}
-                  </label>
-                  <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{settings.darkMode ? t("settings.darkMode") : t("settings.lightMode")}</div>
                 </div>
               </div>
             </section>

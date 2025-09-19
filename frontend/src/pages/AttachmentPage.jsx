@@ -14,6 +14,7 @@ import {
   Grid
 } from "lucide-react";
 import { fetchAttachments, deleteAttachment, downloadAttachment } from "../api/attachments";
+import TopBar from "../components/layout/TopBar";
 
 /* Small util: format date nicely */
 const formatDate = (d) => {
@@ -220,6 +221,7 @@ export default function AttachmentsPage({ reportId }) {
             <div className="flex-shrink-0">
               <PillToggle value={viewMode} onChange={setViewMode} t={t} />
             </div>
+          <TopBar/>
           </div>
         </div>
 

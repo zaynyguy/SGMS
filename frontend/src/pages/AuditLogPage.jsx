@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, Search, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { fetchAuditLogs } from "../api/audit";
+import TopBar from "../components/layout/TopBar";
 
 const AuditLogPage = ({ showToast }) => {
   const { t } = useTranslation();
@@ -125,26 +126,71 @@ const AuditLogPage = ({ showToast }) => {
   return (
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-2 sm:p-4 transition-colors duration-200">
       <div className="max-w-8xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">{t("audit.title")}</h2>
-          </div>
-          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md flex items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
-            >
-              <Filter size={14} className="sm:w-4" /> {showFilters ? t("audit.filters.hide") : t("audit.filters.show")}
-            </button>
-            <button
-              onClick={handleExportCSV}
-              className="px-3 py-2 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md flex items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base"
-            >
-              <Download size={14} className="sm:w-4" /> {t("audit.exportCsv")}
-            </button>
-          </div>
-        </div>
+{/* Header */}
+<div className="flex flex-col gap-3">
+  <div className="flex flex-wrap items-center gap-3 justify-between">
+    {/* Title (left) */}
+    <div className="flex items-center gap-3 min-w-0">
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white truncate">{t("audit.title")}</h2>
+
+      {/* Desktop (lg+): inline buttons next to title */}
+      <div className="hidden lg:flex items-center gap-2 ml-3">
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md flex items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+        >
+          <Filter size={14} /> {showFilters ? t("audit.filters.hide") : t("audit.filters.show")}
+        </button>
+        <button
+          onClick={handleExportCSV}
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md flex items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+        >
+          <Download size={14} /> {t("audit.exportCsv")}
+        </button>
+      </div>
+    </div>
+
+    {/* TopBar (always on right) */}
+    <div className="min-w-0 ml-auto">
+      <div className="flex justify-end">
+        <TopBar />
+      </div>
+    </div>
+  </div>
+
+  {/* Tablet (md .. lg): buttons placed below the header, right-aligned under TopBar */}
+  <div className="hidden md:flex lg:hidden justify-end gap-2">
+    <button
+      onClick={() => setShowFilters(!showFilters)}
+      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md flex items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+    >
+      <Filter size={14} /> {showFilters ? t("audit.filters.hide") : t("audit.filters.show")}
+    </button>
+    <button
+      onClick={handleExportCSV}
+      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md flex items-center gap-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+    >
+      <Download size={14} /> {t("audit.exportCsv")}
+    </button>
+  </div>
+
+  {/* Mobile (smaller than md): full-width stacked buttons for touch */}
+  <div className="flex flex-col sm:hidden gap-2">
+    <button
+      onClick={() => setShowFilters(!showFilters)}
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md flex items-center gap-2 justify-center bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+    >
+      <Filter size={14} /> {showFilters ? t("audit.filters.hide") : t("audit.filters.show")}
+    </button>
+    <button
+      onClick={handleExportCSV}
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md flex items-center gap-2 justify-center bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+    >
+      <Download size={14} /> {t("audit.exportCsv")}
+    </button>
+  </div>
+</div>
+
 
         {/* Search */}
         <div className="mb-4 sm:mb-6 relative">
@@ -215,99 +261,117 @@ const AuditLogPage = ({ showToast }) => {
           )}
         </div>
 
-        {/* Table */}
-        <div className="overflow-hidden border border-gray-200 dark:border-gray-700 rounded-lg shadow">
-          {filteredLogs.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("audit.table.timestamp")}</th>
-                    <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("audit.table.user")}</th>
-                    <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">{t("audit.table.entity")}</th>
-                    <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("audit.table.action")}</th>
-                    <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell">{t("audit.table.details")}</th>
-                    <th scope="col" className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"></th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredLogs.map((log) => (
-                    <React.Fragment key={log.id}>
-                      <tr
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                        onClick={() => toggleRow(log.id)}
-                      >
-                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-800 dark:text-gray-200">
-                          {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
-                        </td>
-                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-800 dark:text-gray-200">
-                          {safeString(log.username) || safeString(log.name)}
-                        </td>
-                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-800 dark:text-gray-200 hidden sm:table-cell">
-                          {safeString(log.entity) || t("audit.na")}
-                        </td>
-                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              log.action === "create"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                : log.action === "update"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                                : log.action === "delete"
-                                ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-                            }`}
-                          >
-                            {safeString(log.action)}
-                          </span>
-                        </td>
-                        <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200 max-w-xs truncate hidden md:table-cell">
-                          {safeString(log.details) || ""}
-                        </td>
-                        <td className="px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                          {expandedRows.has(log.id) ? <ChevronUp size={14} className="sm:w-4" /> : <ChevronDown size={14} className="sm:w-4" />}
-                        </td>
-                      </tr>
-                      {expandedRows.has(log.id) && (
-                        <tr className="bg-gray-50 dark:bg-gray-700">
-                          <td colSpan="6" className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                              <div>
-                                <h4 className="font-medium mb-1 text-xs sm:text-sm">{t("audit.expanded.fullDetails")}</h4>
-                                <pre className="whitespace-pre-wrap bg-gray-100 dark:bg-gray-600 p-2 sm:p-3 rounded text-xs">
-                                  {safeString(log.details)}
-                                </pre>
-                              </div>
-                              <div className="mt-2 md:mt-0">
-                                <h4 className="font-medium mb-1 text-xs sm:text-sm">{t("audit.expanded.additionalInfo")}</h4>
-                                <div className="text-xs space-y-1">
-                                  <p><span className="font-medium">{t("audit.expanded.idLabel")}</span> {log.id}</p>
-                                  <p><span className="font-medium">{t("audit.expanded.entityLabel")}</span> {safeString(log.entity) || t("audit.na")}</p>
-                                  <p><span className="font-medium">{t("audit.expanded.ipLabel")}</span> {log.ipAddress || t("audit.na")}</p>
-                                  <p><span className="font-medium">{t("audit.expanded.userAgentLabel")}</span> {log.userAgent || t("audit.na")}</p>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-8 sm:py-12 bg-white dark:bg-gray-800">
-              <div className="flex justify-center mb-3 sm:mb-4">
-                <Search className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500" />
-              </div>
-              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-1">{t("audit.noLogs.title")}</h3>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 px-2">
-                {searchQuery || fromDate || toDate ? t("audit.noLogs.tryAdjust") : t("audit.noLogs.none")}
-              </p>
-            </div>
-          )}
-        </div>
+{/* Table */}
+<div className="border border-gray-200 dark:border-gray-700 rounded-lg shadow overflow-hidden">
+  {filteredLogs.length > 0 ? (
+    // table scroll confined here (no page-level horizontal scroll)
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-800">
+          <tr>
+            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style={{ width: 220 }}>
+              {t("audit.table.timestamp")}
+            </th>
+            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              {t("audit.table.user")}
+            </th>
+            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">
+              {t("audit.table.entity")}
+            </th>
+            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" style={{ width: 120 }}>
+              {t("audit.table.action")}
+            </th>
+            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell">
+              <span className="inline-block max-w-[18rem] md:max-w-xs truncate">{t("audit.table.details")}</span>
+            </th>
+            <th className="px-2 sm:px-4 py-2 sm:py-3" style={{ width: 48 }} />
+          </tr>
+        </thead>
+
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+          {filteredLogs.map((log) => (
+            <React.Fragment key={log.id}>
+              <tr
+                className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                onClick={() => toggleRow(log.id)}
+              >
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200 align-top">
+                  <div className="truncate">{log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}</div>
+                </td>
+
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200 align-top min-w-0">
+                  <div className="truncate">{safeString(log.username) || safeString(log.name)}</div>
+                </td>
+
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200 hidden sm:table-cell align-top">
+                  <div className="truncate max-w-[12rem]">{safeString(log.entity) || t("audit.na")}</div>
+                </td>
+
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm align-top">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      log.action === "create"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                        : log.action === "update"
+                        ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                        : log.action === "delete"
+                        ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                    }`}
+                  >
+                    {safeString(log.action)}
+                  </span>
+                </td>
+
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200 hidden md:table-cell align-top">
+                  <div className="break-words max-w-[18rem] md:max-w-xs truncate">{safeString(log.details) || ""}</div>
+                </td>
+
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 dark:text-gray-400 align-top">
+                  {expandedRows.has(log.id) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </td>
+              </tr>
+
+              {expandedRows.has(log.id) && (
+                <tr className="bg-gray-50 dark:bg-gray-700">
+                  <td colSpan="6" className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-800 dark:text-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                      <div>
+                        <h4 className="font-medium mb-1 text-xs sm:text-sm">{t("audit.expanded.fullDetails")}</h4>
+                        <pre className="whitespace-pre-wrap break-words bg-gray-100 dark:bg-gray-600 p-2 sm:p-3 rounded text-xs">
+                          {safeString(log.details)}
+                        </pre>
+                      </div>
+                      <div className="mt-2 md:mt-0">
+                        <h4 className="font-medium mb-1 text-xs sm:text-sm">{t("audit.expanded.additionalInfo")}</h4>
+                        <div className="text-xs space-y-1">
+                          <p><span className="font-medium">{t("audit.expanded.idLabel")}</span> {log.id}</p>
+                          <p><span className="font-medium">{t("audit.expanded.entityLabel")}</span> {safeString(log.entity) || t("audit.na")}</p>
+                          <p><span className="font-medium">{t("audit.expanded.ipLabel")}</span> {log.ipAddress || t("audit.na")}</p>
+                          <p><span className="font-medium">{t("audit.expanded.userAgentLabel")}</span> {log.userAgent || t("audit.na")}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : (
+    <div className="text-center py-8 sm:py-12 bg-white dark:bg-gray-800">
+      <div className="flex justify-center mb-3 sm:mb-4">
+        <Search className="h-8 w-8 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500" />
+      </div>
+      <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-1">{t("audit.noLogs.title")}</h3>
+      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 px-2">
+        {searchQuery || fromDate || toDate ? t("audit.noLogs.tryAdjust") : t("audit.noLogs.none")}
+      </p>
+    </div>
+  )}
+</div>
 
         {/* Pagination (static placeholders) */}
         {filteredLogs.length > 0 && (

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Loader } from "lucide-react";
 import { fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
 import { useTranslation } from "react-i18next";
+import TopBar from "../components/layout/TopBar";
 
 /* -------------------------
    Small helper: render metrics nicely (object or JSON)
@@ -66,7 +67,7 @@ function TopRightTabs({ value, onChange }) {
   ];
 
   return (
-    <div className="flex justify-end items-center">
+    <div className="flex justify-end items-center space-x-4">
       <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">
         {options.map((opt) => (
           <button
@@ -82,6 +83,7 @@ function TopRightTabs({ value, onChange }) {
           </button>
         ))}
       </div>
+        <TopBar/>
     </div>
   );
 }

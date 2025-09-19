@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from "react"
 import { useTranslation } from "react-i18next";
 import { fetchSystemSettings, updateSystemSettings } from "../api/systemSettings";
 import AllowedTypesInput from "../components/AllowedTypesInput";
+import TopBar from "../components/layout/TopBar";
 
 /**
  * Helpers
@@ -194,6 +195,7 @@ export default function SystemSettingsPage() {
       <div className="max-w-8xl mx-auto px-3 sm:px-4">
         <div className="flex justify-between items-center mb-6 px-2">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">{t("systemSettings.title")}</h1>
+          <TopBar/>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 transition-colors duration-200">

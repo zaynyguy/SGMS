@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  @keyframes ripple {
+    from { transform: scale(0.35); opacity: 0.6; }
+    to   { transform: scale(12);   opacity: 0;   }
+  }
+  .animate-ripple { animation: ripple 600ms cubic-bezier(.22,.9,.31,.99) forwards; }
+}
