@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Edit, Trash, UserPlus, X } from 'lucide-react';
 import { fetchUsers, createUser, updateUser, deleteUser, fetchRoles } from '../api/admin';
+import { api as apiAuth } from '../api/auth'; // used for multipart upload to new backend route
 import Toast from '../components/common/Toast';
 
 /* ---------- Helpers ---------- */
@@ -24,6 +25,20 @@ const gradientFromString = (s) => {
   const h1 = a % 360;
   const h2 = (180 + h1) % 360;
   return `linear-gradient(135deg, hsl(${h1} 70% 60%), hsl(${h2} 70% 40%))`;
+};
+
+// Convert data: URL to File
+const dataURLToFile = (dataURL, filename = 'upload.png') => {
+  const arr = dataURL.split(',');
+  const match = arr[0].match(/:(.*?);/);
+  const mime = match ? match[1] : 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
 };
 
 /* ---------- Component ---------- */
@@ -48,7 +63,7 @@ const UsersManagementPage = () => {
 
   // For profile picture selection (file or URL)
   const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null); // dataURL or URL
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null); // objectURL or URL or data:
   const previewRef = useRef(null);
 
   // Toast helpers
@@ -162,14 +177,20 @@ const UsersManagementPage = () => {
     setProfilePictureFile(null);
   };
 
-  // Convert file -> base64 dataURL (so controller receiving profilePicture string works)
-  const fileToDataUrl = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(file);
-    });
+  /**
+   * Upload file for given userId using new admin route:
+   * PUT /api/users/:id/profile-picture  (field name: 'file')
+   * Uses apiAuth helper so cookies/auth are handled.
+   */
+  const uploadProfileFileForUser = async (userId, file) => {
+    if (!userId || !file) return null;
+    const fd = new FormData();
+    fd.append('file', file);
+    // call auth.api helper - it prefixes with API_URL and uses _doFetch so credentials included
+    // options.isFormData ensures Content-Type is not forced and browser sets boundary
+    const result = await apiAuth(`/api/users/${userId}/profile-picture`, 'PUT', fd, { isFormData: true });
+    return result;
+  };
 
   const handleSaveUser = async (e) => {
     e.preventDefault();
@@ -181,34 +202,69 @@ const UsersManagementPage = () => {
     try {
       setSubmitting(true);
 
-      // If file selected, convert to dataURL and send as profilePicture string.
-      // If preview is a normal URL string (no file), that will be sent as-is.
-      let profilePictureValue = null;
-      if (profilePictureFile) {
-        profilePictureValue = await fileToDataUrl(profilePictureFile);
-      } else if (profilePicturePreview) {
-        profilePictureValue = profilePicturePreview;
-      }
-
+      // Build payload WITHOUT embedding large base64. We'll handle files separately.
       const payload = {
         username: formData.username.trim(),
         name: formData.name.trim(),
         roleId: Number(formData.roleId),
         ...(formData.password ? { password: formData.password } : {}),
-        ...(profilePictureValue ? { profilePicture: profilePictureValue } : {}),
       };
 
-      if (userToEdit) {
-        await updateUser(userToEdit.id, payload);
-        showToast(t('admin.users.toasts.updateSuccess', { name: formData.name }), 'success');
-      } else {
-        await createUser(payload);
-        showToast(t('admin.users.toasts.createSuccess', { name: formData.name }), 'success');
+      // If profilePicturePreview is a plain remote/local URL and NOT a data: URL and no file selected,
+      // we allow sending it as the profilePicture string (it's already a URL, small).
+      const isPreviewUrl =
+        profilePicturePreview &&
+        (profilePicturePreview.startsWith('http') || profilePicturePreview.startsWith('/') || profilePicturePreview.startsWith('https'));
+      if (!profilePictureFile && isPreviewUrl) {
+        payload.profilePicture = profilePicturePreview;
       }
 
+      // Create or update user first, then upload file (if any).
+      let savedUser = null;
+      if (userToEdit) {
+        // update existing user (no profilePicture file yet)
+        savedUser = await updateUser(userToEdit.id, payload);
+      } else {
+        // create new user (without file)
+        savedUser = await createUser(payload);
+      }
+
+      // If admin selected a file -> upload to new admin upload endpoint
+      if (profilePictureFile) {
+        try {
+          // If we created user, use new id; if updated, use existing id.
+          const idForUpload = savedUser?.id;
+          if (!idForUpload) throw new Error('User id not available for upload');
+
+          // Upload file (FormData) — server responds with JSON including profilePicture and user
+          await uploadProfileFileForUser(idForUpload, profilePictureFile);
+        } catch (uploadErr) {
+          // We do not abort the whole operation on upload failure, but notify admin
+          console.error('Profile picture upload failed:', uploadErr);
+          showToast(t('admin.users.errors.pictureUploadFailed') || 'Profile picture upload failed', 'error');
+        }
+      } else if (profilePicturePreview && profilePicturePreview.startsWith('data:') && savedUser?.id) {
+        // preview is a data URL (maybe from a paste). Convert to File and upload so we avoid sending huge JSON.
+        try {
+          const f = dataURLToFile(profilePicturePreview, `${savedUser.username || savedUser.id}_pic.png`);
+          await uploadProfileFileForUser(savedUser.id, f);
+        } catch (err) {
+          console.error('DataURL profile picture upload failed:', err);
+          showToast(t('admin.users.errors.pictureUploadFailed') || 'Profile picture upload failed', 'error');
+        }
+      }
+
+      // refresh list
       const updatedUsers = await fetchUsers();
       setUsers(updatedUsers || []);
       handleCloseUserModal();
+
+      showToast(
+        userToEdit
+          ? t('admin.users.toasts.updateSuccess', { name: formData.name })
+          : t('admin.users.toasts.createSuccess', { name: formData.name }),
+        'success'
+      );
     } catch (error) {
       console.error("save user error:", error);
       showToast(t('admin.users.errors.saveFailed', { error: error?.message || error }), 'error');
@@ -466,7 +522,7 @@ const UsersManagementPage = () => {
                         <button type="button" onClick={removeProfilePreview} className="text-sm text-red-600 dark:text-red-400">Remove</button>
                       )}
                     </div>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('admin.users.form.pictureHint') || 'You can upload an image (sent as data URL) or leave blank.'}</p>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('admin.users.form.pictureHint') || 'You can upload an image or leave blank.'}</p>
                   </div>
                 </div>
 

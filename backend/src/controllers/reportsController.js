@@ -12,30 +12,70 @@ const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 const { getAttachmentSettings } = require("../utils/systemSettings");
 const { uploadFile, deleteFile } = require("../services/uploadService");
 
+
+exports.canSubmitReport = async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
+    );
+
+
+    if (!rows[0]) {
+      return res.json({ reporting_active: false });
+    }
+
+    const val = rows[0].value;
+    const isActive = typeof val === "boolean" ? val : String(val).toLowerCase() === "true";
+    return res.json({ reporting_active: Boolean(isActive) });
+  } catch (err) {
+    console.error("canSubmitReport error:", err);
+    
+    return res.status(500).json({ reporting_active: false, error: err.message });
+  }
+};
+
 exports.submitReport = async (req, res) => {
   const { activityId } = req.params;
   const { narrative, metrics_data, new_status } = req.body;
 
   try {
-    const setting = await db.query(
+    const { rows } = await db.query(
       `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
     );
-    if (setting.rows[0] && setting.rows[0].value === false) {
-      return res
-        .status(403)
-        .json({ message: "Reporting is currently disabled." });
+
+    if (!rows[0]) {
+      return res.status(403).json({ message: "Reporting is currently disabled." });
+    }
+
+    const val = rows[0].value;
+    const isActive = typeof val === "boolean" ? val : String(val).toLowerCase() === "true";
+    if (!isActive) {
+      return res.status(403).json({ message: "Reporting is currently disabled." });
     }
   } catch (err) {
-    // missing setting is fine
+    console.error("Error reading reporting_active setting:", err);
+    return res.status(500).json({ message: "Unable to determine reporting status. Contact admin." });
   }
 
   const client = await db.connect();
 
-  // We'll keep track of uploaded files so we can cleanup on failure
-  const uploadedFiles = []; // each item: { uploaded, originalFile }
+  const uploadedFiles = []; 
 
   try {
     await client.query("BEGIN");
+
+    let parsedMetrics = null;
+    if (metrics_data) {
+      if (typeof metrics_data === "string") {
+        try {
+          parsedMetrics = metrics_data.trim() === "" ? null : JSON.parse(metrics_data);
+        } catch (e) {
+          parsedMetrics = metrics_data;
+        }
+      } else {
+        parsedMetrics = metrics_data;
+      }
+    }
 
     const reportResult = await client.query(
       `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status, "createdAt", "updatedAt")
@@ -45,7 +85,7 @@ exports.submitReport = async (req, res) => {
         activityId,
         req.user.id,
         narrative || null,
-        metrics_data ? JSON.parse(metrics_data) : null,
+        parsedMetrics,
         new_status || null,
       ]
     );
@@ -54,7 +94,8 @@ exports.submitReport = async (req, res) => {
 
     // Validate attachments size (use system setting)
     if (req.files && req.files.length) {
-      const { maxSizeMb } = await getAttachmentSettings();
+      const attachmentSettings = await getAttachmentSettings();
+      const maxSizeMb = Number(attachmentSettings?.maxSizeMb || attachmentSettings?.max_attachment_size_mb || 10);
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
       const oversized = req.files.filter((f) => {
         try {
@@ -425,13 +466,35 @@ exports.generateMasterReport = async (req, res) => {
   try {
     const rows = await db.query(
       `
-SELECT g.id as goal_id, g.title as goal_title, g.progress as goal_progress, g.status as goal_status,
-       t.id as task_id, t.title as task_title, t.progress as task_progress, t.status as task_status, t."assigneeId" as task_assignee,
-       a.id as activity_id, a.title as activity_title, a.description as activity_description,
-       a."currentMetric", a."targetMetric", a.weight as activity_weight, a."isDone" as activity_done, a.status as activity_status,
-       r.id as report_id, r.narrative as report_narrative, r.status as report_status, r.metrics_data as report_metrics, 
-       r."new_status" as report_new_status, r."createdAt" as report_createdAt,
-       at.id as attachment_id, at."fileName" as attachment_name, at."filePath" as attachment_path, at."fileType" as attachment_type
+SELECT g.id as goal_id,
+       g.title as goal_title,
+       g.progress as goal_progress,
+       g.status as goal_status,
+       g.weight as goal_weight,
+       t.id as task_id,
+       t.title as task_title,
+       t.progress as task_progress,
+       t.status as task_status,
+       t.weight as task_weight,
+       t."assigneeId" as task_assignee,
+       a.id as activity_id,
+       a.title as activity_title,
+       a.description as activity_description,
+       a."currentMetric",
+       a."targetMetric",
+       a.weight as activity_weight,
+       a."isDone" as activity_done,
+       a.status as activity_status,
+       r.id as report_id,
+       r.narrative as report_narrative,
+       r.status as report_status,
+       r.metrics_data as report_metrics,
+       r."new_status" as report_new_status,
+       r."createdAt" as report_createdAt,
+       at.id as attachment_id,
+       at."fileName" as attachment_name,
+       at."filePath" as attachment_path,
+       at."fileType" as attachment_type
 FROM "Goals" g
 LEFT JOIN "Tasks" t ON t."goalId" = g.id
 LEFT JOIN "Activities" a ON a."taskId" = t.id

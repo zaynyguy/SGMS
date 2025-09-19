@@ -19,7 +19,6 @@ export const submitReport = (activityId, formData) => {
 // -------------------- REPORT MANAGEMENT --------------------
 
 // Fetch all reports
-
 export const fetchReports = (page = 1, pageSize = 20, status, q) => {
   const params = new URLSearchParams();
   params.append("page", page);
@@ -42,4 +41,31 @@ export const fetchReportById = (id) => api(`/api/reports/${id}`, "GET");
 export const fetchMasterReport = (groupId) => {
   const qs = groupId ? `?groupId=${encodeURIComponent(groupId)}` : "";
   return api(`/api/reports/master-report${qs}`, "GET");
+};
+
+// -------------------- REPORTING STATUS (NEW) --------------------
+
+// Simple endpoint for frontend to ask "is reporting allowed right now?"
+// Expected return shape: { reporting_active: true }  (if backend sends different shape, adapt accordingly)
+export const fetchReportingStatus = async () => {
+  // This will throw on HTTP errors (see api() helper)
+  const data = await api("/api/reports/reporting-status", "GET");
+  // Be defensive: return normalized object
+  return {
+    reporting_active:
+      data && typeof data.reporting_active !== "undefined"
+        ? Boolean(data.reporting_active)
+        : null,
+    raw: data,
+  };
+};
+
+// -------------------- exports (named) --------------------
+export default {
+  submitReport,
+  fetchReports,
+  reviewReport,
+  fetchReportById,
+  fetchMasterReport,
+  fetchReportingStatus,
 };

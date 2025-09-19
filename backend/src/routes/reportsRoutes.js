@@ -1,5 +1,4 @@
 // src/routes/reportsRoutes.js
-
 const express = require("express");
 const router = express.Router();
 const reportsController = require("../controllers/reportsController");
@@ -11,6 +10,13 @@ const {
 const { upload } = require("../middleware/uploadMiddleware");
 
 router.use(authenticateJWT);
+
+// allows frontend to check if reporting is active
+router.get(
+  "/reporting-status",
+  authorizePermissions(["view_reports"]), 
+  reportsController.canSubmitReport
+);
 
 router.post(
   "/activity/:activityId",
@@ -52,7 +58,7 @@ router.post(
   upload.single("file"),
   authorizePermissions(["manage_reports"]),
   attachmentsController.uploadAttachment
-)
+);
 
 // Delete attachment
 router.delete(

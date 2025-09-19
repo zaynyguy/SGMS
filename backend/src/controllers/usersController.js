@@ -1,7 +1,10 @@
 // src/controllers/usersController.js
 const db = require('../db');
 const bcrypt = require('bcrypt');
+const { uploadFile, deleteFile } = require('../services/uploadService'); // <- new
+// Note: uploadFile/deleteFile already provided by your uploadService
 
+// Existing getAllUsers / createUser / updateUser / deleteUser remain unchanged...
 exports.getAllUsers = async (req, res) => {
   try {
     const { rows } = await db.query(`
@@ -95,5 +98,57 @@ exports.deleteUser = async (req, res) => {
   } catch (err) {
     console.error('usersController.deleteUser error', err);
     res.status(500).json({ message: 'Internal server error.' });
+  }
+};
+
+/**
+ * Admin-only: upload profile picture for a specific user.
+ * Route: PUT /api/users/:id/profile-picture
+ * Expects multipart/form-data with field "file" (handled by multer middleware).
+ * Returns { message, profilePicture, user } on success.
+ */
+exports.uploadProfilePictureForUser = async (req, res) => {
+  const userId = Number(req.params.id);
+  if (!userId) return res.status(400).json({ message: 'Invalid user id' });
+
+  // multer will place file at req.file
+  if (!req.file) return res.status(400).json({ message: 'No file uploaded. Field name must be "file".' });
+
+  try {
+    // 1) fetch current profilePicture for potential deletion
+    const current = await db.query('SELECT "profilePicture" FROM "Users" WHERE id = $1 LIMIT 1', [userId]);
+    const oldProfilePicture = current.rows?.[0]?.profilePicture || null;
+
+    // 2) upload the file (local or cloudinary) using existing service
+    const uploaded = await uploadFile(req.file); // returns { url, provider, fileName, fileType, public_id? }
+
+    // 3) persist new url in DB
+    const updateRes = await db.query(
+      `UPDATE "Users" SET "profilePicture" = $1, "updatedAt" = NOW() WHERE id = $2 RETURNING id, username, name, "roleId", language, "darkMode", COALESCE("profilePicture",'') AS "profilePicture", COALESCE(token_version,0) AS token_version, "createdAt", "updatedAt"`,
+      [uploaded.url, userId]
+    );
+
+    // 4) attempt to delete old asset (best-effort)
+    try {
+      if (oldProfilePicture) {
+        // If you stored additional metadata (public_id) somewhere, pass it as extra. We don't have it here so pass only the path.
+        await deleteFile(oldProfilePicture);
+      }
+    } catch (delErr) {
+      console.error('Warning: failed to delete old profile picture:', delErr);
+      // Do not fail the request for delete errors.
+    }
+
+    const updatedUser = updateRes.rows?.[0] || null;
+
+    return res.json({
+      message: 'Profile picture updated successfully.',
+      profilePicture: uploaded.url,
+      provider: uploaded.provider || null,
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error('uploadProfilePictureForUser error:', err);
+    return res.status(500).json({ message: 'Failed to upload profile picture.' });
   }
 };

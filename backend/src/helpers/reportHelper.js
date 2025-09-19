@@ -264,7 +264,6 @@ function generateReportHtml(rows) {
     html += `</div></body></html>`;
     return html;
 }
-
 function generateReportJson(rows) {
   const goals = new Map();
 
@@ -286,6 +285,7 @@ function generateReportJson(rows) {
       title: r.goal_title || null,
       progress: r.goal_progress ?? 0,
       status: r.goal_status || null,
+      weight: typeof r.goal_weight !== 'undefined' ? Number(r.goal_weight) : null,
       tasks: new Map()
     }));
 
@@ -298,6 +298,7 @@ function generateReportJson(rows) {
         progress: r.task_progress ?? 0,
         status: r.task_status || null,
         assignee: r.task_assignee ?? null,
+        weight: typeof r.task_weight !== 'undefined' ? Number(r.task_weight) : null,
         activities: new Map()
       }));
     }
@@ -308,9 +309,10 @@ function generateReportJson(rows) {
         id: aid,
         title: r.activity_title || null,
         description: r.activity_description || null,
-        currentMetric: r.currentMetric || {},
-        targetMetric: r.targetMetric || {},
-        weight: r.activity_weight ?? 0,
+        // parenthesize the nullish coalescing part before using ||
+        currentMetric: (r.currentMetric ?? r.currentmetric) || {},
+        targetMetric: (r.targetMetric ?? r.targetmetric) || {},
+        weight: typeof r.activity_weight !== 'undefined' ? Number(r.activity_weight) : 0,
         isDone: !!r.activity_done,
         status: r.activity_status || null,
         reports: []
@@ -318,8 +320,8 @@ function generateReportJson(rows) {
 
       // add report (if exists)
       if (r.report_id) {
-        // find existing attachment entry inside newly added report if present
-        let rep = {
+        // create a minimal report object; attachments (if any) added here
+        const rep = {
           id: r.report_id,
           narrative: r.report_narrative || null,
           status: r.report_status || null,
@@ -329,7 +331,6 @@ function generateReportJson(rows) {
           attachments: []
         };
 
-        // push attachments later, but if row contains attachment info, add it
         if (r.attachment_id) {
           rep.attachments.push({
             id: r.attachment_id,
@@ -339,7 +340,6 @@ function generateReportJson(rows) {
           });
         }
 
-        // If a row is repeated for same report (multiple attachments), combine attachments below
         act.reports.push(rep);
       }
     }
@@ -360,11 +360,11 @@ function generateReportJson(rows) {
           else {
             // merge attachments arrays (avoid duplicates)
             const existing = mergedReportsMap.get(id);
-            const aNames = new Set(existing.attachments.map(a=>a.id));
+            const aIds = new Set(existing.attachments.map(a => a.id));
             for (const att of rep.attachments || []) {
-              if (!aNames.has(att.id)) {
+              if (!aIds.has(att.id)) {
                 existing.attachments.push(att);
-                aNames.add(att.id);
+                aIds.add(att.id);
               }
             }
           }
@@ -403,12 +403,10 @@ function generateReportJson(rows) {
           const metrics = monthly[ym] || {};
           perQuarter[qk] = perQuarter[qk] || {};
           Object.entries(metrics).forEach(([mk, mv]) => {
-            // only numeric when computing max; otherwise keep last observed
             const vNum = Number(mv);
             if (!isNaN(vNum)) {
               perQuarter[qk][mk] = perQuarter[qk][mk] === undefined ? vNum : Math.max(perQuarter[qk][mk], vNum);
             } else {
-              // non-numeric: keep the last seen value
               perQuarter[qk][mk] = mv;
             }
           });
@@ -452,6 +450,7 @@ function generateReportJson(rows) {
         progress: task.progress,
         status: task.status,
         assignee: task.assignee,
+        weight: task.weight,
         activities: activitiesOut
       });
     } // tasks loop
@@ -461,6 +460,7 @@ function generateReportJson(rows) {
       title: goal.title,
       progress: goal.progress,
       status: goal.status,
+      weight: goal.weight,
       tasks: tasksOut
     });
   } // goals loop
