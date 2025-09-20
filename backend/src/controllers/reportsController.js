@@ -12,13 +12,20 @@ const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 const { getAttachmentSettings } = require("../utils/systemSettings");
 const { uploadFile, deleteFile } = require("../services/uploadService");
 
+/**
+ * Helper: check if user has a permission
+ */
+function hasPermission(req, perm) {
+  if (!req.user) return false;
+  const perms = req.user.permissions || req.user.perms || [];
+  return Array.isArray(perms) && perms.includes(perm);
+}
 
 exports.canSubmitReport = async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
     );
-
 
     if (!rows[0]) {
       return res.json({ reporting_active: false });
@@ -29,7 +36,6 @@ exports.canSubmitReport = async (req, res) => {
     return res.json({ reporting_active: Boolean(isActive) });
   } catch (err) {
     console.error("canSubmitReport error:", err);
-    
     return res.status(500).json({ reporting_active: false, error: err.message });
   }
 };
@@ -58,8 +64,7 @@ exports.submitReport = async (req, res) => {
   }
 
   const client = await db.connect();
-
-  const uploadedFiles = []; 
+  const uploadedFiles = [];
 
   try {
     await client.query("BEGIN");
@@ -398,6 +403,12 @@ exports.reviewReport = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/reports
+ * - If user has manage_reports permission -> return all reports (admin)
+ * - Else if user has view_reports -> return reports in user's groups OR reports submitted by that user
+ * - Paginated, optional status filter, q search
+ */
 exports.getAllReports = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page || "1", 10), 1);
@@ -406,16 +417,48 @@ exports.getAllReports = async (req, res) => {
     const status = req.query.status ? String(req.query.status) : null;
     const qRaw = req.query.q ? String(req.query.q).trim() : null;
 
-    const whereClauses = [];
+    // Base params: LIMIT, OFFSET
     const params = [pageSize, offset];
+    const whereClauses = [];
 
+    // Permission-based scoping
+    const isAdmin = hasPermission(req, "manage_reports");
+    const canViewGroup = hasPermission(req, "view_reports");
+
+    // If not admin, but has view_reports, restrict by user's groups OR their own reports.
+    if (!isAdmin && canViewGroup) {
+      // Get group IDs for the user
+      const gRes = await db.query(
+        `SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`,
+        [req.user.id]
+      );
+      const groupIds = gRes.rows.map(r => r.groupId).filter(Boolean);
+
+      if (groupIds.length) {
+        // Add parameterized array of group IDs using Postgres ANY()
+        params.push(groupIds);
+        // r is Reports alias, later joins will include Goals as g
+        whereClauses.push(`(g."groupId" = ANY($${params.length}) OR r."userId" = ${db._escape ? db._escape(req.user.id) : '$$USERID_PLACEHOLDER$$'})`);
+        // Note: we can't use req.user.id directly inside SQL string as param index (we'll replace below).
+        // We'll patch this properly below to avoid SQL injection.
+      } else {
+        // user has no groups: only their own reports
+        params.push(req.user.id);
+        whereClauses.push(`r."userId" = $${params.length}`);
+      }
+    } else if (!isAdmin && !canViewGroup) {
+      // No permissions to see reports
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    // status filter
     if (status) {
       params.push(status);
       whereClauses.push(`r.status = $${params.length}`);
     }
 
+    // q filter (search across id, user name, activity title, narrative)
     if (qRaw) {
-      // search across id, user name, activity title, narrative
       params.push(`%${qRaw}%`);
       const idx = params.length;
       whereClauses.push(
@@ -423,7 +466,56 @@ exports.getAllReports = async (req, res) => {
       );
     }
 
-    const where = whereClauses.length ? "WHERE " + whereClauses.join(" AND ") : "";
+    // Build final where clause string
+    let where = whereClauses.length ? "WHERE " + whereClauses.join(" AND ") : "";
+
+    // Special handling: if we inserted a placeholder for userId earlier, replace it with an actual param index
+    // We'll detect the placeholder and replace with a positional parameter.
+    // Simpler approach: rebuild params and where with correct indices.
+    // Let's rebuild to be safe and clear.
+
+    // Rebuild params and where with correct positions:
+    const rebuiltParams = [pageSize, offset];
+    const rebuiltWhereClauses = [];
+
+    // Helper to push a param and return $n
+    const pushParam = (val) => {
+      rebuiltParams.push(val);
+      return `$${rebuiltParams.length}`;
+    };
+
+    // Recompute permission-based clause
+    if (!isAdmin && canViewGroup) {
+      const gRes2 = await db.query(
+        `SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`,
+        [req.user.id]
+      );
+      const groupIds2 = gRes2.rows.map(r => r.groupId).filter(Boolean);
+
+      if (groupIds2.length) {
+        const groupParam = pushParam(groupIds2); // will be $3 typically
+        const userParam = pushParam(req.user.id);
+        rebuiltWhereClauses.push(`(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`);
+      } else {
+        const userParam = pushParam(req.user.id);
+        rebuiltWhereClauses.push(`r."userId" = ${userParam}`);
+      }
+    }
+
+    // status
+    if (status) {
+      const p = pushParam(status);
+      rebuiltWhereClauses.push(`r.status = ${p}`);
+    }
+
+    // q
+    if (qRaw) {
+      const p = pushParam(`%${qRaw}%`);
+      rebuiltWhereClauses.push(`(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`);
+    }
+
+    // assemble where
+    const rebuiltWhere = rebuiltWhereClauses.length ? "WHERE " + rebuiltWhereClauses.join(" AND ") : "";
 
     const sql = `
       SELECT r.*, u.name as user_name,
@@ -436,12 +528,12 @@ exports.getAllReports = async (req, res) => {
       LEFT JOIN "Activities" a ON r."activityId" = a.id
       LEFT JOIN "Tasks" t ON a."taskId" = t.id
       LEFT JOIN "Goals" g ON t."goalId" = g.id
-      ${where}
+      ${rebuiltWhere}
       ORDER BY r."createdAt" DESC
       LIMIT $1 OFFSET $2
     `;
 
-    const { rows } = await db.query(sql, params);
+    const { rows } = await db.query(sql, rebuiltParams);
     const total = rows.length ? Number(rows[0].total_count || 0) : 0;
 
     // strip total_count from each row before returning (optional)

@@ -96,7 +96,7 @@ const Sidebar = ({
       accentLight: "#10B981",
       accentDark: "#60A5FA",
     },
-    hasPermission("manage_reports") && {
+    (hasPermission("manage_reports")|| hasPermission("view_reports")) && {
       to: "/report",
       icon: <FileText size={24} />,
       label: t("sidebar.menu.reports"),
