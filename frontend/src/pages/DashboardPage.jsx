@@ -11,22 +11,39 @@ import {
 import { markAllNotificationsRead } from "../api/notifications";
 import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
+import { useNavigate } from "react-router-dom";
+import { Loader } from "lucide-react";
 
 // --- Small UI helpers ---
 const LoadingSkeleton = ({ className = "h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" }) => (
   <div className={className} aria-hidden />
 );
 
-const Card = ({ title, children, onClick, className = "" }) => (
-  <button
-    onClick={onClick}
-    className={`text-left p-4 rounded-2xl shadow-sm bg-white dark:bg-gray-800 hover:shadow-md focus:shadow-outline focus:outline-none ${className}`}
-    aria-label={title}
-  >
-    <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{title}</div>
-    <div>{children}</div>
-  </button>
-);
+// Card: now supports optional `to` navigation and clearer interactive styling
+const Card = ({ title, children, onClick, to, className = "" }) => {
+  const clickable = Boolean(onClick || to);
+  return (
+    <div
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onClick={(e) => {
+        if (onClick) onClick(e);
+      }}
+      onKeyDown={(e) => {
+        if (!clickable) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (onClick) onClick(e);
+        }
+      }}
+      className={`text-left p-4 rounded-2xl shadow-sm bg-white dark:bg-gray-800 transition transform ${clickable ? "hover:shadow-md hover:-translate-y-0.5 cursor-pointer focus:scale-105 focus:outline-none focus:ring-2 focus:ring-sky-400" : ""} ${className}`}
+      aria-label={title}
+    >
+      <div className="text-sm text-gray-500 dark:text-gray-400 mb-2">{title}</div>
+      <div>{children}</div>
+    </div>
+  );
+};
 
 function formatDate(d) {
   if (!d) return "-";
@@ -35,26 +52,36 @@ function formatDate(d) {
 }
 
 /* ---------------------------
-   Group bar chart (vertical) - enhanced
+   Group bar chart (vertical) - improved responsiveness
 ---------------------------- */
-const GroupBarChart = ({ data = [], height = 120, maxOverride = null }) => {
+const GroupBarChart = ({ data = [], height = 140, maxOverride = null }) => {
   if (!data || !data.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
 
   const values = data.map((d) => Number(d.value ?? d.progress ?? 0));
   const max = Number(maxOverride ?? Math.max(...values, 1));
-  const barWidth = Math.max(28, Math.floor(360 / Math.max(1, data.length)));
+
+  // compute reasonable bar width but keep small enough for many entries
+  const idealWidth = 48;
+  const minWidth = 18;
+  const barWidth = Math.max(minWidth, Math.min(idealWidth, Math.floor(320 / Math.max(1, data.length)) + 8));
+  const svgWidth = data.length * barWidth;
 
   return (
     <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${data.length * barWidth} ${height + 1}`} className="w-full h-[180px]">
-        <line x1="0" y1={height} x2={data.length * barWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="1" />
+      <svg viewBox={`0 0 ${svgWidth} ${height + 36}`} className="w-full h-[200px]" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Group progress bars">
+        {/* baseline */}
+        <line x1="0" y1={height} x2={svgWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="1" />
         {data.map((d, i) => {
           const val = Number(d.value ?? d.progress ?? 0);
-          const barH = Math.max(2, (val / max) * (height - 10));
-          const x = i * barWidth + 8;
-          const w = barWidth - 16;
+          const barH = Math.max(2, (val / max) * (height - 16));
+          const x = i * barWidth + Math.floor(barWidth * 0.12);
+          const w = Math.floor(barWidth * 0.76);
           const y = height - barH;
           const color = d.color || `hsl(${(i * 45) % 360}, 70%, 50%)`;
+          const label = d.name ?? d.label ?? `#${i + 1}`;
+
+          // rotate label when long or many bars
+          const rotate = data.length > 8 || String(label).length > 10;
 
           return (
             <g key={i} transform={`translate(${x},0)`}>
@@ -67,28 +94,30 @@ const GroupBarChart = ({ data = [], height = 120, maxOverride = null }) => {
                 fill={color}
                 style={{ transition: "height 600ms ease, y 600ms ease" }}
                 role="img"
-                aria-label={`${d.name ?? d.label}: ${val}`}
+                aria-label={`${label}: ${val}`}
               />
               <text
                 x={w / 2}
-                y={height + 14}
-                fontSize="10"
-                textAnchor="middle"
-                fill="#6B7280"
-                className="text-xs dark:fill-gray-400"
-                style={{ transformOrigin: "center", whiteSpace: "nowrap" }}
-              >
-                {d.name ?? d.label}
-              </text>
-              <text
-                x={w / 2}
-                y={y - 6}
-                fontSize="10"
+                y={y - 8}
+                fontSize="12"
                 textAnchor="middle"
                 fill="#111827"
-                className="text-xs font-medium dark:fill-gray-200"
+                className="text-sm font-medium dark:fill-gray-200"
               >
                 {String(val)}
+              </text>
+
+              <text
+                x={w / 2}
+                y={height + 16}
+                fontSize="12"
+                textAnchor={rotate ? "end" : "middle"}
+                transform={rotate ? `rotate(-45 ${w / 2} ${height + 16})` : undefined}
+                fill="#6B7280"
+                className="text-xs dark:fill-gray-400"
+                style={{ whiteSpace: "nowrap" }}
+              >
+                {label}
               </text>
             </g>
           );
@@ -99,7 +128,7 @@ const GroupBarChart = ({ data = [], height = 120, maxOverride = null }) => {
 };
 
 /* ---------------------------
-   TaskBarChart (horizontal)
+   TaskBarChart (horizontal) - slimmer bars and better typography
 ---------------------------- */
 const TaskBarChart = ({ items = [], maxItems = 8 }) => {
   if (!items || !items.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No tasks</div>;
@@ -109,14 +138,14 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
     <div className="space-y-3">
       {display.map((it, idx) => {
         const value = Number(it.progress ?? it.value ?? 0);
-        const pct = Math.max(0, Math.min(100, value));
+        const pct = Math.max(0, Math.min(100, Math.round(value)));
         const color = it.color || `hsl(${(idx * 50) % 360}, 70%, 50%)`;
         return (
           <div key={idx} className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-700 dark:text-gray-300 truncate">{it.label}</div>
-                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 ml-2">{pct}%</div>
+                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{it.label}</div>
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-2">{pct}%</div>
               </div>
 
               <div className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${it.label} progress`}>
@@ -137,7 +166,8 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
 };
 
 /* ---------------------------
-   Pie chart with legend
+   Pie chart with responsive legend
+   - stacks legend beneath pie on small screens
 ---------------------------- */
 const PieChart = ({ slices = [], size = 140 }) => {
   if (!slices || !slices.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No data</div>;
@@ -146,7 +176,7 @@ const PieChart = ({ slices = [], size = 140 }) => {
   const cx = size / 2, cy = size / 2, r = Math.min(60, size / 2 - 8);
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col sm:flex-row items-center gap-4">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
         {slices.map((s, i) => {
           const portion = Number(s.value ?? s.count ?? 0) / total;
@@ -162,24 +192,30 @@ const PieChart = ({ slices = [], size = 140 }) => {
           return <path key={i} d={d} fill={s.color || `hsl(${(i * 70) % 360}, 70%, 60%)`} stroke="#fff" className="dark:stroke-gray-800" strokeWidth="1" />;
         })}
         <circle cx={cx} cy={cy} r={r - 18} fill="#fff" className="dark:fill-gray-800" />
-        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="12" className="text-gray-700 dark:text-gray-300 font-semibold">{total}</text>
+        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="text-gray-700 dark:text-gray-300 font-semibold">{total}</text>
       </svg>
 
-      <div className="flex flex-col gap-2">
-        {slices.map((s, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm">
-            <span style={{ background: s.color || `hsl(${(i * 70) % 360}, 70%, 60%)` }} className="w-3 h-3 rounded-sm inline-block" />
-            <span className="text-gray-700 dark:text-gray-300 truncate max-w-[140px]">{s.label}</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">({Math.round(((s.value ?? s.count ?? 0) / total) * 100)}%)</span>
-          </div>
-        ))}
+      <div className="flex-1 min-w-0">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
+          {slices.map((s, i) => (
+            <div key={i} className="flex items-center gap-3 text-sm">
+              <span style={{ background: s.color || `hsl(${(i * 70) % 360}, 70%, 60%)` }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div className="truncate text-gray-700 dark:text-gray-300">{s.label}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 ml-2">({Math.round(((s.value ?? s.count ?? 0) / total) * 100)}%)</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
 
 /* ---------------------------
-   Overdue Table, Notifications, AuditPanel (unchanged)
+   Overdue Table, Notifications, AuditPanel (mostly unchanged)
 ---------------------------- */
 const OverdueTable = ({ rows = [], loading, t }) => {
   if (loading) return <LoadingSkeleton className="h-48 w-full" />;
@@ -223,7 +259,7 @@ const OverdueTable = ({ rows = [], loading, t }) => {
   );
 };
 
-const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsRead, marking, t }) => {
+const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsRead, marking, t, navigate }) => {
   if (loading) return <LoadingSkeleton className="h-40 w-full" />;
   if (!notifications.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.noNotifications")}</div>;
   return (
@@ -245,9 +281,21 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
       </div>
       <ul className="space-y-2">
         {notifications.map((n) => (
-          <li key={n.id} className={`p-3 rounded-lg border ${n.isRead ? "border-gray-200 dark:border-gray-700" : "border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30"}`}>
-            <div className="text-sm mb-1 dark:text-gray-300">{n.message || n.type}</div>
-            <div className="text-xs text-gray-400 dark:text-gray-500">{new Date(n.createdAt || n.time || n._raw?.createdAt).toLocaleString()}</div>
+          <li key={n.id}>
+            <button
+              onClick={() => {
+                // navigate to specific link if provided, otherwise to notifications page
+                if (n.url) {
+                  window.location.href = n.url;
+                } else {
+                  navigate("/notification");
+                }
+              }}
+              className={`w-full text-left p-3 rounded-lg border ${n.isRead ? "border-gray-200 dark:border-gray-700" : "border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30"} hover:shadow-sm transition`}
+            >
+              <div className="text-sm mb-1 dark:text-gray-300">{n.message || n.type}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500">{new Date(n.createdAt || n.time || n._raw?.createdAt).toLocaleString()}</div>
+            </button>
           </li>
         ))}
       </ul>
@@ -283,6 +331,7 @@ const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
 // --- Main Dashboard Component ---
 export default function DashboardPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   const [dashboardData, setDashboardData] = useState({
     summary: null,
@@ -400,6 +449,14 @@ export default function DashboardPage() {
     return `${sign}${d}%`;
   }, [dashboardData.summary]);
 
+  // navigation helpers for KPI cards
+  const goToGoals = () => navigate("/project?tab=goals");
+  const goToTasks = () => navigate("/project?tab=tasks");
+  const goToActivities = () => navigate("/project?tab=activities");
+  const goToPendingReports = () => navigate("/report?status=Pending");
+  const goToNotifications = () => navigate("/notification");
+  const goToAudit = () => navigate("/auditLog");
+
   return (
     <div className="p-6 bg-gray-200 dark:bg-gray-900 min-h-screen transition-colors duration-300">
       <div className="flex flex-col gap-4 mb-6">
@@ -417,7 +474,7 @@ export default function DashboardPage() {
               </svg>
               {t("dashboard.refresh")}
             </button>
-<TopBar className="flex-col items-center"/>
+            <TopBar className="flex-col items-center" />
           </div>
         </div>
 
@@ -432,45 +489,47 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Top cards */}
         <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card title={t("dashboard.cards.goals.title")}>
+          <Card title={t("dashboard.cards.goals.title")} onClick={goToGoals}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_goal_progress ?? "-"}%</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{goalDelta ? <span className={goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>{goalDelta} {t("dashboard.cards.goals.fromLast")}</span> : t("dashboard.cards.goals.noComparison")}</div>
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_goal_progress ?? "-"}%</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {goalDelta ? <span className={goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>{goalDelta} {t("dashboard.cards.goals.fromLast")}</span> : t("dashboard.cards.goals.noComparison")}
+                </div>
               </div>
             )}
           </Card>
 
-          <Card title={t("dashboard.cards.tasks.title")}>
+          <Card title={t("dashboard.cards.tasks.title")} onClick={goToTasks}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_task_progress ?? "-"}%</div>
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_task_progress ?? "-"}%</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">{t("dashboard.cards.tasks.subtitle")}</div>
               </div>
             )}
           </Card>
 
-          <Card title={t("dashboard.cards.activities.title")}>
+          <Card title={t("dashboard.cards.activities.title")} onClick={goToActivities}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_activity_progress ?? "-"}%</div>
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.overall_activity_progress ?? "-"}%</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">{t("dashboard.cards.activities.subtitle")}</div>
               </div>
             )}
           </Card>
 
-          <Card title={t("dashboard.cards.pendingReports.title")}>
+          <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.pending_reports ?? 0}</div>
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.pending_reports ?? 0}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">{t("dashboard.cards.pendingReports.subtitle")}</div>
               </div>
             )}
@@ -481,7 +540,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
             <div className="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">{t("dashboard.groupProgress")}</div>
-            {loading ? <LoadingSkeleton className="h-28" /> : <GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress }))} />}
+            {loading ? <LoadingSkeleton className="h-28" /> : <GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} />}
           </div>
 
           <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
@@ -494,7 +553,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-            <div className="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">{t("dashboard.reportsDistribution")}</div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">{t("dashboard.reportsDistribution")}</div>
+              <button onClick={() => navigate("/report")} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{t("dashboard.viewAll")}</button>
+            </div>
             {loading ? <LoadingSkeleton className="h-28" /> : <div className="flex justify-center"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
           </div>
         </div>
@@ -504,7 +566,10 @@ export default function DashboardPage() {
           <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 h-full transition-colors duration-300">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900 dark:text-white">{t("dashboard.overdueTitle")}</h3>
-              <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">{dashboardData.overdueRows.length} {t("dashboard.tasks")}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">{dashboardData.overdueRows.length} {t("dashboard.tasks")}</span>
+                <button onClick={() => navigate("/project?tab=tasks")} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{t("dashboard.manageTasks")}</button>
+              </div>
             </div>
             <OverdueTable rows={dashboardData.overdueRows} loading={loading} t={t} />
           </div>
@@ -519,14 +584,23 @@ export default function DashboardPage() {
               onMarkAsRead={handleMarkNotificationsRead}
               marking={marking}
               t={t}
+              navigate={navigate}
             />
+            <div className="mt-3">
+              <button onClick={() => navigate("/notification")} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">{t("dashboard.viewAllNotifications")}</button>
+            </div>
           </div>
         </div>
 
         {/* Audit panel (always visible; backend enforces permission) */}
         <div className="lg:col-span-12">
           <div className="p-5 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
-            <AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} />
+            <div className="flex items-center justify-between mb-4">
+              <AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} />
+              <div className="ml-4">
+                <button onClick={goToAudit} className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">{t("dashboard.viewAudit")}</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

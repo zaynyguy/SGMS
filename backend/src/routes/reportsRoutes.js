@@ -14,14 +14,14 @@ router.use(authenticateJWT);
 // allows frontend to check if reporting is active
 router.get(
   "/reporting-status",
-  authorizePermissions(["view_reports"]), 
+  authorizePermissions(["view_reports", "manage_reports"]), 
   reportsController.canSubmitReport
 );
 
 router.post(
   "/activity/:activityId",
   upload.array("attachments", 5),
-  authorizePermissions(["view_reports"]),
+  authorizePermissions(["view_reports", "manage_reports"]),
   reportsController.submitReport
 );
 
@@ -38,10 +38,10 @@ router.get(
   reportsController.generateMasterReport
 );
 
-// Fetch all reports (for admin review)
+// Fetch all reports (for admin review) — now accessible to view_reports, but controller scopes results
 router.get(
   "/",
-  authorizePermissions(["manage_reports"]),
+  authorizePermissions(["manage_reports", "view_reports"]),
   reportsController.getAllReports
 );
 
