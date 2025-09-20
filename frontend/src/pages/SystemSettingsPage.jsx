@@ -1,4 +1,3 @@
-// src/pages/SystemSettingsPage.jsx
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchSystemSettings, updateSystemSettings } from "../api/systemSettings";
@@ -205,17 +204,19 @@ export default function SystemSettingsPage() {
       : "text-green-700 dark:text-green-400";
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 py-4 md:py-8 transition-colors duration-200">
-      <div className="max-w-8xl mx-auto px-3 sm:px-4">
-        <div className="flex justify-between items-center mb-6 px-2">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 py-4 md:py-8 transition-colors duration-200 settings-wrap">
+      <div className="max-w-8xl mx-auto px-3 sm:px-4 container">
+        <div className="flex justify-between items-center mb-6 px-2 header-inner">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">{t("systemSettings.title")}</h1>
-          <TopBar/>
+          <div className="header-actions justify-end flex gap-2 items-center">
+            <TopBar className="flex" />
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 transition-colors duration-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 transition-colors duration-200 section">
           <div className="space-y-5">
             {/* Allowed attachment types */}
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 section">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("systemSettings.allowedAttachmentTypes.label")}</label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t("systemSettings.allowedAttachmentTypes.help")}</p>
               <AllowedTypesInput
@@ -230,9 +231,9 @@ export default function SystemSettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 responsive-grid">
               {/* Audit retention days */}
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 section">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("systemSettings.auditRetention.label")}</label>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t("systemSettings.auditRetention.help")}</p>
                 <input
@@ -248,7 +249,7 @@ export default function SystemSettingsPage() {
               </div>
 
               {/* Max attachment size */}
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 section">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("systemSettings.maxAttachmentSize.label")}</label>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t("systemSettings.maxAttachmentSize.help")}</p>
                 <input
@@ -265,7 +266,7 @@ export default function SystemSettingsPage() {
             </div>
 
             {/* Reporting */}
-            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+            <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 section">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("systemSettings.reporting.label")}</label>
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t("systemSettings.reporting.help")}</p>
               <div className="flex items-center">
@@ -293,7 +294,7 @@ export default function SystemSettingsPage() {
               onClick={handleSave}
               disabled={saving}
               aria-label={t("systemSettings.saveButtonAria")}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center disabled:opacity-50"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center disabled:opacity-50 btn-sm-full"
             >
               {saving ? (
                 <>

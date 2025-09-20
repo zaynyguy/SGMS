@@ -2,10 +2,219 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------
+   Custom utilities & keyframes
+   --------------------------- */
 @layer utilities {
+  /* ripple animation (your original example) */
   @keyframes ripple {
     from { transform: scale(0.35); opacity: 0.6; }
     to   { transform: scale(12);   opacity: 0;   }
   }
   .animate-ripple { animation: ripple 600ms cubic-bezier(.22,.9,.31,.99) forwards; }
+
+  /* ---------------------------
+     Global responsive utilities
+     (SettingsPage helpers + breakpoints)
+     Paste this block after your @tailwind lines
+     --------------------------- */
+
+  /* Base helpers (available globally) */
+  .settings-wrap {
+    max-width: 1440px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;  /* 16px */
+    padding-right: 1rem; /* 16px */
+    box-sizing: border-box;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .header-inner {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .header-actions {
+    margin-left: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .responsive-avatar img,
+  .responsive-avatar > div {
+    width: 112px !important;
+    height: 112px !important;
+  }
+
+  .section {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .responsive-grid {
+    width: 100%;
+  }
+
+  /* small-screen button/input full width helper */
+  .btn-sm-full {
+    width: 100% !important;
+    display: inline-flex !important;
+    justify-content: center;
+  }
+
+  /* -----------------------
+     Breakpoints (explicit media queries)
+     ----------------------- */
+
+  /* Extra small phones (<= 320px) */
+  @media (max-width: 320px) {
+    .settings-wrap { padding-left: .75rem; padding-right: .75rem; } /* 12px */
+    .responsive-avatar img, .responsive-avatar > div { width: 72px !important; height: 72px !important; }
+    .section { padding: .75rem; }
+    .header-inner { gap: .5rem; }
+    .header-actions h1 { font-size: 16px; line-height: 1.1; }
+    .btn-sm-full { width: 100% !important; display: inline-flex !important; justify-content: center; }
+  }
+
+  /* small phones (321px - 374px) */
+  @media (min-width: 321px) and (max-width: 374px) {
+    .settings-wrap { padding-left: .75rem; padding-right: .75rem; }
+    .responsive-avatar img, .responsive-avatar > div { width: 80px !important; height: 80px !important; }
+    .section { padding: .75rem; }
+    .header-actions h1 { font-size: 17px; }
+    .btn-sm-full { width: 100% !important; display: inline-flex !important; justify-content: center; }
+  }
+
+  /* large phones (375px - 424px) */
+  @media (min-width: 375px) and (max-width: 424px) {
+    .settings-wrap { padding-left: .875rem; padding-right: .875rem; } /* 14px */
+    .responsive-avatar img, .responsive-avatar > div { width: 96px !important; height: 96px !important; }
+    .section { padding: .875rem; }
+    .header-actions h1 { font-size: 18px; }
+    .btn-sm-full { width: 100% !important; display: inline-flex !important; justify-content: center; }
+  }
+
+  /* tablets and up (>= 768px) */
+  @media (min-width: 768px) {
+    .settings-wrap { padding-left: 1.5rem; padding-right: 1.5rem; } /* 24px */
+    .responsive-avatar img, .responsive-avatar > div { width: 112px !important; height: 112px !important; }
+    .section { padding: 1.25rem; } /* 20px */
+    .header-actions { margin-left: auto; }
+    .header-actions h1 { font-size: 20px; }
+    .btn-sm-full { width: auto !important; }
+  }
+
+  /* laptop (>= 1024px) */
+  @media (min-width: 1024px) {
+    .settings-wrap { padding-left: 2rem; padding-right: 2rem; } /* 32px */
+    .section { padding: 1.5rem; } /* 24px */
+    .header-actions h1 { font-size: 22px; }
+  }
+
+  /* laptop large (>= 1440px) */
+  @media (min-width: 1440px) {
+    .settings-wrap { padding-left: 3rem; padding-right: 3rem; } /* 48px */
+    .container { max-width: 1320px; }
+    .section { padding: 1.75rem; } /* 28px */
+    .header-actions h1 { font-size: 24px; }
+  }
 }
+/* End of custom utilities */
+
+/* ------------------- Responsive Typography ------------------- */
+
+:root {
+  --type-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  --type-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
+    "Segoe UI Mono", monospace;
+
+  --base-320: 14px;
+  --base-375: 14.5px;
+  --base-425: 15px;
+  --base-768: 16px;
+  --base-1024: 16.5px;
+  --base-1440: 17px;
+}
+
+html, body {
+  font-family: var(--type-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: inherit;
+}
+
+html { font-size: var(--base-375); }
+@media (max-width: 320px) { html { font-size: var(--base-320); } }
+@media (min-width: 321px) and (max-width: 374px) { html { font-size: var(--base-375); } }
+@media (min-width: 375px) and (max-width: 424px) { html { font-size: var(--base-425); } }
+@media (min-width: 768px) { html { font-size: var(--base-768); } }
+@media (min-width: 1024px) { html { font-size: var(--base-1024); } }
+@media (min-width: 1440px) { html { font-size: var(--base-1440); } }
+
+body {
+  line-height: 1.45;
+  font-weight: 400;
+  font-size: 1rem;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: rgba(17, 24, 39, 0.9);
+  max-width: 70ch;
+}
+
+h1 { font-size: 1.5rem; line-height: 1.1; margin: 0 0 0.5rem; font-weight: 700; }
+h2 { font-size: 1.25rem; line-height: 1.15; margin: 0 0 0.5rem; font-weight: 600; }
+h3 { font-size: 1.125rem; line-height: 1.2; margin: 0 0 0.5rem; font-weight: 600; }
+h4 { font-size: 1rem; line-height: 1.25; margin: 0 0 0.5rem; font-weight: 600; }
+
+@media (max-width: 375px) {
+  h1 { font-size: 1.35rem; }
+  h2 { font-size: 1.15rem; }
+}
+
+@media (min-width: 1024px) {
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.35rem; }
+  h3 { font-size: 1.2rem; }
+}
+
+.small-text, label, .help-text {
+  font-size: 0.875rem;
+  line-height: 1.3;
+  color: rgba(55, 65, 81, 0.9);
+}
+
+button, .btn, input[type="button"], input[type="submit"] {
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+/* Ensure touch targets remain accessible */
+button, .btn, input, select, textarea, label[role="button"] {
+  min-height: 2.75rem;
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+}
+
+code, kbd, pre {
+  font-family: var(--type-mono);
+  font-size: 0.9em;
+}
+
+/* Heading inside header-actions */
+.header-actions h1 { font-weight: 700; margin: 0; }

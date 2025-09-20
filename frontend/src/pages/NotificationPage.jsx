@@ -7,6 +7,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
 } from "../api/notifications";
+import TopBar from "../components/layout/TopBar";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);
@@ -106,8 +107,8 @@ export default function NotificationsPage() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
+      <div className="flex items-center justify-end mb-6">
+        <div className="justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">Notifications</h1>
           <p className="text-sm text-gray-500">{unread} unread</p>
         </div>
@@ -121,6 +122,7 @@ export default function NotificationsPage() {
             </button>
           )}
         </div>
+      <TopBar/>
       </div>
 
       {/* Filters */}
