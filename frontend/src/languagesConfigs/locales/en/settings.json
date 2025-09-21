@@ -1,0 +1,37 @@
+{
+  "settings": {
+    "title": "Settings",
+    "loading": "Loading settings…",
+    "profilePicture": "Profile picture",
+    "chooseImage": "Choose image",
+    "pictureHint": "Square image works best (max 5 MB)",
+    "uploading": "Uploading...",
+    "upload": "Upload",
+    "personalInfo": "Personal info",
+    "username": "Username",
+    "usernameHelp": "Username is not editable",
+    "name": "Full name",
+    "namePlaceholder": "Your display name",
+    "appearance": "Appearance",
+    "language": "Language",
+    "changePassword": "Change password",
+    "oldPassword": "Old password",
+    "newPassword": "New password",
+    "passwordPlaceholder": "••••••••",
+    "passwordRequirements": "Minimum 8 characters.",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "toasts": {
+      "pictureSuccess": "Profile picture updated",
+      "updateSuccess": "Settings updated"
+    },
+    "errors": {
+      "loadError": "Failed to load settings",
+      "invalidImage": "Invalid image file",
+      "imageTooLarge": "Image too large (max 5 MB)",
+      "uploadError": "Failed to upload profile picture",
+      "oldPasswordRequired": "Old password is required to change your password",
+      "passwordTooShort": "Password must be at least 8 characters"
+    }
+  }
+}

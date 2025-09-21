@@ -2,17 +2,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, CheckCircle, Info, AlertTriangle } from "lucide-react";
-import BottomSheet from "../BottomSheet"; // adjust path if needed
+import { Bell, CheckCircle, Info, AlertTriangle, RefreshCw, Eye } from "lucide-react";
+import BottomSheet from "../BottomSheet";
 import { fetchNotifications, fetchUnreadCount } from "../../api/notifications";
-
-/**
- * NotificationPreview (hover vs touch-aware)
- *
- * - If the device supports hover (matchMedia '(hover: hover)') => desktop popover + navigate on click
- * - If device does NOT support hover => mobile/tablet BottomSheet on tap (no navigate)
- * - Listens for changes in hover capability (e.g., attach/detach mouse)
- */
 
 export default function NotificationPreview({
   item = { to: "/notification", label: "Notifications" },
@@ -26,13 +18,14 @@ export default function NotificationPreview({
   const hideTimer = useRef(null);
 
   // state
-  const [open, setOpen] = useState(false); // desktop popover open
-  const [sheetOpen, setSheetOpen] = useState(false); // touch sheet open
+  const [open, setOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
   const [coords, setCoords] = useState({ top: 0, left: 0, transform: "translate(0,0)" });
+  const [loading, setLoading] = useState(false);
 
-  // feature detection: does this device support hover? (true for mouse/trackpad)
+  // feature detection: does this device support hover?
   const [canHover, setCanHover] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -42,12 +35,11 @@ export default function NotificationPreview({
     }
   });
 
-  // recompute canHover when media query changes (attaching/detaching mouse)
+  // recompute canHover when media query changes
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
     const mq = window.matchMedia("(hover: hover)");
     const handler = (e) => setCanHover(!!e.matches);
-    // Modern browsers use addEventListener on MediaQueryList; fallback to deprecated addListener
     if (mq.addEventListener) mq.addEventListener("change", handler);
     else if (mq.addListener) mq.addListener(handler);
     return () => {
@@ -56,7 +48,7 @@ export default function NotificationPreview({
     };
   }, []);
 
-  // initial unread (and don't poll here — reuse your polling if you have it)
+  // initial unread count
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -71,8 +63,9 @@ export default function NotificationPreview({
     return () => (mounted = false);
   }, []);
 
-  // load preview items (5)
+  // load preview items
   const loadPreview = async () => {
+    setLoading(true);
     try {
       const res = await fetchNotifications(1, 5);
       setNotifications(res?.rows || []);
@@ -80,6 +73,8 @@ export default function NotificationPreview({
       setUnread(u?.unread ?? 0);
     } catch (e) {
       console.error("Failed to load notifications", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,6 +115,7 @@ export default function NotificationPreview({
     }
     openPreviewAtBell();
   };
+  
   const handleMouseLeave = () => {
     if (!canHover) return;
     hideTimer.current = setTimeout(() => {
@@ -128,18 +124,15 @@ export default function NotificationPreview({
     }, 150);
   };
 
-  // click bell:
-  // - if device supports hover -> treat as desktop: navigate
-  // - if device does NOT support hover -> open bottom sheet (touch devices & touch-first tablets)
+  // click bell handler
   const handleBellClick = (e) => {
-    // cancel hide timer (if any)
     if (hideTimer.current) {
       clearTimeout(hideTimer.current);
       hideTimer.current = null;
     }
 
     if (!canHover) {
-      // touch-first device (mobile/tablet): open bottom sheet instead of navigating
+      // touch-first device: open bottom sheet
       setSheetOpen(true);
       loadPreview();
     } else {
@@ -148,11 +141,27 @@ export default function NotificationPreview({
     }
   };
 
-  // keyboard accessibility: Enter/Space behave same as click
+  // keyboard accessibility
   const handleBellKeyDown = (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleBellClick();
+    }
+  };
+
+  // notification icon based on level
+  const getNotificationIcon = (level) => {
+    const iconProps = { size: 16, className: "flex-shrink-0" };
+    
+    switch (level) {
+      case "success":
+        return <CheckCircle {...iconProps} className="text-green-500" />;
+      case "warning":
+        return <AlertTriangle {...iconProps} className="text-yellow-500" />;
+      case "error":
+        return <AlertTriangle {...iconProps} className="text-red-500" />;
+      default:
+        return <Info {...iconProps} className="text-blue-500" />;
     }
   };
 
@@ -180,38 +189,60 @@ export default function NotificationPreview({
               transition: "opacity 200ms ease, transform 200ms ease",
             }}
           >
-            <div className="w-80 max-h-[420px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700">
-                <div className="text-sm font-medium">Notifications</div>
-                <div className="text-xs text-gray-500">{unread} unread</div>
+            <div className="w-80 max-h-[420px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-200">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <div className="text-sm font-medium text-gray-800 dark:text-white">Notifications</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{unread} unread</div>
               </div>
 
-              <div className="divide-y overflow-y-auto max-h-[340px]">
-                {notifications.length === 0 && <div className="p-4 text-sm text-gray-500">No notifications</div>}
-                {notifications.map((n) => (
-                  <div
-                    key={n.id}
-                    className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 ${n.isRead ? "bg-white" : "bg-blue-50"}`}
-                    onClick={() => navigate(item?.to || "/notification")}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <div className="flex-shrink-0 mt-0.5">
-                      {n.level === "success" ? <CheckCircle className="w-4 h-4" /> : n.level === "warning" ? <AlertTriangle className="w-4 h-4" /> : n.level === "error" ? <AlertTriangle className="w-4 h-4" /> : <Info className="w-4 h-4" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-sm truncate ${n.isRead ? "text-gray-600" : "font-medium text-gray-900"}`}>{n.message}</div>
-                      <div className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</div>
-                    </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700 overflow-y-auto max-h-[340px]">
+                {loading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <RefreshCw className="h-5 w-5 text-gray-400 animate-spin" />
                   </div>
-                ))}
+                ) : notifications.length === 0 ? (
+                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">No notifications</div>
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`flex items-start gap-3 p-3 transition-colors duration-200 cursor-pointer ${
+                        n.isRead 
+                          ? "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700" 
+                          : "bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                      }`}
+                      onClick={() => navigate(item?.to || "/notification")}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {getNotificationIcon(n.level)}
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-sm truncate ${n.isRead ? "text-gray-600 dark:text-gray-300" : "font-medium text-gray-900 dark:text-white"}`}>
+                          {n.message}
+                        </div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          {new Date(n.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2 border-t dark:border-gray-700">
-                <button onClick={() => navigate(item?.to || "/notification")} className="text-sm px-2 py-1 rounded hover:bg-gray-100">
+              <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <button 
+                  onClick={() => navigate(item?.to || "/notification")} 
+                  className="text-sm px-2 py-1 rounded text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center gap-1"
+                >
+                  <Eye size={14} />
                   View all
                 </button>
-                <button onClick={loadPreview} className="text-sm px-2 py-1 rounded hover:bg-gray-100">
+                <button 
+                  onClick={loadPreview} 
+                  className="text-sm px-2 py-1 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 flex items-center gap-1"
+                  disabled={loading}
+                >
+                  <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                   Refresh
                 </button>
               </div>
@@ -221,7 +252,6 @@ export default function NotificationPreview({
         )
       : null;
 
-  // bottom sheet (mobile/tablet)
   return (
     <>
       <div ref={bellRef} className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
@@ -231,67 +261,83 @@ export default function NotificationPreview({
           onClick={handleBellClick}
           onKeyDown={handleBellKeyDown}
           aria-label={item?.label || "Notifications"}
-          className={`flex items-center p-2 rounded-full transition-colors duration-200 ${showExpanded ? "justify-normal" : "justify-center"} cursor-pointer`}
+          className={`flex items-center p-2 rounded-full transition-colors duration-200 ${
+            showExpanded 
+              ? "justify-normal text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" 
+              : "justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          } cursor-pointer`}
         >
-          <div className="relative flex items-center justify-center w-6">
-            <Bell size={24}/>
+          <div className="relative flex items-center justify-center">
+            <Bell size={20} />
             {unread > 0 && (
-              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold leading-none text-white bg-red-600 rounded-full">
+              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-xs font-semibold leading-none text-white bg-red-500 rounded-full">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
           </div>
-          {showExpanded && <span className="ml-3 truncate">{item?.label || "Notifications"}</span>}
+          {showExpanded && <span className="ml-2 truncate text-sm">{item?.label || "Notifications"}</span>}
         </div>
       </div>
 
       {popover}
 
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)}>
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-lg font-semibold">Notifications</div>
-            <div className="text-xs text-gray-500">{unread} unread</div>
+        <div className="p-4 bg-white dark:bg-gray-800 rounded-t-lg transition-colors duration-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-lg font-semibold text-gray-800 dark:text-white">Notifications</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">{unread} unread</div>
           </div>
 
-          <div className="divide-y">
-            {notifications.length === 0 && <div className="p-3 text-sm text-gray-500">No notifications</div>}
-            {notifications.map((n) => (
-              <div
-                key={n.id}
-                className={`p-3 ${n.isRead ? "text-gray-600" : "text-gray-900 font-medium"} flex items-start gap-3`}
-                onClick={() => {
-                  setSheetOpen(false);
-                  navigate(item?.to || "/notification");
-                }}
-              >
-                <div className="flex-shrink-0 mt-0.5">
-                  {n.level === "success" ? <CheckCircle className="w-4 h-4" /> : n.level === "warning" ? <AlertTriangle className="w-4 h-4" /> : n.level === "error" ? <AlertTriangle className="w-4 h-4" /> : <Info className="w-4 h-4" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate">{n.message}</div>
-                  <div className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</div>
-                </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+            {loading ? (
+              <div className="flex justify-center items-center py-6">
+                <RefreshCw className="h-5 w-5 text-gray-400 dark:text-gray-500 animate-spin" />
               </div>
-            ))}
+            ) : notifications.length === 0 ? (
+              <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">No notifications</div>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  className={`p-3 flex items-start gap-3 transition-colors duration-200 ${
+                    n.isRead 
+                      ? "text-gray-600 dark:text-gray-300" 
+                      : "text-gray-900 dark:text-white font-medium"
+                  }`}
+                  onClick={() => {
+                    setSheetOpen(false);
+                    navigate(item?.to || "/notification");
+                  }}
+                >
+                  {getNotificationIcon(n.level)}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm truncate">{n.message}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {new Date(n.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between">
             <button
               onClick={() => {
                 setSheetOpen(false);
                 navigate(item?.to || "/notification");
               }}
-              className="text-sm px-3 py-2 rounded bg-gray-100 hover:bg-gray-200"
+              className="text-sm px-3 py-2 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 flex items-center gap-1"
             >
+              <Eye size={14} />
               View all
             </button>
             <button
-              onClick={() => {
-                loadPreview();
-              }}
-              className="text-sm px-3 py-2 rounded hover:bg-gray-100"
+              onClick={loadPreview}
+              disabled={loading}
+              className="text-sm px-3 py-2 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 flex items-center gap-1"
             >
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               Refresh
             </button>
           </div>

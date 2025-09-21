@@ -16,7 +16,7 @@ import { createPortal } from "react-dom";
  *  </BottomSheet>
  */
 
-export default function BottomSheet({ open, onClose, children, height = "80vh" }) {
+export default function BottomSheet({ open, onClose, children, height = "66vh" }) {
   const sheetRef = useRef(null);
   const startY = useRef(0);
   const currentY = useRef(0);

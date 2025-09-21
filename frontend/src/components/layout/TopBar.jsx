@@ -25,7 +25,7 @@ const TopBar = () => {
   }, [dark]);
 
   return (
-    <header className="sticky top-0 z-50 bg-white dark:bg-gray-900/60 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800 rounded-full">
+    <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 backdrop-blur-sm rounded-full">
       <div className="max-w-8xl mx-auto px-4 py-2 flex items-center">
         <div className="flex-1" /> {/* spacer -> keeps controls on the right */}
 

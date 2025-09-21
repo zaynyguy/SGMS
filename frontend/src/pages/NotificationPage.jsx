@@ -1,6 +1,6 @@
 // src/pages/NotificationsPage.jsx
 import React, { useEffect, useState } from "react";
-import { CheckCircle, Info, AlertTriangle } from "lucide-react";
+import { CheckCircle, Info, AlertTriangle, Loader, Filter } from "lucide-react";
 import {
   fetchNotifications,
   fetchUnreadCount,
@@ -87,13 +87,13 @@ export default function NotificationsPage() {
   const iconFor = (level) => {
     switch (level) {
       case "success":
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />;
       case "warning":
-        return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+        return <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />;
       case "error":
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+        return <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />;
       default:
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <Info className="w-5 h-5 text-blue-500 flex-shrink-0" />;
     }
   };
 
@@ -105,109 +105,130 @@ export default function NotificationsPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex items-center justify-end mb-6">
-        <div className="justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">Notifications</h1>
-          <p className="text-sm text-gray-500">{unread} unread</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">Notifications</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{unread} unread</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {unread > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm transition-colors duration-200"
+              >
+                Mark all as read
+              </button>
+            )}
+            <TopBar />
+          </div>
         </div>
-        <div>
-          {unread > 0 && (
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mr-2">
+            <Filter size={16} />
+            <span>Filter:</span>
+          </div>
+          {["all", "unread", "read"].map((f) => (
             <button
-              onClick={handleMarkAllRead}
-              className="px-3 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
+                filter === f
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
             >
-              Mark all as read
+              {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
-          )}
+          ))}
         </div>
-      <TopBar/>
-      </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 mb-4">
-        {["all", "unread", "read"].map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-1 rounded-lg text-sm font-medium ${
-              filter === f
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {/* Body */}
-      <div className="bg-white rounded-xl shadow border divide-y">
-        {loading && notifications.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            Loading notifications…
-          </div>
-        ) : visible.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
-            No notifications to display
-          </div>
-        ) : (
-          visible.map((n) => (
-            <div
-              key={n.id}
-              className={`flex items-start gap-3 p-4 ${
-                n.isRead ? "bg-white" : "bg-blue-50"
-              } hover:bg-gray-50`}
-            >
-              <div className="flex-shrink-0 mt-0.5">{iconFor(n.level)}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3">
-                  <p
-                    className={`text-sm ${
-                      n.isRead
-                        ? "text-gray-600"
-                        : "text-gray-900 font-medium"
-                    }`}
-                  >
-                    {n.message}
-                  </p>
-                  <div className="flex-shrink-0 ml-3 flex flex-col items-end gap-2">
-                    {!n.isRead && (
-                      <button
-                        onClick={() => handleMarkRead(n.id)}
-                        className="text-xs px-2 py-1 rounded bg-white border hover:bg-gray-100"
-                      >
-                        Mark
-                      </button>
-                    )}
-                    <span className="text-xs text-gray-400">
-                      {new Date(n.createdAt).toLocaleString()}
-                    </span>
+        {/* Body */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-200">
+          {loading && notifications.length === 0 ? (
+            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+              <div className="flex justify-center">
+                <Loader className="h-5 w-5 animate-spin" />
+              </div>
+              <p className="mt-2">Loading notifications…</p>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+              No notifications to display
+            </div>
+          ) : (
+            visible.map((n) => (
+              <div
+                key={n.id}
+                className={`flex items-start gap-3 p-4 transition-colors duration-200 ${
+                  n.isRead 
+                    ? "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750" 
+                    : "bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                }`}
+              >
+                {iconFor(n.level)}
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <p
+                      className={`text-sm break-words ${
+                        n.isRead
+                          ? "text-gray-600 dark:text-gray-300"
+                          : "text-gray-900 dark:text-white font-medium"
+                      }`}
+                    >
+                      {n.message}
+                    </p>
+                    
+                    <div className="flex flex-col sm:items-end gap-2">
+                      {!n.isRead && (
+                        <button
+                          onClick={() => handleMarkRead(n.id)}
+                          className="text-xs px-2 py-1 rounded-md bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 self-start sm:self-auto"
+                        >
+                          Mark as read
+                        </button>
+                      )}
+                      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                        {new Date(n.createdAt).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
 
-      {/* Load more */}
-      <div className="mt-4 flex items-center justify-center">
-        {error && <div className="text-sm text-red-500">{error}</div>}
-        {!loading &&
-          !loadingMore &&
-          notifications.length >= page * LIMIT && (
+        {/* Load more */}
+        <div className="mt-6 flex items-center justify-center">
+          {error && (
+            <div className="text-sm text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-md">
+              {error}
+            </div>
+          )}
+          
+          {!loading && !loadingMore && notifications.length >= page * LIMIT && (
             <button
               onClick={handleLoadMore}
-              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
+              className="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
             >
               Load more
             </button>
           )}
-        {loadingMore && (
-          <div className="text-sm text-gray-600">Loading more…</div>
-        )}
+          
+          {loadingMore && (
+            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <Loader className="h-4 w-4 animate-spin mr-2" />
+              Loading more…
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

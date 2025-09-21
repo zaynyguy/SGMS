@@ -72,7 +72,7 @@ function App() {
                 <Route
                   path="/report"
                   element={
-                    <ProtectedRoute requiredPermission="view_report">
+                    <ProtectedRoute requiredPermission="view_reports">
                       <ReportPage />
                     </ProtectedRoute>
                   }
