@@ -5,7 +5,7 @@ const http = require("http");
 const { initSocket } = require("./services/socketService"); 
 const db = require("./db")
 const cookieParser = require('cookie-parser');
-
+const { scheduleMonthlySnapshots } = require('./jobs/monthlySnapshot');
 
 const app = express();
 const server = http.createServer(app);
@@ -14,6 +14,8 @@ const server = http.createServer(app);
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+scheduleMonthlySnapshots({ schedule: '0 9 1 * *' });
 
 // --- API Routes ---
 app.use("/api/auth", require("./routes/authRoutes"));

@@ -52,8 +52,6 @@ function renderMetricsList(metrics) {
 
 /* -------------------------
    Pills (desktop center) + Mobile bottom nav
-   - show pills centered on md+ (inline)
-   - show bottom fixed nav on mobile (md:hidden)
 ------------------------- */
 function TabsPills({ value, onChange }) {
   const { t } = useTranslation();
@@ -81,7 +79,6 @@ function TabsPills({ value, onChange }) {
 
   return (
     <>
-      {/* Desktop / Tablet: pills centered in header (visible md+) */}
       <div className="hidden md:flex items-center justify-end flex-1">
         <div role="tablist" aria-label="reports mode" className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1">
           {options.map((opt) => {
@@ -107,7 +104,6 @@ function TabsPills({ value, onChange }) {
         </div>
       </div>
 
-      {/* Mobile: bottom fixed navbar (visible only < md) */}
       <nav aria-label="reports tabs" className="md:hidden fixed left-4 right-4 bottom-4 z-40">
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-2 flex justify-between items-center">
           {options.map((opt) => {
@@ -145,6 +141,7 @@ function ReviewReportsPage() {
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [actionState, setActionState] = useState({});
+  // actionLoading keyed by report id; value: 'approving' | 'rejecting' | null
   const [actionLoading, setActionLoading] = useState({});
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -182,8 +179,12 @@ function ReviewReportsPage() {
   async function handleReview(id, status) {
     const adminComment = actionState[id]?.comment || null;
     const resubmissionDeadline = actionState[id]?.deadline || null;
+
+    // set action-specific loading state so only clicked button shows spinner
+    const actionKey = status === "Approved" ? "approving" : "rejecting";
+
     try {
-      setActionLoading((s) => ({ ...s, [id]: true }));
+      setActionLoading((s) => ({ ...s, [id]: actionKey }));
       await reviewReport(id, { status, adminComment, resubmissionDeadline });
       await loadReports();
       setActionState((s) => ({
@@ -191,6 +192,7 @@ function ReviewReportsPage() {
         [id]: {
           ...(s[id] || {}),
           _lastResult: t("reports.action.updatedTo", { status }),
+          _lastError: null,
         },
       }));
     } catch (err) {
@@ -200,10 +202,12 @@ function ReviewReportsPage() {
         [id]: {
           ...(s[id] || {}),
           _lastError: err?.message || t("reports.action.failed"),
+          _lastResult: null,
         },
       }));
     } finally {
-      setActionLoading((s) => ({ ...s, [id]: false }));
+      // clear loading
+      setActionLoading((s) => ({ ...s, [id]: null }));
     }
   }
 
@@ -321,117 +325,122 @@ function ReviewReportsPage() {
           ))
         ) : (
           <>
-            {reports.map((r) => (
-              <div key={r.id} className="border rounded-lg overflow-hidden transition-all">
-                <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 md:gap-4">
-                      <div className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">Report #{r.id}</div>
-                      <div
-                        className={`px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs md:text-sm font-medium ${
-                          r.status === "Approved"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                            : r.status === "Rejected"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                            : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                        }`}
+            {reports.map((r) => {
+              const isLoading = !!actionLoading[r.id];
+              const approving = actionLoading[r.id] === "approving";
+              const rejecting = actionLoading[r.id] === "rejecting";
+              return (
+                <div key={r.id} className="border rounded-lg overflow-hidden transition-all">
+                  <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-4">
+                        <div className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">Report #{r.id}</div>
+                        <div
+                          className={`px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs md:text-sm font-medium ${
+                            r.status === "Approved"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                              : r.status === "Rejected"
+                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                          }`}
+                        >
+                          {t(`reports.status.${r.status}`, { defaultValue: r.status })}
+                        </div>
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">
+                        {r.activity_title} • {r.user_name}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 items-center">
+                      <button
+                        onClick={() => setExpanded(expanded === r.id ? null : r.id)}
+                        aria-expanded={expanded === r.id}
+                        className="flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       >
-                        {t(`reports.status.${r.status}`, { defaultValue: r.status })}
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">
-                      {r.activity_title} • {r.user_name}
+                        <svg className={`transition-transform ${expanded === r.id ? "rotate-180" : "rotate-0"}`} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex gap-2 items-center">
-                    <button
-                      onClick={() => setExpanded(expanded === r.id ? null : r.id)}
-                      aria-expanded={expanded === r.id}
-                      className="flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <svg className={`transition-transform ${expanded === r.id ? "rotate-180" : "rotate-0"}`} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                        <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                  </div>
+                  {expanded === r.id && (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800 space-y-3">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.narrative")}</div>
+                        <div className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1 whitespace-pre-wrap">
+                          {r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.metrics_narrative")}</div>
+                        <div className="mt-2">{renderMetricsList(r.metrics_data)}</div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <input
+                          placeholder={t("reports.adminComment_placeholder.placeholder")}
+                          value={actionState[r.id]?.comment || ""}
+                          onChange={(e) =>
+                            setActionState((s) => ({
+                              ...s,
+                              [r.id]: {
+                                ...(s[r.id] || {}),
+                                comment: e.target.value,
+                              },
+                            }))
+                          }
+                          className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                          disabled={isLoading}
+                        />
+                        <input
+                          type="date"
+                          value={actionState[r.id]?.deadline || ""}
+                          onChange={(e) =>
+                            setActionState((s) => ({
+                              ...s,
+                              [r.id]: {
+                                ...(s[r.id] || {}),
+                                deadline: e.target.value,
+                              },
+                            }))
+                          }
+                          className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+                          disabled={isLoading}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleReview(r.id, "Approved")}
+                            className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
+                            disabled={isLoading}
+                            aria-busy={approving}
+                          >
+                            {approving ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.approve")}
+                          </button>
+                          <button
+                            onClick={() => handleReview(r.id, "Rejected")}
+                            className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
+                            disabled={isLoading}
+                            aria-busy={rejecting}
+                          >
+                            {rejecting ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.reject")}
+                          </button>
+                        </div>
+                      </div>
+
+                      {actionState[r.id]?._lastResult && (
+                        <div className="text-xs text-green-700 dark:text-green-300">{actionState[r.id]._lastResult}</div>
+                      )}
+                      {actionState[r.id]?._lastError && (
+                        <div className="text-xs text-red-600 dark:text-red-400">{actionState[r.id]._lastError}</div>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                {expanded === r.id && (
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 space-y-3">
-                    <div>
-                      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.narrative")}</div>
-                      <div className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1">
-                        {r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.metrics_narrative")}</div>
-                      <div className="mt-2">{renderMetricsList(r.metrics_data)}</div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                      <input
-                        placeholder={t("reports.adminComment_placeholder.placeholder")}
-                        value={actionState[r.id]?.comment || ""}
-                        onChange={(e) =>
-                          setActionState((s) => ({
-                            ...s,
-                            [r.id]: {
-                              ...(s[r.id] || {}),
-                              comment: e.target.value,
-                            },
-                          }))
-                        }
-                        className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                        disabled={!!actionLoading[r.id]}
-                      />
-                      <input
-                        type="date"
-                        value={actionState[r.id]?.deadline || ""}
-                        onChange={(e) =>
-                          setActionState((s) => ({
-                            ...s,
-                            [r.id]: {
-                              ...(s[r.id] || {}),
-                              deadline: e.target.value,
-                            },
-                          }))
-                        }
-                        className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                        disabled={!!actionLoading[r.id]}
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleReview(r.id, "Approved")}
-                          className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
-                          disabled={!!actionLoading[r.id]}
-                          aria-busy={!!actionLoading[r.id]}
-                        >
-                          {actionLoading[r.id] ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.approve")}
-                        </button>
-                        <button
-                          onClick={() => handleReview(r.id, "Rejected")}
-                          className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
-                          disabled={!!actionLoading[r.id]}
-                          aria-busy={!!actionLoading[r.id]}
-                        >
-                          {actionLoading[r.id] ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.reject")}
-                        </button>
-                      </div>
-                    </div>
-
-                    {actionState[r.id]?._lastResult && (
-                      <div className="text-xs text-green-700 dark:text-green-300">{actionState[r.id]._lastResult}</div>
-                    )}
-                    {actionState[r.id]?._lastError && (
-                      <div className="text-xs text-red-600 dark:text-red-400">{actionState[r.id]._lastError}</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
             {reports.length === 0 && !loading && (
               <div className="text-center text-gray-500 dark:text-gray-400 py-6">{t("reports.noReports")}</div>
             )}
@@ -510,31 +519,81 @@ function ReviewReportsPage() {
 
 /* -------------------------
    Master report helpers & table row
-   (unchanged logic, only styling maintained)
 ------------------------- */
 
-function fmtMonthKey(date) {
-  const [y, m] = String(date).split("-");
-  const mm = Number(m);
-  return new Date(Number(y), mm - 1, 1).toLocaleString(undefined, {
-    month: "short",
-    year: "numeric",
-  });
+/**
+ * Normalize period keys returned from backend into canonical monthly/quarterly/annual keys:
+ * - monthly -> "YYYY-MM" (from any of: "YYYY-M", "YYYY-MM", "YYYY-MM-DD", ISO string)
+ * - quarterly -> "YYYY-Qn"
+ * - annual -> "YYYY"
+ */
+function normalizePeriodKey(rawKey, granularity) {
+  if (!rawKey) return null;
+  // if rawKey is a Date-like string "2025-10-01T00:00:00Z" or "2025-10-01"
+  const tryDate = new Date(rawKey);
+  if (!isNaN(tryDate)) {
+    const y = tryDate.getFullYear();
+    const m = String(tryDate.getMonth() + 1).padStart(2, "0");
+    if (granularity === "monthly") return `${y}-${m}`;
+    if (granularity === "quarterly") return `${y}-Q${Math.floor((tryDate.getMonth()) / 3) + 1}`;
+    return String(y);
+  }
+
+  // if `rawKey` already like 'YYYY-M' or 'YYYY-MM'
+  const parts = String(rawKey).split("-");
+  if (granularity === "monthly") {
+    if (parts.length >= 2) {
+      const y = parts[0];
+      const m = String(Number(parts[1])).padStart(2, "0");
+      return `${y}-${m}`;
+    }
+    return rawKey;
+  }
+  if (granularity === "quarterly") {
+    if (rawKey.includes("-Q")) return rawKey;
+    // try parse as 'YYYY-MM' -> convert to quarter
+    if (parts.length >= 2) {
+      const y = parts[0];
+      const m = Number(parts[1]);
+      const q = Math.floor((m - 1) / 3) + 1;
+      return `${y}-Q${q}`;
+    }
+    return rawKey;
+  }
+  // annual
+  if (parts.length >= 1) return parts[0];
+  return rawKey;
+}
+
+function fmtMonthKey(dateKey) {
+  if (!dateKey) return "";
+  // expected canonical 'YYYY-MM' or 'YYYY-MM-DD' or ISO
+  const [yPart, mPart] = String(dateKey).split("-");
+  if (!mPart) return dateKey;
+  const y = Number(yPart);
+  const m = Number(mPart);
+  if (isNaN(y) || isNaN(m)) return dateKey;
+  return new Date(y, m - 1, 1).toLocaleString(undefined, { month: "short", year: "numeric" });
 }
 function fmtQuarterKey(q) {
   const [y, qn] = String(q).split("-Q");
   return `Q${qn} ${y}`;
 }
+
 function flattenPeriods(masterJson, granularity) {
   const set = new Set();
   (masterJson?.goals || []).forEach((g) => {
     (g.tasks || []).forEach((task) => {
       (task.activities || []).forEach((a) => {
         const hist = a.history?.[granularity] || {};
-        Object.keys(hist || {}).forEach((k) => set.add(k));
+        Object.keys(hist || {}).forEach((rawKey) => {
+          const normalized = normalizePeriodKey(rawKey, granularity);
+          if (normalized) set.add(normalized);
+        });
       });
     });
   });
+
   const arr = Array.from(set);
   arr.sort((A, B) => {
     if (granularity === "monthly") {
@@ -549,8 +608,10 @@ function flattenPeriods(masterJson, granularity) {
       return Number(A) - Number(B);
     }
   });
+
   return arr;
 }
+
 function pickMetricForActivity(activity, metricKey) {
   if (metricKey) return metricKey;
   const tg = activity.targetMetric || {};
@@ -573,13 +634,34 @@ function pickMetricForActivity(activity, metricKey) {
   }
   return null;
 }
+
 function getLatestMetricValueInPeriod(activity, periodKey, granularity, metricKey) {
-  const arr = (activity.history?.[granularity]?.[periodKey] || []).slice();
-  if (!arr.length) return null;
+  // Accept either canonical period keys, or raw keys (backend) - normalize when matching
+  const hist = activity.history?.[granularity] || {};
+  const normalizedKey = normalizePeriodKey(periodKey, granularity);
+  const arr = (hist[normalizedKey] || []).slice();
+  if (!arr.length) {
+    // fallback: try raw keys
+    const rawKeys = Object.keys(hist || {});
+    for (const rk of rawKeys) {
+      if (normalizePeriodKey(rk, granularity) === normalizedKey) {
+        const fallback = (hist[rk] || []).slice();
+        if (fallback.length) {
+          fallback.sort((a, b) => new Date(a.date) - new Date(b.date));
+          const r = fallback[fallback.length - 1];
+          if (!r || !r.metrics) return null;
+          if (metricKey && metricKey in r.metrics) return r.metrics[metricKey];
+          const keys = Object.keys(r.metrics || {});
+          return keys.length ? r.metrics[keys[0]] : null;
+        }
+      }
+    }
+    return null;
+  }
   arr.sort((a, b) => new Date(a.date) - new Date(b.date));
   for (let i = arr.length - 1; i >= 0; i--) {
     const r = arr[i];
-    if (!r.metrics) continue;
+    if (!r || !r.metrics) continue;
     if (metricKey && metricKey in r.metrics) return r.metrics[metricKey];
     const keys = Object.keys(r.metrics || {});
     if (keys.length === 1) return r.metrics[keys[0]];
@@ -734,6 +816,7 @@ function MasterReportPageWrapper() {
     const dataTable = t("reports.master.dataTable");
     const generated = t("reports.master.generatedAt", { date: new Date().toLocaleString() });
 
+    // Note: narrative section uses pre-wrap so newlines are preserved in PDF
     return `<!doctype html>
 <html>
 <head>
@@ -748,6 +831,7 @@ th,td{border:1px solid #ddd;padding:8px;font-size:13px;vertical-align:top}
 th{background:#f3f4f6}
 .goal-row td{background:#eef2ff}
 .task-row td{background:#f8fafc}
+.narrative { white-space: pre-wrap; line-height:1.45; padding:10px; background:#fff; border-radius:6px; border:1px solid #eee; }
 @media print { body { -webkit-print-color-adjust: exact; } }
 </style>
 </head>
@@ -777,7 +861,7 @@ th{background:#f3f4f6}
                 <div style="margin-top:8px">${(activity.reports || [])
                   .map(
                     (r) =>
-                      `<div style="padding:6px;border-top:1px dashed #eee"><strong>#${escapeHtml(String(r.id))}</strong> • ${escapeHtml(String(r.status || "—"))} • ${r.createdAt ? escapeHtml(new Date(r.createdAt).toLocaleString()) : ""}<div style="margin-top:4px">${escapeHtml(r.narrative || "")}</div></div>`
+                      `<div style="padding:6px;border-top:1px dashed #eee"><strong>#${escapeHtml(String(r.id))}</strong> • ${escapeHtml(String(r.status || "—"))} • ${r.createdAt ? escapeHtml(new Date(r.createdAt).toLocaleString()) : ""}<div class="narrative" style="margin-top:6px">${escapeHtml(r.narrative || "")}</div></div>`
                   )
                   .join("")}</div>
               </div>
@@ -961,7 +1045,7 @@ th{background:#f3f4f6}
                                       <div className="text-sm font-medium">#{r.id} • <span className="text-gray-600 dark:text-gray-300">{r.status}</span></div>
                                       <div className="text-xs text-gray-400">{r.createdAt ? new Date(r.createdAt).toLocaleString() : ""}</div>
                                     </div>
-                                    <div className="mt-1 text-sm text-gray-700 dark:text-gray-200">{r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}</div>
+                                    <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}</div>
                                     {r.metrics && (
                                       <div className="mt-2">
                                         <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t("reports.metrics")}</div>
@@ -1053,7 +1137,6 @@ export default function ReportsUI() {
   return (
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 md:p-6 lg:p-8 max-w-8xl mx-auto transition-colors duration-200">
       <header className="mb-6 md:mb-8">
-        {/* KEEP title and TopBar on one line */}
         <div className="flex items-start md:items-center justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-gray-100 truncate">{t("reports.header.title")}</h1>
@@ -1061,19 +1144,14 @@ export default function ReportsUI() {
           </div>
 
           <div className="flex items-center justify-end gap-4">
-        {/* Centered pills for md+; mobile pills live in fixed bottom nav via TabsPills */}
-        <div className="mt-4 hidden md:block">
-          <TabsPills value={page} onChange={setPage} />
-        </div>
-            {/* TopBar always on right, ensuring title + topbar are on same line */}
-          <div className="flex-shrink-0 ml-4">
-            <TopBar />
-          </div>
-
+            <div className="mt-4 hidden md:block">
+              <TabsPills value={page} onChange={setPage} />
+            </div>
+            <div className="flex-shrink-0 ml-4">
+              <TopBar />
+            </div>
           </div>
         </div>
-
-        {/* For small screens we don't render pills here; TabsPills will show mobile bottom nav */}
       </header>
 
       {page === "review" && <ReviewReportsPage />}
@@ -1083,7 +1161,6 @@ export default function ReportsUI() {
         <p>© {new Date().getFullYear()} {t("reports.footer.systemName")} | v2.0</p>
       </footer>
 
-      {/* Render mobile bottom pills (TabsPills contains the mobile nav), placed here so DOM includes it */}
       <div className="md:hidden">
         <TabsPills value={page} onChange={setPage} />
       </div>

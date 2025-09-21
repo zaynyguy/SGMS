@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS "Notifications" CASCADE;
 DROP TABLE IF EXISTS "AuditLogs" CASCADE;
 DROP TABLE IF EXISTS "ProgressHistory" CASCADE;
 
+
 DROP TYPE IF EXISTS goal_status CASCADE;
 DROP TYPE IF EXISTS task_status CASCADE;
 DROP TYPE IF EXISTS activity_status CASCADE;
@@ -245,21 +246,26 @@ CREATE INDEX idx_refresh_tokens_userid ON "RefreshTokens"("userId");
 
 
 -- =========================
--- PROGRESS HISTROY
+-- PROGRESS HISTORY
 -- =========================
-
-CREATE TABLE IF NOT EXISTS "ProgressHistory" (
+CREATE TABLE "ProgressHistory" (
   id SERIAL PRIMARY KEY,
-  entity_type VARCHAR(20) NOT NULL, -- 'Activity' | 'Task' | 'Goal'
+  entity_type VARCHAR(20) NOT NULL,
   entity_id INTEGER NOT NULL,
   group_id INTEGER,
   progress INTEGER NOT NULL DEFAULT 0,
   metrics JSONB DEFAULT '{}'::jsonb,
-  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  snapshot_month DATE NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_progresshistory_entity ON "ProgressHistory"(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_progresshistory_recorded_at ON "ProgressHistory"(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_progresshistory_snapshot_month ON "ProgressHistory"(snapshot_month);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_progresshistory_entity_month
+  ON "ProgressHistory"(entity_type, entity_id, snapshot_month);
+
 
 -- =========================
 -- TRIGGERS & FUNCTIONS
