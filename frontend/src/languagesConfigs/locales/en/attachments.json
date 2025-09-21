@@ -1,0 +1,39 @@
+{
+  "attachments": {
+    "title": "Attachments",
+    "viewToggleAria": "Toggle attachments view",
+    "view": {
+      "grid": "Grid",
+      "gridTitle": "Grid view",
+      "table": "List",
+      "tableTitle": "List view"
+    },
+    "closePreview": "Close preview",
+    "messages": {
+      "failedLoad": "Failed to load attachments",
+      "noFileReturned": "No file returned from server",
+      "downloadFailed": "Download failed",
+      "deleteFailed": "Failed to delete attachment"
+    },
+    "loading": "Loading attachments…",
+    "noAttachmentsTitle": "No attachments",
+    "noAttachmentsSubtitle": "There are no attachments for this report.",
+    "table": {
+      "file": "File",
+      "type": "Type",
+      "uploaded": "Uploaded",
+      "actions": "Actions"
+    },
+    "idPrefix": "ID:",
+    "uploadedPrefix": "Uploaded:",
+    "empty": "—",
+    "download": "Download",
+    "preview": "Preview",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this attachment?",
+    "searchPlaceholder": "Search attachments by name, id or type…",
+    "searchAria": "Search attachments",
+    "clearSearchAria": "Clear search",
+    "clearSearchTitle": "Clear search"
+  }
+}

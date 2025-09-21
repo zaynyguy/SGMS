@@ -36,7 +36,7 @@ function IconForType({ fileType }) {
 /* Pill toggle (keeps visible and compact) */
 function PillToggle({ value, onChange, t }) {
   return (
-    <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1 shadow-sm" role="tablist">
+    <div className="inline-flex bg-gray-100 dark:bg-gray-800 rounded-full p-1 gap-1 shadow-sm" role="tablist" aria-label={t("attachments.viewToggleAria")}>
       <button
         onClick={() => onChange("grid")}
         aria-pressed={value === "grid"}
@@ -127,9 +127,8 @@ export default function AttachmentsPage({ reportId }) {
       const res = await downloadAttachment(at.id);
 
       if (res.url && !res.blob) {
-        // open external url in new tab (for cloud/redirects)
         const w = window.open(res.url, "_blank");
-        if (!w) window.location.href = res.url; // fallback
+        if (!w) window.location.href = res.url;
         return;
       }
 
@@ -146,7 +145,6 @@ export default function AttachmentsPage({ reportId }) {
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (err) {
       console.error("Download error:", err);
-      // show friendly message localized
       alert(err?.message || t("attachments.messages.downloadFailed"));
     } finally {
       setDownloading(null);
@@ -168,7 +166,6 @@ export default function AttachmentsPage({ reportId }) {
   };
 
   const openPreview = (at) => {
-    // build absolute URL for /uploads local files
     let src = at.filePath || at.url || at.url;
     if (src && src.startsWith("/")) src = `${window.location.origin}${src}`;
     setPreview({ src, name: at.fileName });
@@ -188,42 +185,65 @@ export default function AttachmentsPage({ reportId }) {
   return (
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 sm:p-6 transition-colors duration-200">
       <div className="max-w-8xl mx-auto">
-        {/* Header row: left title, right controls. We force them to stay in one line by using flex, min-w-0 on search. */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("attachments.title")}</h1>
-          </div>
+        {/* HEADER: flexible single container which reorders on breakpoints:
+            - small: first row = Title + TopBar, second row = Search + PillToggle
+            - md+: all three appear in one row: Title | Search+Pill | TopBar
+        */}
+        <header className="mb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Title: first element, takes remaining space on small */}
+            <div className="order-1 flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t("attachments.title")}</h1>
+            </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative flex-1 sm:flex-none min-w-0">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
+            {/* TopBar: on small it appears on same first row (order-2), on md+ keep to the far right (order-3) */}
+            <div className="order-2 md:order-3 flex-shrink-0">
+              <TopBar />
+            </div>
+
+            {/* Controls (search + pill): on small we want them below (full width), so give them order-3 and w-full;
+                on md+ we place them between title and TopBar using md:order-2 and md:w-auto */}
+            <div className="order-3 w-full md:order-2 md:w-auto">
+              <div className="mt-3 md:mt-0 flex items-center gap-3">
+                {/* Search (fills available space on narrow screens) */}
+                <div className="relative flex-1 min-w-0">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-gray-400" />
+                  </div>
+                  <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder={t("attachments.searchPlaceholder")}
+                    className="pl-10 pr-9 py-2 w-full rounded-md border bg-white dark:bg-gray-700 text-sm sm:text-base text-gray-900 dark:text-white min-w-0"
+                    aria-label={t("attachments.searchAria")}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-1 top-1.5 p-1.5 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      aria-label={t("attachments.clearSearchAria")}
+                      title={t("attachments.clearSearchTitle")}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Pill toggle: shrink-to-content so search keeps most available width on small devices */}
+                <div className="flex-shrink-0">
+                  <PillToggle value={viewMode} onChange={setViewMode} t={t} />
+                </div>
               </div>
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t("attachments.searchPlaceholder")}
-                className="pl-10 pr-9 py-2 w-full sm:w-72 rounded-md border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white min-w-0"
-                aria-label={t("attachments.searchAria")}
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="absolute right-1 top-1.5 p-1.5 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  aria-label={t("attachments.clearSearchAria")}
-                  title={t("attachments.clearSearchTitle")}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
             </div>
-
-            <div className="flex-shrink-0">
-              <PillToggle value={viewMode} onChange={setViewMode} t={t} />
-            </div>
-          <TopBar/>
           </div>
-        </div>
+
+          {/* optional error message under header (compact) */}
+          {error && (
+            <div className="mt-3 text-sm text-red-700 dark:text-red-300">
+              {error}
+            </div>
+          )}
+        </header>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
           {loading ? (
@@ -242,23 +262,23 @@ export default function AttachmentsPage({ reportId }) {
               <table className="min-w-full table-auto">
                 <thead className="bg-gray-50 dark:bg-gray-700 text-left">
                   <tr>
-                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("attachments.table.file")}</th>
-                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("attachments.table.type")}</th>
-                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">{t("attachments.table.uploaded")}</th>
-                    <th className="px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-right">{t("attachments.table.actions")}</th>
+                    <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("attachments.table.file")}</th>
+                    <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("attachments.table.type")}</th>
+                    <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">{t("attachments.table.uploaded")}</th>
+                    <th className="px-4 sm:px-6 py-3 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-right">{t("attachments.table.actions")}</th>
                   </tr>
                 </thead>
 
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filtered.map((at) => (
                     <tr key={at.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors align-top">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center min-w-0">
                           <div className="flex-shrink-0 h-10 w-10 text-indigo-600 dark:text-indigo-400">
                             <IconForType fileType={at.fileType} />
                           </div>
-                          <div className="ml-4 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[60ch]" title={at.fileName}>
+                          <div className="ml-3 min-w-0">
+                            <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate max-w-[60ch]" title={at.fileName}>
                               {at.fileName}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">{t("attachments.idPrefix")} {at.id}</div>
@@ -266,17 +286,17 @@ export default function AttachmentsPage({ reportId }) {
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 max-w-[22ch] truncate" title={at.fileType}>
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                        <div className="inline-block px-2 py-1 text-xs sm:text-sm font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 max-w-[22ch] truncate" title={at.fileType}>
                           {at.fileType || t("attachments.empty")}
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden sm:table-cell">
                         {t("attachments.uploadedPrefix")} {formatDate(at.createdAt)}
                       </td>
 
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-2 flex-wrap">
                           <button
                             onClick={() => handleDownload(at)}
@@ -319,7 +339,6 @@ export default function AttachmentsPage({ reportId }) {
               </table>
             </div>
           ) : (
-            // Grid view responsive columns: 1 / 2 / 3
             <div className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filtered.map((at) => (
@@ -329,7 +348,7 @@ export default function AttachmentsPage({ reportId }) {
                         <IconForType fileType={at.fileType} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate" title={at.fileName}>
+                        <div className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate" title={at.fileName}>
                           {at.fileName}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{t("attachments.idPrefix")} {at.id}</div>

@@ -11,6 +11,7 @@ import {
   Shield,
   Palette,
   UserCircle,
+  Settings,
 } from "lucide-react";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import Toast from "../components/common/Toast";
@@ -291,15 +292,15 @@ const SettingsPage = () => {
   const gradient = gradientFromString(settings.name || settings.username || "user");
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-      <header className="static top-0 z-20 bg-gray-50 dark:bg-gray-900/60 backdrop-blur-sm border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-8xl justify-between mx-auto px-4 py-4 flex sm:flex-row sm:items-center gap-3 sm:gap-6">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200 settings-wrap">
+      <header className="static top-0 z-20 bg-gray-200 dark:bg-gray-900/60 backdrop-blur-sm">
+        <div className="max-w-8xl justify-between mx-auto px-4 py-4 flex sm:flex-row sm:items-center gap-3 sm:gap-6 header-inner">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 rounded-full bg-gradient-to-br from-purple-50 to-sky-50 dark:from-purple-900/10 dark:to-sky-900/10">
-              <UserCircle size={20} className="text-sky-600 dark:text-sky-300" />
+              <Settings size={20} className="text-sky-600 dark:text-sky-300" />
             </div>
-            <div className="flex space-x-[6rem] md:space-x-[67rem] items-center min-w-0">
-              <h1 className="text-xl sm:text-2xl font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
+            <div className="flex items-center min-w-0 header-actions">
+              <h1 className="text-xl sm:text-2xl font-medium sm:font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
             </div>
           </div>
 
@@ -307,11 +308,11 @@ const SettingsPage = () => {
         </div>
       </header>
 
-      <main className="max-w-8xl mx-auto px-4 py-6">
+      <main className="max-w-8xl mx-auto px-4 py-6 container">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
           <form onSubmit={handleSubmit} className="space-y-0">
             {/* Profile Picture */}
-            <section className="p-6">
+            <section className="p-6 section">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300">
                   <User size={18} />
@@ -320,7 +321,7 @@ const SettingsPage = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-                <div className="relative">
+                <div className="relative responsive-avatar">
                   {avatarUrl ? (
                     <img
                       src={avatarUrl}
@@ -383,7 +384,7 @@ const SettingsPage = () => {
                         type="button"
                         onClick={uploadProfilePicture}
                         disabled={uploadingPicture}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors btn-sm-full"
                       >
                         {uploadingPicture ? (
                           <>
@@ -404,7 +405,7 @@ const SettingsPage = () => {
             </section>
 
             {/* Personal Info */}
-            <section className="p-6">
+            <section className="p-6 section">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300">
                   <UserCircle size={18} />
@@ -412,7 +413,7 @@ const SettingsPage = () => {
                 <h2 className="text-lg font-semibold">{t("settings.personalInfo") || "Personal info"}</h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 responsive-grid">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     {t("settings.username") || "Username"}
@@ -442,7 +443,7 @@ const SettingsPage = () => {
             </section>
 
             {/* Appearance */}
-            <section className="p-6">
+            <section className="p-6 section">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300">
                   <Palette size={18} />
@@ -465,7 +466,7 @@ const SettingsPage = () => {
             </section>
 
             {/* Password */}
-            <section className="p-6">
+            <section className="p-6 section">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">
                   <Shield size={18} />
@@ -473,7 +474,7 @@ const SettingsPage = () => {
                 <h2 className="text-lg font-semibold">{t("settings.changePassword") || "Change password"}</h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 responsive-grid">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.oldPassword") || "Old password"}</label>
                   <input
@@ -509,11 +510,11 @@ const SettingsPage = () => {
             </section>
 
             {/* Submit */}
-            <section className="p-6 bg-gray-50 dark:bg-gray-700/50 flex justify-end">
+            <section className="p-6 bg-gray-50 dark:bg-gray-700/50 flex justify-end section">
               <button
                 type="submit"
                 disabled={saving || (newPassword && newPassword.length < 8) || (newPassword && !oldPassword)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors btn-sm-full"
               >
                 {saving ? (
                   <>
