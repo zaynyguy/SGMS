@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { loginUser as apiLoginUser } from "../api/auth";
+import { loginUser as apiLoginUser, logoutUser } from "../api/auth";
 import { applyTheme } from "../uites/applyTheme";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -9,7 +9,6 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  // keep token in state for compatibility; we also put short-lived token on window.__ACCESS_TOKEN
   const [token, setToken] = useState(localStorage.getItem("authToken") || null);
   const [loading, setLoading] = useState(true);
   const { i18n } = useTranslation();
@@ -78,10 +77,13 @@ export const AuthProvider = ({ children }) => {
           username: fullUser?.username,
           name: fullUser?.name,
           role: fullUser?.role,
-          permissions: Array.isArray(fullUser?.permissions) ? fullUser.permissions : [],
+          permissions: Array.isArray(fullUser?.permissions)
+            ? fullUser.permissions
+            : [],
           language: fullUser?.language,
           darkMode: fullUser?.darkMode,
-          profilePicture: fullUser?.profilePicture || fullUser?.profilePic || "",
+          profilePicture:
+            fullUser?.profilePicture || fullUser?.profilePic || "",
         };
 
         // keep localStorage for compatibility with code that expects it
@@ -105,72 +107,71 @@ export const AuthProvider = ({ children }) => {
   );
 
   const logout = useCallback(async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" }).catch(() => {});
-    } catch (_) {}
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
     window.__ACCESS_TOKEN = null;
     applyTheme("system");
+    try {
+      await logoutUser();
+    } catch (_) {}
   }, []);
 
   // Trying to refresh access token using the refresh cookie
-  const tryRefresh = useCallback(
-    async () => {
-      // guarding to prevent concurrent refreshes
-      if (refreshing) return false;
-      setRefreshing(true);
-      try {
-        const r = await fetch("/api/auth/refresh", {
-          method: "POST",
-          credentials: "include", // sends httpOnly refresh cookie
-          headers: { Accept: "application/json" },
-        });
-        if (!r.ok) {
-          setRefreshing(false);
-          await logout();
-          return false;
-        }
-        const data = await r.json();
-        const newToken = data.token;
-        let newUser = data.user;
-
-        // If server returned a partial user, try to fetch canonical /me
-        if (!newUser || !Array.isArray(newUser.permissions)) {
-          const me = await fetchMe(newToken);
-          if (me) newUser = me;
-        }
-
-        const safeUser = {
-          id: newUser?.id,
-          username: newUser?.username,
-          name: newUser?.name,
-          role: newUser?.role,
-          permissions: Array.isArray(newUser?.permissions) ? newUser.permissions : [],
-          language: newUser?.language,
-          darkMode: newUser?.darkMode,
-          profilePicture: newUser?.profilePicture || "",
-        };
-
-        // updates both in-memory and localStorage for compatibility
-        window.__ACCESS_TOKEN = newToken;
-        localStorage.setItem("authToken", newToken);
-        localStorage.setItem("user", JSON.stringify(safeUser));
-        setToken(newToken);
-        setUser(safeUser);
-        setRefreshing(false);
-        return true;
-      } catch (err) {
-        console.error("Refresh failed", err);
+  const tryRefresh = useCallback(async () => {
+    // guarding to prevent concurrent refreshes
+    if (refreshing) return false;
+    setRefreshing(true);
+    try {
+      const r = await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "include", // sends httpOnly refresh cookie
+        headers: { Accept: "application/json" },
+      });
+      if (!r.ok) {
         setRefreshing(false);
         await logout();
         return false;
       }
-    },
-    [refreshing, logout, fetchMe]
-  );
+      const data = await r.json();
+      const newToken = data.token;
+      let newUser = data.user;
+
+      // If server returned a partial user, try to fetch canonical /me
+      if (!newUser || !Array.isArray(newUser.permissions)) {
+        const me = await fetchMe(newToken);
+        if (me) newUser = me;
+      }
+
+      const safeUser = {
+        id: newUser?.id,
+        username: newUser?.username,
+        name: newUser?.name,
+        role: newUser?.role,
+        permissions: Array.isArray(newUser?.permissions)
+          ? newUser.permissions
+          : [],
+        language: newUser?.language,
+        darkMode: newUser?.darkMode,
+        profilePicture: newUser?.profilePicture || "",
+      };
+
+      // updates both in-memory and localStorage for compatibility
+      window.__ACCESS_TOKEN = newToken;
+      localStorage.setItem("authToken", newToken);
+      localStorage.setItem("user", JSON.stringify(safeUser));
+      setToken(newToken);
+      setUser(safeUser);
+      setRefreshing(false);
+      return true;
+    } catch (err) {
+      console.error("Refresh failed", err);
+      setRefreshing(false);
+      await logout();
+      return false;
+    }
+  }, [refreshing, logout, fetchMe]);
 
   // Low-level fetch wrapper: adds Authorization header and attempts one refresh on 401
   const apiFetch = useCallback(
@@ -179,33 +180,46 @@ export const AuthProvider = ({ children }) => {
       const access = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
       if (access) headers["Authorization"] = `Bearer ${access}`;
 
-      const res = await fetch(url, { ...options, headers, credentials: "include" });
+      const res = await fetch(url, {
+        ...options,
+        headers,
+        credentials: "include",
+      });
 
       if (res.status === 401) {
         const ok = await tryRefresh();
         if (!ok) return res;
         const retriedHeaders = { ...(options.headers || {}) };
-        const newAccess = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
+        const newAccess =
+          window.__ACCESS_TOKEN || localStorage.getItem("authToken");
         if (newAccess) retriedHeaders["Authorization"] = `Bearer ${newAccess}`;
-        return fetch(url, { ...options, headers: retriedHeaders, credentials: "include" });
+        return fetch(url, {
+          ...options,
+          headers: retriedHeaders,
+          credentials: "include",
+        });
       }
       return res;
     },
     [tryRefresh]
   );
 
-  const updateUser = useCallback((updatedUserData, newToken) => {
-    // updatedUserData might be a full user or a partial patch. We persist what is passed.
-    setUser(updatedUserData);
-    localStorage.setItem("user", JSON.stringify(updatedUserData));
-    if (newToken) {
-      setToken(newToken);
-      localStorage.setItem("authToken", newToken);
-      window.__ACCESS_TOKEN = newToken;
-    }
-    if (updatedUserData?.language) i18n.changeLanguage(updatedUserData.language);
-    applyTheme(updatedUserData?.darkMode ?? "system");
-  }, [i18n]);
+  const updateUser = useCallback(
+    (updatedUserData, newToken) => {
+      // updatedUserData might be a full user or a partial patch. We persist what is passed.
+      setUser(updatedUserData);
+      localStorage.setItem("user", JSON.stringify(updatedUserData));
+      if (newToken) {
+        setToken(newToken);
+        localStorage.setItem("authToken", newToken);
+        window.__ACCESS_TOKEN = newToken;
+      }
+      if (updatedUserData?.language)
+        i18n.changeLanguage(updatedUserData.language);
+      applyTheme(updatedUserData?.darkMode ?? "system");
+    },
+    [i18n]
+  );
 
   const value = {
     user,
@@ -219,7 +233,11 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
