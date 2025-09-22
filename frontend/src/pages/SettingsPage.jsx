@@ -278,7 +278,7 @@ const SettingsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gray-200 dark:bg-gray-900 flex items-center justify-center p-6">
         <div className="flex flex-col items-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-500 mb-4" />
           <p className="text-gray-500 dark:text-gray-400">{t("settings.loading") || "Loading..."}</p>
@@ -295,12 +295,17 @@ const SettingsPage = () => {
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200 settings-wrap">
       <header className="static top-0 z-20 bg-gray-200 dark:bg-gray-900/60 backdrop-blur-sm">
         <div className="max-w-8xl justify-between mx-auto px-4 py-4 flex sm:flex-row sm:items-center gap-3 sm:gap-6 header-inner">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 rounded-full bg-gradient-to-br from-purple-50 to-sky-50 dark:from-purple-900/10 dark:to-sky-900/10">
-              <Settings size={20} className="text-sky-600 dark:text-sky-300" />
-            </div>
+          <div className="flex items-center gap-4 min-w-0">
             <div className="flex items-center min-w-0 header-actions">
-              <h1 className="text-xl sm:text-2xl font-medium sm:font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
+              <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+                        <Settings className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                      </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-medium sm:font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
+              <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                {t("settings.subtitle")}
+              </p>
+              </div>
             </div>
           </div>
 

@@ -2,7 +2,7 @@ import React, { useState, memo } from "react";
 import UsersManagementPage from "./UsersManagementPage";
 import RolesManagementPage from "./RolesManagementPage";
 import GroupsManagementPage from "./GroupsManagementPage";
-import { Users, Key, Layers } from "lucide-react";
+import { Users, Key, Layers, UserPen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import TopBar from "../components/layout/TopBar";
 
@@ -13,22 +13,40 @@ const navItems = [
   { key: "groups", Icon: Layers },
 ];
 
-const NavButton = memo(function NavButton({ label, isActive, onClick, children }) {
+function NavButton({ label, subtitle, isActive, onClick, children }) {
   return (
     <button
       onClick={onClick}
       aria-current={isActive ? "page" : undefined}
-      className={`inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base font-medium transition-all focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-        isActive
-          ? "border-2 border-blue-500 text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30"
-          : "border-2 border-transparent text-gray-600 dark:text-gray-300 hover:border-gray-200 dark:hover:border-gray-600 hover:text-gray-800 dark:hover:text-gray-200 bg-white/0"
-      }`}
+      className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm transition
+        ${
+          isActive
+            ? "bg-white dark:bg-gray-700 shadow text-sky-700 dark:text-sky-300"
+            : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+        }
+      `}
     >
-      {children}
-      <span className="whitespace-nowrap">{label}</span>
+      {/* Icon slot (keeps consistent sizing) */}
+      <div
+        className={`flex-shrink-0 ${
+          isActive ? "text-sky-700" : " dark:text-sky-300"
+        }`}
+      >
+        {children}
+      </div>
+
+      {/* Text: label + subtitle stacked */}
+      <div className="min-w-0 text-left">
+        <div className="text-sm font-semibold truncate">{label}</div>
+        {subtitle ? (
+          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {subtitle}
+          </div>
+        ) : null}
+      </div>
     </button>
   );
-});
+}
 
 export default function AccessManagement() {
   const { t } = useTranslation();
@@ -37,28 +55,43 @@ export default function AccessManagement() {
   return (
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Top Navigation Bar */}
-      <nav className="bg-gray-200 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+      <nav className="bg-gray-200 dark:bg-gray-900">
         <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4 h-16 md:h-20">
             {/* Left: Title (single-line, truncates) */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold leading-tight truncate">
-                {t("access.title")}
-              </h1>
+              <div className="flex items-center min-w-0 gap-4 mt-4">
+                <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+                  <UserPen className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                </div>
+                <div>
+                  <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold leading-tight truncate">
+                    {t("access.title")}
+                  </h1>
+                  <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                    {t("access.subtitle")}
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Middle: Desktop nav (visible md+) */}
-            <div className="hidden md:flex items-center space-x-2 rounded-full bg-white dark:bg-gray-800/40 p-1">
+            <div className="hidden md:flex items-center space-x-2 rounded-full bg-gray-100 dark:bg-gray-800/40 mt-4 p-1">
               {navItems.map((item) => {
                 const label = t(`access.nav.${item.key}`);
+                const subtitle = item.subtitleKey
+                  ? t(`access.nav.${item.subtitleKey}`)
+                  : null;
                 const isActive = activeTab === item.key;
                 return (
                   <NavButton
                     key={item.key}
                     label={label}
+                    subtitle={subtitle}
                     isActive={isActive}
                     onClick={() => setActiveTab(item.key)}
                   >
+                    {/* Icon component (provided by item.Icon) */}
                     <item.Icon size={16} aria-hidden />
                   </NavButton>
                 );
@@ -66,7 +99,7 @@ export default function AccessManagement() {
             </div>
 
             {/* Right: TopBar - always visible, doesn't push title */}
-            <div className="flex-shrink-0 ml-2">
+            <div className="flex-shrink-0 ml-2 mt-4">
               <TopBar />
             </div>
           </div>
@@ -97,8 +130,8 @@ export default function AccessManagement() {
                 aria-current={isActive ? "page" : undefined}
                 className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg transition-colors text-xs sm:text-sm ${
                   isActive
-                    ? "bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-blue-300"
-                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    ? "bg-white dark:bg-gray-700 shadow text-sky-700 dark:text-sky-300"
+            : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
               >
                 <Icon size={20} aria-hidden />

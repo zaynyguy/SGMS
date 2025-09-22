@@ -1,5 +1,6 @@
 // src/pages/ProjectManagement.jsx
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   Plus,
@@ -36,16 +37,17 @@ import {
 } from "../api/activities";
 import { submitReport, fetchReportingStatus } from "../api/reports";
 import { useAuth } from "../context/AuthContext";
+import TopBar from "../components/layout/TopBar";
 
 /* -------------------------
    Helpers: date formatting
 ------------------------- */
-const formatDate = (d) => {
-  if (!d) return "—";
+const formatDate = (d, t) => {
+  if (!d) return t("project.na");
   try {
     const parsed = new Date(d);
     if (isNaN(parsed)) return d;
-    return new Intl.DateTimeFormat("en-US", {
+    return new Intl.DateTimeFormat(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -207,6 +209,7 @@ function renderMetricsList(metrics) {
    Main component
 ------------------------- */
 const ProjectManagement = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   const [groups, setGroups] = useState([]);
@@ -234,8 +237,10 @@ const ProjectManagement = () => {
   const [canManageGTA, setCanManageGTA] = useState(false);
   const [canViewGTA, setCanViewGTA] = useState(false);
 
+  // inspector selected goal (desktop only)
+  const [selectedGoal, setSelectedGoal] = useState(null);
+
   // ---- reporting window state ----
-  // null = unknown (hide), true = allowed, false = not allowed
   const [reportingActive, setReportingActive] = useState(null);
   const [canSubmitReport, setCanSubmitReport] = useState(false);
 
@@ -249,7 +254,6 @@ const ProjectManagement = () => {
       setCanManageGTA(perms.includes("manage_gta"));
       setCanViewGTA(perms.includes("view_gta") || perms.includes("manage_gta"));
 
-      // Accept several common permission name variants for "submit report"
       const submitPermNames = [
         "submit_report",
         "SubmitReport",
@@ -305,13 +309,13 @@ const ProjectManagement = () => {
         await Promise.all(firstFew.map((gId) => loadTasks(gId, { silent: true })));
       } catch (err) {
         console.error("loadGoals error:", err);
-        setError(err?.message || "Failed to load goals");
+        setError(err?.message || t("project.errors.loadGoals"));
         setGoals([]);
       } finally {
         setIsLoadingGoals(false);
       }
     },
-    [currentPage, pageSize]
+    [currentPage, pageSize, t]
   );
 
   useEffect(() => {
@@ -341,11 +345,11 @@ const ProjectManagement = () => {
     } catch (err) {
       console.error("loadTasks error:", err);
       setTasks((prev) => ({ ...prev, [goalId]: [] }));
-      setError(err?.message || "Failed to load tasks");
+      setError(err?.message || t("project.errors.loadTasks"));
     } finally {
       if (!opts.silent) setTasksLoading((prev) => ({ ...prev, [goalId]: false }));
     }
-  }, []);
+  }, [t]);
 
   const loadActivities = useCallback(async (taskId) => {
     if (!taskId) return;
@@ -357,11 +361,11 @@ const ProjectManagement = () => {
     } catch (err) {
       console.error("loadActivities error:", err);
       setActivities((prev) => ({ ...prev, [taskId]: [] }));
-      setError(err?.message || "Failed to load activities");
+      setError(err?.message || t("project.errors.loadActivities"));
     } finally {
       setActivitiesLoading((prev) => ({ ...prev, [taskId]: false }));
     }
-  }, []);
+  }, [t]);
 
   /* ---------- CRUD handlers ---------- */
   const handleCreateGoal = async (payload) => {
@@ -369,11 +373,11 @@ const ProjectManagement = () => {
     try {
       await createGoal(payload);
       setModal({ isOpen: false, type: null, data: null });
-      setSuccess("Goal created");
+      setSuccess(t("project.toasts.goalCreated"));
       await loadGoals({ page: 1 });
     } catch (err) {
       console.error("createGoal error:", err);
-      setError(err?.message || "Failed to create goal");
+      setError(err?.message || t("project.errors.createGoal"));
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setSuccess(null), 2000);
@@ -384,25 +388,25 @@ const ProjectManagement = () => {
     try {
       await updateGoal(goalId, payload);
       setModal({ isOpen: false, type: null, data: null });
-      setSuccess("Goal updated");
+      setSuccess(t("project.toasts.goalUpdated"));
       await loadGoals();
     } catch (err) {
       console.error("updateGoal error:", err);
-      setError(err?.message || "Failed to update goal");
+      setError(err?.message || t("project.errors.updateGoal"));
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setSuccess(null), 2000);
     }
   };
   const handleDeleteGoal = async (goalId) => {
-    if (!window.confirm("Delete this goal and all children?")) return;
+    if (!window.confirm(t("project.confirm.deleteGoal"))) return;
     try {
       await deleteGoal(goalId);
-      setSuccess("Goal deleted");
+      setSuccess(t("project.toasts.goalDeleted"));
       await loadGoals();
     } catch (err) {
       console.error("deleteGoal error:", err);
-      setError(err?.message || "Failed to delete goal");
+      setError(err?.message || t("project.errors.deleteGoal"));
     } finally {
       setTimeout(() => setSuccess(null), 2000);
     }
@@ -413,12 +417,12 @@ const ProjectManagement = () => {
     try {
       await createTask(goalId, payload);
       setModal({ isOpen: false, type: null, data: null });
-      setSuccess("Task created");
+      setSuccess(t("project.toasts.taskCreated"));
       await loadTasks(goalId);
       await loadGoals();
     } catch (err) {
       console.error("createTask error:", err);
-      setError(err?.message || "Failed to create task");
+      setError(err?.message || t("project.errors.createTask"));
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setSuccess(null), 2000);
@@ -429,27 +433,27 @@ const ProjectManagement = () => {
     try {
       await updateTask(goalId, taskId, payload);
       setModal({ isOpen: false, type: null, data: null });
-      setSuccess("Task updated");
+      setSuccess(t("project.toasts.taskUpdated"));
       await loadTasks(goalId);
       await loadGoals();
     } catch (err) {
       console.error("updateTask error:", err);
-      setError(err?.message || "Failed to update task");
+      setError(err?.message || t("project.errors.updateTask"));
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setSuccess(null), 2000);
     }
   };
   const handleDeleteTask = async (goalId, taskId) => {
-    if (!window.confirm("Delete this task and activities?")) return;
+    if (!window.confirm(t("project.confirm.deleteTask"))) return;
     try {
       await deleteTask(goalId, taskId);
-      setSuccess("Task deleted");
+      setSuccess(t("project.toasts.taskDeleted"));
       await loadTasks(goalId);
       await loadGoals();
     } catch (err) {
       console.error("deleteTask error:", err);
-      setError(err?.message || "Failed to delete task");
+      setError(err?.message || t("project.errors.deleteTask"));
     } finally {
       setTimeout(() => setSuccess(null), 2000);
     }
@@ -460,13 +464,13 @@ const ProjectManagement = () => {
     try {
       await createActivity(taskId, payload);
       setModal({ isOpen: false, type: null, data: null });
-      setSuccess("Activity created");
+      setSuccess(t("project.toasts.activityCreated"));
       await loadActivities(taskId);
       await loadTasks(goalId);
       await loadGoals();
     } catch (err) {
       console.error("createActivity error:", err);
-      setError(err?.message || "Failed to create activity");
+      setError(err?.message || t("project.errors.createActivity"));
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setSuccess(null), 2000);
@@ -477,20 +481,20 @@ const ProjectManagement = () => {
     try {
       await updateActivity(taskId, activityId, payload);
       setModal({ isOpen: false, type: null, data: null });
-      setSuccess("Activity updated");
+      setSuccess(t("project.toasts.activityUpdated"));
       await loadActivities(taskId);
       await loadTasks(goalId);
       await loadGoals();
     } catch (err) {
       console.error("updateActivity error:", err);
-      setError(err?.message || "Failed to update activity");
+      setError(err?.message || t("project.errors.updateActivity"));
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setSuccess(null), 2000);
     }
   };
   const handleDeleteActivity = async (goalId, taskId, activityId) => {
-    if (!window.confirm("Delete this activity?")) return;
+    if (!window.confirm(t("project.confirm.deleteActivity"))) return;
     setIsSubmitting(true);
     try {
       await deleteActivity(taskId, activityId);
@@ -498,12 +502,12 @@ const ProjectManagement = () => {
         ...prev,
         [taskId]: (prev[taskId] || []).filter((a) => a.id !== activityId),
       }));
-      setSuccess("Activity deleted");
+      setSuccess(t("project.toasts.activityDeleted"));
       await loadTasks(goalId);
       await loadGoals();
     } catch (err) {
       console.error("deleteActivity error:", err);
-      setError(err?.message || "Failed to delete activity");
+      setError(err?.message || t("project.errors.deleteActivity"));
     } finally {
       setIsSubmitting(false);
       setTimeout(() => setSuccess(null), 2000);
@@ -524,6 +528,7 @@ const ProjectManagement = () => {
     if (expandedGoal === goal.id) setExpandedGoal(null);
     else {
       setExpandedGoal(goal.id);
+      setSelectedGoal(goal); // select for inspector on desktop
       if (!tasks[goal.id]) await loadTasks(goal.id);
     }
   };
@@ -582,7 +587,7 @@ const ProjectManagement = () => {
     setError(null);
     try {
       await submitReport(activityId, fd);
-      setSuccess("Report submitted");
+      setSuccess(t("project.toasts.reportSubmitted"));
       closeSubmitModal();
       if (taskId) await loadActivities(taskId);
       if (goalId) await loadTasks(goalId);
@@ -590,7 +595,7 @@ const ProjectManagement = () => {
       setTimeout(() => setSuccess(null), 2500);
     } catch (err) {
       console.error("submitReport error (full):", err);
-      let message = err?.message || "Failed to submit report.";
+      let message = err?.message || t("project.errors.submitReport");
       try {
         if (err?.response && typeof err.response === "object") {
           const r = err.response;
@@ -615,713 +620,7 @@ const ProjectManagement = () => {
     }
   };
 
-  /* ---------- Render ---------- */
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-200">
-      {/* Mobile menu overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        ></div>
-      )}
-
-      <header className="mb-4 min-w-8xl mx-auto">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center justify-between w-full md:w-auto">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg bg-gradient-to-br from-purple-50 to-sky-50 dark:from-purple-900/10 dark:to-sky-900/10">
-                <Target className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white">
-                  Project Manager
-                </h1>
-              </div>
-            </div>
-
-            <button
-              className="md:hidden p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-          </div>
-
-          {/* Mobile menu */}
-          <div
-            className={`${
-              mobileMenuOpen ? "block" : "hidden"
-            } md:flex md:items-center gap-2 w-full md:w-auto md:flex-nowrap mt-4 md:mt-0`}
-          >
-            <div className="relative flex-1 md:flex-none min-w-0">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search goals..."
-                className="pl-10 pr-3 py-2 border rounded-md bg-white dark:bg-gray-700 text-sm w-full min-w-0 text-gray-900 dark:text-white"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 mt-2 md:mt-0">
-              <button
-                onClick={() => loadGoals({ page: 1 })}
-                className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 dark:text-white text-sm flex items-center gap-2 whitespace-nowrap w-full md:w-auto justify-center"
-              >
-                <RefreshCw className="h-4 w-4" /> Refresh
-              </button>
-
-              {canManageGTA && (
-                <button
-                  onClick={() =>
-                    setModal({ isOpen: true, type: "createGoal", data: null })
-                  }
-                  className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm flex items-center gap-2 whitespace-nowrap w-full md:w-auto justify-center"
-                >
-                  <Plus className="h-4 w-4" /> Add Goal
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="min-w-8xl mx-auto">
-        {error && (
-          <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 px-3 py-2 rounded relative">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
-            </div>
-            <button
-              onClick={() => setError(null)}
-              className="absolute top-1 right-1 p-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-200 px-3 py-2 rounded relative">
-            <div className="text-sm">{success}</div>
-            <button
-              onClick={() => setSuccess(null)}
-              className="absolute top-1 right-1 p-2"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {isLoadingGoals ? (
-          <>
-            <SkeletonCard rows={2} />
-            <SkeletonCard rows={3} />
-            <SkeletonCard rows={1} />
-          </>
-        ) : filteredGoals.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-sm text-gray-500 dark:text-gray-400">
-            {goals.length === 0
-              ? "No goals found. Create your first goal."
-              : "No goals match your search."}
-          </div>
-        ) : (
-          filteredGoals.map((goal) => (
-            <article
-              key={goal.id}
-              className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded-lg mb-6 overflow-hidden"
-            >
-              <div className="p-5 md:p-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-start gap-4 min-w-0 flex-1">
-                    <button
-                      onClick={() => toggleGoal(goal)}
-                      className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block"
-                      aria-label="Toggle goal"
-                    >
-                      {expandedGoal === goal.id ? (
-                        <ChevronDown className="h-5 w-5" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5" />
-                      )}
-                    </button>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between">
-                        <h3 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white break-words">
-                          {goal.title}
-                        </h3>
-
-                        <div className="md:hidden flex items-center gap-2 ml-2">
-                          <button
-                            onClick={() => toggleGoal(goal)}
-                            className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            aria-label="Toggle goal"
-                          >
-                            {expandedGoal === goal.id ? (
-                              <ChevronDown className="h-5 w-5" />
-                            ) : (
-                              <ChevronRight className="h-5 w-5" />
-                            )}
-                          </button>
-
-                          {canManageGTA && (
-                            <div className="relative">
-                              <button className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <MoreVertical className="h-5 w-5" />
-                              </button>
-                              <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
-                                <button
-                                  onClick={() =>
-                                    setModal({
-                                      isOpen: true,
-                                      type: "editGoal",
-                                      data: goal,
-                                    })
-                                  }
-                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                >
-                                  <Edit />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteGoal(goal.id)}
-                                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                >
-                                  <Trash2 />
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 break-words">
-                        {goal.description || "—"}
-                      </p>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-300">
-                        <span className="whitespace-nowrap">
-                          Group:{" "}
-                          <strong className="text-gray-800 dark:text-gray-100">
-                            {goal.groupName || "Unassigned"}
-                          </strong>
-                        </span>
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                          <StatusBadge status={goal.status} />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-4 md:mt-0">
-                    <div className="hidden md:flex flex-col items-end text-xs text-gray-500 dark:text-gray-300 mr-3 w-36">
-                      <div className="w-full">
-                        <ProgressBar
-                          progress={goal.progress ?? 0}
-                          variant="goal"
-                        />
-                      </div>
-                    </div>
-
-                    {canManageGTA && (
-                      <div className="hidden md:flex items-center gap-2">
-                        <button
-                          onClick={() =>
-                            setModal({
-                              isOpen: true,
-                              type: "editGoal",
-                              data: goal,
-                            })
-                          }
-                          className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                        >
-                          <Edit className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteGoal(goal.id)}
-                          className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">
-                      {formatDate(goal.startDate)} — {formatDate(goal.endDate)}
-                    </span>
-                  </div>
-                  <div>
-                    Weight:{" "}
-                    <strong className="text-gray-800 dark:text-gray-100">
-                      {goal.weight ?? "-"}
-                    </strong>
-                  </div>
-                  <div className="flex items-center gap-3 md:hidden">
-                    <div className="flex-1 max-w-xs">
-                      <ProgressBar
-                        progress={goal.progress ?? 0}
-                        variant="goal"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {expandedGoal === goal.id && (
-                  <div className="mt-6 pl-0 sm:pl-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                        <CheckSquare className="h-4 w-4 text-sky-600" /> Tasks
-                      </h4>
-                      <div>
-                        {canManageGTA && (
-                          <button
-                            onClick={() =>
-                              setModal({
-                                isOpen: true,
-                                type: "createTask",
-                                data: { goalId: goal.id },
-                              })
-                            }
-                            className="px-2 py-1 bg-blue-500 text-white rounded text-xs flex items-center gap-1"
-                          >
-                            <Plus className="h-3 w-3" /> Add Task
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {tasksLoading[goal.id] ? (
-                      <div className="p-3">
-                        <Loader className="h-6 w-6 animate-spin text-sky-600" />
-                      </div>
-                    ) : (tasks[goal.id] || []).length === 0 ? (
-                      <div className="p-3 text-sm text-gray-500 dark:text-gray-400">
-                        No tasks for this goal.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {tasks[goal.id].map((task) => (
-                          <div
-                            key={task.id}
-                            className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-100 dark:border-gray-700"
-                          >
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
-                              <div className="flex items-start gap-3 min-w-0 flex-1">
-                                <button
-                                  onClick={() => toggleTask(goal, task)}
-                                  className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block"
-                                  aria-label="Toggle task"
-                                >
-                                  {expandedTask === task.id ? (
-                                    <ChevronDown className="h-5 w-5" />
-                                  ) : (
-                                    <ChevronRight className="h-5 w-5" />
-                                  )}
-                                </button>
-
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-start justify-between">
-                                    <div className="font-medium text-gray-900 dark:text-white break-words">
-                                      {task.title}
-                                    </div>
-
-                                    <div className="sm:hidden flex items-center gap-2 ml-2">
-                                      <button
-                                        onClick={() => toggleTask(goal, task)}
-                                        className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        aria-label="Toggle task"
-                                      >
-                                        {expandedTask === task.id ? (
-                                          <ChevronDown className="h-5 w-5" />
-                                        ) : (
-                                          <ChevronRight className="h-5 w-5" />
-                                        )}
-                                      </button>
-
-                                      {canManageGTA && (
-                                        <div className="relative">
-                                          <button className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                            <MoreVertical className="h-5 w-5" />
-                                          </button>
-                                          <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
-                                            <button
-                                              onClick={() =>
-                                                setModal({
-                                                  isOpen: true,
-                                                  type: "editTask",
-                                                  data: {
-                                                    goalId: goal.id,
-                                                    ...task,
-                                                  },
-                                                })
-                                              }
-                                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                            >
-                                              <Edit />
-                                            </button>
-                                            <button
-                                              onClick={() =>
-                                                handleDeleteTask(goal.id, task.id)
-                                              }
-                                              className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                            >
-                                              <Trash2 />
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">
-                                    {task.description || "—"}
-                                  </div>
-                                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-3">
-                                    <div>Due: {formatDate(task.dueDate)}</div>
-                                    <div>Weight: {task.weight ?? "-"}</div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 whitespace-nowrap justify-between sm:justify-end">
-                                <StatusBadge status={task.status} />
-                                {canManageGTA && (
-                                  <>
-                                    <button
-                                      onClick={() =>
-                                        setModal({
-                                          isOpen: true,
-                                          type: "editTask",
-                                          data: { goalId: goal.id, ...task },
-                                        })
-                                      }
-                                      className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
-                                    >
-                                      <Edit className="h-5 w-5" />
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleDeleteTask(goal.id, task.id)
-                                      }
-                                      className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
-                                    >
-                                      <Trash2 className="h-5 w-5" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300 pl-0 sm:pl-6">
-                              <div className="flex items-center gap-2">
-                                <Calendar className="h-4 w-4 flex-shrink-0" />
-                                <span className="truncate">
-                                  {formatDate(task.dueDate)}
-                                </span>
-                              </div>
-                              <div>
-                                Weight: <strong>{task.weight ?? "-"}</strong>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 max-w-xs">
-                                  <ProgressBar progress={task.progress ?? 0} />
-                                </div>
-                              </div>
-                            </div>
-
-                            {expandedTask === task.id && (
-                              <div className="mt-4 pl-0 sm:pl-6">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h6 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <List className="h-4 w-4 text-sky-600" />{" "}
-                                    Activities
-                                  </h6>
-                                  <div>
-                                    {canManageGTA && (
-                                      <button
-                                        onClick={() =>
-                                          setModal({
-                                            isOpen: true,
-                                            type: "createActivity",
-                                            data: {
-                                              goalId: goal.id,
-                                              taskId: task.id,
-                                            },
-                                          })
-                                        }
-                                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded"
-                                      >
-                                       + Add Activity
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {activitiesLoading[task.id] ? (
-                                  <div className="p-2">
-                                    <Loader className="h-5 w-5 animate-spin text-sky-600" />
-                                  </div>
-                                ) : (activities[task.id] || []).length === 0 ? (
-                                  <div className="p-2 text-sm text-center text-gray-500 dark:text-gray-400">
-                                    No activities for this task.
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {activities[task.id].map((activity) => (
-                                      <div
-                                        key={activity.id}
-                                        className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-3"
-                                      >
-                                        <div className="min-w-0 flex-1">
-                                          <div className="font-medium text-gray-900 dark:text-white break-words">
-                                            {activity.title}
-                                          </div>
-                                          <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 break-words">
-                                            {activity.description || "—"}
-                                          </div>
-
-                                          <div className="mt-2 text-xs text-gray-500 dark:text-gray-300 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                            <div>
-                                              Due:{" "}
-                                              {formatDate(activity.dueDate)}
-                                            </div>
-                                            <div>
-                                              Weight: {activity.weight ?? "-"}
-                                            </div>
-                                            <div>
-                                              {activity.isDone ? "Completed" : "Open"}
-                                            </div>
-                                          </div>
-
-                                          {/* Render target metrics properly */}
-                                          <div className="mt-2">
-                                            {activity.targetMetric ? (
-                                              <div className="text-xs p-2 rounded bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100">
-                                                <div className="font-medium text-xs mb-1">
-                                                  Target Metrics
-                                                </div>
-                                                <div className="space-y-1">
-                                                  {renderMetricsList(activity.targetMetric)}
-                                                </div>
-                                              </div>
-                                            ) : null}
-                                          </div>
-                                        </div>
-
-                                        <div className="flex flex-col sm:items-end gap-2 mt-2 sm:mt-0">
-                                          <StatusBadge status={activity.status} />
-
-                                          <div className="flex items-center gap-2 whitespace-nowrap justify-between sm:justify-end">
-                                            {/* Submit Report button: only when user has submit permission and reportingActive === true */}
-                                            {canSubmitReport && reportingActive === true && (
-                                              <button
-                                                onClick={() =>
-                                                  openSubmitModal(
-                                                    goal.id,
-                                                    task.id,
-                                                    activity.id
-                                                  )
-                                                }
-                                                className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs"
-                                              >
-                                                Submit Report
-                                              </button>
-                                            )}
-
-                                            {/* Desktop edit/delete for activity (like tasks/goals) */}
-                                            {canManageGTA && (
-                                              <>
-                                                <div className="hidden sm:flex items-center gap-1">
-                                                  <button
-                                                    onClick={() =>
-                                                      setModal({
-                                                        isOpen: true,
-                                                        type: "editActivity",
-                                                        data: {
-                                                          goalId: goal.id,
-                                                          taskId: task.id,
-                                                          ...activity,
-                                                        },
-                                                      })
-                                                    }
-                                                    className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                                                    title="Edit activity"
-                                                  >
-                                                    <Edit className="h-4 w-4" />
-                                                  </button>
-                                                  <button
-                                                    onClick={() =>
-                                                      handleDeleteActivity(
-                                                        goal.id,
-                                                        task.id,
-                                                        activity.id
-                                                      )
-                                                    }
-                                                    className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                                                    title="Delete activity"
-                                                  >
-                                                    <Trash2 className="h-4 w-4" />
-                                                  </button>
-                                                </div>
-
-                                                {/* Mobile menu (keeps existing behavior) */}
-                                                <div className="sm:hidden relative">
-                                                  <button className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                  </button>
-                                                  <div className="flex mt-1 w-fit bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
-                                                    <button
-                                                      onClick={() =>
-                                                        setModal({
-                                                          isOpen: true,
-                                                          type: "editActivity",
-                                                          data: {
-                                                            goalId: goal.id,
-                                                            taskId: task.id,
-                                                            ...activity,
-                                                          },
-                                                        })
-                                                      }
-                                                      className="block w-fit text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                    >
-                                                      <Edit />
-                                                    </button>
-                                                    <button
-                                                      onClick={() =>
-                                                        handleDeleteActivity(
-                                                          goal.id,
-                                                          task.id,
-                                                          activity.id
-                                                        )
-                                                      }
-                                                      className="block w-fit text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                    >
-                                                      <Trash2 />
-                                                    </button>
-                                                  </div>
-                                                </div>
-                                              </>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </article>
-          ))
-        )}
-        {/* pagination footer */}
-        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-sm text-gray-700 dark:text-gray-300">
-            Showing {Math.min((currentPage - 1) * pageSize + 1, goals.length)} -{" "}
-            {Math.min(currentPage * pageSize, goals.length)} of {goals.length}
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="px-2 py-1 rounded-md bg-white dark:bg-gray-700 border text-sm text-gray-700 dark:text-gray-200"
-            >
-              {[10, 20, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n} per page
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage((p) => p + 1)}
-              className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </main>
-
-      {/* Generic modal: kept usage (you said you already have these ready) */}
-      {modal.isOpen && modal.type && modal.type !== "submitReport" && (
-        // GenericModal should be implemented elsewhere in your project
-        <GenericModal
-          modal={modal}
-          setModal={setModal}
-          groups={groups}
-          tasks={tasks}
-          goals={goals}
-          activities={activities}
-          onCreateGoal={handleCreateGoal}
-          onUpdateGoal={handleUpdateGoal}
-          onCreateTask={handleCreateTask}
-          onUpdateTask={handleUpdateTask}
-          onCreateActivity={handleCreateActivity}
-          onUpdateActivity={handleUpdateActivity}
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      {/* Submit Report modal (kept usage) */}
-      {submitModal.isOpen && submitModal.data && (
-        <SubmitReportInline
-          data={submitModal.data}
-          onClose={closeSubmitModal}
-          onSubmit={handleSubmitReport}
-          loading={isSubmitting}
-        />
-      )}
-    </div>
-  );
-};
-
-export default ProjectManagement;
-
-/* ---------------------------
-   GenericModal (improved styling + weight validation)
-   Receives: modal, setModal, groups, tasks, goals, activities, handlers...
-----------------------------*/
-function GenericModal({
-  modal,
-  setModal,
-  groups = [],
-  tasks = {},
-  goals = [],
-  activities = {},
-  onCreateGoal,
-  onUpdateGoal,
-  onCreateTask,
-  onUpdateTask,
-  onCreateActivity,
-  onUpdateActivity,
-  isSubmitting,
-}) {
-  const [local, setLocal] = React.useState({});
-  const [jsonError, setJsonError] = React.useState(null);
-  const [inlineError, setInlineError] = React.useState(null);
-
+  /* ---------- Small helpers for modal validation (copied from original) ---------- */
   const metricsObjectToArray = (tm) => {
     try {
       if (!tm) return [{ key: "", value: "" }];
@@ -1342,6 +641,803 @@ function GenericModal({
     }
   };
 
+  const computeGoalWeightAvailable = (goalId, excludeTaskId = null) => {
+    const g = goals.find(
+      (x) => String(x.id) === String(goalId) || x.id === goalId
+    );
+    const goalWeight = Number(g?.weight ?? 100);
+    const list = tasks[goalId] || [];
+    const sumOther = list.reduce((s, t) => {
+      if (excludeTaskId && String(t.id) === String(excludeTaskId)) return s;
+      return s + Number(t.weight || 0);
+    }, 0);
+    return {
+      goalWeight,
+      used: sumOther,
+      available: Math.max(0, goalWeight - sumOther),
+    };
+  };
+
+  const computeTaskWeightAvailable = (taskId, excludeActivityId = null) => {
+    const allTasksLists = Object.values(tasks).flat();
+    const task = allTasksLists.find(
+      (t) => String(t.id) === String(taskId) || t.id === taskId
+    );
+    const taskWeight = Number(task?.weight ?? 0);
+    const list = activities[taskId] || [];
+    const sumOther = list.reduce((s, a) => {
+      if (excludeActivityId && String(a.id) === String(excludeActivityId))
+        return s;
+      return s + Number(a.weight || 0);
+    }, 0);
+    return {
+      taskWeight,
+      used: sumOther,
+      available: Math.max(0, taskWeight - sumOther),
+    };
+  };
+
+  /* ---------- Render ---------- */
+
+  return (
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-200">
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      <div className="max-w-8xl mx-auto">
+        <header className="mb-4">
+  {/* First row: title (left) + TopBar (right) - same on mobile & desktop */}
+  <div className="flex items-start md:items-center justify-between gap-4">
+    <div className="flex items-center gap-4">
+      <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+        <Target className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+      </div>
+
+      <div>
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight">
+          {t("project.title")}
+        </h1>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          {t("project.subtitle")}
+        </p>
+      </div>
+    </div>
+
+    {/* TopBar always on the right of the first row */}
+    <div className="ml-auto flex-shrink-0">
+      <TopBar />
+    </div>
+  </div>
+
+  {/* Second area:
+      - Desktop (md+): single row containing search + refresh + addGoal
+      - Mobile: search row, then separate buttons row (so 3 lines total as requested)
+  */}
+  <div className="mt-4">
+    {/* Desktop layout */}
+    <div className="hidden md:flex items-center gap-3">
+      {/* Search grows to fill remaining space */}
+      <div className="relative flex-1 min-w-0">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="h-4 w-4 text-gray-400" />
+        </div>
+        <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder={t("project.searchPlaceholder")}
+          aria-label={t("project.searchAria")}
+          className="pl-10 pr-3 py-2 rounded-md border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white w-full min-w-0 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+        />
+      </div>
+
+      <button
+        onClick={() => loadGoals({ page: 1 })}
+        className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+        aria-label={t("project.actions.refresh")}
+        title={t("project.actions.refresh")}
+      >
+        <RefreshCw className={`h-4 w-4 ${isLoadingGoals ? "animate-spin" : ""}`} />
+        <span className="hidden lg:inline">{t("project.actions.refresh")}</span>
+      </button>
+
+      {canManageGTA && (
+        <button
+          onClick={() => setModal({ isOpen: true, type: "createGoal", data: null })}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 transition"
+          aria-label={t("project.actions.addGoal")}
+          title={t("project.actions.addGoal")}
+        >
+          <Plus className="h-4 w-4" />
+          <span className="hidden lg:inline">{t("project.actions.addGoal")}</span>
+        </button>
+      )}
+    </div>
+
+    {/* Mobile layout:
+        Row 1 (search) shown on all small screens
+        Row 2 (actions) below it — full width buttons for better touch UX
+    */}
+    <div className="md:hidden space-y-2">
+      {/* Search row (mobile full width) */}
+      <div className="relative w-full">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search className="h-4 w-4 text-gray-400" />
+        </div>
+        <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder={t("project.searchPlaceholder")}
+          aria-label={t("project.searchAria")}
+          className="pl-10 pr-3 py-2 rounded-md border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white w-full focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+        />
+      </div>
+
+      {/* Actions row (mobile): full width buttons with good spacing for touch */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => loadGoals({ page: 1 })}
+          className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+          aria-label={t("project.actions.refresh")}
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoadingGoals ? "animate-spin" : ""}`} />
+          <span>{t("project.actions.refresh")}</span>
+        </button>
+
+        {canManageGTA && (
+          <button
+            onClick={() => setModal({ isOpen: true, type: "createGoal", data: null })}
+            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 transition"
+            aria-label={t("project.actions.addGoal")}
+          >
+            <Plus className="h-4 w-4" />
+            <span>{t("project.actions.addGoal")}</span>
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+</header>
+
+
+        <main className="grid gap-6">
+          <div className="lg:col-span-8">
+            {error && (
+              <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 px-3 py-2 rounded relative">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-sm">{error}</span>
+                </div>
+                <button
+                  onClick={() => setError(null)}
+                  className="absolute top-1 right-1 p-2"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-200 px-3 py-2 rounded relative">
+                <div className="text-sm">{success}</div>
+                <button
+                  onClick={() => setSuccess(null)}
+                  className="absolute top-1 right-1 p-2"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {isLoadingGoals ? (
+              <>
+                <SkeletonCard rows={2} />
+                <SkeletonCard rows={3} />
+                <SkeletonCard rows={1} />
+              </>
+            ) : filteredGoals.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                {goals.length === 0
+                  ? t("project.empty.noGoals")
+                  : t("project.empty.noMatch")}
+              </div>
+            ) : (
+              filteredGoals.map((goal) => (
+                <article
+                  key={goal.id}
+                  className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded-lg mb-6 overflow-hidden"
+                  role="region"
+                  aria-labelledby={`goal-${goal.id}-title`}
+                >
+                  <div className="p-5 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4 min-w-0 flex-1">
+                        <button
+                          onClick={() => toggleGoal(goal)}
+                          className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block"
+                          aria-label={t("project.actions.toggleGoal")}
+                        >
+                          {expandedGoal === goal.id ? (
+                            <ChevronDown className="h-5 w-5" />
+                          ) : (
+                            <ChevronRight className="h-5 w-5" />
+                          )}
+                        </button>
+
+                        <div className="min-w-0 flex-1" onClick={() => setSelectedGoal(goal)} style={{cursor: 'pointer'}}>
+                          <div className="flex items-start justify-between">
+                            <h3 id={`goal-${goal.id}-title`} className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white break-words">
+                              {goal.title}
+                            </h3>
+
+                            <div className="md:hidden flex items-center gap-2 ml-2">
+                              <button
+                                onClick={() => toggleGoal(goal)}
+                                className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                aria-label={t("project.actions.toggleGoal")}
+                              >
+                                {expandedGoal === goal.id ? (
+                                  <ChevronDown className="h-5 w-5" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5" />
+                                )}
+                              </button>
+
+                              {canManageGTA && (
+                                <div className="relative">
+                                  <button className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <MoreVertical className="h-5 w-5" />
+                                  </button>
+                                  <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                    <button
+                                      onClick={() =>
+                                        setModal({
+                                          isOpen: true,
+                                          type: "editGoal",
+                                          data: goal,
+                                        })
+                                      }
+                                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    >
+                                      <Edit className="inline-block mr-2 h-4 w-4" /> {t("project.actions.edit")}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteGoal(goal.id)}
+                                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    >
+                                      <Trash2 className="inline-block mr-2 h-4 w-4" /> {t("project.actions.delete")}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 break-words">
+                            {goal.description || "—"}
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-300">
+                            <span className="whitespace-nowrap">
+                              {t("project.fields.group")}:{" "}
+                              <strong className="text-gray-800 dark:text-gray-100">
+                                {goal.groupName || t("project.unassigned")}
+                              </strong>
+                            </span>
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                              <StatusBadge status={goal.status} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 mt-4 md:mt-0">
+                        <div className="hidden md:flex flex-col items-end text-xs text-gray-500 dark:text-gray-300 mr-3 w-36">
+                          <div className="w-full">
+                            <ProgressBar
+                              progress={goal.progress ?? 0}
+                              variant="goal"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {canManageGTA && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  setModal({
+                                    isOpen: true,
+                                    type: "editGoal",
+                                    data: goal,
+                                  })
+                                }
+                                className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
+                                title={t("project.actions.edit")}
+                              >
+                                <Edit className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteGoal(goal.id)}
+                                className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
+                                title={t("project.actions.delete")}
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {formatDate(goal.startDate, t)} — {formatDate(goal.endDate, t)}
+                        </span>
+                      </div>
+                      <div>
+                        {t("project.fields.weight")}:{" "}
+                        <strong className="text-gray-800 dark:text-gray-100">
+                          {goal.weight ?? "-"}
+                        </strong>
+                      </div>
+                      <div className="flex items-center gap-3 md:hidden">
+                        <div className="flex-1 max-w-xs">
+                          <ProgressBar
+                            progress={goal.progress ?? 0}
+                            variant="goal"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {expandedGoal === goal.id && (
+                      <div className="mt-6 pl-0 sm:pl-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <CheckSquare className="h-4 w-4 text-sky-600" /> {t("project.sections.tasks")}
+                          </h4>
+                          <div>
+                            {canManageGTA && (
+                              <button
+                                onClick={() =>
+                                  setModal({
+                                    isOpen: true,
+                                    type: "createTask",
+                                    data: { goalId: goal.id },
+                                  })
+                                }
+                                className="px-2 py-1 bg-blue-500 text-white rounded text-xs flex items-center gap-1"
+                              >
+                                <Plus className="h-3 w-3" /> {t("project.actions.addTask")}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {tasksLoading[goal.id] ? (
+                          <div className="p-3">
+                            <Loader className="h-6 w-6 animate-spin text-sky-600" />
+                          </div>
+                        ) : (tasks[goal.id] || []).length === 0 ? (
+                          <div className="p-3 text-sm text-gray-500 dark:text-gray-400">
+                            {t("project.empty.noTasks")}
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {tasks[goal.id].map((task) => (
+                              <div
+                                key={task.id}
+                                className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-100 dark:border-gray-700"
+                              >
+                                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
+                                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                                    <button
+                                      onClick={() => toggleTask(goal, task)}
+                                      className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block"
+                                      aria-label={t("project.actions.toggleTask")}
+                                    >
+                                      {expandedTask === task.id ? (
+                                        <ChevronDown className="h-5 w-5" />
+                                      ) : (
+                                        <ChevronRight className="h-5 w-5" />
+                                      )}
+                                    </button>
+
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-start justify-between">
+                                        <div className="font-medium text-gray-900 dark:text-white break-words">
+                                          {task.title}
+                                        </div>
+
+                                        <div className="sm:hidden flex items-center gap-2 ml-2">
+                                          <button
+                                            onClick={() => toggleTask(goal, task)}
+                                            className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            aria-label={t("project.actions.toggleTask")}
+                                          >
+                                            {expandedTask === task.id ? (
+                                              <ChevronDown className="h-5 w-5" />
+                                            ) : (
+                                              <ChevronRight className="h-5 w-5" />
+                                            )}
+                                          </button>
+
+                                          {canManageGTA && (
+                                            <div className="relative">
+                                              <button className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                                <MoreVertical className="h-5 w-5" />
+                                              </button>
+                                              <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                                <button
+                                                  onClick={() =>
+                                                    setModal({
+                                                      isOpen: true,
+                                                      type: "editTask",
+                                                      data: {
+                                                        goalId: goal.id,
+                                                        ...task,
+                                                      },
+                                                    })
+                                                  }
+                                                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                >
+                                                  <Edit className="inline-block mr-2 h-4 w-4" /> {t("project.actions.edit")}
+                                                </button>
+                                                <button
+                                                  onClick={() =>
+                                                    handleDeleteTask(goal.id, task.id)
+                                                  }
+                                                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                >
+                                                  <Trash2 className="inline-block mr-2 h-4 w-4" /> {t("project.actions.delete")}
+                                                </button>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">
+                                        {task.description || "—"}
+                                      </div>
+                                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-3">
+                                        <div>{t("project.fields.due")}: {formatDate(task.dueDate, t)}</div>
+                                        <div>{t("project.fields.weight")}: {task.weight ?? "-"}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 whitespace-nowrap justify-between sm:justify-end">
+                                    <StatusBadge status={task.status} />
+                                    {canManageGTA && (
+                                      <>
+                                        <button
+                                          onClick={() =>
+                                            setModal({
+                                              isOpen: true,
+                                              type: "editTask",
+                                              data: { goalId: goal.id, ...task },
+                                            })
+                                          }
+                                          className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
+                                          title={t("project.actions.edit")}
+                                        >
+                                          <Edit className="h-5 w-5" />
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteTask(goal.id, task.id)
+                                          }
+                                          className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
+                                          title={t("project.actions.delete")}
+                                        >
+                                          <Trash2 className="h-5 w-5" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300 pl-0 sm:pl-6">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 flex-shrink-0" />
+                                    <span className="truncate">
+                                      {formatDate(task.dueDate, t)}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    {t("project.fields.weight")}: <strong>{task.weight ?? "-"}</strong>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1 max-w-xs">
+                                      <ProgressBar progress={task.progress ?? 0} />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {expandedTask === task.id && (
+                                  <div className="mt-4 pl-0 sm:pl-6">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h6 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                        <List className="h-4 w-4 text-sky-600" />{" "}
+                                        {t("project.sections.activities")}
+                                      </h6>
+                                      <div>
+                                        {canManageGTA && (
+                                          <button
+                                            onClick={() =>
+                                              setModal({
+                                                isOpen: true,
+                                                type: "createActivity",
+                                                data: {
+                                                  goalId: goal.id,
+                                                  taskId: task.id,
+                                                },
+                                              })
+                                            }
+                                            className="px-2 py-1 text-xs bg-blue-500 text-white rounded"
+                                          >
+                                            <Plus className="inline-block h-3 w-3 mr-1" /> {t("project.actions.addActivity")}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {activitiesLoading[task.id] ? (
+                                      <div className="p-2">
+                                        <Loader className="h-5 w-5 animate-spin text-sky-600" />
+                                      </div>
+                                    ) : (activities[task.id] || []).length === 0 ? (
+                                      <div className="p-2 text-sm text-center text-gray-500 dark:text-gray-400">
+                                        {t("project.empty.noActivities")}
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2">
+                                        {activities[task.id].map((activity) => (
+                                          <div
+                                            key={activity.id}
+                                            className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-3"
+                                          >
+                                            <div className="min-w-0 flex-1">
+                                              <div className="font-medium text-gray-900 dark:text-white break-words">
+                                                {activity.title}
+                                              </div>
+                                              <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 break-words">
+                                                {activity.description || "—"}
+                                              </div>
+
+                                              <div className="mt-2 text-xs text-gray-500 dark:text-gray-300 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                                <div>
+                                                  {t("project.fields.due")}:{" "}
+                                                  {formatDate(activity.dueDate, t)}
+                                                </div>
+                                                <div>
+                                                  {t("project.fields.weight")}: {activity.weight ?? "-"}
+                                                </div>
+                                                <div>
+                                                  {activity.isDone ? t("project.status.completed") : t("project.status.open")}
+                                                </div>
+                                              </div>
+
+                                              {/* Render target metrics properly */}
+                                              <div className="mt-2">
+                                                {activity.targetMetric ? (
+                                                  <div className="text-xs p-2 rounded bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+                                                    <div className="font-medium text-xs mb-1">
+                                                      {t("project.labels.targetMetrics")}
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                      {renderMetricsList(activity.targetMetric)}
+                                                    </div>
+                                                  </div>
+                                                ) : null}
+                                              </div>
+                                            </div>
+
+                                            <div className="flex flex-col sm:items-end gap-2 mt-2 sm:mt-0">
+                                              <StatusBadge status={activity.status} />
+
+                                              <div className="flex items-center gap-2 flex-nowrap whitespace-nowrap justify-between sm:justify-end">
+  {/* Submit Report */}
+  {canSubmitReport && reportingActive === true && (
+    <>
+      {/* Desktop: full button (hidden on xs) */}
+      <button
+        onClick={() => openSubmitModal(goal.id, task.id, activity.id)}
+        className="hidden items-center sm:inline-flex flex-shrink-0 px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs"
+      >
+        {t("project.actions.submitReport")}
+      </button>
+
+      {/* Mobile: small submit (inline with edit/delete) */}
+      <button
+        onClick={() => openSubmitModal(goal.id, task.id, activity.id)}
+        className="inline-flex sm:hidden flex-shrink-0 items-center px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs"
+        aria-label={t("project.actions.submitReport")}
+      >
+        {/* Optional short label; you can replace with icon if you'd like */}
+        <span className="truncate">{t("project.actions.submitReport")}</span>
+      </button>
+    </>
+  )}
+
+  {/* Desktop actions (icons) */}
+  {canManageGTA && (
+    <>
+      <div className="hidden sm:flex items-center gap-1">
+        <button
+          onClick={() =>
+            setModal({
+              isOpen: true,
+              type: "editActivity",
+              data: { goalId: goal.id, taskId: task.id, ...activity },
+            })
+          }
+          className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+          title={t("project.actions.edit")}
+        >
+          <Edit className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => handleDeleteActivity(goal.id, task.id, activity.id)}
+          className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+          title={t("project.actions.delete")}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Mobile: inline Edit + Delete with text labels */}
+      <div className="inline-flex sm:hidden items-center gap-1">
+        <button
+          onClick={() =>
+            setModal({
+              isOpen: true,
+              type: "editActivity",
+              data: { goalId: goal.id, taskId: task.id, ...activity },
+            })
+          }
+          className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-white hover:bg-gray-100 dark:bg-gray-900"
+          aria-label={t("project.actions.edit")}
+        >
+          <Edit className="h-4 w-4" />
+          <span className="text-xs">{t("project.actions.edit")}</span>
+        </button>
+
+        <button
+          onClick={() => handleDeleteActivity(goal.id, task.id, activity.id)}
+          className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-900 rounded-md text-sm text-red-600 hover:bg-gray-100 dark:bg-gray-900"
+          aria-label={t("project.actions.delete")}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="text-xs">{t("project.actions.delete")}</span>
+        </button>
+      </div>
+    </>
+  )}
+</div>
+
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))
+            )}
+            {/* pagination footer */}
+            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-sm text-gray-700 dark:text-gray-300">
+                {t("project.pagination.showing", {
+                  from: Math.min((currentPage - 1) * pageSize + 1, goals.length),
+                  to: Math.min(currentPage * pageSize, goals.length),
+                  total: goals.length,
+                })}
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  className="px-2 py-1 rounded-md bg-white dark:bg-gray-700 border text-sm text-gray-700 dark:text-gray-200"
+                >
+                  {[10, 20, 50, 100].map((n) => (
+                    <option key={n} value={n}>
+                      {t("project.pagination.perPage", { n })}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  {t("project.pagination.prev")}
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                  className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-700 text-sm text-gray-700 dark:text-gray-200"
+                >
+                  {t("project.pagination.next")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Generic modal component included below in-file for convenience */}
+        {modal.isOpen && modal.type && modal.type !== "submitReport" && (
+          <GenericModal
+            modal={modal}
+            setModal={setModal}
+            groups={groups}
+            tasks={tasks}
+            goals={goals}
+            activities={activities}
+            onCreateGoal={handleCreateGoal}
+            onUpdateGoal={handleUpdateGoal}
+            onCreateTask={handleCreateTask}
+            onUpdateTask={handleUpdateTask}
+            onCreateActivity={handleCreateActivity}
+            onUpdateActivity={handleUpdateActivity}
+            isSubmitting={isSubmitting}
+            t={t}
+          />
+        )}
+
+        {submitModal.isOpen && submitModal.data && (
+          <SubmitReportInline
+            data={submitModal.data}
+            onClose={closeSubmitModal}
+            onSubmit={handleSubmitReport}
+            loading={isSubmitting}
+            t={t}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ProjectManagement;
+
+/* ---------------------------
+   GenericModal (improved, i18n)
+----------------------------*/
+function GenericModal({
+  modal,
+  setModal,
+  groups = [],
+  tasks = {},
+  goals = [],
+  activities = {},
+  onCreateGoal,
+  onUpdateGoal,
+  onCreateTask,
+  onUpdateTask,
+  onCreateActivity,
+  onUpdateActivity,
+  isSubmitting,
+  t,
+}) {
+  const [local, setLocal] = React.useState({});
+  const [jsonError, setJsonError] = React.useState(null);
+  const [inlineError, setInlineError] = React.useState(null);
+
   React.useEffect(() => {
     if (!modal.isOpen) return;
     const initial = modal.data || {};
@@ -1354,7 +1450,20 @@ function GenericModal({
         weight: initial.weight ?? 0,
         status: initial.status || "not-started",
         isDone: initial.isDone ?? false,
-        targetMetrics: metricsObjectToArray(initial.targetMetric),
+        targetMetrics: (() => {
+          try {
+            if (!initial.targetMetric) return [{ key: "", value: "" }];
+            if (typeof initial.targetMetric === "string")
+              return JSON.parse(initial.targetMetric);
+            // converted by helper below
+            return Object.keys(initial.targetMetric || {}).map((k) => ({
+              key: k,
+              value: String(initial.targetMetric[k]),
+            }));
+          } catch {
+            return [{ key: "", value: "" }];
+          }
+        })(),
       });
     } else if (modal.type === "createTask" || modal.type === "editTask") {
       setLocal({
@@ -1379,8 +1488,6 @@ function GenericModal({
     }
     setJsonError(null);
   }, [modal.isOpen, modal.type, modal.data]);
-
-  if (!modal.isOpen) return null;
 
   const onLocalChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -1414,12 +1521,9 @@ function GenericModal({
   const removeMetricRow = (idx) => {
     setLocal((p) => {
       const next = { ...(p || {}) };
-      next.targetMetrics = (Array.isArray(next.targetMetrics)
-        ? next.targetMetrics.filter((_, i) => i !== idx)
-        : []
-      ).length
-        ? next.targetMetrics.filter((_, i) => i !== idx)
-        : [{ key: "", value: "" }];
+      const arr = Array.isArray(next.targetMetrics) ? next.targetMetrics : [];
+      const filtered = arr.filter((_, i) => i !== idx);
+      next.targetMetrics = filtered.length ? filtered : [{ key: "", value: "" }];
       return next;
     });
   };
@@ -1442,8 +1546,7 @@ function GenericModal({
   };
 
   const computeTaskWeightAvailable = (taskId, excludeActivityId = null) => {
-    const // find task and its weight fallback
-      allTasksLists = Object.values(tasks).flat();
+    const allTasksLists = Object.values(tasks).flat();
     const task = allTasksLists.find(
       (t) => String(t.id) === String(taskId) || t.id === taskId
     );
@@ -1470,7 +1573,7 @@ function GenericModal({
       if (modal.type === "createTask" || modal.type === "editTask") {
         const goalId = modal.data?.goalId;
         if (!goalId) {
-          setInlineError("Missing goal id for task.");
+          setInlineError(t("project.errors.missingGoalId"));
           return;
         }
         const newWeight = Number(local.weight || 0);
@@ -1481,13 +1584,18 @@ function GenericModal({
         );
 
         if (newWeight < 0) {
-          setInlineError("Task weight must be >= 0.");
+          setInlineError(t("project.errors.weightNonNegative"));
           return;
         }
 
         if (newWeight > available) {
           setInlineError(
-            `Cannot set task weight to ${newWeight}. Goal total is ${goalWeight} and ${used} is already used by other tasks. Available: ${available}.`
+            t("project.errors.weightExceeds", {
+              newWeight,
+              goalWeight,
+              used,
+              available,
+            })
           );
           return;
         }
@@ -1497,7 +1605,7 @@ function GenericModal({
       if (modal.type === "createActivity" || modal.type === "editActivity") {
         const taskId = modal.data?.taskId;
         if (!taskId) {
-          setInlineError("Missing task id for activity.");
+          setInlineError(t("project.errors.missingTaskId"));
           return;
         }
         const newWeight = Number(local.weight || 0);
@@ -1509,13 +1617,18 @@ function GenericModal({
         );
 
         if (newWeight < 0) {
-          setInlineError("Activity weight must be >= 0.");
+          setInlineError(t("project.errors.weightNonNegative"));
           return;
         }
 
         if (newWeight > available) {
           setInlineError(
-            `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${used} is already used by other activities. Available: ${available}.`
+            t("project.errors.weightExceedsTask", {
+              newWeight,
+              taskWeight,
+              used,
+              available,
+            })
           );
           return;
         }
@@ -1583,25 +1696,28 @@ function GenericModal({
       }
     } catch (err) {
       console.error("modal submit error", err);
-      setInlineError(err?.message || "Failed to submit");
+      setInlineError(err?.message || t("project.errors.modalSubmit"));
     }
   };
+
+  if (!modal.isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded shadow overflow-auto max-h-[90vh]">
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {modal.type === "createGoal" && "Create Goal"}
-            {modal.type === "editGoal" && "Edit Goal"}
-            {modal.type === "createTask" && "Create Task"}
-            {modal.type === "editTask" && "Edit Task"}
-            {modal.type === "createActivity" && "Create Activity"}
-            {modal.type === "editActivity" && "Edit Activity"}
+            {modal.type === "createGoal" && t("project.modal.createGoal")}
+            {modal.type === "editGoal" && t("project.modal.editGoal")}
+            {modal.type === "createTask" && t("project.modal.createTask")}
+            {modal.type === "editTask" && t("project.modal.editTask")}
+            {modal.type === "createActivity" && t("project.modal.createActivity")}
+            {modal.type === "editActivity" && t("project.modal.editActivity")}
           </h3>
           <button
             onClick={() => setModal({ isOpen: false, type: null, data: null })}
             className="text-gray-400 hover:text-gray-600"
+            aria-label={t("project.actions.close")}
           >
             &times;
           </button>
@@ -1612,7 +1728,7 @@ function GenericModal({
             modal.type === "editActivity") && (
             <>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Title *
+                {t("project.fields.title")} *
               </label>
               <input
                 name="title"
@@ -1623,7 +1739,7 @@ function GenericModal({
               />
 
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Description
+                {t("project.fields.description")}
               </label>
               <textarea
                 name="description"
@@ -1636,7 +1752,7 @@ function GenericModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Due Date
+                    {t("project.fields.dueDate")}
                   </label>
                   <input
                     name="dueDate"
@@ -1648,7 +1764,7 @@ function GenericModal({
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Weight
+                    {t("project.fields.weight")}
                   </label>
                   <input
                     name="weight"
@@ -1662,7 +1778,7 @@ function GenericModal({
               </div>
 
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Status
+                {t("project.fields.status")}
               </label>
               <select
                 name="status"
@@ -1670,9 +1786,9 @@ function GenericModal({
                 onChange={(e) => onLocalChange(e)}
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="not-started">Not Started</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
+                <option value="not-started">{t("project.status.notStarted")}</option>
+                <option value="in-progress">{t("project.status.inProgress")}</option>
+                <option value="completed">{t("project.status.completed")}</option>
               </select>
 
               {/* show available space for activity within task */}
@@ -1684,23 +1800,14 @@ function GenericModal({
                         modal.data.taskId,
                         modal.type === "editActivity" ? modal.data?.id : null
                       );
-                    return (
-                      <span>
-                        Task total:{" "}
-                        <strong className="text-gray-800 dark:text-gray-100">
-                          {taskWeight}
-                        </strong>
-                        . Used by other activities: <strong>{used}</strong>.
-                        Available: <strong>{available}</strong>.
-                      </span>
-                    );
+                    return t("project.hints.taskWeight", { taskWeight, used, available });
                   })()}
                 </div>
               )}
 
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Target Metrics
+                  {t("project.labels.targetMetrics")}
                 </label>
                 <div className="mt-2 space-y-2">
                   {(Array.isArray(local.targetMetrics)
@@ -1709,7 +1816,7 @@ function GenericModal({
                   ).map((m, idx) => (
                     <div key={idx} className="flex gap-2">
                       <input
-                        placeholder="Key"
+                        placeholder={t("project.placeholders.metricKey")}
                         value={m?.key || ""}
                         onChange={(e) =>
                           updateMetricRow(idx, "key", e.target.value)
@@ -1717,7 +1824,7 @@ function GenericModal({
                         className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
                       />
                       <input
-                        placeholder="Value"
+                        placeholder={t("project.placeholders.metricValue")}
                         value={m?.value || ""}
                         onChange={(e) =>
                           updateMetricRow(idx, "value", e.target.value)
@@ -1728,8 +1835,9 @@ function GenericModal({
                         type="button"
                         onClick={() => removeMetricRow(idx)}
                         className="px-2 py-1 bg-red-500 text-white rounded text-xs"
+                        aria-label={t("project.actions.remove")}
                       >
-                        X
+                        {t("project.actions.removeShort")}
                       </button>
                     </div>
                   ))}
@@ -1739,7 +1847,7 @@ function GenericModal({
                   onClick={addMetricRow}
                   className="mt-2 px-2 py-1 bg-green-600 text-white rounded text-xs"
                 >
-                  + Add Metric
+                  + {t("project.actions.addMetric")}
                 </button>
                 {jsonError && (
                   <div className="text-xs text-red-500 mt-1">{jsonError}</div>
@@ -1751,7 +1859,7 @@ function GenericModal({
           {(modal.type === "createTask" || modal.type === "editTask") && (
             <>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Title *
+                {t("project.fields.title")} *
               </label>
               <input
                 name="title"
@@ -1761,7 +1869,7 @@ function GenericModal({
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Description
+                {t("project.fields.description")}
               </label>
               <textarea
                 name="description"
@@ -1771,7 +1879,7 @@ function GenericModal({
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Due Date
+                {t("project.fields.dueDate")}
               </label>
               <input
                 name="dueDate"
@@ -1781,7 +1889,7 @@ function GenericModal({
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Weight
+                {t("project.fields.weight")}
               </label>
               <input
                 name="weight"
@@ -1796,16 +1904,7 @@ function GenericModal({
                   {(() => {
                     const { goalWeight, used, available } =
                       computeGoalWeightAvailable(modal.data.goalId, null);
-                    return (
-                      <span>
-                        Goal total:{" "}
-                        <strong className="text-gray-800 dark:text-gray-100">
-                          {goalWeight}
-                        </strong>
-                        . Used by other tasks: <strong>{used}</strong>.
-                        Available: <strong>{available}</strong>.
-                      </span>
-                    );
+                    return t("project.hints.goalWeight", { goalWeight, used, available });
                   })()}
                 </div>
               )}
@@ -1815,7 +1914,7 @@ function GenericModal({
           {(modal.type === "createGoal" || modal.type === "editGoal") && (
             <>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Title *
+                {t("project.fields.title")} *
               </label>
               <input
                 name="title"
@@ -1825,7 +1924,7 @@ function GenericModal({
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Description
+                {t("project.fields.description")}
               </label>
               <textarea
                 name="description"
@@ -1835,7 +1934,7 @@ function GenericModal({
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Assign to group
+                {t("project.fields.assignGroup")}
               </label>
               <select
                 name="groupId"
@@ -1843,7 +1942,7 @@ function GenericModal({
                 onChange={(e) => onLocalChange(e)}
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="">— Unassigned —</option>
+                <option value="">{t("project.unassigned")}</option>
                 {groups.map((g) => (
                   <option key={g.id} value={String(g.id)}>
                     {g.name}
@@ -1853,7 +1952,7 @@ function GenericModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Start date
+                    {t("project.fields.startDate")}
                   </label>
                   <input
                     name="startDate"
@@ -1865,7 +1964,7 @@ function GenericModal({
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    End date
+                    {t("project.fields.endDate")}
                   </label>
                   <input
                     name="endDate"
@@ -1877,7 +1976,7 @@ function GenericModal({
                 </div>
               </div>
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Weight
+                {t("project.fields.weight")}
               </label>
               <input
                 name="weight"
@@ -1904,7 +2003,7 @@ function GenericModal({
             onClick={() => setModal({ isOpen: false, type: null, data: null })}
             className="px-3 py-2 rounded border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
           >
-            Cancel
+            {t("project.actions.cancel")}
           </button>
           <button
             onClick={submitLocal}
@@ -1914,7 +2013,7 @@ function GenericModal({
             {isSubmitting ? (
               <Loader className="h-4 w-4 animate-spin mr-2" />
             ) : null}
-            {modal.type && modal.type.startsWith("edit") ? "Save" : "Create"}
+            {modal.type && modal.type.startsWith("edit") ? t("project.actions.save") : t("project.actions.create")}
           </button>
         </div>
       </div>
@@ -1923,9 +2022,9 @@ function GenericModal({
 }
 
 /* ---------------------------
-   SubmitReportInline (unchanged styling)
+   SubmitReportInline (i18n)
 ----------------------------*/
-function SubmitReportInline({ data, onClose, onSubmit, loading }) {
+function SubmitReportInline({ data, onClose, onSubmit, loading, t }) {
   const { goalId, taskId, activityId } = data || {};
   const [narrative, setNarrative] = useState("");
   const [metricsArray, setMetricsArray] = useState([{ key: "", value: "" }]);
@@ -1967,7 +2066,7 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
       (m) => m && String(m.key).trim() === "" && String(m.value).trim() !== ""
     );
     if (hasInvalid) {
-      setLocalErr("Metric keys cannot be empty when a value is provided.");
+      setLocalErr(t("project.errors.metricKeyMissing"));
       return;
     }
 
@@ -1990,7 +2089,7 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
       >
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Submit Report
+            {t("project.modal.submitReport")}
           </h3>
           <button
             type="button"
@@ -2004,7 +2103,7 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
         <div className="px-4 py-4 space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Activity
+              {t("project.labels.activity")}
             </label>
             <div className="mt-1 text-sm text-gray-700 dark:text-gray-200">
               {activityId}
@@ -2013,7 +2112,7 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Narrative
+              {t("project.fields.narrative")}
             </label>
             <textarea
               value={narrative}
@@ -2025,13 +2124,13 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Target / Metrics
+              {t("project.labels.metrics")}
             </label>
             <div className="mt-2 space-y-2">
               {metricsArray.map((m, idx) => (
                 <div key={idx} className="flex gap-2">
                   <input
-                    placeholder="Key"
+                    placeholder={t("project.placeholders.metricKey")}
                     value={m.key}
                     onChange={(e) =>
                       updateMetricRow(idx, "key", e.target.value)
@@ -2039,7 +2138,7 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
                     className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
                   />
                   <input
-                    placeholder="Value"
+                    placeholder={t("project.placeholders.metricValue")}
                     value={m.value}
                     onChange={(e) =>
                       updateMetricRow(idx, "value", e.target.value)
@@ -2051,7 +2150,7 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
                     onClick={() => removeMetricRow(idx)}
                     className="px-2 py-1 bg-red-500 text-white rounded text-xs"
                   >
-                    X
+                    {t("project.actions.removeShort")}
                   </button>
                 </div>
               ))}
@@ -2061,10 +2160,10 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
               onClick={addMetricRow}
               className="mt-2 px-2 py-1 bg-green-600 text-white rounded text-xs"
             >
-              + Add Metric
+              + {t("project.actions.addMetric")}
             </button>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Add metrics as key/value pairs.
+              {t("project.hints.metrics")}
             </p>
             {localErr && (
               <div className="text-xs text-red-500 mt-1">{localErr}</div>
@@ -2073,23 +2172,23 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              New Status (optional)
+              {t("project.fields.newStatus")}
             </label>
             <select
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value)}
               className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="">— No change —</option>
-              <option value="Done">Done</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Not Started">Not Started</option>
+              <option value="">{t("project.none")}</option>
+              <option value="Done">{t("project.status.completed")}</option>
+              <option value="In Progress">{t("project.status.inProgress")}</option>
+              <option value="Not Started">{t("project.status.notStarted")}</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Attachments
+              {t("project.labels.attachments")}
             </label>
             <input
               type="file"
@@ -2098,7 +2197,7 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
               className="mt-2"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Max files: server-side limit applies.
+              {t("project.hints.attachments")}
             </p>
             {files.length > 0 && (
               <ul className="mt-2 text-xs text-gray-700 dark:text-gray-200">
@@ -2118,7 +2217,7 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
             onClick={() => onClose()}
             className="px-3 py-2 rounded border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
           >
-            Cancel
+            {t("project.actions.cancel")}
           </button>
           <button
             type="submit"
@@ -2126,11 +2225,10 @@ function SubmitReportInline({ data, onClose, onSubmit, loading }) {
             className="px-3 py-2 rounded bg-indigo-600 text-white flex items-center"
           >
             {loading ? <Loader className="h-4 w-4 animate-spin mr-2" /> : null}
-            Submit
+            {t("project.actions.submit")}
           </button>
         </div>
       </form>
     </div>
   );
 }
-
