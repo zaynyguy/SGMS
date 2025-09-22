@@ -1,163 +1,258 @@
-import React, { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { NavLink, useNavigate } from "react-router-dom";
-import { Bell, CheckCircle, Info, AlertTriangle } from "lucide-react";
-import { fetchNotifications, fetchUnreadCount } from "../api/notifications";
+// src/pages/NotificationsPage.jsx
+import React, { useEffect, useState } from "react";
+import { CheckCircle, Info, AlertTriangle, Loader, Filter, Bell } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import {
+  fetchNotifications,
+  fetchUnreadCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+} from "../api/notifications";
+import TopBar from "../components/layout/TopBar";
 
-/**
- * Portal-based NotificationPreview
- * - Renders the preview into document.body so it appears outside the sidebar
- * - Positions relative to the bell using getBoundingClientRect
- * - Hover shows preview on desktop; click still navigates to item.to
- */
-export default function NotificationPreview({ item = { to: "/notification", label: "Notifications" }, showExpanded = false, position = "right" }) {
-  const [open, setOpen] = useState(false);
+export default function NotificationsPage() {
+  const { t } = useTranslation();
+
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const bellRef = useRef(null);
-  const hideTimer = useRef(null);
-  const containerRef = useRef(null);
-  const navigate = useNavigate();
+  const [filter, setFilter] = useState("all"); // 'all' | 'unread' | 'read'
+  const [page, setPage] = useState(1);
+  const LIMIT = 25;
 
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Initial load
   useEffect(() => {
-    let mounted = true;
-    fetchUnreadCount().then((r) => mounted && setUnread(r?.unread ?? 0)).catch(() => {});
-    return () => (mounted = false);
+    loadNotifications(1, false);
+    fetchUnreadCount()
+      .then((r) => setUnread(r?.unread ?? 0))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadPreview = async () => {
+  // Reload when filter changes
+  useEffect(() => {
+    loadNotifications(1, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
+
+  const loadNotifications = async (newPage = 1, append = false) => {
     try {
-      const res = await fetchNotifications(1, 5);
-      setNotifications(res?.rows || []);
-      const u = await fetchUnreadCount();
-      setUnread(u?.unread ?? 0);
+      if (append) setLoadingMore(true);
+      else setLoading(true);
+
+      const res = await fetchNotifications(newPage, LIMIT);
+      const rows = res?.rows ?? [];
+
+      setNotifications((prev) => (append ? [...prev, ...rows] : rows));
+      setPage(newPage);
+
+      // Update unread count
+      try {
+        const u = await fetchUnreadCount();
+        setUnread(u?.unread ?? 0);
+      } catch {}
+
+      setError(null);
     } catch (e) {
       console.error("Failed to load notifications", e);
+      setError(t("notifications.errors.loadFailed"));
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
   };
 
-  const openAtBell = () => {
-    if (!bellRef.current) return;
-    const rect = bellRef.current.getBoundingClientRect();
-    const scrollY = window.scrollY || window.pageYOffset;
-    // compute default coords (right, vertically centered)
-    let top = rect.top + scrollY + rect.height / 2;
-    let left = rect.right + 8;
-    if (position === "left") left = rect.left - 8;
-    if (position === "top") {
-      top = rect.top + scrollY - 8;
-      left = rect.left + rect.width / 2;
+  const handleLoadMore = () => loadNotifications(page + 1, true);
+
+  const handleMarkRead = async (id) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+      setUnread((u) => Math.max(0, u - 1));
+    } catch (e) {
+      console.error("Failed to mark read", e);
+      // optional: show a localized error - currently just logs
+      // alert(t("notifications.errors.markReadFailed"));
     }
-    if (position === "bottom") {
-      top = rect.bottom + scrollY + 8;
-      left = rect.left + rect.width / 2;
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnread(0);
+    } catch (e) {
+      console.error("Failed to mark all read", e);
+      // optional: show localized error
+      // alert(t("notifications.errors.markAllFailed"));
     }
-    setCoords({ top, left });
-    setOpen(true);
-    loadPreview();
   };
 
-  const close = () => setOpen(false);
-
-  const handleMouseEnter = () => {
-    if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
-    openAtBell();
-  };
-  const handleMouseLeave = () => {
-    hideTimer.current = setTimeout(() => setOpen(false), 150);
-  };
-
-  const getIcon = (level) => {
+  const iconFor = (level) => {
     switch (level) {
-      case "success": return <CheckCircle className="w-4 h-4" />;
-      case "warning": return <AlertTriangle className="w-4 h-4" />;
-      case "error": return <AlertTriangle className="w-4 h-4" />;
-      default: return <Info className="w-4 h-4" />;
+      case "success":
+        return <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />;
+      case "warning":
+        return <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />;
+      case "error":
+        return <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />;
+      default:
+        return <Info className="w-5 h-5 text-blue-500 flex-shrink-0" />;
     }
   };
 
-  // portal popover element
-  const popover = open ? createPortal(
-    <div
-      ref={containerRef}
-      role="dialog"
-      aria-label="Recent notifications"
-      tabIndex={-1}
-      onMouseEnter={() => { if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } }}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        position: "absolute",
-        top: coords.top,
-        left: coords.left,
-        // transform depends on position to align nicely
-        transform:
-          position === "right"
-            ? "translate(8px, -50%)"
-            : position === "left"
-            ? "translate(-100%, -50%)"
-            : position === "top"
-            ? "translate(-500%, -100%)"
-            : "translate(-500%, 8px)",
-        zIndex: 9999,
-      }}
-    >
-      <div className="w-80 max-h-[420px] bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b dark:border-gray-700">
-          <div className="text-sm font-medium text-text-gray-800 dark:text-white">Notifications</div>
-          <div className="text-xs text-gray-500">{unread} unread</div>
+  // Apply filter
+  const visible = notifications.filter((n) => {
+    if (filter === "unread") return !n.isRead;
+    if (filter === "read") return n.isRead;
+    return true;
+  });
+
+  return (
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 transition-colors duration-200">
+      <div className="max-w-8xl mx-auto p-4 sm:p-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+          <div className="flex items-center min-w-0 gap-4">
+            <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+                        <Bell className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                      </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
+              {t("notifications.title")}
+            </h1>
+            <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                {t("settings.subtitle")}
+              </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t("notifications.unreadCount", { count: unread })}
+            </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {unread > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm transition-colors duration-200"
+                aria-label={t("notifications.aria.markAll")}
+              >
+                {t("notifications.markAll")}
+              </button>
+            )}
+            <TopBar />
+          </div>
         </div>
 
-        <div className="divide-y overflow-y-auto max-h-[340px]">
-          {notifications.length === 0 && <div className="p-4 text-sm text-gray-500">No notifications</div>}
-          {notifications.map((n) => (
-            <div
-              key={n.id}
-              className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 ${n.isRead ? "bg-white" : "bg-blue-50"}`}
-              onClick={() => navigate(item?.to || "/notification")}
-              role="button"
-              tabIndex={0}
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mr-2" aria-hidden>
+            <Filter size={16} />
+            <span>{t("notifications.filter.label")}</span>
+          </div>
+          {["all", "unread", "read"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
+                filter === f
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
+              aria-pressed={filter === f}
+              aria-label={t("notifications.filter." + f)}
             >
-              <div className="flex-shrink-0 mt-0.5">{getIcon(n.level)}</div>
-              <div className="flex-1 min-w-0">
-                <div className={`text-sm truncate ${n.isRead ? "text-gray-600" : "font-medium text-gray-900"}`}>{n.message}</div>
-                <div className="text-xs text-gray-400 mt-1">{new Date(n.createdAt).toLocaleString()}</div>
-              </div>
-            </div>
+              {t(`notifications.filter.${f}`)}
+            </button>
           ))}
         </div>
 
-      </div>
-    </div>,
-    document.body
-  ) : null;
+        {/* Body */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-200">
+          {loading && notifications.length === 0 ? (
+            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+              <div className="flex justify-center">
+                <Loader className="h-5 w-5 animate-spin" />
+              </div>
+              <p className="mt-2">{t("notifications.loading")}</p>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+              {t("notifications.noNotifications")}
+            </div>
+          ) : (
+            visible.map((n) => (
+              <div
+                key={n.id}
+                className={`flex items-start gap-3 p-4 transition-colors duration-200 ${
+                  n.isRead
+                    ? "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750"
+                    : "bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                }`}
+              >
+                {iconFor(n.level)}
 
-  return (
-    <>
-      <div
-        ref={bellRef}
-        className="relative"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        <NavLink
-          to={item?.to || "/notification"}
-          className={`flex items-center p-3 rounded-md transition-colors duration-200 ${showExpanded ? "justify-normal" : "justify-center"}`}
-          aria-label={item?.label || "Notifications"}
-        >
-          <div className="relative flex items-center justify-center w-6">
-            <Bell size={24} className="text-gray-600 dark:text-gray-200"/>
-            {unread > 0 && (
-              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold leading-none text-white bg-red-600 rounded-full">
-                {unread > 9 ? "9+" : unread}
-              </span>
-            )}
-          </div>
-          {showExpanded && <span className="ml-3 truncate">{item?.label || "Notifications"}</span>}
-        </NavLink>
-      </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <p
+                      className={`text-sm break-words ${
+                        n.isRead ? "text-gray-600 dark:text-gray-300" : "text-gray-900 dark:text-white font-medium"
+                      }`}
+                    >
+                      {n.message}
+                    </p>
 
-      {popover}
-    </>
+                    <div className="flex flex-col sm:items-end gap-2">
+                      {!n.isRead && (
+                        <button
+                          onClick={() => handleMarkRead(n.id)}
+                          className="text-xs px-2 py-1 rounded-md text-gray-950 dark:text-white bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 self-start sm:self-auto"
+                        >
+                          {t("notifications.markAsRead")}
+                        </button>
+                      )}
+                      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                        {t("notifications.timestamps.formatted", { date: new Date(n.createdAt).toLocaleString() })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Load more */}
+        <div className="mt-6 flex items-center justify-center">
+          {error && (
+            <div className="text-sm text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-4 py-2 rounded-md">
+              {error}
+            </div>
+          )}
+
+          {!loading && !loadingMore && notifications.length >= page * LIMIT && (
+            <button
+              onClick={handleLoadMore}
+              className="px-4 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
+              aria-label={t("notifications.aria.loadMore")}
+            >
+              {t("notifications.loadMore")}
+            </button>
+          )}
+
+          {loadingMore && (
+            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <Loader className="h-4 w-4 animate-spin mr-2" />
+              {t("notifications.loadingMore")}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

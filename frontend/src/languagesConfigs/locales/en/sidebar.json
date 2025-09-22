@@ -1,0 +1,21 @@
+{
+  "sidebar": {
+    "menu": {
+      "dashboard": "Dashboard",
+      "settings": "Settings",
+      "systemSettings": "System Settings",
+      "audit": "Audit Logs",
+      "accessManagement": "Access Management",
+      "reports": "Reports",
+      "projectManagement": "Project Management",
+      "attachments": "Attachments",
+      "notification": "Notifications"
+    },
+    "logoAlt": "Company logo",
+    "appName": "Officemate",
+    "profileAlt": "User profile picture",
+    "logout": "Log out",
+    "openMenu": "Open sidebar menu",
+    "closeMenu": "Close sidebar menu"
+  }
+}

@@ -16,6 +16,7 @@ DROP TABLE IF EXISTS "Notifications" CASCADE;
 DROP TABLE IF EXISTS "AuditLogs" CASCADE;
 DROP TABLE IF EXISTS "ProgressHistory" CASCADE;
 
+
 DROP TYPE IF EXISTS goal_status CASCADE;
 DROP TYPE IF EXISTS task_status CASCADE;
 DROP TYPE IF EXISTS activity_status CASCADE;
@@ -27,7 +28,9 @@ DROP TYPE IF EXISTS report_status CASCADE;
 CREATE TYPE goal_status AS ENUM ('Not Started', 'In Progress', 'Completed', 'On Hold');
 CREATE TYPE task_status AS ENUM ('To Do', 'In Progress', 'Done', 'Blocked');
 CREATE TYPE activity_status AS ENUM ('To Do', 'In Progress', 'Done');
-CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 'Rejected');
+CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 
+'Rejected');
+
 
 -- =========================
 -- ROLES & PERMISSIONS
@@ -57,6 +60,7 @@ CREATE TABLE "Users" (
   "roleId" INTEGER REFERENCES "Roles"("id") ON DELETE SET NULL,
   "language" VARCHAR(10) DEFAULT 'en',
   "darkMode" BOOLEAN DEFAULT false,
+  "token_version" INTEGER DEFAULT 0 NOT NULL,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -77,6 +81,7 @@ CREATE TABLE "Groups" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
   "description" TEXT,
+  "profilePicture" TEXT,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -227,21 +232,40 @@ CREATE TABLE "AuditLogs" (
 CREATE INDEX idx_auditlogs_createdAt ON "AuditLogs" ("createdAt");
 
 -- =========================
--- PROGRESS HISTROY
+-- REFRESH JWT TOKENS
 -- =========================
-
-CREATE TABLE IF NOT EXISTS "ProgressHistory" (
+CREATE TABLE "RefreshTokens" (
   id SERIAL PRIMARY KEY,
-  entity_type VARCHAR(20) NOT NULL, -- 'Activity' | 'Task' | 'Goal'
+  "userId" INTEGER NOT NULL REFERENCES "Users"(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL,
+  "expiresAt" TIMESTAMPTZ NOT NULL,
+  revoked BOOLEAN DEFAULT false,
+  createdAt TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX idx_refresh_tokens_userid ON "RefreshTokens"("userId");
+
+
+-- =========================
+-- PROGRESS HISTORY
+-- =========================
+CREATE TABLE "ProgressHistory" (
+  id SERIAL PRIMARY KEY,
+  entity_type VARCHAR(20) NOT NULL,
   entity_id INTEGER NOT NULL,
   group_id INTEGER,
   progress INTEGER NOT NULL DEFAULT 0,
   metrics JSONB DEFAULT '{}'::jsonb,
-  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  snapshot_month DATE NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_progresshistory_entity ON "ProgressHistory"(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_progresshistory_recorded_at ON "ProgressHistory"(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_progresshistory_snapshot_month ON "ProgressHistory"(snapshot_month);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_progresshistory_entity_month
+  ON "ProgressHistory"(entity_type, entity_id, snapshot_month);
+
 
 -- =========================
 -- TRIGGERS & FUNCTIONS

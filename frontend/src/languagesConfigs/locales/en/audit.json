@@ -1,0 +1,56 @@
+{
+  "audit": {
+    "title": "Audit log",
+    "loadFailed": "Failed to load audit logs",
+    "exportCsv": "Export CSV",
+    "csv": {
+      "filename": "audit-logs.csv"
+    },
+    "export": {
+      "success": "Export started — your download should begin shortly"
+    },
+    "searchPlaceholder": "Search by user, entity, action or details",
+    "searchAria": "Search audit logs",
+    "results": {
+      "showing": "Showing {{filtered}} of {{total}} log(s)"
+    },
+    "loading": "Loading…",
+    "filters": {
+      "show": "Show filters",
+      "hide": "Hide filters",
+      "title": "Filters",
+      "fromDate": "From date",
+      "toDate": "To date",
+      "apply": "Apply filters",
+      "clear": "Clear filters",
+      "applied": "Filters applied",
+      "cleared": "Filters cleared"
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "entity": "Entity",
+      "action": "Action",
+      "details": "Details"
+    },
+    "noLogs": {
+      "title": "No audit logs found",
+      "none": "There are no audit logs yet.",
+      "tryAdjust": "Try adjusting your search or date filters."
+    },
+    "expanded": {
+      "fullDetails": "Full details",
+      "additionalInfo": "Additional information",
+      "idLabel": "ID:",
+      "entityLabel": "Entity:",
+      "ipLabel": "IP:",
+      "userAgentLabel": "User agent:"
+    },
+    "na": "N/A",
+    "pagination": {
+      "range": "Showing {{from}} to {{to}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
+    }
+  }
+}

@@ -5,7 +5,6 @@ const fs = require("fs");
 const db = require("../db");
 const bcrypt = require("bcrypt");
 
-
 function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -43,10 +42,18 @@ async function run() {
 
     // ---------- PERMISSIONS ----------
     const perms = [
-      "manage_gta", "view_gta", "submit_reports", "view_reports",
-      "manage_reports", "manage_settings", "view_audit_logs",
-      "manage_notifications", "manage_dashboard", "view_dashboard",
-      "manage_attachments", "manage_access",
+      "manage_gta",
+      "view_gta",
+      "submit_reports",
+      "view_reports",
+      "manage_reports",
+      "manage_settings",
+      "view_audit_logs",
+      "manage_notifications",
+      "manage_dashboard",
+      "view_dashboard",
+      "manage_attachments",
+      "manage_access",
     ];
     const permIds = {};
     for (const p of perms) {
@@ -72,7 +79,11 @@ async function run() {
 
     await grant("Admin", perms);
     await grant("Manager", [
-      "manage_gta", "view_gta", "manage_reports", "view_reports", "view_dashboard"
+      "manage_gta",
+      "view_gta",
+      "manage_reports",
+      "view_reports",
+      "view_dashboard",
     ]);
     await grant("User", ["view_reports", "view_gta", "view_dashboard"]);
 
@@ -83,7 +94,13 @@ async function run() {
     const { rows: arows } = await client.query(
       `INSERT INTO "Users"(username, name, password, "roleId", "profilePicture")
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [adminUser, "System Admin", adminHash, roleIds["Admin"], "/uploads/admin.png"]
+      [
+        adminUser,
+        "System Admin",
+        adminHash,
+        roleIds["Admin"],
+        "/uploads/admin.png",
+      ]
     );
     const adminId = arows[0].id;
 
@@ -115,7 +132,12 @@ async function run() {
           [username, name, hash, roleIds["User"]]
         );
         const uid = rows[0].id;
-        createdUsers.push({ id: uid, username, password: pass, groupId: groupIds[i] });
+        createdUsers.push({
+          id: uid,
+          username,
+          password: pass,
+          groupId: groupIds[i],
+        });
         await client.query(
           `INSERT INTO "UserGroups"("userId","groupId") VALUES ($1,$2) ON CONFLICT DO NOTHING`,
           [uid, groupIds[i]]
@@ -136,7 +158,9 @@ async function run() {
     );
 
     // ---------- GOALS / TASKS / ACTIVITIES ----------
-    const goalIds = [], taskIds = [], activityIds = [];
+    const goalIds = [],
+      taskIds = [],
+      activityIds = [];
 
     for (let gidx = 0; gidx < groupIds.length; gidx++) {
       const gid = groupIds[gidx];
@@ -183,16 +207,34 @@ async function run() {
             const targetMetric = { target: randInt(100, 1000) };
             const currentMetric = { current: randInt(0, targetMetric.target) };
             const isDone = Math.random() > 0.6;
-            const status = isDone ? "Done" : Math.random() > 0.4 ? "In Progress" : "To Do";
+            const status = isDone
+              ? "Done"
+              : Math.random() > 0.4
+              ? "In Progress"
+              : "To Do";
 
-            const activityDueOffset = isOverdue ? -randInt(0, 7) : randInt(3, 14);
+            const activityDueOffset = isOverdue
+              ? -randInt(0, 7)
+              : randInt(3, 14);
             const activityDueDate = new Date();
-            activityDueDate.setDate(activityDueDate.getDate() + activityDueOffset);
+            activityDueDate.setDate(
+              activityDueDate.getDate() + activityDueOffset
+            );
 
             const { rows: ar } = await client.query(
               `INSERT INTO "Activities"(title, description, "taskId", status, weight, "targetMetric", "currentMetric", "isDone", "dueDate")
                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
-              [aTitle, aDesc, taskId, status, aWeight, JSON.stringify(targetMetric), JSON.stringify(currentMetric), isDone, activityDueDate]
+              [
+                aTitle,
+                aDesc,
+                taskId,
+                status,
+                aWeight,
+                JSON.stringify(targetMetric),
+                JSON.stringify(currentMetric),
+                isDone,
+                activityDueDate,
+              ]
             );
             const activityId = ar[0].id;
             activityIds.push(activityId);
@@ -200,7 +242,10 @@ async function run() {
             // Reports
             const numReports = Math.random() > 0.6 ? 1 : randInt(0, 2);
             for (let ri = 0; ri < numReports; ri++) {
-              const reporter = Math.random() > 0.5 ? adminId : createdUsers[gidx * 3 + (ri % 3)].id;
+              const reporter =
+                Math.random() > 0.5
+                  ? adminId
+                  : createdUsers[gidx * 3 + (ri % 3)].id;
               const metricVal = { lines: randInt(0, targetMetric.target) };
               const rStatusRoll = Math.random();
               let rStatus = "Pending";
@@ -210,7 +255,14 @@ async function run() {
               await client.query(
                 `INSERT INTO "Reports"("activityId","userId", narrative, metrics_data, status, "createdAt")
                  VALUES ($1,$2,$3,$4,$5, now() - (interval '1 day' * $6))`,
-                [activityId, reporter, narrative, JSON.stringify(metricVal), rStatus, randInt(0, 10)]
+                [
+                  activityId,
+                  reporter,
+                  narrative,
+                  JSON.stringify(metricVal),
+                  rStatus,
+                  randInt(0, 10),
+                ]
               );
             }
           }
@@ -231,14 +283,23 @@ async function run() {
         const recordedAt = dueDate
           ? new Date(dueDate.getTime() - (steps - i) * 24 * 60 * 60 * 1000)
           : new Date(Date.now() - (steps - i) * 24 * 60 * 60 * 1000);
-        entries.push({ entityType, entityId, groupId, progress: current, recordedAt });
+        entries.push({
+          entityType,
+          entityId,
+          groupId,
+          progress: current,
+          recordedAt,
+        });
       }
       return entries;
     }
 
     // Tasks
     for (const tId of taskIds) {
-      const { rows } = await client.query(`SELECT "dueDate" FROM "Tasks" WHERE id=$1`, [tId]);
+      const { rows } = await client.query(
+        `SELECT "dueDate" FROM "Tasks" WHERE id=$1`,
+        [tId]
+      );
       const series = randomProgressSeries("Task", tId, null, rows[0].dueDate);
       for (const e of series) {
         await client.query(
@@ -251,8 +312,16 @@ async function run() {
 
     // Activities
     for (const aId of activityIds) {
-      const { rows } = await client.query(`SELECT "dueDate" FROM "Activities" WHERE id=$1`, [aId]);
-      const series = randomProgressSeries("Activity", aId, null, rows[0].dueDate);
+      const { rows } = await client.query(
+        `SELECT "dueDate" FROM "Activities" WHERE id=$1`,
+        [aId]
+      );
+      const series = randomProgressSeries(
+        "Activity",
+        aId,
+        null,
+        rows[0].dueDate
+      );
       for (const e of series) {
         await client.query(
           `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at)
@@ -274,7 +343,7 @@ async function run() {
       }
     }
 
-       // Basic system settings
+    // Basic system settings
     const settings = [
       {
         key: "max_attachment_size_mb",
@@ -292,19 +361,16 @@ async function run() {
         description: "Enable report submissions",
       },
       {
-        key: "resubmission_deadline_days",
-        value: 7,
-        description: "Days to resubmit rejected reports",
-      },
-      {
         key: "audit_retention_days",
         value: 365,
         description: "Days to retain audit logs",
       },
     ];
+
     for (const s of settings) {
       await client.query(
-        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)`,
+        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description`,
         [s.key, JSON.stringify(s.value), s.description]
       );
     }

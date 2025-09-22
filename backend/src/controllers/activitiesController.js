@@ -1,4 +1,3 @@
-// src/controllers/activitiesController.js
 const db = require("../db");
 const notificationService = require("../services/notificationService");
 const { logAudit } = require("../helpers/audit");
@@ -56,12 +55,35 @@ exports.createActivity = async (req, res) => {
 
   try {
     const activity = await db.tx(async (client) => {
-      const t = await client.query('SELECT id FROM "Tasks" WHERE id=$1', [
+      // ensure task exists & lock row
+      const t = await client.query('SELECT id, weight FROM "Tasks" WHERE id=$1 FOR UPDATE', [
         taskId,
       ]);
       if (!t.rows.length) {
         const err = new Error("Task not found");
         err.status = 404;
+        throw err;
+      }
+
+      const taskWeight = Number(t.rows[0].weight ?? 0);
+      const newWeight = Number(weight ?? 0);
+      if (newWeight < 0) {
+        const err = new Error("Activity weight must be >= 0");
+        err.status = 400;
+        throw err;
+      }
+
+      const sumRes = await client.query(
+        'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Activities" WHERE "taskId"=$1',
+        [taskId]
+      );
+      const sumOther = Number(sumRes.rows[0].sum || 0);
+
+      if (newWeight + sumOther > taskWeight) {
+        const err = new Error(
+          `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${sumOther} is already used.`
+        );
+        err.status = 400;
         throw err;
       }
 
@@ -75,7 +97,7 @@ exports.createActivity = async (req, res) => {
           String(title).trim(),
           description?.trim() || null,
           dueDate || null,
-          weight ?? 0,
+          newWeight,
           targetMetric ?? null,
         ]
       );
@@ -83,7 +105,7 @@ exports.createActivity = async (req, res) => {
 
       const newActivity = r.rows[0];
 
-      // Audit inside the same transaction so audit rolls back if tx rolls back
+      // Audit inside tx
       try {
         await logAudit({
           userId: req.user.id,
@@ -96,13 +118,12 @@ exports.createActivity = async (req, res) => {
         });
       } catch (e) {
         console.error("ACTIVITY_CREATED audit failed (in-tx):", e);
-        // don't break the transaction for audit failure
       }
 
       return newActivity;
     });
 
-    // Post-commit notification (best-effort)
+    // Post-commit notification
     try {
       await notificationService({
         userId: req.user.id,
@@ -121,6 +142,8 @@ exports.createActivity = async (req, res) => {
     console.error("createActivity error:", err);
     if (err && err.status === 404)
       return res.status(404).json({ message: err.message });
+    if (err && err.status === 400)
+      return res.status(400).json({ message: err.message });
     return res
       .status(500)
       .json({ message: "Failed to create activity.", error: err.message });
@@ -140,19 +163,49 @@ exports.updateActivity = async (req, res) => {
 
   try {
     const activity = await db.tx(async (client) => {
-      const c = await client.query('SELECT id FROM "Activities" WHERE id=$1', [
-        activityId,
-      ]);
+      const c = await client.query(
+        'SELECT * FROM "Activities" WHERE id=$1 FOR UPDATE',
+        [activityId]
+      );
       if (!c.rows.length) {
         const e = new Error("Activity not found");
         e.status = 404;
         throw e;
       }
 
+      // enforce weight constraint if weight provided
+      let newWeight = weight ?? c.rows[0].weight;
+      newWeight = Number(newWeight);
+      if (newWeight < 0) {
+        const err = new Error("Activity weight must be >= 0");
+        err.status = 400;
+        throw err;
+      }
+
+      const tRes = await client.query(
+        'SELECT weight FROM "Tasks" WHERE id=$1 FOR UPDATE',
+        [c.rows[0].taskId]
+      );
+      const taskWeight = Number(tRes.rows[0].weight ?? 0);
+
+      const sumRes = await client.query(
+        'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Activities" WHERE "taskId"=$1 AND id<>$2',
+        [c.rows[0].taskId, activityId]
+      );
+      const sumOther = Number(sumRes.rows[0].sum || 0);
+
+      if (newWeight + sumOther > taskWeight) {
+        const err = new Error(
+          `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${sumOther} is already used.`
+        );
+        err.status = 400;
+        throw err;
+      }
+
       const r = await client.query(
         `UPDATE "Activities"
          SET title=$1, description=$2, status=COALESCE($3, status),
-             "dueDate"=$4, "weight"=COALESCE($5, "weight"),
+             "dueDate"=$4, "weight"=$5,
              "targetMetric"=COALESCE($6, "targetMetric"),
              "isDone"=COALESCE($7, "isDone"), "updatedAt"=NOW()
          WHERE id=$8
@@ -162,7 +215,7 @@ exports.updateActivity = async (req, res) => {
           description?.trim() || null,
           status || null,
           dueDate || null,
-          weight ?? null,
+          newWeight,
           targetMetric ?? null,
           isDone !== undefined ? isDone : null,
           activityId,
@@ -172,7 +225,7 @@ exports.updateActivity = async (req, res) => {
 
       const updatedActivity = r.rows[0];
 
-      // Audit inside transaction with before/after snapshots
+      // Audit inside tx
       try {
         await logAudit({
           userId: req.user.id,
@@ -191,7 +244,7 @@ exports.updateActivity = async (req, res) => {
       return updatedActivity;
     });
 
-    // Post-commit notification (best-effort)
+    // Post-commit notification
     try {
       await notificationService({
         userId: req.user.id,
@@ -208,6 +261,8 @@ exports.updateActivity = async (req, res) => {
     console.error("updateActivity error:", err);
     if (err && err.status === 404)
       return res.status(404).json({ message: err.message });
+    if (err && err.status === 400)
+      return res.status(400).json({ message: err.message });
     return res
       .status(500)
       .json({ message: "Failed to update activity.", error: err.message });
@@ -237,7 +292,7 @@ exports.deleteActivity = async (req, res) => {
       );
       const deletedRow = r.rows && r.rows[0] ? r.rows[0] : null;
 
-      // Audit the deletion inside the same transaction
+      // Audit deletion
       try {
         await logAudit({
           userId: req.user.id,

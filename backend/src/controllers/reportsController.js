@@ -12,30 +12,88 @@ const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 const { getAttachmentSettings } = require("../utils/systemSettings");
 const { uploadFile, deleteFile } = require("../services/uploadService");
 
+/**
+ * Helper: check if user has a permission
+ */
+function hasPermission(req, perm) {
+  if (!req.user) return false;
+  const perms = req.user.permissions || req.user.perms || [];
+  return Array.isArray(perms) && perms.includes(perm);
+}
+
+exports.canSubmitReport = async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
+    );
+
+    if (!rows[0]) {
+      return res.json({ reporting_active: false });
+    }
+
+    const val = rows[0].value;
+    const isActive =
+      typeof val === "boolean" ? val : String(val).toLowerCase() === "true";
+    return res.json({ reporting_active: Boolean(isActive) });
+  } catch (err) {
+    console.error("canSubmitReport error:", err);
+    return res
+      .status(500)
+      .json({ reporting_active: false, error: err.message });
+  }
+};
+
 exports.submitReport = async (req, res) => {
   const { activityId } = req.params;
   const { narrative, metrics_data, new_status } = req.body;
 
   try {
-    const setting = await db.query(
+    const { rows } = await db.query(
       `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
     );
-    if (setting.rows[0] && setting.rows[0].value === false) {
+
+    if (!rows[0]) {
+      return res
+        .status(403)
+        .json({ message: "Reporting is currently disabled." });
+    }
+
+    const val = rows[0].value;
+    const isActive =
+      typeof val === "boolean" ? val : String(val).toLowerCase() === "true";
+    if (!isActive) {
       return res
         .status(403)
         .json({ message: "Reporting is currently disabled." });
     }
   } catch (err) {
-    // missing setting is fine
+    console.error("Error reading reporting_active setting:", err);
+    return res
+      .status(500)
+      .json({
+        message: "Unable to determine reporting status. Contact admin.",
+      });
   }
 
   const client = await db.connect();
-
-  // We'll keep track of uploaded files so we can cleanup on failure
-  const uploadedFiles = []; // each item: { uploaded, originalFile }
+  const uploadedFiles = [];
 
   try {
     await client.query("BEGIN");
+
+    let parsedMetrics = null;
+    if (metrics_data) {
+      if (typeof metrics_data === "string") {
+        try {
+          parsedMetrics =
+            metrics_data.trim() === "" ? null : JSON.parse(metrics_data);
+        } catch (e) {
+          parsedMetrics = metrics_data;
+        }
+      } else {
+        parsedMetrics = metrics_data;
+      }
+    }
 
     const reportResult = await client.query(
       `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status, "createdAt", "updatedAt")
@@ -45,7 +103,7 @@ exports.submitReport = async (req, res) => {
         activityId,
         req.user.id,
         narrative || null,
-        metrics_data ? JSON.parse(metrics_data) : null,
+        parsedMetrics,
         new_status || null,
       ]
     );
@@ -54,7 +112,12 @@ exports.submitReport = async (req, res) => {
 
     // Validate attachments size (use system setting)
     if (req.files && req.files.length) {
-      const { maxSizeMb } = await getAttachmentSettings();
+      const attachmentSettings = await getAttachmentSettings();
+      const maxSizeMb = Number(
+        attachmentSettings?.maxSizeMb ||
+          attachmentSettings?.max_attachment_size_mb ||
+          10
+      );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
       const oversized = req.files.filter((f) => {
         try {
@@ -278,7 +341,6 @@ exports.reviewReport = async (req, res) => {
     }
 
     if (status === "Approved") {
-      // Apply metrics to activity
       if (updatedReport.metrics_data) {
         await client.query(
           `UPDATE "Activities"
@@ -288,7 +350,6 @@ exports.reviewReport = async (req, res) => {
         );
       }
 
-      // Update activity status if report specifies new_status
       if (updatedReport.new_status) {
         const newStatus = updatedReport.new_status;
         await client.query(
@@ -301,32 +362,52 @@ exports.reviewReport = async (req, res) => {
         );
       }
 
-      // Fetch activity + task + goal for progress snapshot
+      
       const aRes = await client.query(
-        `SELECT a.id, a."taskId", t."goalId", a."currentMetric", a."weight", a."isDone"
-         FROM "Activities" a
-         JOIN "Tasks" t ON t.id = a."taskId"
-         WHERE a.id = $1 LIMIT 1`,
+        `SELECT a.id, a."taskId", t."goalId" AS "goalId", a."currentMetric", a."targetMetric", a."isDone"
+        FROM "Activities" a
+        JOIN "Tasks" t ON t.id = a."taskId"
+        WHERE a.id = $1 LIMIT 1`,
         [updatedReport.activityId]
       );
 
       if (aRes.rows[0]) {
         const act = aRes.rows[0];
+
+        
         const gRes = await client.query(
           `SELECT "groupId" FROM "Goals" WHERE id = $1 LIMIT 1`,
           [act.goalId]
         );
         const groupId = gRes.rows[0] ? gRes.rows[0].groupId : null;
 
+      
+        const progress = act.isDone ? 100 : 0;
+
+        
+        const now = new Date();
+        const snapshotMonth = new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
+        );
+        const snapshotMonthStr = snapshotMonth.toISOString().slice(0, 10); 
+
+        const metricsObj = {
+          currentMetric: act.currentMetric ?? null,
+          targetMetric: act.targetMetric ?? null,
+        
+        };
+
         await client.query(
-          `INSERT INTO "ProgressHistory"("entity_type","entity_id","group_id","progress","metrics","recorded_at")
-           VALUES ($1,$2,$3,$4,$5,NOW())`,
+          `INSERT INTO "ProgressHistory" ("entity_type", "entity_id", "group_id", "progress", "metrics", "snapshot_month", "recorded_at")
+          VALUES ($1, $2, $3, $4, $5::jsonb, $6, NOW())
+          ON CONFLICT ("entity_type","entity_id","snapshot_month") DO NOTHING`,
           [
             "Activity",
             act.id,
             groupId,
-            act.progress || 0,
-            act.currentMetric || {},
+            progress,
+            JSON.stringify(metricsObj),
+            snapshotMonthStr,
           ]
         );
       }
@@ -357,24 +438,69 @@ exports.reviewReport = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/reports
+ * - If user has manage_reports permission -> return all reports (admin)
+ * - Else if user has view_reports -> return reports in user's groups OR reports submitted by that user
+ * - Paginated, optional status filter, q search
+ */
 exports.getAllReports = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page || "1", 10), 1);
-    const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || "20", 10), 1), 200);
+    const pageSize = Math.min(
+      Math.max(parseInt(req.query.pageSize || "20", 10), 1),
+      200
+    );
     const offset = (page - 1) * pageSize;
     const status = req.query.status ? String(req.query.status) : null;
     const qRaw = req.query.q ? String(req.query.q).trim() : null;
 
-    const whereClauses = [];
+    // Base params: LIMIT, OFFSET
     const params = [pageSize, offset];
+    const whereClauses = [];
 
+    // Permission-based scoping
+    const isAdmin = hasPermission(req, "manage_reports");
+    const canViewGroup = hasPermission(req, "view_reports");
+
+    // If not admin, but has view_reports, restrict by user's groups OR their own reports.
+    if (!isAdmin && canViewGroup) {
+      // Get group IDs for the user
+      const gRes = await db.query(
+        `SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`,
+        [req.user.id]
+      );
+      const groupIds = gRes.rows.map((r) => r.groupId).filter(Boolean);
+
+      if (groupIds.length) {
+        // Add parameterized array of group IDs using Postgres ANY()
+        params.push(groupIds);
+        // r is Reports alias, later joins will include Goals as g
+        whereClauses.push(
+          `(g."groupId" = ANY($${params.length}) OR r."userId" = ${
+            db._escape ? db._escape(req.user.id) : "$$USERID_PLACEHOLDER$$"
+          })`
+        );
+        // Note: we can't use req.user.id directly inside SQL string as param index (we'll replace below).
+        // We'll patch this properly below to avoid SQL injection.
+      } else {
+        // user has no groups: only their own reports
+        params.push(req.user.id);
+        whereClauses.push(`r."userId" = $${params.length}`);
+      }
+    } else if (!isAdmin && !canViewGroup) {
+      // No permissions to see reports
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    // status filter
     if (status) {
       params.push(status);
       whereClauses.push(`r.status = $${params.length}`);
     }
 
+    // q filter (search across id, user name, activity title, narrative)
     if (qRaw) {
-      // search across id, user name, activity title, narrative
       params.push(`%${qRaw}%`);
       const idx = params.length;
       whereClauses.push(
@@ -382,7 +508,64 @@ exports.getAllReports = async (req, res) => {
       );
     }
 
-    const where = whereClauses.length ? "WHERE " + whereClauses.join(" AND ") : "";
+    // Build final where clause string
+    let where = whereClauses.length
+      ? "WHERE " + whereClauses.join(" AND ")
+      : "";
+
+    // Special handling: if we inserted a placeholder for userId earlier, replace it with an actual param index
+    // We'll detect the placeholder and replace with a positional parameter.
+    // Simpler approach: rebuild params and where with correct indices.
+    // Let's rebuild to be safe and clear.
+
+    // Rebuild params and where with correct positions:
+    const rebuiltParams = [pageSize, offset];
+    const rebuiltWhereClauses = [];
+
+    // Helper to push a param and return $n
+    const pushParam = (val) => {
+      rebuiltParams.push(val);
+      return `$${rebuiltParams.length}`;
+    };
+
+    // Recompute permission-based clause
+    if (!isAdmin && canViewGroup) {
+      const gRes2 = await db.query(
+        `SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`,
+        [req.user.id]
+      );
+      const groupIds2 = gRes2.rows.map((r) => r.groupId).filter(Boolean);
+
+      if (groupIds2.length) {
+        const groupParam = pushParam(groupIds2); // will be $3 typically
+        const userParam = pushParam(req.user.id);
+        rebuiltWhereClauses.push(
+          `(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`
+        );
+      } else {
+        const userParam = pushParam(req.user.id);
+        rebuiltWhereClauses.push(`r."userId" = ${userParam}`);
+      }
+    }
+
+    // status
+    if (status) {
+      const p = pushParam(status);
+      rebuiltWhereClauses.push(`r.status = ${p}`);
+    }
+
+    // q
+    if (qRaw) {
+      const p = pushParam(`%${qRaw}%`);
+      rebuiltWhereClauses.push(
+        `(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`
+      );
+    }
+
+    // assemble where
+    const rebuiltWhere = rebuiltWhereClauses.length
+      ? "WHERE " + rebuiltWhereClauses.join(" AND ")
+      : "";
 
     const sql = `
       SELECT r.*, u.name as user_name,
@@ -395,12 +578,12 @@ exports.getAllReports = async (req, res) => {
       LEFT JOIN "Activities" a ON r."activityId" = a.id
       LEFT JOIN "Tasks" t ON a."taskId" = t.id
       LEFT JOIN "Goals" g ON t."goalId" = g.id
-      ${where}
+      ${rebuiltWhere}
       ORDER BY r."createdAt" DESC
       LIMIT $1 OFFSET $2
     `;
 
-    const { rows } = await db.query(sql, params);
+    const { rows } = await db.query(sql, rebuiltParams);
     const total = rows.length ? Number(rows[0].total_count || 0) : 0;
 
     // strip total_count from each row before returning (optional)
@@ -425,13 +608,35 @@ exports.generateMasterReport = async (req, res) => {
   try {
     const rows = await db.query(
       `
-SELECT g.id as goal_id, g.title as goal_title, g.progress as goal_progress, g.status as goal_status,
-       t.id as task_id, t.title as task_title, t.progress as task_progress, t.status as task_status, t."assigneeId" as task_assignee,
-       a.id as activity_id, a.title as activity_title, a.description as activity_description,
-       a."currentMetric", a."targetMetric", a.weight as activity_weight, a."isDone" as activity_done, a.status as activity_status,
-       r.id as report_id, r.narrative as report_narrative, r.status as report_status, r.metrics_data as report_metrics, 
-       r."new_status" as report_new_status, r."createdAt" as report_createdAt,
-       at.id as attachment_id, at."fileName" as attachment_name, at."filePath" as attachment_path, at."fileType" as attachment_type
+SELECT g.id as goal_id,
+       g.title as goal_title,
+       g.progress as goal_progress,
+       g.status as goal_status,
+       g.weight as goal_weight,
+       t.id as task_id,
+       t.title as task_title,
+       t.progress as task_progress,
+       t.status as task_status,
+       t.weight as task_weight,
+       t."assigneeId" as task_assignee,
+       a.id as activity_id,
+       a.title as activity_title,
+       a.description as activity_description,
+       a."currentMetric",
+       a."targetMetric",
+       a.weight as activity_weight,
+       a."isDone" as activity_done,
+       a.status as activity_status,
+       r.id as report_id,
+       r.narrative as report_narrative,
+       r.status as report_status,
+       r.metrics_data as report_metrics,
+       r."new_status" as report_new_status,
+       r."createdAt" as report_createdAt,
+       at.id as attachment_id,
+       at."fileName" as attachment_name,
+       at."filePath" as attachment_path,
+       at."fileType" as attachment_type
 FROM "Goals" g
 LEFT JOIN "Tasks" t ON t."goalId" = g.id
 LEFT JOIN "Activities" a ON a."taskId" = t.id
@@ -445,65 +650,79 @@ ORDER BY g.id, t.id, a.id, r.id
 
     const raw = rows.rows || [];
 
-    // --- Build Change History from Reports ---
+    // --- Build Activity Change History from ProgressHistory table (preferred)
+    // This builds monthly snapshots, then groups into monthly/quarterly/annual buckets.
+    const phRowsQ = await db.query(
+      `
+      SELECT entity_id::int as activity_id, snapshot_month, progress, metrics, recorded_at
+      FROM "ProgressHistory"
+      WHERE entity_type = 'Activity'
+      ${groupId ? "AND group_id = $1" : ""}
+      ORDER BY entity_id, snapshot_month
+      `,
+      groupId ? [groupId] : []
+    );
+
     const historyByActivity = {};
-    for (const row of raw) {
-      if (!row.activity_id || !row.report_id) continue;
-
-      const actId = row.activity_id;
-      const createdAt = row.report_createdat;
-      const metrics = row.report_metrics || {};
-
-      if (!historyByActivity[actId]) historyByActivity[actId] = [];
-
-      historyByActivity[actId].push({
-        reportId: row.report_id,
-        date: createdAt,
-        metrics,
-        newStatus: row.report_new_status,
+    for (const r of phRowsQ.rows || []) {
+      const aid = Number(r.activity_id);
+      if (!historyByActivity[aid]) historyByActivity[aid] = [];
+      historyByActivity[aid].push({
+        snapshot_month: r.snapshot_month, // Date or string 'YYYY-MM-DD'
+        progress:
+          typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
+        metrics: r.metrics || {},
+        recorded_at: r.recorded_at,
       });
     }
 
-    // Group history into monthly / quarterly / annual
     const breakdowns = {};
-    for (const [actId, reports] of Object.entries(historyByActivity)) {
-      breakdowns[actId] = {
-        monthly: {},
-        quarterly: {},
-        annual: {},
-      };
+    for (const [actId, snaps] of Object.entries(historyByActivity)) {
+      const numericActId = Number(actId);
+      breakdowns[numericActId] = { monthly: {}, quarterly: {}, annual: {} };
 
-      for (const rep of reports) {
-        const d = new Date(rep.date);
+      for (const snap of snaps) {
+        const d = new Date(snap.snapshot_month);
         if (isNaN(d)) continue;
 
-        const monthKey = `${d.getFullYear()}-${d.getMonth() + 1}`;
+        const monthKey = `${d.getFullYear()}-${d.getMonth() + 1}`; // e.g. "2025-10"
         const quarterKey = `${d.getFullYear()}-Q${
           Math.floor(d.getMonth() / 3) + 1
         }`;
         const yearKey = `${d.getFullYear()}`;
 
-        // push to monthly
-        if (!breakdowns[actId].monthly[monthKey])
-          breakdowns[actId].monthly[monthKey] = [];
-        breakdowns[actId].monthly[monthKey].push(rep);
+        if (!breakdowns[numericActId].monthly[monthKey])
+          breakdowns[numericActId].monthly[monthKey] = [];
+        breakdowns[numericActId].monthly[monthKey].push({
+          date: snap.snapshot_month,
+          progress: snap.progress,
+          metrics: snap.metrics,
+          recorded_at: snap.recorded_at,
+        });
 
-        // push to quarterly
-        if (!breakdowns[actId].quarterly[quarterKey])
-          breakdowns[actId].quarterly[quarterKey] = [];
-        breakdowns[actId].quarterly[quarterKey].push(rep);
+        if (!breakdowns[numericActId].quarterly[quarterKey])
+          breakdowns[numericActId].quarterly[quarterKey] = [];
+        breakdowns[numericActId].quarterly[quarterKey].push({
+          date: snap.snapshot_month,
+          progress: snap.progress,
+          metrics: snap.metrics,
+          recorded_at: snap.recorded_at,
+        });
 
-        // push to annual
-        if (!breakdowns[actId].annual[yearKey])
-          breakdowns[actId].annual[yearKey] = [];
-        breakdowns[actId].annual[yearKey].push(rep);
+        if (!breakdowns[numericActId].annual[yearKey])
+          breakdowns[numericActId].annual[yearKey] = [];
+        breakdowns[numericActId].annual[yearKey].push({
+          date: snap.snapshot_month,
+          progress: snap.progress,
+          metrics: snap.metrics,
+          recorded_at: snap.recorded_at,
+        });
       }
     }
 
     // --- Inject into the JSON output ---
     const masterJson = generateReportJson(raw);
 
-    // Walk activities inside masterJson and attach history
     for (const goal of masterJson.goals || []) {
       for (const task of goal.tasks || []) {
         for (const activity of task.activities || []) {
@@ -528,7 +747,10 @@ ORDER BY g.id, t.id, a.id, r.id
 
     return res.json(masterJson);
   } catch (err) {
-    console.error("Error generating master report:", err);
-    res.status(500).json({ error: err.message });
+    console.error(
+      "Error generating master report:",
+      err && err.message ? err.message : err
+    );
+    res.status(500).json({ error: err.message || String(err) });
   }
 };

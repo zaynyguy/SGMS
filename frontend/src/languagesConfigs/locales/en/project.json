@@ -1,0 +1,145 @@
+{
+  "project": {
+    "title": "Project Manager",
+    "subtitle": "Organize goals, tasks and activities",
+    "na": "—",
+    "searchPlaceholder": "Search goals...",
+    "searchAria": "Search goals",
+    "unassigned": "Unassigned",
+    "none": "— No change —",
+
+    "actions": {
+      "refresh": "Refresh",
+      "addGoal": "Add Goal",
+      "addTask": "Add Task",
+      "addActivity": "Add Activity",
+      "edit": "Edit",
+      "delete": "Delete",
+      "toggleGoal": "Toggle goal",
+      "toggleTask": "Toggle task",
+      "remove": "Remove",
+      "removeShort": "X",
+      "addMetric": "Add Metric",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "submit": "Submit",
+      "mobileMenu": "Open menu",
+      "open": "Open",
+      "close": "Close",
+      "submitReport": "Submit Report"
+    },
+
+    "fields": {
+      "group": "Group",
+      "weight": "Weight",
+      "due": "Due",
+      "dueDate": "Due date",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "title": "Title",
+      "description": "Description",
+      "progress": "Progress"
+    },
+
+    "sections": {
+      "tasks": "Tasks",
+      "activities": "Activities"
+    },
+
+    "labels": {
+      "targetMetrics": "Target Metrics",
+      "activity": "Activity",
+      "metrics": "Target / Metrics",
+      "attachments": "Attachments"
+    },
+
+    "placeholders": {
+      "metricKey": "Key",
+      "metricValue": "Value"
+    },
+
+    "hints": {
+      "taskWeight": "Task total: {{taskWeight}}. Used by other activities: {{used}}. Available: {{available}}.",
+      "goalWeight": "Goal total: {{goalWeight}}. Used by other tasks: {{used}}. Available: {{available}}.",
+      "metrics": "Add metrics as key/value pairs.",
+      "attachments": "Max files: server-side limit applies."
+    },
+
+    "empty": {
+      "noGoals": "No goals found. Create your first goal.",
+      "noMatch": "No goals match your search.",
+      "noTasks": "No tasks for this goal.",
+      "noActivities": "No activities for this task."
+    },
+
+    "errors": {
+      "loadGoals": "Failed to load goals.",
+      "loadTasks": "Failed to load tasks.",
+      "loadActivities": "Failed to load activities.",
+      "createGoal": "Failed to create goal.",
+      "updateGoal": "Failed to update goal.",
+      "deleteGoal": "Failed to delete goal.",
+      "createTask": "Failed to create task.",
+      "updateTask": "Failed to update task.",
+      "deleteTask": "Failed to delete task.",
+      "createActivity": "Failed to create activity.",
+      "updateActivity": "Failed to update activity.",
+      "deleteActivity": "Failed to delete activity.",
+      "submitReport": "Failed to submit report.",
+      "missingGoalId": "Missing goal id.",
+      "weightNonNegative": "Weight must be greater than or equal to 0.",
+      "weightExceeds": "Cannot set weight to {{newWeight}}. Goal total is {{goalWeight}} and {{used}} is already used. Available: {{available}}.",
+      "missingTaskId": "Missing task id.",
+      "weightExceedsTask": "Cannot set weight to {{newWeight}}. Task total is {{taskWeight}} and {{used}} is already used. Available: {{available}}.",
+      "modalSubmit": "Failed to submit modal form.",
+      "metricKeyMissing": "Metric keys cannot be empty when a value is provided."
+    },
+
+    "toasts": {
+      "goalCreated": "Goal created",
+      "goalUpdated": "Goal updated",
+      "goalDeleted": "Goal deleted",
+      "taskCreated": "Task created",
+      "taskUpdated": "Task updated",
+      "taskDeleted": "Task deleted",
+      "activityCreated": "Activity created",
+      "activityUpdated": "Activity updated",
+      "activityDeleted": "Activity deleted",
+      "reportSubmitted": "Report submitted"
+    },
+
+    "modal": {
+      "createGoal": "Create Goal",
+      "editGoal": "Edit Goal",
+      "createTask": "Create Task",
+      "editTask": "Edit Task",
+      "createActivity": "Create Activity",
+      "editActivity": "Edit Activity",
+      "submitReport": "Submit Report"
+    },
+
+    "pagination": {
+      "showing": "Showing {{from}} - {{to}} of {{total}}",
+      "perPage": "{{n}} per page",
+      "prev": "Previous",
+      "next": "Next"
+    },
+
+    "inspector": {
+      "title": "Inspector",
+      "empty": "Select a goal to see details"
+    },
+
+    "status": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "open": "Open"
+    },
+
+    "labelsSmall": {
+      "activity": "Activity"
+    }
+  }
+}

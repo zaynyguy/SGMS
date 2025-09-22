@@ -1,10 +1,11 @@
 // src/utils/generateToken.js
-
 const jwt = require('jsonwebtoken');
-const db = require('../db')
-const generateToken = async (userId) => {
+const db = require('../db');
+
+const generateToken = async (userId, opts = {}) => {
   const query = `
-    SELECT u.id, u.username, u.name, u.password, u."roleId", u.language, u."darkMode", r.name AS "roleName"
+    SELECT u.id, u.username, u.name, u.password, u."roleId", u.language, u."darkMode",
+           u."profilePicture", u.token_version AS "tokenVersion", r.name AS "roleName"
     FROM "Users" u
     LEFT JOIN "Roles" r ON u."roleId" = r.id
     WHERE u.id = $1;
@@ -12,8 +13,10 @@ const generateToken = async (userId) => {
   const { rows } = await db.query(query, [userId]);
   const user = rows[0];
 
+  if (!user) throw new Error('User not found when generating token');
+
   const permsQuery = `
-    SELECT p.name AS permission
+    SELECT p.id, p.name AS permission
     FROM "Permissions" p
     JOIN "RolePermissions" rp ON p.id = rp."permissionId"
     WHERE rp."roleId" = $1;
@@ -29,14 +32,18 @@ const generateToken = async (userId) => {
     permissions,
     language: user.language,
     darkMode: user.darkMode,
+    profilePicture: user.profilepicture || user.profilePicture || null, 
+    tokenVersion: user.tokenVersion ?? user.token_version ?? 0,
   };
 
-  const token = jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '1d',
-  });
+  const jwtOptions = {
+    expiresIn: opts.expiresIn || process.env.JWT_EXPIRES_IN || '1d',
+    issuer: process.env.JWT_ISSUER || undefined,
+  };
+
+  const token = jwt.sign(payload, process.env.JWT_SECRET, jwtOptions);
 
   return { token, user: payload };
 };
-
 
 module.exports = generateToken;
