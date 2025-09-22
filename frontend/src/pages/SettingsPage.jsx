@@ -292,7 +292,7 @@ const SettingsPage = () => {
   const gradient = gradientFromString(settings.name || settings.username || "user");
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200 settings-wrap">
+    <div className="min-h-screen dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200 settings-wrap">
       <header className="static top-0 z-20 bg-gray-200 dark:bg-gray-900/60 backdrop-blur-sm">
         <div className="max-w-8xl justify-between mx-auto px-4 py-4 flex sm:flex-row sm:items-center gap-3 sm:gap-6 header-inner">
           <div className="flex items-center gap-4 min-w-0">

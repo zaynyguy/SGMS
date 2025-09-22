@@ -1,8 +1,8 @@
 // src/jobs/monthlySnapshot.js
 require('dotenv').config();
 const cron = require('node-cron');
-const db = require('../db'); // ensure this exports a pg Pool instance
-const ADVISORY_LOCK_KEY = 9876543210;
+const db = require('../db'); 
+const ADVISORY_LOCK_KEY = process.env.ADVISORY_LOCK_KEY;
 
 function monthStartFromDate(d = new Date()) {
   const dt = new Date(d);
@@ -16,7 +16,7 @@ function formatSnapshotMonth(dt) {
   return `${y}-${m}-01`;
 }
 
-// snapshotMonthInput: Date or date-string or omitted -> uses provided month
+
 async function snapshotMonthForAllActivities(snapshotMonthInput) {
   const pool = db;
   const client = await pool.connect();
@@ -25,7 +25,7 @@ async function snapshotMonthForAllActivities(snapshotMonthInput) {
     const snapshotMonthDateStart = monthStartFromDate(snapshotMonthDate);
     const snapshotMonthStr = snapshotMonthDateStart.toISOString().slice(0, 10); // 'YYYY-MM-DD'
 
-    // advisory lock so two processes cannot run concurrently
+   
     const lockRes = await client.query('SELECT pg_try_advisory_lock($1) AS locked', [ADVISORY_LOCK_KEY]);
     if (!lockRes.rows?.[0]?.locked) {
       console.warn('monthlySnapshot: could not acquire advisory lock - another process may be running.');
@@ -58,8 +58,7 @@ async function snapshotMonthForAllActivities(snapshotMonthInput) {
     let errors = 0;
 
     for (const a of activities) {
-      // compute a simple activity-level progress: if isDone -> 100 else 0
-      // (Activities table in your schema doesn't have a numeric progress field)
+     
       const progress = a.isDone ? 100 : 0;
 
       const metricsObj = {
@@ -123,7 +122,7 @@ async function ensureMonthlySnapshotsOnStartup() {
       return result;
     }
 
-    // floor to month start
+    
     lastMonth = monthStartFromDate(lastMonth);
 
     if (lastMonth.getTime() >= nowMonthStart.getTime()) {
@@ -131,7 +130,7 @@ async function ensureMonthlySnapshotsOnStartup() {
       return { ok: true, skipped: 0 };
     }
 
-    // build list of months to generate (month after lastMonth up to current month)
+    
     const monthsToDo = [];
     let cur = new Date(Date.UTC(lastMonth.getUTCFullYear(), lastMonth.getUTCMonth() + 1, 1));
     while (cur.getTime() <= nowMonthStart.getTime()) {
@@ -157,7 +156,7 @@ async function ensureMonthlySnapshotsOnStartup() {
 }
 
 function scheduleMonthlySnapshots({ schedule = '0 9 1 * *', timezone = undefined } = {}) {
-  // run startup catch-up immediately (async)
+  
   (async () => {
     try {
       console.info('monthlySnapshot: running startup catch-up check...');
@@ -185,15 +184,14 @@ function scheduleMonthlySnapshots({ schedule = '0 9 1 * *', timezone = undefined
   return { task };
 }
 
-// expose functions
+
 module.exports = {
   snapshotMonthForAllActivities,
   ensureMonthlySnapshotsOnStartup,
   scheduleMonthlySnapshots,
 };
 
-// allows running this file directly for testing:
-// e.g. node src/jobs/monthlySnapshot.js
+
 if (require.main === module) {
   (async () => {
     const result = await snapshotMonthForAllActivities(new Date());
