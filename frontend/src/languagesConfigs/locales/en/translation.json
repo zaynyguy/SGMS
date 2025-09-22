@@ -1,6 +1,7 @@
 {
   "access": {
     "title": "Access management",
+    "subtitle": "Control who can access features and data across the organization.",
     "nav": {
       "users": "Users",
       "roles": "Roles",
@@ -12,6 +13,7 @@
   },
   "attachments": {
     "title": "Attachments",
+    "subtitle": "Manage files, uploads and document attachments for reports and items.",
     "viewToggleAria": "Toggle attachments view",
     "view": {
       "grid": "Grid",
@@ -49,6 +51,7 @@
   },
   "audit": {
     "title": "Audit log",
+    "subtitle": "View a chronological record of system events, security and user activity.",
     "loadFailed": "Failed to load audit logs",
     "exportCsv": "Export CSV",
     "csv": {
@@ -103,6 +106,8 @@
   },
   "groups": {
     "title": "Groups",
+        "subtitle": "Create and manage groups and membership.",
+        "searchPlaceholder": "Search groups by name or description…",
     "search": {
       "placeholder": "Search groups by name or description…",
       "aria": "Search groups"
@@ -147,6 +152,7 @@
         "description": "Description"
       },
       "buttons": {
+                "uploadPicture": "Upload picture",
         "cancel": "Cancel",
         "create": "Create group",
         "save": "Save changes",
@@ -185,6 +191,7 @@
     }
   },
   "reports": {
+     "noReports": "No reports available yet. Create a report to see data here.",
     "header": {
       "title": "Reports",
       "subtitle": "Review, manage and export reports"
@@ -311,6 +318,7 @@
     },
     "roles": {
       "title": "Roles & Permissions",
+      "subtitle": "Define roles and granular permissions for users and groups.",
       "loading": "Loading roles and permissions…",
       "rolesList": "Roles",
       "addRole": "Add role",
@@ -366,6 +374,7 @@
     },
     "users": {
       "title": "Users",
+      "subtitle": "Create, edit and manage application users and their roles.",
       "addUser": "Add user",
       "noUsers": "No users",
       "noUsersDescription": "There are no users yet. Create one to get started.",
@@ -379,6 +388,8 @@
       "createUserTitle": "Create user",
       "form": {
         "picture": "Profile picture",
+        "upload": "Upload",
+        "remove": "Remove",
         "pictureHint": "You can upload an image or leave blank.",
         "username": "Username",
         "usernamePlaceholder": "Enter username",
@@ -420,6 +431,7 @@
   },
   "settings": {
     "title": "Settings",
+    "subtitle": "Manage application-wide preferences, appearance and integrations.",
     "loading": "Loading settings…",
     "profilePicture": "Profile picture",
     "chooseImage": "Choose image",
@@ -466,7 +478,7 @@
       "notification": "Notifications"
     },
     "logoAlt": "Company logo",
-    "appName": "Officemate",
+    "appName": "SGMS",
     "profileAlt": "User profile picture",
     "logout": "Log out",
     "openMenu": "Open sidebar menu",
@@ -474,6 +486,7 @@
   },
   "systemSettings": {
     "title": "System settings",
+    "subtitle": "Configure system behavior, integrations, backups and environment options.",
     "allowedAttachmentTypes": {
       "label": "Allowed attachment types",
       "help": "Specify which MIME types are allowed for file uploads. Example: application/pdf, image/png, image/jpeg",
@@ -506,5 +519,272 @@
       "failedSave": "Failed to save settings"
     },
     "description": "Configure global system settings such as allowed attachments, audit retention and reporting."
+  },
+  "project": {
+    "title": "Project Manager",
+    "subtitle": "Organize goals, tasks and activities",
+    "na": "—",
+    "searchPlaceholder": "Search goals...",
+    "searchAria": "Search goals",
+    "unassigned": "Unassigned",
+    "none": "— No change —",
+
+    "actions": {
+      "refresh": "Refresh",
+      "addGoal": "Add Goal",
+      "addTask": "Add Task",
+      "addActivity": "Add Activity",
+      "edit": "Edit",
+      "delete": "Delete",
+      "toggleGoal": "Toggle goal",
+      "toggleTask": "Toggle task",
+      "remove": "Remove",
+      "removeShort": "X",
+      "addMetric": "Add Metric",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "submit": "Submit",
+      "mobileMenu": "Open menu",
+      "open": "Open",
+      "close": "Close",
+      "submitReport": "Submit Report"
+    },
+
+    "fields": {
+      "group": "Group",
+      "weight": "Weight",
+      "due": "Due",
+      "dueDate": "Due date",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "title": "Title",
+      "description": "Description",
+      "progress": "Progress"
+    },
+
+    "sections": {
+      "tasks": "Tasks",
+      "activities": "Activities"
+    },
+
+    "labels": {
+      "targetMetrics": "Target Metrics",
+      "activity": "Activity",
+      "metrics": "Target / Metrics",
+      "attachments": "Attachments"
+    },
+
+    "placeholders": {
+      "metricKey": "Key",
+      "metricValue": "Value"
+    },
+
+    "hints": {
+      "taskWeight": "Task total: {{taskWeight}}. Used by other activities: {{used}}. Available: {{available}}.",
+      "goalWeight": "Goal total: {{goalWeight}}. Used by other tasks: {{used}}. Available: {{available}}.",
+      "metrics": "Add metrics as key/value pairs.",
+      "attachments": "Max files: server-side limit applies."
+    },
+
+    "empty": {
+      "noGoals": "No goals found. Create your first goal.",
+      "noMatch": "No goals match your search.",
+      "noTasks": "No tasks for this goal.",
+      "noActivities": "No activities for this task."
+    },
+
+    "errors": {
+      "loadGoals": "Failed to load goals.",
+      "loadTasks": "Failed to load tasks.",
+      "loadActivities": "Failed to load activities.",
+      "createGoal": "Failed to create goal.",
+      "updateGoal": "Failed to update goal.",
+      "deleteGoal": "Failed to delete goal.",
+      "createTask": "Failed to create task.",
+      "updateTask": "Failed to update task.",
+      "deleteTask": "Failed to delete task.",
+      "createActivity": "Failed to create activity.",
+      "updateActivity": "Failed to update activity.",
+      "deleteActivity": "Failed to delete activity.",
+      "submitReport": "Failed to submit report.",
+      "missingGoalId": "Missing goal id.",
+      "weightNonNegative": "Weight must be greater than or equal to 0.",
+      "weightExceeds": "Cannot set weight to {{newWeight}}. Goal total is {{goalWeight}} and {{used}} is already used. Available: {{available}}.",
+      "missingTaskId": "Missing task id.",
+      "weightExceedsTask": "Cannot set weight to {{newWeight}}. Task total is {{taskWeight}} and {{used}} is already used. Available: {{available}}.",
+      "modalSubmit": "Failed to submit modal form.",
+      "metricKeyMissing": "Metric keys cannot be empty when a value is provided."
+    },
+
+    "toasts": {
+      "goalCreated": "Goal created",
+      "goalUpdated": "Goal updated",
+      "goalDeleted": "Goal deleted",
+      "taskCreated": "Task created",
+      "taskUpdated": "Task updated",
+      "taskDeleted": "Task deleted",
+      "activityCreated": "Activity created",
+      "activityUpdated": "Activity updated",
+      "activityDeleted": "Activity deleted",
+      "reportSubmitted": "Report submitted"
+    },
+
+    "modal": {
+      "createGoal": "Create Goal",
+      "editGoal": "Edit Goal",
+      "createTask": "Create Task",
+      "editTask": "Edit Task",
+      "createActivity": "Create Activity",
+      "editActivity": "Edit Activity",
+      "submitReport": "Submit Report"
+    },
+
+    "pagination": {
+      "showing": "Showing {{from}} - {{to}} of {{total}}",
+      "perPage": "{{n}} per page",
+      "prev": "Previous",
+      "next": "Next"
+    },
+
+    "inspector": {
+      "title": "Inspector",
+      "empty": "Select a goal to see details"
+    },
+
+    "status": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "open": "Open"
+    },
+
+    "labelsSmall": {
+      "activity": "Activity"
+    }
+  },
+  "login": {
+"company_logo_alt": "Company logo",
+"title": "Welcome back",
+"subtitle": "Urban Development and Construction Berue",
+"form_title": "Log in to your account",
+"username_label": "Username",
+"username_placeholder": "Enter your Username",
+"password_label": "Password",
+"password_placeholder": "Enter your password",
+"show_password": "Show password",
+"hide_password": "Hide password",
+"password_too_short": "Password must be at least 8 characters",
+"error_default": "Unable to sign in. Please check your credentials and try again.",
+"logging_in": "Logging in...",
+"button_signin": "Log in"
+},
+"dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of goals, tasks, reports and recent activity.",
+    "aria": {
+      "refresh": "Refresh dashboard",
+      "loading": "Loading dashboard",
+      "loaded": "Dashboard loaded"
+    },
+    "refresh": "Refresh",
+    "failedLoadPrefix": "Failed to load: ",
+    "errors": {
+      "summary": "summary",
+      "groupCharts": "group charts",
+      "taskCharts": "task charts",
+      "reports": "reports distribution",
+      "overdue": "overdue tasks",
+      "notifications": "notifications",
+      "audit": "audit logs"
+    },
+    "cards": {
+      "goals": {
+        "title": "Goals",
+        "aria": "Open goals",
+        "fromLast": "from last period",
+        "noComparison": "Overall Goal progress"
+      },
+      "tasks": {
+        "title": "Tasks",
+        "aria": "Open tasks",
+        "subtitle": "Overall Task progress"
+      },
+      "activities": {
+        "title": "Activities",
+        "aria": "Open activities",
+        "subtitle": "Overall Activity progress"
+      },
+      "pendingReports": {
+        "title": "Pending reports",
+        "aria": "Open pending reports",
+        "subtitle": "Reports awaiting review"
+      }
+    },
+    "groupProgress": "Group progress",
+    "topTasks": "Top tasks",
+    "reportsDistribution1": "Reports distribution",
+    "reportsDistribution": {
+      "aria": "Open reports"
+    },
+    "overdueTitle": "Overdue tasks",
+    "tasks": "tasks",
+    "open": "Open",
+    "noOverdue": "No overdue tasks",
+    "table": {
+      "task": "Task",
+      "due": "Due",
+      "daysOverdue": "Days overdue",
+      "assignee": "Assignee",
+      "goal": "Goal",
+      "group": "Group",
+      "link": "Link"
+    },
+    "noNotifications": "No notifications",
+    "notifications": {
+      "title": "Notifications",
+      "marking": "Marking...",
+      "markAll": "Mark all as read"
+    },
+    "audit": {
+      "title": "Audit log",
+      "noPermission": "You do not have permission to view audit logs.",
+      "noLogs": "No audit logs found"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "View and manage alerts, messages and system notices — mark as read, filter, and take action on important items.",
+    "unreadCount": "{{count}} unread",
+    "markAll": "Mark all as read",
+    "filter": {
+      "label": "Filter:",
+      "all": "All",
+      "unread": "Unread",
+      "read": "Read"
+    },
+    "loading": "Loading notifications…",
+    "noNotifications": "No notifications to display",
+    "markAsRead": "Mark as read",
+    "loadMore": "Load more",
+    "loadingMore": "Loading more…",
+    "errors": {
+      "loadFailed": "Failed to load notifications",
+      "markReadFailed": "Failed to mark notification as read",
+      "markAllFailed": "Failed to mark all notifications as read"
+    },
+    "aria": {
+      "title": "Notifications page",
+      "filter": "Notification filter",
+      "markAll": "Mark all notifications as read",
+      "loadMore": "Load more notifications"
+    },
+    "meta": {
+      "unreadSingular": "{{count}} unread",
+      "unreadPlural": "{{count}} unread"
+    },
+    "timestamps": {
+      "formatted": "{{date}}"
+    }
   }
 }

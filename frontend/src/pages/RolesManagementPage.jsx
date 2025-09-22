@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Shield, Settings, Trash, AlertTriangle, X, FileText, Eye, Send, Zap, Bell, Monitor, Folder
+  Plus, Shield, Settings, Trash, AlertTriangle, X, FileText, Eye, Send, Zap, Bell, Monitor, Folder,
+  Key
 } from 'lucide-react';
 import {
   fetchRoles,
@@ -257,9 +258,19 @@ const RolesManagementPage = () => {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+          <div className='flex items-center min-w-0 gap-4'>
+            <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-800">
+                        <Key className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                      </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
             {t('admin.roles.title')}
           </h1>
+          <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                {t("admin.roles.subtitle")}
+              </p>
+          </div>
+          </div>
 
           <div className="flex items-center gap-3">
             {hasUnsavedChanges && (

@@ -46,7 +46,7 @@ const TopBar = () => {
           {/* Hamburger (mobile only) */}
           <button
             onClick={toggleSidebar}
-            className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="md:hidden p-2 rounded-md text-gray-900 dark:text-white transition-colors"
             aria-label={sidebarOpen ? "Close menu" : "Open menu"}
           >
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}

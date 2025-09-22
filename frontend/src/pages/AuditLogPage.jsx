@@ -1,7 +1,7 @@
 // src/pages/AuditLogPage.jsx
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Download, Search, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Download, Search, Filter, ChevronDown, ChevronUp, ClipboardCheck } from "lucide-react";
 import { fetchAuditLogs } from "../api/audit";
 import TopBar from "../components/layout/TopBar";
 
@@ -124,14 +124,22 @@ const AuditLogPage = ({ showToast }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 transition-colors duration-200">
       <div className="p-4 sm:p-6 max-w-8xl mx-auto">
         {/* Header row: title (single line) + TopBar (no wrap) */}
         <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white truncate">
+          <div className="flex min-w-0 gap-4 items-center">
+            <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+                        <ClipboardCheck className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                      </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white truncate">
               {t("audit.title")}
             </h2>
+            <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                {t("audit.subtitle")}
+              </p>
+            </div>
           </div>
 
           <div className="flex-shrink-0">

@@ -1,6 +1,6 @@
 // src/pages/ReportsUI.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { Loader } from "lucide-react";
+import { Loader, FileText, Plus } from "lucide-react";
 import { fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
 import { useTranslation } from "react-i18next";
 import TopBar from "../components/layout/TopBar";
@@ -235,13 +235,18 @@ function ReviewReportsPage() {
   return (
     <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
-        <div>
-          <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">
+        <div className="flex items-center min-w-0 gap-4">
+          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-900">
+                        <Plus className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                      </div>
+          <div>
+            <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">
             {t("reports.review.title")}
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">
             {t("reports.review.subtitle")}
           </p>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full lg:w-auto">
@@ -366,78 +371,104 @@ function ReviewReportsPage() {
                   </div>
 
                   {expanded === r.id && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 space-y-3">
-                      <div>
-                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.narrative")}</div>
-                        <div className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1 whitespace-pre-wrap">
-                          {r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}
-                        </div>
-                      </div>
+  <div className="p-4 bg-gray-50 dark:bg-gray-800 space-y-4">
+    {/* side-by-side: narrative | metrics */}
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+  {/* Left: Narrative */}
+  <section className="space-y-2">
+    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+      {t("reports.narrative")}
+    </h3>
 
-                      <div>
-                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.metrics_narrative")}</div>
-                        <div className="mt-2">{renderMetricsList(r.metrics_data)}</div>
-                      </div>
+    <div
+      className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1 whitespace-pre-wrap"
+      aria-live="polite"
+    >
+      {r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}
+    </div>
+  </section>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <input
-                          placeholder={t("reports.adminComment_placeholder.placeholder")}
-                          value={actionState[r.id]?.comment || ""}
-                          onChange={(e) =>
-                            setActionState((s) => ({
-                              ...s,
-                              [r.id]: {
-                                ...(s[r.id] || {}),
-                                comment: e.target.value,
-                              },
-                            }))
-                          }
-                          className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                          disabled={isLoading}
-                        />
-                        <input
-                          type="date"
-                          value={actionState[r.id]?.deadline || ""}
-                          onChange={(e) =>
-                            setActionState((s) => ({
-                              ...s,
-                              [r.id]: {
-                                ...(s[r.id] || {}),
-                                deadline: e.target.value,
-                              },
-                            }))
-                          }
-                          className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-                          disabled={isLoading}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleReview(r.id, "Approved")}
-                            className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
-                            disabled={isLoading}
-                            aria-busy={approving}
-                          >
-                            {approving ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.approve")}
-                          </button>
-                          <button
-                            onClick={() => handleReview(r.id, "Rejected")}
-                            className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
-                            disabled={isLoading}
-                            aria-busy={rejecting}
-                          >
-                            {rejecting ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.reject")}
-                          </button>
-                        </div>
-                      </div>
+  {/* Right: Metrics */}
+  <aside className="space-y-2">
+    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+      {t("reports.metrics_narrative")}
+    </h3>
 
-                      {actionState[r.id]?._lastResult && (
-                        <div className="text-xs text-green-700 dark:text-green-300">{actionState[r.id]._lastResult}</div>
-                      )}
-                      {actionState[r.id]?._lastError && (
-                        <div className="text-xs text-red-600 dark:text-red-400">{actionState[r.id]._lastError}</div>
-                      )}
-                    </div>
-                  )}
+    <div className="mt-2">
+      {renderMetricsList(r.metrics_data)}
+    </div>
+  </aside>
+</div>
+
+
+    <div className="flex flex-col md:flex-row md:items-start gap-3">
+      <textarea
+        rows={3}
+        placeholder={t("reports.adminComment_placeholder.placeholder")}
+        value={actionState[r.id]?.comment || ""}
+        onChange={(e) =>
+          setActionState((s) => ({
+            ...s,
+            [r.id]: {
+              ...(s[r.id] || {}),
+              comment: e.target.value,
+            },
+          }))
+        }
+        className="flex-1 px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-y"
+        disabled={isLoading}
+        aria-label={t("reports.adminComment_placeholder.placeholder")}
+      />
+
+      <div className="w-full md:w-56 flex flex-col gap-2">
+        <input
+          type="date"
+          value={actionState[r.id]?.deadline || ""}
+          onChange={(e) =>
+            setActionState((s) => ({
+              ...s,
+              [r.id]: {
+                ...(s[r.id] || {}),
+                deadline: e.target.value,
+              },
+            }))
+          }
+          className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent w-full"
+          disabled={isLoading}
+          aria-label={t("reports.deadline")}
+        />
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleReview(r.id, "Approved")}
+            className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
+            disabled={isLoading}
+            aria-busy={approving}
+          >
+            {approving ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.approve")}
+          </button>
+
+          <button
+            onClick={() => handleReview(r.id, "Rejected")}
+            className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
+            disabled={isLoading}
+            aria-busy={rejecting}
+          >
+            {rejecting ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.reject")}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {actionState[r.id]?._lastResult && (
+      <div className="text-sm text-green-700 dark:text-green-300">{actionState[r.id]._lastResult}</div>
+    )}
+    {actionState[r.id]?._lastError && (
+      <div className="text-sm text-red-600 dark:text-red-400">{actionState[r.id]._lastError}</div>
+    )}
+  </div>
+)}
+
                 </div>
               );
             })}
@@ -961,7 +992,7 @@ th{background:#f3f4f6}
   return (
     <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-4 mb-5">
-        <div className="bg-gradient-to-br from-purple-100 to-sky-50 dark:from-purple-900/20 dark:to-sky-900/10 dark:text-gray-100 p-3 rounded-lg">
+        <div className="text-sky-600 dark:text-sky-300 bg-gray-200 dark:bg-gray-900 p-3 rounded-lg">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
             <path d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 11h7v6H3z" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -1138,9 +1169,14 @@ export default function ReportsUI() {
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 md:p-6 lg:p-8 max-w-8xl mx-auto transition-colors duration-200">
       <header className="mb-6 md:mb-8">
         <div className="flex items-start md:items-center justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-gray-100 truncate">{t("reports.header.title")}</h1>
+          <div className="flex items-center min-w-0 gap-4">
+            <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+                        <FileText className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                      </div>
+            <div>
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-gray-100 truncate">{t("reports.header.title")}</h1>
             <p className="text-base text-gray-600 dark:text-gray-300 mt-2">{t("reports.header.subtitle")}</p>
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-4">

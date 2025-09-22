@@ -7,15 +7,12 @@ import {
   Home,
   Settings,
   LogOut,
-  Menu,
-  X,
   UserPen,
   Settings2Icon,
   ClipboardCheck,
   Paperclip,
-  FileBarChartIcon,
   FileText,
-  Bell,
+  Target,
 } from "lucide-react";
 import companyLogo from "../../assets/logo.png";
 import { useSidebar } from "../../context/SidebarContext"; // <<-- ensure this path matches your project
@@ -60,37 +57,19 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
       accentLight: "#10B981",
       accentDark: "#60A5FA",
     },
-    {
-      to: "/settings",
-      icon: <Settings size={24} />,
-      label: t("sidebar.menu.settings"),
-      colorLight: "rgba(16,185,129)",
-      colorDark: "rgba(37,99,200)",
-      accentLight: "#10B981",
-      accentDark: "#60A5FA",
-    },
-    hasPermission("manage_settings") && {
-      to: "/systemsettings",
-      icon: <Settings2Icon size={24} />,
-      label: t("sidebar.menu.systemSettings"),
-      colorLight: "rgba(16,185,129)",
-      colorDark: "rgba(37,99,200)",
-      accentLight: "#10B981",
-      accentDark: "#60A5FA",
-    },
-    hasPermission("view_audit_logs") && {
-      to: "/auditLog",
-      icon: <ClipboardCheck size={24} />,
-      label: t("sidebar.menu.audit"),
-      colorLight: "rgba(16,185,129)",
-      colorDark: "rgba(37,99,200)",
-      accentLight: "#10B981",
-      accentDark: "#60A5FA",
-    },
     hasPermission("manage_access") && {
       to: "/accessmanagement",
       icon: <UserPen size={24} />,
       label: t("sidebar.menu.accessManagement"),
+      colorLight: "rgba(16,185,129)",
+      colorDark: "rgba(37,99,200)",
+      accentLight: "#10B981",
+      accentDark: "#60A5FA",
+    },
+    (hasPermission("manage_gta") || hasPermission("view_gta")) && {
+      to: "/project",
+      icon: <Target size={24} />,
+      label: t("sidebar.menu.projectManagement"),
       colorLight: "rgba(16,185,129)",
       colorDark: "rgba(37,99,200)",
       accentLight: "#10B981",
@@ -105,19 +84,37 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
       accentLight: "#10B981",
       accentDark: "#60A5FA",
     },
-    (hasPermission("manage_gta") || hasPermission("view_gta")) && {
-      to: "/project",
-      icon: <FileBarChartIcon size={24} />,
-      label: t("sidebar.menu.projectManagement"),
+    hasPermission("manage_attachments") && {
+      to: "/attachment",
+      icon: <Paperclip size={24} />,
+      label: t("sidebar.menu.attachments"),
       colorLight: "rgba(16,185,129)",
       colorDark: "rgba(37,99,200)",
       accentLight: "#10B981",
       accentDark: "#60A5FA",
     },
-    hasPermission("manage_attachments") && {
-      to: "/attachment",
-      icon: <Paperclip size={24} />,
-      label: t("sidebar.menu.attachments"),
+    hasPermission("view_audit_logs") && {
+      to: "/auditLog",
+      icon: <ClipboardCheck size={24} />,
+      label: t("sidebar.menu.audit"),
+      colorLight: "rgba(16,185,129)",
+      colorDark: "rgba(37,99,200)",
+      accentLight: "#10B981",
+      accentDark: "#60A5FA",
+    },
+    hasPermission("manage_settings") && {
+      to: "/systemsettings",
+      icon: <Settings2Icon size={24} />,
+      label: t("sidebar.menu.systemSettings"),
+      colorLight: "rgba(16,185,129)",
+      colorDark: "rgba(37,99,200)",
+      accentLight: "#10B981",
+      accentDark: "#60A5FA",
+    },
+    {
+      to: "/settings",
+      icon: <Settings size={24} />,
+      label: t("sidebar.menu.settings"),
       colorLight: "rgba(16,185,129)",
       colorDark: "rgba(37,99,200)",
       accentLight: "#10B981",
@@ -190,7 +187,7 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
               ${
                 isActive
                   ? "bg-transparent text-gray-900 dark:text-white"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
               }
               ${showExpanded ? "justify-normal" : "justify-center"}`}
               aria-label={item.label}

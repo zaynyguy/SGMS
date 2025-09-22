@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { fetchSystemSettings, updateSystemSettings } from "../api/systemSettings";
 import AllowedTypesInput from "../components/AllowedTypesInput";
 import TopBar from "../components/layout/TopBar";
+import {Settings2Icon} from "lucide-react"
 
 /**
  * Helpers
@@ -185,7 +186,7 @@ export default function SystemSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <div className="flex justify-center items-center h-screen bg-gray-200 dark:bg-gray-900 transition-colors duration-200">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 dark:border-blue-400" />
       </div>
     );
@@ -204,12 +205,20 @@ export default function SystemSettingsPage() {
       : "text-green-700 dark:text-green-400";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 px-3 transition-colors duration-200">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 py-4 px-3 transition-colors duration-200">
+      <div className="max-w-8xl mx-auto">
         {/* Header: title (single line) + TopBar */}
         <div className="flex items-center justify-between mb-6 gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">{t("systemSettings.title")}</h1>
+          <div className="flex min-w-0 gap-4 items-center">
+            <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+                        <Settings2Icon className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+                      </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white truncate">{t("systemSettings.title")}</h1>
+            <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                {t("systemSettings.subtitle")}
+              </p>
+            </div>
           </div>
           <div className="flex-shrink-0 w-auto">
             <TopBar />
