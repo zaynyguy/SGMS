@@ -1,6 +1,5 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
-
 const fs = require("fs");
 const db = require("../db");
 const bcrypt = require("bcrypt");
@@ -20,16 +19,21 @@ async function findSchema() {
   throw new Error("schema.sql not found.");
 }
 
+function snapshotMonthFrom(date) {
+  const d = new Date(date);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+  return `${year}-${month}-01`;
+}
+
 async function run() {
   const client = await db.connect();
   try {
     await client.query("BEGIN");
 
     const schemaSql = await findSchema();
-    console.log("Applying schema (DROP/CREATE) ...");
     await client.query(schemaSql);
 
-    // ---------- ROLES ----------
     const roleNames = ["Admin", "Manager", "User"];
     const roleIds = {};
     for (const r of roleNames) {
@@ -40,7 +44,6 @@ async function run() {
       roleIds[r] = rows[0].id;
     }
 
-    // ---------- PERMISSIONS ----------
     const perms = [
       "manage_gta",
       "view_gta",
@@ -87,7 +90,6 @@ async function run() {
     ]);
     await grant("User", ["view_reports", "view_gta", "view_dashboard"]);
 
-    // ---------- ADMIN USER ----------
     const adminUser = process.env.ADMIN_USERNAME || "admin";
     const adminPass = process.env.ADMIN_PASSWORD || "admin123";
     const adminHash = await bcrypt.hash(adminPass, 10);
@@ -104,7 +106,6 @@ async function run() {
     );
     const adminId = arows[0].id;
 
-    // ---------- GROUPS ----------
     const groupDefs = [
       { name: "Development", desc: "Dev team" },
       { name: "QA", desc: "Quality Assurance" },
@@ -119,7 +120,6 @@ async function run() {
       groupIds.push(rows[0].id);
     }
 
-    // ---------- USERS ----------
     const createdUsers = [];
     for (let i = 0; i < groupIds.length; i++) {
       for (let j = 1; j <= 3; j++) {
@@ -145,7 +145,6 @@ async function run() {
       }
     }
 
-    // ---------- MANAGER ----------
     const mgrHash = await bcrypt.hash("manager123", 8);
     const { rows: mrows } = await client.query(
       `INSERT INTO "Users"(username, name, password, "roleId") VALUES ($1, $2, $3, $4) RETURNING id`,
@@ -157,7 +156,6 @@ async function run() {
       [managerId, groupIds[0]]
     );
 
-    // ---------- GOALS / TASKS / ACTIVITIES ----------
     const goalIds = [],
       taskIds = [],
       activityIds = [];
@@ -178,7 +176,6 @@ async function run() {
         const goalId = gr[0].id;
         goalIds.push(goalId);
 
-        // Tasks
         for (let ti = 1; ti <= 3; ti++) {
           const tTitle = `${goalTitle} Task ${ti}`;
           const tDesc = `Task ${ti} under ${goalTitle}`;
@@ -199,7 +196,6 @@ async function run() {
           const taskId = tr[0].id;
           taskIds.push(taskId);
 
-          // Activities
           for (let ai = 1; ai <= 2; ai++) {
             const aTitle = `${tTitle} Activity ${ai}`;
             const aDesc = `Activity ${ai} for ${tTitle}`;
@@ -239,7 +235,6 @@ async function run() {
             const activityId = ar[0].id;
             activityIds.push(activityId);
 
-            // Reports
             const numReports = Math.random() > 0.6 ? 1 : randInt(0, 2);
             for (let ri = 0; ri < numReports; ri++) {
               const reporter =
@@ -270,31 +265,32 @@ async function run() {
       }
     }
 
-    // ---------- Progress History ----------
-    console.log("Seeding progress history...");
-
     function randomProgressSeries(entityType, entityId, groupId, dueDate) {
       const entries = [];
       const steps = randInt(3, 6);
       let current = randInt(0, 30);
+      const seen = new Set();
       for (let i = 0; i < steps; i++) {
         const increment = randInt(0, 25);
         current = Math.min(100, current + increment);
         const recordedAt = dueDate
           ? new Date(dueDate.getTime() - (steps - i) * 24 * 60 * 60 * 1000)
           : new Date(Date.now() - (steps - i) * 24 * 60 * 60 * 1000);
+        const snapshot_month = snapshotMonthFrom(recordedAt);
+        if (seen.has(snapshot_month)) continue;
+        seen.add(snapshot_month);
         entries.push({
           entityType,
           entityId,
           groupId,
           progress: current,
           recordedAt,
+          snapshot_month,
         });
       }
       return entries;
     }
 
-    // Tasks
     for (const tId of taskIds) {
       const { rows } = await client.query(
         `SELECT "dueDate" FROM "Tasks" WHERE id=$1`,
@@ -303,14 +299,22 @@ async function run() {
       const series = randomProgressSeries("Task", tId, null, rows[0].dueDate);
       for (const e of series) {
         await client.query(
-          `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at)
-           VALUES ($1,$2,$3,$4,$5)`,
-          [e.entityType, e.entityId, e.groupId, e.progress, e.recordedAt]
+          `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at, snapshot_month)
+           VALUES ($1,$2,$3,$4,$5,$6)
+           ON CONFLICT (entity_type, entity_id, snapshot_month)
+           DO UPDATE SET progress = EXCLUDED.progress, recorded_at = EXCLUDED.recorded_at, metrics = EXCLUDED.metrics`,
+          [
+            e.entityType,
+            e.entityId,
+            e.groupId,
+            e.progress,
+            e.recordedAt,
+            e.snapshot_month,
+          ]
         );
       }
     }
 
-    // Activities
     for (const aId of activityIds) {
       const { rows } = await client.query(
         `SELECT "dueDate" FROM "Activities" WHERE id=$1`,
@@ -324,26 +328,42 @@ async function run() {
       );
       for (const e of series) {
         await client.query(
-          `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at)
-           VALUES ($1,$2,$3,$4,$5)`,
-          [e.entityType, e.entityId, e.groupId, e.progress, e.recordedAt]
+          `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at, snapshot_month)
+           VALUES ($1,$2,$3,$4,$5,$6)
+           ON CONFLICT (entity_type, entity_id, snapshot_month)
+           DO UPDATE SET progress = EXCLUDED.progress, recorded_at = EXCLUDED.recorded_at, metrics = EXCLUDED.metrics`,
+          [
+            e.entityType,
+            e.entityId,
+            e.groupId,
+            e.progress,
+            e.recordedAt,
+            e.snapshot_month,
+          ]
         );
       }
     }
 
-    // Goals
     for (const gId of goalIds) {
       const series = randomProgressSeries("Goal", gId, null, null);
       for (const e of series) {
         await client.query(
-          `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at)
-           VALUES ($1,$2,$3,$4,$5)`,
-          [e.entityType, e.entityId, e.groupId, e.progress, e.recordedAt]
+          `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at, snapshot_month)
+           VALUES ($1,$2,$3,$4,$5,$6)
+           ON CONFLICT (entity_type, entity_id, snapshot_month)
+           DO UPDATE SET progress = EXCLUDED.progress, recorded_at = EXCLUDED.recorded_at, metrics = EXCLUDED.metrics`,
+          [
+            e.entityType,
+            e.entityId,
+            e.groupId,
+            e.progress,
+            e.recordedAt,
+            e.snapshot_month,
+          ]
         );
       }
     }
 
-    // Basic system settings
     const settings = [
       {
         key: "max_attachment_size_mb",
@@ -370,7 +390,7 @@ async function run() {
     for (const s of settings) {
       await client.query(
         `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)
-      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description`,
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description`,
         [s.key, JSON.stringify(s.value), s.description]
       );
     }
@@ -378,8 +398,8 @@ async function run() {
     await client.query("COMMIT");
     console.log("Seeding completed successfully!");
   } catch (err) {
-    console.error("Error seeding DB:", err);
     await client.query("ROLLBACK");
+    console.error("Error seeding DB:", err);
   } finally {
     client.release();
   }

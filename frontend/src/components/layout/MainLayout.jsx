@@ -9,7 +9,7 @@ import Sidebar from '../layout/SideBar';
  */
 const MainLayout = () => {
     return (
-        <div className="flex bg-gray-100 min-h-screen">
+        <div className="flex bg-gray-100 dark:bg-gray-800 min-h-screen">
             <Sidebar />
             <main className="flex-1">
                 {/* The Outlet component renders the active child route */}
