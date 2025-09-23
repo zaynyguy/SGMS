@@ -247,7 +247,6 @@ const OverdueTable = ({ rows = [], loading, t }) => {
             <th className="p-2">{t("dashboard.table.assignee")}</th>
             <th className="p-2">{t("dashboard.table.goal")}</th>
             <th className="p-2">{t("dashboard.table.group")}</th>
-            <th className="p-2">{t("dashboard.table.link")}</th>
           </tr>
         </thead>
         <tbody>
@@ -264,15 +263,6 @@ const OverdueTable = ({ rows = [], loading, t }) => {
               </td>
               <td className="p-2 dark:text-gray-300">{r.goalTitle}</td>
               <td className="p-2 dark:text-gray-300">{r.groupName}</td>
-              <td className="p-2">
-                <a
-                  href={`/tasks/${r.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
-                >
-                  {t("dashboard.open")}
-                </a>
-              </td>
             </tr>
           ))}
         </tbody>
