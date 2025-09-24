@@ -7,6 +7,40 @@ const API_URL = import.meta.env.VITE_API_URL || "";
 
 const AuthContext = createContext(null);
 
+function normalizeStoredUserRaw() {
+  try {
+    const raw = localStorage.getItem("user");
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistUserToStorage(userObj) {
+  try {
+    // Keep stored user but do NOT overwrite theme (localStorage.theme) unless the caller explicitly provided darkMode
+    const existing = normalizeStoredUserRaw();
+    const merged = { ...existing, ...userObj };
+    // Remove darkMode key unless the merged object explicitly included it (we preserve whatever caller passed)
+    // However, we will keep any darkMode if provided intentionally by the caller.
+    localStorage.setItem("user", JSON.stringify(merged));
+  } catch (e) {
+    // ignore storage errors
+  }
+}
+
+function resolvedThemeFromStorageOrIncoming(incoming) {
+  const ls = localStorage.getItem("theme");
+  if (ls === "dark" || ls === "light") return ls;
+  // if incoming explicitly provided darkMode boolean, map it
+  if (incoming && Object.prototype.hasOwnProperty.call(incoming, "darkMode")) {
+    return incoming.darkMode ? "dark" : "light";
+  }
+  return "system";
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem("authToken") || null);
@@ -15,26 +49,28 @@ export const AuthProvider = ({ children }) => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (token && storedUser) {
+    const storedUserRaw = localStorage.getItem("user");
+    if (token && storedUserRaw) {
       try {
-        const parsedUser = JSON.parse(storedUser);
+        const parsedUser = JSON.parse(storedUserRaw);
         setUser(parsedUser);
-
         if (parsedUser?.language) i18n.changeLanguage(parsedUser.language);
-        applyTheme(parsedUser?.darkMode ?? "system");
       } catch {
         localStorage.removeItem("user");
       }
+    }
+    // apply theme from localStorage if set, otherwise system
+    const lsTheme = localStorage.getItem("theme");
+    if (lsTheme === "dark" || lsTheme === "light") {
+      applyTheme(lsTheme);
     } else {
       applyTheme("system");
     }
-    // set window global for api helper to pick up
     if (token) window.__ACCESS_TOKEN = token;
     setLoading(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, i18n]);
 
-  // helper: fetch canonical /api/auth/me (returns user) — used only as a fallback
   const fetchMe = useCallback(
     async (accessToken) => {
       try {
@@ -56,47 +92,41 @@ export const AuthProvider = ({ children }) => {
     [API_URL]
   );
 
-  // call the backend login endpoint (apiLoginUser) and handle tokens/cookies
   const login = useCallback(
     async (username, password) => {
       try {
         const response = await apiLoginUser(username, password);
-        // backend usually returns { token, user }
         const { token: newToken, user: loggedInUser } = response || {};
 
-        // if user is partial (e.g. only { profilePicture: ... }) try to fetch canonical /me
         let fullUser = loggedInUser;
         if (!fullUser || !Array.isArray(fullUser.permissions)) {
           const me = await fetchMe(newToken);
           if (me) fullUser = me;
         }
 
-        // create a safe user object to persist (avoid storing unexpected fields)
         const safeUser = {
           id: fullUser?.id,
           username: fullUser?.username,
           name: fullUser?.name,
           role: fullUser?.role,
-          permissions: Array.isArray(fullUser?.permissions)
-            ? fullUser.permissions
-            : [],
+          permissions: Array.isArray(fullUser?.permissions) ? fullUser.permissions : [],
           language: fullUser?.language,
-          darkMode: fullUser?.darkMode,
-          profilePicture:
-            fullUser?.profilePicture || fullUser?.profilePic || "",
+          // intentionally DO NOT trust server darkMode by default — remove storing darkMode here
+          profilePicture: fullUser?.profilePicture || fullUser?.profilePic || "",
         };
 
-        // keep localStorage for compatibility with code that expects it
         localStorage.setItem("authToken", newToken);
-        localStorage.setItem("user", JSON.stringify(safeUser));
+        persistUserToStorage(safeUser);
         setToken(newToken);
         setUser(safeUser);
-
-        // set in-memory access token (preferred by api layer)
         window.__ACCESS_TOKEN = newToken;
 
         if (safeUser?.language) i18n.changeLanguage(safeUser.language);
-        applyTheme(safeUser?.darkMode ?? "system");
+
+        // Apply theme from localStorage if present, otherwise keep system
+        const theme = resolvedThemeFromStorageOrIncoming(null);
+        applyTheme(theme);
+
         return { token: newToken, user: safeUser };
       } catch (error) {
         console.error("Login failed:", error);
@@ -118,15 +148,13 @@ export const AuthProvider = ({ children }) => {
     } catch (_) {}
   }, []);
 
-  // Trying to refresh access token using the refresh cookie
   const tryRefresh = useCallback(async () => {
-    // guarding to prevent concurrent refreshes
     if (refreshing) return false;
     setRefreshing(true);
     try {
       const r = await fetch("/api/auth/refresh", {
         method: "POST",
-        credentials: "include", // sends httpOnly refresh cookie
+        credentials: "include",
         headers: { Accept: "application/json" },
       });
       if (!r.ok) {
@@ -138,7 +166,6 @@ export const AuthProvider = ({ children }) => {
       const newToken = data.token;
       let newUser = data.user;
 
-      // If server returned a partial user, try to fetch canonical /me
       if (!newUser || !Array.isArray(newUser.permissions)) {
         const me = await fetchMe(newToken);
         if (me) newUser = me;
@@ -149,20 +176,21 @@ export const AuthProvider = ({ children }) => {
         username: newUser?.username,
         name: newUser?.name,
         role: newUser?.role,
-        permissions: Array.isArray(newUser?.permissions)
-          ? newUser.permissions
-          : [],
+        permissions: Array.isArray(newUser?.permissions) ? newUser.permissions : [],
         language: newUser?.language,
-        darkMode: newUser?.darkMode,
         profilePicture: newUser?.profilePicture || "",
       };
 
-      // updates both in-memory and localStorage for compatibility
       window.__ACCESS_TOKEN = newToken;
       localStorage.setItem("authToken", newToken);
-      localStorage.setItem("user", JSON.stringify(safeUser));
+      persistUserToStorage(safeUser);
       setToken(newToken);
       setUser(safeUser);
+
+      // preserve theme from localStorage unless server intentionally provided darkMode (we ignore by default)
+      const theme = resolvedThemeFromStorageOrIncoming(null);
+      applyTheme(theme);
+
       setRefreshing(false);
       return true;
     } catch (err) {
@@ -173,7 +201,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, [refreshing, logout, fetchMe]);
 
-  // Low-level fetch wrapper: adds Authorization header and attempts one refresh on 401
   const apiFetch = useCallback(
     async (url, options = {}) => {
       const headers = { ...(options.headers || {}) };
@@ -190,8 +217,7 @@ export const AuthProvider = ({ children }) => {
         const ok = await tryRefresh();
         if (!ok) return res;
         const retriedHeaders = { ...(options.headers || {}) };
-        const newAccess =
-          window.__ACCESS_TOKEN || localStorage.getItem("authToken");
+        const newAccess = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
         if (newAccess) retriedHeaders["Authorization"] = `Bearer ${newAccess}`;
         return fetch(url, {
           ...options,
@@ -206,17 +232,40 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = useCallback(
     (updatedUserData, newToken) => {
-      // updatedUserData might be a full user or a partial patch. We persist what is passed.
-      setUser(updatedUserData);
-      localStorage.setItem("user", JSON.stringify(updatedUserData));
+      const existing = normalizeStoredUserRaw();
+      // Merge values but DO NOT overwrite theme unless caller explicitly included darkMode key
+      const merged = { ...existing, ...updatedUserData };
+
+      // If incoming data explicitly contains darkMode, respect it and write theme
+      if (Object.prototype.hasOwnProperty.call(updatedUserData || {}, "darkMode")) {
+        const theme = updatedUserData.darkMode ? "dark" : "light";
+        applyTheme(theme);
+        localStorage.setItem("theme", theme);
+        merged.darkMode = updatedUserData.darkMode;
+      } else {
+        // preserve existing theme and don't write darkMode onto stored user
+        const ls = localStorage.getItem("theme");
+        if (ls === "dark" || ls === "light") {
+          // keep theme in storage as-is; do not set merged.darkMode based on server
+          delete merged.darkMode;
+        } else {
+          delete merged.darkMode;
+        }
+        // ensure UI theme remains whatever localStorage currently says
+        const theme = resolvedThemeFromStorageOrIncoming(null);
+        applyTheme(theme);
+      }
+
+      setUser(merged);
+      persistUserToStorage(merged);
+
       if (newToken) {
         setToken(newToken);
         localStorage.setItem("authToken", newToken);
         window.__ACCESS_TOKEN = newToken;
       }
-      if (updatedUserData?.language)
-        i18n.changeLanguage(updatedUserData.language);
-      applyTheme(updatedUserData?.darkMode ?? "system");
+
+      if (merged?.language) i18n.changeLanguage(merged.language);
     },
     [i18n]
   );
@@ -233,11 +282,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
