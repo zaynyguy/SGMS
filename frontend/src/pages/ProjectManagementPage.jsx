@@ -1096,7 +1096,7 @@ const ProjectManagement = () => {
                                                   }
                                                   className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                 >
-                                                  <Trash2 className="inline-block mr-2 h-4 w-4" /> {t("project.actions.delete")}
+                                                  <Trash2 className="inline-block mr-2 h-4 w-4" /> {t("project.actions.deleteTask")}
                                                 </button>
                                               </div>
                                             </div>
@@ -1136,7 +1136,7 @@ const ProjectManagement = () => {
                                             handleDeleteTask(goal.id, task.id)
                                           }
                                           className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
-                                          title={t("project.actions.delete")}
+                                          title={t("project.actions.deleteTask")}
                                         >
                                           <Trash2 className="h-5 w-5" />
                                         </button>

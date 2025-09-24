@@ -190,8 +190,6 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
 
   return (
     <div ref={containerRef} className="w-full relative">
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allowed Attachment Types</label>
-
       <div
         className="min-h-[56px] border rounded-lg px-2 py-1 bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-600"
         onClick={() => inputRef.current?.focus()}
@@ -237,7 +235,7 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
         </div>
 
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-300">
-          <div>Examples: <code className="text-xs">application/pdf</code>, <code className="text-xs">image/png</code>, <code className="text-xs">image/*</code></div>
+          <div>Examples: <code className="text-xs">application/pdf</code>, <code className="text-xs">image/png</code>, <code className="text-xs">image/jpeg</code>, <code className="text-xs">application/doc</code></div>
           {error ? <div className="mt-1 text-red-600 dark:text-red-400">{error}</div> : null}
         </div>
       </div>
