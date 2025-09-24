@@ -1193,7 +1193,7 @@ export default function ReportsUI() {
       {page === "review" && <ReviewReportsPage />}
       {page === "master" && <MasterReportPageWrapper />}
 
-      <footer className="mt-10 md:mt-14 text-center text-gray-500 dark:text-gray-400 text-sm">
+      <footer className="flex justify-center mt-10 md:mt-14 text-center text-gray-500 dark:text-gray-400 text-sm">
         <p>© {new Date().getFullYear()} {t("reports.footer.systemName")} | v2.0</p>
       </footer>
 

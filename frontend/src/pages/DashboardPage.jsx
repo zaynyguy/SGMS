@@ -207,7 +207,7 @@ const PieChart = ({ slices = [], size = 220 }) => {
           return <path key={i} d={d} fill={s.color || `hsl(${(i * 70) % 360}, 70%, 60%)`} stroke="#fff" className="dark:stroke-gray-800" strokeWidth="1" />;
         })}
         <circle cx={cx} cy={cy} r={r - 18} fill="#fff" className="dark:fill-gray-800" />
-        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="text-gray-900 dark:text-gray-100 font-semibold">{total}</text>
+        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold">{total}</text>
       </svg>
 
       <div className="flex-1 min-w-0">
