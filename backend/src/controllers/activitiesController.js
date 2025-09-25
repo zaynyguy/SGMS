@@ -1,8 +1,8 @@
 const db = require("../db");
 const notificationService = require("../services/notificationService");
 const { logAudit } = require("../helpers/audit");
+const EPS = 1e-9;
 
-// GET /api/tasks/:taskId/activities
 exports.getActivitiesByTask = async (req, res) => {
   const { taskId } = req.params;
   try {
@@ -44,7 +44,6 @@ exports.getActivitiesByTask = async (req, res) => {
   }
 };
 
-// POST /api/tasks/:taskId/activities
 exports.createActivity = async (req, res) => {
   const { taskId } = req.params;
   const { title, description, dueDate, weight, targetMetric } = req.body;
@@ -55,20 +54,29 @@ exports.createActivity = async (req, res) => {
 
   try {
     const activity = await db.tx(async (client) => {
-      // ensure task exists & lock row
-      const t = await client.query('SELECT id, weight FROM "Tasks" WHERE id=$1 FOR UPDATE', [
-        taskId,
-      ]);
+      const t = await client.query(
+        'SELECT id, weight FROM "Tasks" WHERE id=$1 FOR UPDATE',
+        [taskId]
+      );
       if (!t.rows.length) {
         const err = new Error("Task not found");
         err.status = 404;
         throw err;
       }
 
-      const taskWeight = Number(t.rows[0].weight ?? 0);
-      const newWeight = Number(weight ?? 0);
-      if (newWeight < 0) {
-        const err = new Error("Activity weight must be >= 0");
+      const taskWeight = parseFloat(t.rows[0].weight) || 0;
+      const newWeight =
+        weight !== undefined && weight !== null
+          ? parseFloat(String(weight))
+          : 0;
+
+      if (Number.isNaN(newWeight)) {
+        const err = new Error("Activity weight must be a number");
+        err.status = 400;
+        throw err;
+      }
+      if (newWeight <= 0) {
+        const err = new Error("Activity weight must be > 0");
         err.status = 400;
         throw err;
       }
@@ -77,9 +85,9 @@ exports.createActivity = async (req, res) => {
         'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Activities" WHERE "taskId"=$1',
         [taskId]
       );
-      const sumOther = Number(sumRes.rows[0].sum || 0);
+      const sumOther = parseFloat(sumRes.rows[0].sum || 0);
 
-      if (newWeight + sumOther > taskWeight) {
+      if (newWeight + sumOther > taskWeight + EPS) {
         const err = new Error(
           `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${sumOther} is already used.`
         );
@@ -105,7 +113,6 @@ exports.createActivity = async (req, res) => {
 
       const newActivity = r.rows[0];
 
-      // Audit inside tx
       try {
         await logAudit({
           userId: req.user.id,
@@ -123,7 +130,6 @@ exports.createActivity = async (req, res) => {
       return newActivity;
     });
 
-    // Post-commit notification
     try {
       await notificationService({
         userId: req.user.id,
@@ -150,7 +156,6 @@ exports.createActivity = async (req, res) => {
   }
 };
 
-// PUT /api/tasks/:taskId/activities/:activityId
 exports.updateActivity = async (req, res) => {
   const { activityId } = req.params;
   const { title, description, status, dueDate, weight, targetMetric, isDone } =
@@ -173,11 +178,15 @@ exports.updateActivity = async (req, res) => {
         throw e;
       }
 
-      // enforce weight constraint if weight provided
       let newWeight = weight ?? c.rows[0].weight;
-      newWeight = Number(newWeight);
-      if (newWeight < 0) {
-        const err = new Error("Activity weight must be >= 0");
+      newWeight = parseFloat(String(newWeight));
+      if (Number.isNaN(newWeight)) {
+        const err = new Error("Activity weight must be a number");
+        err.status = 400;
+        throw err;
+      }
+      if (newWeight <= 0) {
+        const err = new Error("Activity weight must be > 0");
         err.status = 400;
         throw err;
       }
@@ -186,15 +195,15 @@ exports.updateActivity = async (req, res) => {
         'SELECT weight FROM "Tasks" WHERE id=$1 FOR UPDATE',
         [c.rows[0].taskId]
       );
-      const taskWeight = Number(tRes.rows[0].weight ?? 0);
+      const taskWeight = parseFloat(tRes.rows[0].weight) || 0;
 
       const sumRes = await client.query(
         'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Activities" WHERE "taskId"=$1 AND id<>$2',
         [c.rows[0].taskId, activityId]
       );
-      const sumOther = Number(sumRes.rows[0].sum || 0);
+      const sumOther = parseFloat(sumRes.rows[0].sum || 0);
 
-      if (newWeight + sumOther > taskWeight) {
+      if (newWeight + sumOther > taskWeight + EPS) {
         const err = new Error(
           `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${sumOther} is already used.`
         );
@@ -225,7 +234,6 @@ exports.updateActivity = async (req, res) => {
 
       const updatedActivity = r.rows[0];
 
-      // Audit inside tx
       try {
         await logAudit({
           userId: req.user.id,
@@ -244,7 +252,6 @@ exports.updateActivity = async (req, res) => {
       return updatedActivity;
     });
 
-    // Post-commit notification
     try {
       await notificationService({
         userId: req.user.id,
@@ -269,7 +276,6 @@ exports.updateActivity = async (req, res) => {
   }
 };
 
-// DELETE activity
 exports.deleteActivity = async (req, res) => {
   const { activityId } = req.params;
 

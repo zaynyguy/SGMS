@@ -1,10 +1,10 @@
-// src/utils/generateToken.js
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 
 const generateToken = async (userId, opts = {}) => {
+  // Only select columns that actually exist in the Users table
   const query = `
-    SELECT u.id, u.username, u.name, u.password, u."roleId", u.language, u."darkMode",
+    SELECT u.id, u.username, u.name, u.password, u."roleId", u.language,
            u."profilePicture", u.token_version AS "tokenVersion", r.name AS "roleName"
     FROM "Users" u
     LEFT JOIN "Roles" r ON u."roleId" = r.id
@@ -15,8 +15,9 @@ const generateToken = async (userId, opts = {}) => {
 
   if (!user) throw new Error('User not found when generating token');
 
+  // Get permissions for the user's role
   const permsQuery = `
-    SELECT p.id, p.name AS permission
+    SELECT p.name AS permission
     FROM "Permissions" p
     JOIN "RolePermissions" rp ON p.id = rp."permissionId"
     WHERE rp."roleId" = $1;
@@ -24,6 +25,7 @@ const generateToken = async (userId, opts = {}) => {
   const permsResult = await db.query(permsQuery, [user.roleId]);
   const permissions = permsResult.rows.map(r => r.permission);
 
+  // Construct payload for JWT
   const payload = {
     id: user.id,
     username: user.username,
@@ -31,9 +33,8 @@ const generateToken = async (userId, opts = {}) => {
     role: user.roleName,
     permissions,
     language: user.language,
-    darkMode: user.darkMode,
-    profilePicture: user.profilepicture || user.profilePicture || null, 
-    tokenVersion: user.tokenVersion ?? user.token_version ?? 0,
+    profilePicture: user.profilePicture || null,
+    tokenVersion: user.tokenVersion ?? 0,
   };
 
   const jwtOptions = {

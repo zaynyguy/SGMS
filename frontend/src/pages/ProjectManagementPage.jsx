@@ -1447,7 +1447,7 @@ function GenericModal({
         title: initial.title || "",
         description: initial.description || "",
         dueDate: initial.dueDate || "",
-        weight: initial.weight ?? 0,
+        weight: initial.weight ?? 1,
         status: initial.status || "not-started",
         isDone: initial.isDone ?? false,
         targetMetrics: (() => {
@@ -1455,7 +1455,6 @@ function GenericModal({
             if (!initial.targetMetric) return [{ key: "", value: "" }];
             if (typeof initial.targetMetric === "string")
               return JSON.parse(initial.targetMetric);
-            // converted by helper below
             return Object.keys(initial.targetMetric || {}).map((k) => ({
               key: k,
               value: String(initial.targetMetric[k]),
@@ -1470,7 +1469,7 @@ function GenericModal({
         title: initial.title || "",
         description: initial.description || "",
         dueDate: initial.dueDate || "",
-        weight: initial.weight ?? 0,
+        weight: initial.weight ?? 1,
         status: initial.status || "not-started",
       });
     } else if (modal.type === "createGoal" || modal.type === "editGoal") {
@@ -1480,7 +1479,7 @@ function GenericModal({
         groupId: initial.groupId ? String(initial.groupId) : "",
         startDate: initial.startDate || "",
         endDate: initial.endDate || "",
-        weight: initial.weight ?? 100,
+        weight: initial.weight ?? 1,
         status: initial.status || "active",
       });
     } else {
@@ -1528,15 +1527,20 @@ function GenericModal({
     });
   };
 
+  const parseNum = (v, fallback = 0) => {
+    const n = parseFloat(String(v));
+    return Number.isNaN(n) ? fallback : n;
+  };
+
   const computeGoalWeightAvailable = (goalId, excludeTaskId = null) => {
     const g = goals.find(
       (x) => String(x.id) === String(goalId) || x.id === goalId
     );
-    const goalWeight = Number(g?.weight ?? 100);
+    const goalWeight = parseNum(g?.weight, 0);
     const list = tasks[goalId] || [];
     const sumOther = list.reduce((s, t) => {
       if (excludeTaskId && String(t.id) === String(excludeTaskId)) return s;
-      return s + Number(t.weight || 0);
+      return s + parseNum(t.weight, 0);
     }, 0);
     return {
       goalWeight,
@@ -1550,18 +1554,28 @@ function GenericModal({
     const task = allTasksLists.find(
       (t) => String(t.id) === String(taskId) || t.id === taskId
     );
-    const taskWeight = Number(task?.weight ?? 0);
+    const taskWeight = parseNum(task?.weight, 0);
     const list = activities[taskId] || [];
     const sumOther = list.reduce((s, a) => {
       if (excludeActivityId && String(a.id) === String(excludeActivityId))
         return s;
-      return s + Number(a.weight || 0);
+      return s + parseNum(a.weight, 0);
     }, 0);
     return {
       taskWeight,
       used: sumOther,
       available: Math.max(0, taskWeight - sumOther),
     };
+  };
+
+  const computeSystemWeightAvailable = (excludeGoalId = null) => {
+    const sumOther = goals.reduce((s, g) => {
+      if (excludeGoalId && String(g.id) === String(excludeGoalId)) return s;
+      return s + parseNum(g.weight, 0);
+    }, 0);
+    const used = sumOther;
+    const available = Math.max(0, 100 - used);
+    return { used, available };
   };
 
   const submitLocal = async (e) => {
@@ -1576,15 +1590,15 @@ function GenericModal({
           setInlineError(t("project.errors.missingGoalId"));
           return;
         }
-        const newWeight = Number(local.weight || 0);
+        const newWeight = parseNum(local.weight, 0);
         const excludeTaskId = modal.type === "editTask" ? modal.data?.id : null;
         const { goalWeight, used, available } = computeGoalWeightAvailable(
           goalId,
           excludeTaskId
         );
 
-        if (newWeight < 0) {
-          setInlineError(t("project.errors.weightNonNegative"));
+        if (newWeight <= 0) {
+          setInlineError(t("project.errors.weightPositive") || "Weight must be > 0");
           return;
         }
 
@@ -1608,7 +1622,7 @@ function GenericModal({
           setInlineError(t("project.errors.missingTaskId"));
           return;
         }
-        const newWeight = Number(local.weight || 0);
+        const newWeight = parseNum(local.weight, 0);
         const excludeActivityId =
           modal.type === "editActivity" ? modal.data?.id : null;
         const { taskWeight, used, available } = computeTaskWeightAvailable(
@@ -1616,8 +1630,8 @@ function GenericModal({
           excludeActivityId
         );
 
-        if (newWeight < 0) {
-          setInlineError(t("project.errors.weightNonNegative"));
+        if (newWeight <= 0) {
+          setInlineError(t("project.errors.weightPositive") || "Weight must be > 0");
           return;
         }
 
@@ -1629,6 +1643,26 @@ function GenericModal({
               used,
               available,
             })
+          );
+          return;
+        }
+      }
+
+      if (modal.type === "createGoal" || modal.type === "editGoal") {
+        const newWeight = parseNum(local.weight, 0);
+        if (newWeight <= 0) {
+          setInlineError(t("project.errors.weightPositive") || "Weight must be > 0");
+          return;
+        }
+        const excludeGoalId = modal.type === "editGoal" ? modal.data?.id : null;
+        const { used, available } = computeSystemWeightAvailable(excludeGoalId);
+        if (newWeight > available) {
+          setInlineError(
+            t("project.errors.weightExceedsSystem", {
+              newWeight,
+              used,
+              available,
+            }) || `Cannot set weight to ${newWeight}. System used ${used}, available ${available}.`
           );
           return;
         }
@@ -1702,6 +1736,15 @@ function GenericModal({
 
   if (!modal.isOpen) return null;
 
+  const systemHint =
+    modal.type === "createGoal" || modal.type === "editGoal"
+      ? (() => {
+          const excludeGoalId = modal.type === "editGoal" ? modal.data?.id : null;
+          const { used, available } = computeSystemWeightAvailable(excludeGoalId);
+          return { used, available };
+        })()
+      : null;
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded shadow overflow-auto max-h-[90vh]">
@@ -1768,10 +1811,11 @@ function GenericModal({
                   </label>
                   <input
                     name="weight"
-                    value={local.weight ?? 0}
+                    value={local.weight ?? 1}
                     onChange={(e) => onLocalChange(e)}
                     type="number"
-                    min="0"
+                    min="0.01"
+                    step="any"
                     className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -1791,7 +1835,6 @@ function GenericModal({
                 <option value="completed">{t("project.status.completed")}</option>
               </select>
 
-              {/* show available space for activity within task */}
               {modal.data?.taskId && (
                 <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
                   {(() => {
@@ -1893,10 +1936,11 @@ function GenericModal({
               </label>
               <input
                 name="weight"
-                value={local.weight ?? 0}
+                value={local.weight ?? 1}
                 onChange={(e) => onLocalChange(e)}
                 type="number"
-                min="0"
+                min="0.01"
+                step="any"
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               {modal.type === "createTask" && modal.data?.goalId && (
@@ -1980,17 +2024,25 @@ function GenericModal({
               </label>
               <input
                 name="weight"
-                value={local.weight ?? 100}
+                value={local.weight ?? 1}
                 onChange={(e) => onLocalChange(e)}
                 type="number"
-                min="1"
+                min="0.01"
+                step="any"
                 max="100"
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
+              {systemHint && (
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  {t("project.hints.systemWeight", {
+                    used: systemHint.used,
+                    available: systemHint.available,
+                  }) || `System used: ${systemHint.used}, available: ${systemHint.available}`}
+                </div>
+              )}
             </>
           )}
 
-          {/* inline error for validation */}
           {inlineError && (
             <div className="text-sm text-red-600 dark:text-red-400">
               {inlineError}
@@ -2020,6 +2072,7 @@ function GenericModal({
     </div>
   );
 }
+
 
 /* ---------------------------
    SubmitReportInline (i18n)

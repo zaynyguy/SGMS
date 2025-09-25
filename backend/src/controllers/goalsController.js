@@ -1,6 +1,7 @@
 // src/controllers/goalsController.js
 const db = require('../db');
 const { logAudit } = require('../helpers/audit');
+const EPS = 1e-9;
 
 exports.getGoals = async (req, res) => {
   const page = Math.max(parseInt(req.query.page || '1', 10), 1);
@@ -44,10 +45,42 @@ exports.createGoal = async (req, res) => {
 
   try {
     const goal = await db.tx(async (client) => {
+      const existing = await client.query(`SELECT id, weight FROM "Goals" FOR UPDATE`);
+
+      const sumOther = existing.rows.reduce(
+        (acc, r) => acc + (parseFloat(r.weight) || 0),
+        0
+      );
+
+      const newWeight =
+        weight !== undefined && weight !== null
+          ? parseFloat(String(weight))
+          : 0;
+
+      if (Number.isNaN(newWeight)) {
+        const err = new Error("Goal weight must be a number");
+        err.status = 400;
+        throw err;
+      }
+
+      if (newWeight <= 0) {
+        const err = new Error("Goal weight must be > 0");
+        err.status = 400;
+        throw err;
+      }
+
+      if (sumOther + newWeight > 100 + EPS) {
+        const err = new Error(
+          `Cannot set goal weight to ${newWeight}. System total would exceed 100 (currently ${sumOther} used).`
+        );
+        err.status = 400;
+        throw err;
+      }
+
       const r = await client.query(
         `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", "weight", "createdAt", "updatedAt")
          VALUES ($1,$2,$3,$4,$5,$6, NOW(), NOW()) RETURNING *`,
-        [title.trim(), description?.trim() || null, groupId || null, startDate || null, endDate || null, weight || 100]
+        [title.trim(), description?.trim() || null, groupId || null, startDate || null, endDate || null, newWeight]
       );
       const newGoal = r.rows[0];
 
@@ -71,6 +104,7 @@ exports.createGoal = async (req, res) => {
     res.status(201).json({ message: 'Goal created successfully.', goal });
   } catch (err) {
     console.error("createGoal error:", err);
+    if (err && err.status === 400) return res.status(400).json({ message: err.message });
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
@@ -89,11 +123,42 @@ exports.updateGoal = async (req, res) => {
       }
       const before = cur.rows[0];
 
+      const others = await client.query(
+        `SELECT id, weight FROM "Goals" WHERE id <> $1 FOR UPDATE`,
+        [goalId]
+      );
+
+      const sumOther = others.rows.reduce(
+        (acc, r) => acc + (parseFloat(r.weight) || 0),
+        0
+      );
+
+      let newWeight = weight ?? before.weight;
+      newWeight = parseFloat(String(newWeight));
+      if (Number.isNaN(newWeight)) {
+        const err = new Error("Goal weight must be a number");
+        err.status = 400;
+        throw err;
+      }
+      if (newWeight <= 0) {
+        const err = new Error("Goal weight must be > 0");
+        err.status = 400;
+        throw err;
+      }
+
+      if (sumOther + newWeight > 100 + EPS) {
+        const err = new Error(
+          `Cannot set goal weight to ${newWeight}. System total would exceed 100 (currently ${sumOther} used by other goals).`
+        );
+        err.status = 400;
+        throw err;
+      }
+
       const r = await client.query(
         `UPDATE "Goals" SET title=$1, description=$2, "groupId"=$3, "startDate"=$4, "endDate"=$5,
-           status=COALESCE($6,status), "weight" = COALESCE($7, "weight"), "updatedAt"=NOW()
+           status=COALESCE($6,status), "weight" = $7, "updatedAt"=NOW()
          WHERE id=$8 RETURNING *`,
-        [title?.trim() || null, description?.trim() || null, groupId || null, startDate || null, endDate || null, status || null, weight || null, goalId]
+        [title?.trim() || null, description?.trim() || null, groupId || null, startDate || null, endDate || null, status || null, newWeight, goalId]
       );
       const updated = r.rows[0];
 
@@ -119,6 +184,7 @@ exports.updateGoal = async (req, res) => {
   } catch (err) {
     console.error("updateGoal error:", err);
     if (err && err.status === 404) return res.status(404).json({ message: err.message });
+    if (err && err.status === 400) return res.status(400).json({ message: err.message });
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };

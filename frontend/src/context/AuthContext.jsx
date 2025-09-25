@@ -1,10 +1,8 @@
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { loginUser as apiLoginUser, logoutUser } from "../api/auth";
-import { applyTheme } from "../uites/applyTheme";
+import { loginUser as apiLoginUser, logoutUser as apiLogoutUser } from "../api/auth";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
-
 const AuthContext = createContext(null);
 
 function normalizeStoredUserRaw() {
@@ -20,165 +18,70 @@ function normalizeStoredUserRaw() {
 
 function persistUserToStorage(userObj) {
   try {
-    // Keep stored user but do NOT overwrite theme (localStorage.theme) unless the caller explicitly provided darkMode
     const existing = normalizeStoredUserRaw();
     const merged = { ...existing, ...userObj };
-    // Remove darkMode key unless the merged object explicitly included it (we preserve whatever caller passed)
-    // However, we will keep any darkMode if provided intentionally by the caller.
+    // Never persist darkMode coming from server here — callers should not pass it.
+    if (Object.prototype.hasOwnProperty.call(merged, "darkMode")) delete merged.darkMode;
     localStorage.setItem("user", JSON.stringify(merged));
   } catch (e) {
     // ignore storage errors
   }
 }
 
-function resolvedThemeFromStorageOrIncoming(incoming) {
-  const ls = localStorage.getItem("theme");
-  if (ls === "dark" || ls === "light") return ls;
-  // if incoming explicitly provided darkMode boolean, map it
-  if (incoming && Object.prototype.hasOwnProperty.call(incoming, "darkMode")) {
-    return incoming.darkMode ? "dark" : "light";
-  }
-  return "system";
-}
-
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("authToken") || null);
+  const [token, setToken] = useState(() => localStorage.getItem("authToken") || null);
   const [loading, setLoading] = useState(true);
   const { i18n } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    const storedUserRaw = localStorage.getItem("user");
-    if (token && storedUserRaw) {
-      try {
-        const parsedUser = JSON.parse(storedUserRaw);
-        setUser(parsedUser);
-        if (parsedUser?.language) i18n.changeLanguage(parsedUser.language);
-      } catch {
-        localStorage.removeItem("user");
-      }
+    const stored = normalizeStoredUserRaw();
+    if (token && stored && Object.keys(stored).length) {
+      setUser(stored);
+      if (stored.language) i18n.changeLanguage(stored.language);
     }
-    // apply theme from localStorage if set, otherwise system
-    const lsTheme = localStorage.getItem("theme");
-    if (lsTheme === "dark" || lsTheme === "light") {
-      applyTheme(lsTheme);
-    } else {
-      applyTheme("system");
-    }
+    // Do NOT apply any theme here — ThemeProvider is the single source of truth.
     if (token) window.__ACCESS_TOKEN = token;
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, i18n]);
+  }, [token]);
 
-  const fetchMe = useCallback(
-    async (accessToken) => {
-      try {
-        const resp = await fetch(`${API_URL}/api/auth/me`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          },
-          credentials: "include",
-        });
-        if (!resp.ok) return null;
-        const d = await resp.json();
-        return d;
-      } catch (e) {
-        return null;
-      }
-    },
-    [API_URL]
-  );
+  const fetchMe = useCallback(async (accessToken) => {
+    try {
+      const resp = await fetch(`${API_URL}/api/auth/me`, {
+        method: "GET",
+        headers: { Accept: "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+        credentials: "include",
+      });
+      if (!resp.ok) return null;
+      const d = await resp.json();
+      return d;
+    } catch {
+      return null;
+    }
+  }, []);
 
   const login = useCallback(
     async (username, password) => {
-      try {
-        const response = await apiLoginUser(username, password);
-        const { token: newToken, user: loggedInUser } = response || {};
+      const response = await apiLoginUser(username, password);
+      const { token: newToken, user: loggedInUser } = response || {};
 
-        let fullUser = loggedInUser;
-        if (!fullUser || !Array.isArray(fullUser.permissions)) {
-          const me = await fetchMe(newToken);
-          if (me) fullUser = me;
-        }
-
-        const safeUser = {
-          id: fullUser?.id,
-          username: fullUser?.username,
-          name: fullUser?.name,
-          role: fullUser?.role,
-          permissions: Array.isArray(fullUser?.permissions) ? fullUser.permissions : [],
-          language: fullUser?.language,
-          // intentionally DO NOT trust server darkMode by default — remove storing darkMode here
-          profilePicture: fullUser?.profilePicture || fullUser?.profilePic || "",
-        };
-
-        localStorage.setItem("authToken", newToken);
-        persistUserToStorage(safeUser);
-        setToken(newToken);
-        setUser(safeUser);
-        window.__ACCESS_TOKEN = newToken;
-
-        if (safeUser?.language) i18n.changeLanguage(safeUser.language);
-
-        // Apply theme from localStorage if present, otherwise keep system
-        const theme = resolvedThemeFromStorageOrIncoming(null);
-        applyTheme(theme);
-
-        return { token: newToken, user: safeUser };
-      } catch (error) {
-        console.error("Login failed:", error);
-        throw error;
-      }
-    },
-    [fetchMe, i18n]
-  );
-
-  const logout = useCallback(async () => {
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    setToken(null);
-    setUser(null);
-    window.__ACCESS_TOKEN = null;
-    applyTheme("system");
-    try {
-      await logoutUser();
-    } catch (_) {}
-  }, []);
-
-  const tryRefresh = useCallback(async () => {
-    if (refreshing) return false;
-    setRefreshing(true);
-    try {
-      const r = await fetch("/api/auth/refresh", {
-        method: "POST",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-      if (!r.ok) {
-        setRefreshing(false);
-        await logout();
-        return false;
-      }
-      const data = await r.json();
-      const newToken = data.token;
-      let newUser = data.user;
-
-      if (!newUser || !Array.isArray(newUser.permissions)) {
+      let fullUser = loggedInUser;
+      if (!fullUser || !Array.isArray(fullUser.permissions)) {
         const me = await fetchMe(newToken);
-        if (me) newUser = me;
+        if (me) fullUser = me;
       }
 
+      // build safe user (strip darkMode if present)
       const safeUser = {
-        id: newUser?.id,
-        username: newUser?.username,
-        name: newUser?.name,
-        role: newUser?.role,
-        permissions: Array.isArray(newUser?.permissions) ? newUser.permissions : [],
-        language: newUser?.language,
-        profilePicture: newUser?.profilePicture || "",
+        id: fullUser?.id,
+        username: fullUser?.username,
+        name: fullUser?.name,
+        role: fullUser?.role,
+        permissions: Array.isArray(fullUser?.permissions) ? fullUser.permissions : [],
+        language: fullUser?.language,
+        profilePicture: fullUser?.profilePicture || fullUser?.profilePic || "",
       };
 
       window.__ACCESS_TOKEN = newToken;
@@ -187,19 +90,75 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       setUser(safeUser);
 
-      // preserve theme from localStorage unless server intentionally provided darkMode (we ignore by default)
-      const theme = resolvedThemeFromStorageOrIncoming(null);
-      applyTheme(theme);
+      if (safeUser?.language) i18n.changeLanguage(safeUser.language);
 
-      setRefreshing(false);
-      return true;
-    } catch (err) {
-      console.error("Refresh failed", err);
-      setRefreshing(false);
-      await logout();
-      return false;
+      return { token: newToken, user: safeUser };
+    },
+    [fetchMe, i18n]
+  );
+
+  const logout = useCallback(async () => {
+    setToken(null);
+    setUser(null);
+    window.__ACCESS_TOKEN = null;
+    try {
+      await apiLogoutUser();
+    } catch (_) {
+      // ignore
     }
-  }, [refreshing, logout, fetchMe]);
+  }, []);
+
+  const tryRefresh = useCallback(
+    async () => {
+      if (refreshing) return false;
+      setRefreshing(true);
+      try {
+        const r = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+        if (!r.ok) {
+          setRefreshing(false);
+          await logout();
+          return false;
+        }
+        const data = await r.json();
+        const newToken = data.token;
+        let newUser = data.user;
+        if (!newUser || !Array.isArray(newUser.permissions)) {
+          const me = await fetchMe(newToken);
+          if (me) newUser = me;
+        }
+
+        const safeUser = {
+          id: newUser?.id,
+          username: newUser?.username,
+          name: newUser?.name,
+          role: newUser?.role,
+          permissions: Array.isArray(newUser?.permissions) ? newUser.permissions : [],
+          language: newUser?.language,
+          profilePicture: newUser?.profilePicture || "",
+        };
+
+        window.__ACCESS_TOKEN = newToken;
+        localStorage.setItem("authToken", newToken);
+        persistUserToStorage(safeUser);
+        setToken(newToken);
+        setUser(safeUser);
+        if (safeUser?.language) i18n.changeLanguage(safeUser.language);
+
+        setRefreshing(false);
+        return true;
+      } catch (err) {
+        console.error("Refresh failed", err);
+        setRefreshing(false);
+        await logout();
+        return false;
+      }
+    },
+    [refreshing, logout, fetchMe, i18n]
+  );
 
   const apiFetch = useCallback(
     async (url, options = {}) => {
@@ -207,7 +166,7 @@ export const AuthProvider = ({ children }) => {
       const access = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
       if (access) headers["Authorization"] = `Bearer ${access}`;
 
-      const res = await fetch(url, {
+      let res = await fetch(url, {
         ...options,
         headers,
         credentials: "include",
@@ -216,12 +175,11 @@ export const AuthProvider = ({ children }) => {
       if (res.status === 401) {
         const ok = await tryRefresh();
         if (!ok) return res;
-        const retriedHeaders = { ...(options.headers || {}) };
         const newAccess = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
-        if (newAccess) retriedHeaders["Authorization"] = `Bearer ${newAccess}`;
+        if (newAccess) headers["Authorization"] = `Bearer ${newAccess}`;
         return fetch(url, {
           ...options,
-          headers: retriedHeaders,
+          headers,
           credentials: "include",
         });
       }
@@ -230,45 +188,27 @@ export const AuthProvider = ({ children }) => {
     [tryRefresh]
   );
 
-  const updateUser = useCallback(
-    (updatedUserData, newToken) => {
-      const existing = normalizeStoredUserRaw();
-      // Merge values but DO NOT overwrite theme unless caller explicitly included darkMode key
-      const merged = { ...existing, ...updatedUserData };
+  const updateUser = useCallback((updatedUserData, newToken) => {
+    // Always ignore any 'darkMode' key coming from callers (we keep theme in ThemeContext/localStorage)
+    const sanitized = { ...(updatedUserData || {}) };
+    if (Object.prototype.hasOwnProperty.call(sanitized, "darkMode")) delete sanitized.darkMode;
 
-      // If incoming data explicitly contains darkMode, respect it and write theme
-      if (Object.prototype.hasOwnProperty.call(updatedUserData || {}, "darkMode")) {
-        const theme = updatedUserData.darkMode ? "dark" : "light";
-        applyTheme(theme);
-        localStorage.setItem("theme", theme);
-        merged.darkMode = updatedUserData.darkMode;
-      } else {
-        // preserve existing theme and don't write darkMode onto stored user
-        const ls = localStorage.getItem("theme");
-        if (ls === "dark" || ls === "light") {
-          // keep theme in storage as-is; do not set merged.darkMode based on server
-          delete merged.darkMode;
-        } else {
-          delete merged.darkMode;
-        }
-        // ensure UI theme remains whatever localStorage currently says
-        const theme = resolvedThemeFromStorageOrIncoming(null);
-        applyTheme(theme);
-      }
+    const merged = { ...normalizeStoredUserRaw(), ...sanitized };
 
-      setUser(merged);
-      persistUserToStorage(merged);
+    // Ensure merged contains no darkMode
+    if (Object.prototype.hasOwnProperty.call(merged, "darkMode")) delete merged.darkMode;
 
-      if (newToken) {
-        setToken(newToken);
-        localStorage.setItem("authToken", newToken);
-        window.__ACCESS_TOKEN = newToken;
-      }
+    setUser(merged);
+    persistUserToStorage(merged);
 
-      if (merged?.language) i18n.changeLanguage(merged.language);
-    },
-    [i18n]
-  );
+    if (newToken) {
+      setToken(newToken);
+      localStorage.setItem("authToken", newToken);
+      window.__ACCESS_TOKEN = newToken;
+    }
+
+    if (merged?.language) i18n.changeLanguage(merged.language);
+  }, [i18n]);
 
   const value = {
     user,
@@ -290,5 +230,4 @@ export const useAuth = () => {
   if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };
-
 export default AuthContext;

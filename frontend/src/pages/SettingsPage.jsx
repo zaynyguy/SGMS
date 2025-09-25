@@ -1,24 +1,14 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
-import {
-  Upload,
-  X,
-  User,
-  Save,
-  Shield,
-  Palette,
-  UserCircle,
-  Settings,
-} from "lucide-react";
+import { Upload, X, User, Save, Shield, Palette, UserCircle, Settings } from "lucide-react";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import Toast from "../components/common/Toast";
 import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
+import { useTheme } from "../context/ThemeContext";
 
-/* -------------------------
-   Helpers
-------------------------- */
+/* Helpers omitted for brevity — same as previous (formatBytes, initialsFromName, gradientFromString) */
 const formatBytes = (n) => {
   if (!n) return "0 B";
   const sizes = ["B", "KB", "MB", "GB"];
@@ -30,7 +20,6 @@ const formatBytes = (n) => {
   }
   return `${Math.round(num * 10) / 10} ${sizes[i]}`;
 };
-
 const initialsFromName = (name, fallback) => {
   const n = (name || "").trim();
   if (!n) {
@@ -41,7 +30,6 @@ const initialsFromName = (name, fallback) => {
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
-
 const gradientFromString = (s) => {
   let hash = 0;
   for (let i = 0; i < (s || "").length; i += 1) hash = (hash << 5) - hash + s.charCodeAt(i);
@@ -51,18 +39,15 @@ const gradientFromString = (s) => {
   return `linear-gradient(135deg, hsl(${h1} 70% 60%), hsl(${h2} 70% 40%))`;
 };
 
-/* -------------------------
-   Main component
-------------------------- */
 const SettingsPage = () => {
   const { t } = useTranslation();
   const { updateUser } = useAuth();
+  const { dark } = useTheme();
 
   const [settings, setSettings] = useState({
     username: "",
     name: "",
     language: "en",
-    darkMode: false,
     profilePicture: null,
   });
 
@@ -74,48 +59,27 @@ const SettingsPage = () => {
   const [passwordError, setPasswordError] = useState("");
   const [oldPasswordError, setOldPasswordError] = useState("");
   const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null); // local blob url
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
 
   const previewObjectUrlRef = useRef(null);
 
-  const showToast = (message, type = "create") => {
-    setToast({ message, type });
-  };
-  const handleToastClose = () => setToast(null);
-
-  const applyDarkClass = (isDark) => {
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
-
-
-
-  /* Load settings */
-  const fetchSettings = async () => {
-    try {
-      const data = await api("/api/settings", "GET");
-      if (data) {
-        setSettings((prev) => ({ ...prev, ...data }));
-        const local = localStorage.getItem("theme");
-        const wantDark = local !== null ? local === "dark" : Boolean(data.darkMode);
-        applyDarkClass(wantDark);
-        setSettings((prev) => ({ ...prev, darkMode: wantDark }));
-      }
-    } catch (err) {
-      console.error("Failed to load settings", err);
-      showToast(t("settings.errors.loadError") || "Failed to load settings", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await api("/api/settings", "GET");
+        if (data) {
+          const sanitized = { ...data };
+          if (Object.prototype.hasOwnProperty.call(sanitized, "darkMode")) delete sanitized.darkMode;
+          setSettings((prev) => ({ ...prev, ...sanitized }));
+        }
+      } catch (err) {
+        console.error("Failed to load settings", err);
+        setToast({ message: t("settings.errors.loadError") || "Failed to load settings", type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchSettings();
     return () => {
       if (previewObjectUrlRef.current) {
@@ -126,11 +90,12 @@ const SettingsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Profile picture selection */
+  const showToast = (message, type = "create") => setToast({ message, type });
+  const handleToastClose = () => setToast(null);
+
   const handleProfilePictureChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/")) {
       showToast(t("settings.errors.invalidImage") || "Invalid image file", "error");
       return;
@@ -139,12 +104,10 @@ const SettingsPage = () => {
       showToast(t("settings.errors.imageTooLarge") || `Image too large (max ${formatBytes(5 * 1024 * 1024)})`, "error");
       return;
     }
-
     if (previewObjectUrlRef.current) {
       URL.revokeObjectURL(previewObjectUrlRef.current);
       previewObjectUrlRef.current = null;
     }
-
     const url = URL.createObjectURL(file);
     previewObjectUrlRef.current = url;
     setProfilePicturePreview(url);
@@ -167,8 +130,10 @@ const SettingsPage = () => {
       const fd = new FormData();
       fd.append("profilePicture", profilePictureFile);
 
-      // send with credentials; include Authorization header if available
-      const token = (typeof window !== "undefined" && window.__ACCESS_TOKEN) ? window.__ACCESS_TOKEN : localStorage.getItem("authToken");
+      const token = typeof window !== "undefined" && window.__ACCESS_TOKEN
+        ? window.__ACCESS_TOKEN
+        : localStorage.getItem("authToken");
+
       const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/settings/profile-picture`, {
         method: "PUT",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -177,33 +142,35 @@ const SettingsPage = () => {
       });
 
       if (!resp.ok) {
-        const errBody = await resp.text().catch(() => null);
+        const errText = await resp.text().catch(() => null);
         let parsed;
-        try { parsed = errBody ? JSON.parse(errBody) : null; } catch { parsed = errBody; }
+        try { parsed = errText ? JSON.parse(errText) : null; } catch { parsed = errText; }
         throw new Error(parsed?.message || t("settings.errors.uploadError") || "Upload failed");
       }
 
       const data = await resp.json();
 
-      // robust merge: prefer a full user from server if present, otherwise merge into existing stored user
-      let returnedUser = data.user || null;
-      if (!returnedUser || !Array.isArray(returnedUser.permissions)) {
-        try {
-          const stored = JSON.parse(localStorage.getItem("user") || "{}");
-          returnedUser = { ...stored };
-        } catch (e) {
-          returnedUser = {};
-        }
+      let returnedUser = data.user || {};
+      if (!returnedUser || typeof returnedUser !== "object") returnedUser = {};
+
+      let stored = {};
+      try {
+        stored = JSON.parse(localStorage.getItem("user") || "{}") || {};
+      } catch (e) {
+        stored = {};
       }
 
-      const mergedUser = {
+      const merged = {
+        ...stored,
         ...returnedUser,
-        profilePicture: data.profilePicture || returnedUser.profilePicture || settings.profilePicture || ""
+        profilePicture: data.profilePicture || returnedUser.profilePicture || stored.profilePicture || "",
       };
 
-      // update context + storage (updateUser handles theme/lang etc)
-      updateUser(mergedUser, data.token || undefined);
-      setSettings((s) => ({ ...s, profilePicture: mergedUser.profilePicture }));
+      if (Object.prototype.hasOwnProperty.call(merged, "darkMode")) delete merged.darkMode;
+
+      updateUser(merged, data.token || undefined);
+
+      setSettings((s) => ({ ...s, profilePicture: merged.profilePicture }));
       removeProfilePicturePreview();
       showToast(t("settings.toasts.pictureSuccess") || "Profile picture updated", "update");
     } catch (err) {
@@ -216,21 +183,14 @@ const SettingsPage = () => {
 
   const validatePassword = () => {
     let isValid = true;
-
     if (newPassword && !oldPassword) {
       setOldPasswordError(t("settings.errors.oldPasswordRequired") || "Old password required");
       isValid = false;
-    } else {
-      setOldPasswordError("");
-    }
-
+    } else setOldPasswordError("");
     if (newPassword && newPassword.length < 8) {
       setPasswordError(t("settings.errors.passwordTooShort") || "Password too short");
       isValid = false;
-    } else {
-      setPasswordError("");
-    }
-
+    } else setPasswordError("");
     return isValid;
   };
 
@@ -243,7 +203,6 @@ const SettingsPage = () => {
       const payload = {
         name: settings.name,
         language: settings.language,
-        darkMode: settings.darkMode,
         oldPassword: oldPassword || undefined,
         newPassword: newPassword || undefined,
       };
@@ -251,18 +210,21 @@ const SettingsPage = () => {
       const data = await api("/api/settings", "PUT", payload);
 
       if (data?.user) {
-        // If backend returns a partial user, merge instead of replacing
-        let returnedUser = data.user;
-        if (!returnedUser || !Array.isArray(returnedUser.permissions)) {
-          try {
-            const stored = JSON.parse(localStorage.getItem("user") || "{}");
-            returnedUser = { ...stored, ...returnedUser };
-          } catch (e) {
-            returnedUser = { ...returnedUser };
-          }
+        const returnedUser = data.user || {};
+        let stored = {};
+        try {
+          stored = JSON.parse(localStorage.getItem("user") || "{}") || {};
+        } catch {
+          stored = {};
         }
-        updateUser(returnedUser, data.token);
+
+        const merged = { ...stored, ...returnedUser };
+        if (Object.prototype.hasOwnProperty.call(merged, "darkMode")) delete merged.darkMode;
+
+        updateUser(merged, data.token || undefined);
       }
+
+      setSettings((s) => ({ ...s, name: settings.name, language: settings.language }));
       showToast(t("settings.toasts.updateSuccess") || "Settings updated", "update");
       setOldPassword("");
       setNewPassword("");
@@ -296,18 +258,16 @@ const SettingsPage = () => {
           <div className="flex items-center gap-4 min-w-0">
             <div className="flex items-center min-w-0 header-actions">
               <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-                        <Settings className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                      </div>
+                <Settings className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+              </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-medium sm:font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
-              <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
-                {t("settings.subtitle")}
-              </p>
+                <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">{t("settings.subtitle")}</p>
               </div>
             </div>
           </div>
 
-              <TopBar className="flex"/>
+          <TopBar className="flex" />
         </div>
       </header>
 
@@ -326,28 +286,15 @@ const SettingsPage = () => {
               <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                 <div className="relative responsive-avatar">
                   {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="Profile"
-                      className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm"
-                    />
+                    <img src={avatarUrl} alt="Profile" className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm" />
                   ) : (
-                    <div
-                      className="w-28 h-28 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-sm"
-                      style={{ background: gradient }}
-                      aria-hidden
-                    >
+                    <div className="w-28 h-28 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-sm" style={{ background: gradient }} aria-hidden>
                       {initials}
                     </div>
                   )}
 
                   {profilePicturePreview && (
-                    <button
-                      type="button"
-                      onClick={removeProfilePicturePreview}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"
-                      aria-label="Remove preview"
-                    >
+                    <button type="button" onClick={removeProfilePicturePreview} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md" aria-label="Remove preview">
                       <X className="w-4 h-4" />
                     </button>
                   )}
@@ -355,17 +302,8 @@ const SettingsPage = () => {
 
                 <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                   <div>
-                    <input
-                      type="file"
-                      id="profile-picture"
-                      accept="image/*"
-                      onChange={handleProfilePictureChange}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="profile-picture"
-                      className="inline-flex items-center px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    >
+                    <input type="file" id="profile-picture" accept="image/*" onChange={handleProfilePictureChange} className="hidden" />
+                    <label htmlFor="profile-picture" className="inline-flex items-center px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
                       <Upload className="w-4 h-4 mr-2" />
                       {t("settings.chooseImage") || "Choose image"}
                     </label>
@@ -373,22 +311,13 @@ const SettingsPage = () => {
 
                   <div className="flex items-center gap-2">
                     {profilePictureFile ? (
-                      <div className="text-sm text-gray-600 dark:text-gray-300">
-                        {profilePictureFile.name} • {formatBytes(profilePictureFile.size)}
-                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-300">{profilePictureFile.name} • {formatBytes(profilePictureFile.size)}</div>
                     ) : (
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {t("settings.pictureHint") || "Square image works best (max 5 MB)"}
-                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{t("settings.pictureHint") || "Square image works best (max 5 MB)"}</div>
                     )}
 
                     {profilePictureFile && (
-                      <button
-                        type="button"
-                        onClick={uploadProfilePicture}
-                        disabled={uploadingPicture}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors btn-sm-full"
-                      >
+                      <button type="button" onClick={uploadProfilePicture} disabled={uploadingPicture} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors btn-sm-full">
                         {uploadingPicture ? (
                           <>
                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
@@ -418,29 +347,14 @@ const SettingsPage = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 responsive-grid">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("settings.username") || "Username"}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.username}
-                    readOnly
-                    className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                  />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.username") || "Username"}</label>
+                  <input type="text" value={settings.username} readOnly className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400" />
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.usernameHelp")}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("settings.name") || "Full name"}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.name}
-                    onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder={t("settings.namePlaceholder") || "Your display name"}
-                  />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.name") || "Full name"}</label>
+                  <input type="text" value={settings.name} onChange={(e) => setSettings({ ...settings, name: e.target.value })} className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder={t("settings.namePlaceholder") || "Your display name"} />
                 </div>
               </div>
             </section>
@@ -456,14 +370,8 @@ const SettingsPage = () => {
 
               <div className="grid grid-cols-1 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t("settings.language") || "Language"}
-                  </label>
-                  <LanguageSwitcher
-                    compact
-                    value={settings.language}
-                    onChange={(lang) => setSettings({ ...settings, language: lang })}
-                  />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.language") || "Language"}</label>
+                  <LanguageSwitcher compact value={settings.language} onChange={(lang) => setSettings({ ...settings, language: lang })} />
                 </div>
               </div>
             </section>
@@ -480,32 +388,13 @@ const SettingsPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 responsive-grid">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.oldPassword") || "Old password"}</label>
-                  <input
-                    type="password"
-                    value={oldPassword}
-                    onChange={(e) => {
-                      setOldPassword(e.target.value);
-                      if (e.target.value && oldPasswordError) setOldPasswordError("");
-                    }}
-                    placeholder={t("settings.passwordPlaceholder") || "••••••••"}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${oldPasswordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`}
-                  />
+                  <input type="password" value={oldPassword} onChange={(e) => { setOldPassword(e.target.value); if (e.target.value && oldPasswordError) setOldPasswordError(""); }} placeholder={t("settings.passwordPlaceholder") || "••••••••"} className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${oldPasswordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`} />
                   {oldPasswordError && <p className="mt-1 text-xs text-red-500">{oldPasswordError}</p>}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.newPassword") || "New password"}</label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => {
-                      setNewPassword(e.target.value);
-                      if (e.target.value && e.target.value.length < 8) setPasswordError(t("settings.errors.passwordTooShort") || "Password too short");
-                      else setPasswordError("");
-                    }}
-                    placeholder={t("settings.passwordPlaceholder") || "••••••••"}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${passwordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`}
-                  />
+                  <input type="password" value={newPassword} onChange={(e) => { setNewPassword(e.target.value); if (e.target.value && e.target.value.length < 8) setPasswordError(t("settings.errors.passwordTooShort") || "Password too short"); else setPasswordError(""); }} placeholder={t("settings.passwordPlaceholder") || "••••••••"} className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${passwordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`} />
                   {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.passwordRequirements") || "Minimum 8 characters."}</p>
                 </div>
@@ -514,11 +403,7 @@ const SettingsPage = () => {
 
             {/* Submit */}
             <section className="p-6 bg-gray-50 dark:bg-gray-700/50 flex justify-end section">
-              <button
-                type="submit"
-                disabled={saving || (newPassword && newPassword.length < 8) || (newPassword && !oldPassword)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors btn-sm-full"
-              >
+              <button type="submit" disabled={saving || (newPassword && newPassword.length < 8) || (newPassword && !oldPassword)} className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors btn-sm-full">
                 {saving ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
