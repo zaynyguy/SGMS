@@ -189,23 +189,23 @@ export default function AttachmentsPage({ reportId }) {
       <div className="max-w-8xl mx-auto">
         {/* HEADER: Title | Controls | TopBar */}
         <header className="mb-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="order-1 flex-1 min-w-0">
+          <div className="flex-1 items-center gap-3">
+            <div className="order-1 flex min-w-0 justify-between gap-2">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
                         <Paperclip className="h-6 w-6 text-sky-600 dark:text-sky-300" />
                       </div>
               <div>
-                <h1 className="text-2xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white truncate">{t("attachments.title")}</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white truncate">{t("attachments.title")}</h1>
               <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
                 {t("attachments.subtitle")}
               </p>
               </div>
               </div>
-            </div>
 
             <div className="order-2 md:order-3 flex-shrink-0">
               <TopBar />
+            </div>
             </div>
 
             <div className="order-3 w-full md:order-2 md:w-auto">

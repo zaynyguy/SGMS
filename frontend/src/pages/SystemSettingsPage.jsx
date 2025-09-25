@@ -234,7 +234,6 @@ export default function SystemSettingsPage() {
               <AllowedTypesInput
                 value={allowedTypesArray}
                 onChange={handleAllowedTypesChange}
-                placeholder={t("systemSettings.allowedAttachmentTypes.placeholder")}
               />
 
               <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
@@ -242,9 +241,6 @@ export default function SystemSettingsPage() {
                 <code className="text-xs break-all bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md block overflow-x-auto">
                   {JSON.stringify(lastSavedRef.current?.allowed_attachment_types ?? settings.allowed_attachment_types)}
                 </code>
-                {descriptions.allowed_attachment_types && (
-                  <div className="mt-2 italic text-sm">{descriptions.allowed_attachment_types}</div>
-                )}
               </div>
             </div>
 
@@ -272,9 +268,7 @@ export default function SystemSettingsPage() {
                     {JSON.stringify(lastSavedRef.current?.audit_retention_days ?? settings.audit_retention_days)}
                   </code>
                 </div>
-                {descriptions.audit_retention_days && (
-                  <div className="mt-2 italic text-sm">{descriptions.audit_retention_days}</div>
-                )}
+
               </div>
 
               {/* Max attachment size */}
@@ -300,9 +294,6 @@ export default function SystemSettingsPage() {
                     {JSON.stringify(lastSavedRef.current?.max_attachment_size_mb ?? settings.max_attachment_size_mb)}
                   </code>
                 </div>
-                {descriptions.max_attachment_size_mb && (
-                  <div className="mt-2 italic text-sm">{descriptions.max_attachment_size_mb}</div>
-                )}
               </div>
             </div>
 
@@ -340,9 +331,6 @@ export default function SystemSettingsPage() {
                   {JSON.stringify(lastSavedRef.current?.reporting_active ?? settings.reporting_active)}
                 </code>
               </div>
-              {descriptions.reporting_active && (
-                <div className="mt-2 italic text-sm">{descriptions.reporting_active}</div>
-              )}
             </div>
           </div>
 
@@ -379,7 +367,7 @@ export default function SystemSettingsPage() {
           </div>
         </div>
 
-        <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
+        <div className="flex justify-center mt-6 text-center text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
           <p>{t("systemSettings.description")}</p>
         </div>
       </div>

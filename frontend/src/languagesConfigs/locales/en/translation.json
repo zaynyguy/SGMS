@@ -106,8 +106,8 @@
   },
   "groups": {
     "title": "Groups",
-        "subtitle": "Create and manage groups and membership.",
-        "searchPlaceholder": "Search groups by name or description…",
+    "subtitle": "Create and manage groups and membership.",
+    "searchPlaceholder": "Search groups by name or description…",
     "search": {
       "placeholder": "Search groups by name or description…",
       "aria": "Search groups"
@@ -152,7 +152,7 @@
         "description": "Description"
       },
       "buttons": {
-                "uploadPicture": "Upload picture",
+        "uploadPicture": "Upload picture",
         "cancel": "Cancel",
         "create": "Create group",
         "save": "Save changes",
@@ -191,7 +191,7 @@
     }
   },
   "reports": {
-     "noReports": "No reports available yet. Create a report to see data here.",
+    "noReports": "No reports available yet. Create a report to see data here.",
     "header": {
       "title": "Reports",
       "subtitle": "Review, manage and export reports"
@@ -250,7 +250,7 @@
     "noReports4": "No reports found",
     "noReports5": "No reports found.",
     "footer": {
-      "systemName": "Officemate"
+      "systemName": "SGMS"
     },
     "status2": {
       "Approved": "Approved",
@@ -489,8 +489,7 @@
     "subtitle": "Configure system behavior, integrations, backups and environment options.",
     "allowedAttachmentTypes": {
       "label": "Allowed attachment types",
-      "help": "Specify which MIME types are allowed for file uploads. Example: application/pdf, image/png, image/jpeg",
-      "placeholder": "e.g. application/pdf, image/png"
+      "help": "Specify which MIME types are allowed for file uploads."
     },
     "current": "Current value",
     "auditRetention": {
@@ -560,7 +559,11 @@
       "endDate": "End date",
       "title": "Title",
       "description": "Description",
-      "progress": "Progress"
+      "progress": "Progress",
+      "assignGroup": "Assign to group",
+      "narrative": "Narrative",
+      "newStatus": "New status",
+      "status": "Status"
     },
 
     "sections": {
@@ -661,25 +664,30 @@
 
     "labelsSmall": {
       "activity": "Activity"
+    },
+    "confirm": {
+      "deleteGoal": "Are you sure you want to delete this goal? All related tasks will be removed and this action cannot be undone.",
+      "deleteTask": "Are you sure you want to delete the selected tasks? This action cannot be undone.",
+      "deleteActivity": "Are you sure you want to delete this activity? This action cannot be undone."
     }
   },
   "login": {
-"company_logo_alt": "Company logo",
-"title": "Welcome back",
-"subtitle": "Urban Development and Construction Berue",
-"form_title": "Log in to your account",
-"username_label": "Username",
-"username_placeholder": "Enter your Username",
-"password_label": "Password",
-"password_placeholder": "Enter your password",
-"show_password": "Show password",
-"hide_password": "Hide password",
-"password_too_short": "Password must be at least 8 characters",
-"error_default": "Unable to sign in. Please check your credentials and try again.",
-"logging_in": "Logging in...",
-"button_signin": "Log in"
-},
-"dashboard": {
+    "company_logo_alt": "Company logo",
+    "title": "Welcome back",
+    "subtitle": "Urban Development and Construction Berue",
+    "form_title": "Log in to your account",
+    "username_label": "Username",
+    "username_placeholder": "Enter your Username",
+    "password_label": "Password",
+    "password_placeholder": "Enter your password",
+    "show_password": "Show password",
+    "hide_password": "Hide password",
+    "password_too_short": "Password must be at least 8 characters",
+    "error_default": "Unable to sign in. Please check your credentials and try again.",
+    "logging_in": "Logging in...",
+    "button_signin": "Log in"
+  },
+  "dashboard": {
     "title": "Dashboard",
     "subtitle": "Overview of goals, tasks, reports and recent activity.",
     "aria": {
