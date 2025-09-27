@@ -37,22 +37,72 @@ async function _tryRefresh() {
 
   return _refreshPromise;
 }
-
 async function _doFetch(fullUrl, fetchOptions) {
   fetchOptions = { credentials: "include", ...fetchOptions };
   const token = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
-  if (token) fetchOptions.headers = { ...(fetchOptions.headers || {}), Authorization: `Bearer ${token}` };
+  if (token) {
+    fetchOptions.headers = { ...(fetchOptions.headers || {}), Authorization: `Bearer ${token}` };
+  }
 
   let res = await fetch(fullUrl, fetchOptions);
+
+  // If not unauthorized, return immediately
   if (res.status !== 401) return res;
 
+  // Try refresh silently
   const refreshed = await _tryRefresh();
-  if (!refreshed) return res;
+  if (!refreshed) return res; // if refresh fails, return original 401
 
+  // Retry with new token
   const newToken = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
-  if (newToken) fetchOptions.headers.Authorization = `Bearer ${newToken}`;
+  if (newToken) {
+    fetchOptions.headers.Authorization = `Bearer ${newToken}`;
+  }
+
   return fetch(fullUrl, fetchOptions);
 }
+
+export async function api(endpoint, method = "GET", body = null, options = {}) {
+  const url = endpoint.startsWith("http") ? endpoint : `${API_URL}${endpoint}`;
+  const headers = { Accept: "application/json", ...(options.headers || {}) };
+  const init = { method, headers };
+
+  if (body != null) {
+    const isFormData = Boolean(options.isFormData) || (typeof FormData !== "undefined" && body instanceof FormData);
+    if (isFormData) {
+      init.body = body;
+    } else {
+      init.headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(body);
+    }
+  }
+
+  const res = await _doFetch(url, init);
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text || null; }
+
+  if (!res.ok) {
+    // Only treat it as an auth error if refresh ALSO failed
+    const err = new Error((data?.message || data?.error) || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.response = data;
+    err.isAuthError = res.status === 401;
+
+    if (err.isAuthError) {
+      // Clear auth only when refresh + retry truly failed
+      window.__ACCESS_TOKEN = null;
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+    }
+
+    throw err;
+  }
+
+  return data;
+}
+
+
 
 export async function rawFetch(endpoint, method = "GET", body = null, options = {}) {
   const url = endpoint.startsWith("http") ? endpoint : `${API_URL}${endpoint}`;
@@ -69,25 +119,7 @@ export async function rawFetch(endpoint, method = "GET", body = null, options = 
   return _doFetch(url, init);
 }
 
-export async function api(endpoint, method = "GET", body = null, options = {}) {
-  const res = await rawFetch(endpoint, method, body, options);
-  const text = await res.text();
-  let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch { data = text || null; }
-  if (!res.ok) {
-    const err = new Error((data?.message || data?.error) || `HTTP ${res.status}`);
-    err.status = res.status;
-    err.response = data;
-    err.isAuthError = res.status === 401;
-    if (res.status === 401) {
-      window.__ACCESS_TOKEN = null;
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("user");
-    }
-    throw err;
-  }
-  return data;
-}
+
 
 export const loginUser = (username, password) => api("/api/auth/login", "POST", { username, password });
 export const refreshToken = () => api("/api/auth/refresh", "POST", null);
