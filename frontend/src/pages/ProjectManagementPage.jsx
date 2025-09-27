@@ -1830,9 +1830,9 @@ function GenericModal({
                 onChange={(e) => onLocalChange(e)}
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="not-started">{t("project.status.notStarted")}</option>
-                <option value="in-progress">{t("project.status.inProgress")}</option>
-                <option value="completed">{t("project.status.completed")}</option>
+                <option value="To Do">{t("project.status.notStarted")}</option>
+                <option value="In Progress">{t("project.status.inProgress")}</option>
+                <option value="Done">{t("project.status.completed")}</option>
               </select>
 
               {modal.data?.taskId && (
