@@ -71,6 +71,7 @@ async function _internalCreateNotificationPayload(payload) {
   return notification;
 }
 
+
 exports.createNotification = async function createNotification(req, res) {
   try {
     const userId = req.body.userId || req.user?.id; // fallback to authenticated user
@@ -82,11 +83,13 @@ exports.createNotification = async function createNotification(req, res) {
 
     const notification = await notificationService({ userId, type, message, meta, level });
 
+    // notificationService already emits via socketService.emitToUser.
+    // Keep the old req.io attempt as best-effort (if you ever attach io to req).
     if (req.io?.to) {
       try {
         req.io.to(`user_${notification.userId}`).emit('notification:new', notification);
       } catch (e) {
-        console.error('emit failed', e);
+        console.error('emit failed (req.io):', e);
       }
     }
 

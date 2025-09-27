@@ -18,7 +18,7 @@ function NavButton({ label, subtitle, isActive, onClick, children }) {
     <button
       onClick={onClick}
       aria-current={isActive ? "page" : undefined}
-      className={`flex items-center gap-1 px-3 py-2 rounded-full text-sm transition
+      className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm transition
         ${
           isActive
             ? "bg-white dark:bg-gray-700 shadow text-sky-700 dark:text-sky-300"
@@ -26,20 +26,17 @@ function NavButton({ label, subtitle, isActive, onClick, children }) {
         }
       `}
     >
-      {/* Icon slot (keeps consistent sizing) */}
-      <div
-        className={`flex-shrink-0 ${
-          isActive ? "text-sky-700" : " dark:text-sky-300"
-        }`}
-      >
+      {/* Icon slot */}
+      <div className={`flex-shrink-0 ${isActive ? "text-sky-700" : "dark:text-sky-300"}`}>
         {children}
       </div>
 
       {/* Text: label + subtitle stacked */}
       <div className="min-w-0 text-left">
         <div className="text-sm font-semibold truncate">{label}</div>
+        {/* subtitle hidden on md and below to avoid layout breaking; visible on lg+ */}
         {subtitle ? (
-          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          <div className="hidden lg:block text-xs text-gray-500 dark:text-gray-400 truncate">
             {subtitle}
           </div>
         ) : null}
@@ -60,15 +57,16 @@ export default function AccessManagement() {
           <div className="flex items-center gap-4 h-16 md:h-20">
             {/* Left: Title (single-line, truncates) */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center min-w-0 gap-4 mt-4">
+              <div className="flex items-center gap-4">
                 <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
                   <UserPen className="h-6 w-6 text-sky-600 dark:text-sky-300" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h1 className="text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold leading-tight truncate">
                     {t("access.title")}
                   </h1>
-                  <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                  {/* subtitle hidden on md and below to avoid layout issues */}
+                  <p className="hidden lg:block mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
                     {t("access.subtitle")}
                   </p>
                 </div>
@@ -76,12 +74,10 @@ export default function AccessManagement() {
             </div>
 
             {/* Middle: Desktop nav (visible md+) */}
-            <div className="hidden md:flex items-center space-x-2 rounded-full bg-gray-100 dark:bg-gray-800/40 mt-4 p-1">
+            <div className="hidden md:flex items-center space-x-2 rounded-full bg-gray-100 dark:bg-gray-800/40 p-1">
               {navItems.map((item) => {
                 const label = t(`access.nav.${item.key}`);
-                const subtitle = item.subtitleKey
-                  ? t(`access.nav.${item.subtitleKey}`)
-                  : null;
+                const subtitle = item.subtitleKey ? t(`access.nav.${item.subtitleKey}`) : null;
                 const isActive = activeTab === item.key;
                 return (
                   <NavButton
@@ -91,22 +87,21 @@ export default function AccessManagement() {
                     isActive={isActive}
                     onClick={() => setActiveTab(item.key)}
                   >
-                    {/* Icon component (provided by item.Icon) */}
                     <item.Icon size={16} aria-hidden />
                   </NavButton>
                 );
               })}
             </div>
 
-            {/* Right: TopBar - always visible, doesn't push title */}
-            <div className="flex-shrink-0 ml-2 mt-4">
+            {/* Right: TopBar - always visible */}
+            <div className="flex-shrink-0">
               <TopBar />
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Main Content Area (padding-bottom so mobile bottom nav doesn't overlap) */}
+      {/* Main Content Area */}
       <main className="max-w-8xl mx-auto py-6 px-4 sm:px-6 lg:px-8 pb-28 md:pb-8">
         <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="px-4 py-4 sm:p-6">
@@ -131,7 +126,7 @@ export default function AccessManagement() {
                 className={`flex-1 flex flex-col items-center justify-center py-2 px-2 rounded-lg transition-colors text-xs sm:text-sm ${
                   isActive
                     ? "bg-white dark:bg-gray-700 shadow text-sky-700 dark:text-sky-300"
-            : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
               >
                 <Icon size={20} aria-hidden />
