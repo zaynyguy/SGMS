@@ -16,5 +16,377 @@
      "lang_am": "Afaan Amaaraa",
      "lang_or": "Afaan Oromoo",
      "lang_hr": "Afaan Haraarii"   
+  },
+  "access": {
+    "title": "To'annoo Galii",
+    "subtitle": "Dhaabbata keessaa eenyutu tajaajila kennuu akka adeemsisu irratti to'annoo gochuu.",
+    "nav": {
+      "users": "Fayyadamaa",
+      "roles": "Hirmaannaa",
+      "groups": "Waliigalteewwan"
+    },
+    "mobileNav": {
+      "ariaLabel": "To'annoo Galii"
+    }
+  },
+  "attachments": {
+    "title": "Fuula",
+    "subtitle": "Gabaasa fi waraqaa, qubbeewwan fi sanada fuula irratti to'ataa.",
+    "viewToggleAria": "Ulaagaalee fuula jijjiiri",
+    "view": {
+      "grid": "Qubee",
+      "gridTitle": "Ulaagaalee",
+      "table": "Tarree",
+      "tableTitle": "Tarree"
+    },
+    "closePreview": "Qubee cufuu",
+    "messages": {
+      "failedLoad": "Fuula banuu hin dandeenye",
+      "noFileReturned": "Fayiliin deebifun hin jiru",
+      "downloadFailed": "Buu'uu hin dandeenye",
+      "deleteFailed": "Fuula cufuu hin dandeenye"
+    },
+    "loading": "Fuula fe'achuuf jira ...",
+    "noAttachmentsTitle": "Fuula hin jiru",
+    "noAttachmentsSubtitle": "Gabaasa kanaaf fuula hin jiru.",
+    "table": {
+      "file": "Fayili",
+      "type": "Iaayni",
+      "uploaded": "Fe'ame",
+      "actions": "Hojii"
+    },
+    "idPrefix": "Mallattoo:",
+    "uploadedPrefix": "Fe'ame:",
+    "empty": "---",
+    "download": "Buu'aa",
+    "preview": "Qubee",
+    "delete": "Cufuu",
+    "confirmDelete": "Fuula kana cufuuf dhugaadha?",
+    "searchPlaceholder": "Fuula maqaa, mallattoo yookin Iaayni barbaadi ...",
+    "searchAria": "Fuula barbaadi",
+    "clearSearchAria": "Barbaadi dhangala'uu",
+    "clearSearchTitle": "Barbaadi dhangala'uu"
+  },
+  "audit": {
+    "title": "Audit Log",
+    "subtitle": "All system events and user actions are recorded here.",
+    "loadFailed": "Failed to load audit logs.",
+    "export": {
+      "success": "Export successful."
+    },
+    "csv": {
+      "filename": "audit-logs.csv"
+    },
+    "exportCsv": "Export CSV",
+    "searchPlaceholder": "Search by user, entity, action, details...",
+    "searchAria": "Search audit logs",
+    "filters": {
+      "show": "Show filters",
+      "hide": "Hide filters",
+      "title": "Filters",
+      "fromDate": "From date",
+      "toDate": "To date",
+      "apply": "Apply",
+      "clear": "Clear",
+      "applied": "Filters applied.",
+      "cleared": "Filters cleared."
+    },
+    "results": {
+      "showing": "Showing {{filtered}} of {{total}} results"
+    },
+    "loading": "Loading...",
+    "expanded": {
+      "show": "Show details",
+      "hide": "Hide details",
+      "details": "Details",
+      "fullDetails": "Full details",
+      "additionalInfo": "Additional info",
+      "idLabel": "ID",
+      "entityLabel": "Entity",
+      "ipLabel": "IP",
+      "userAgentLabel": "User agent"
+    },
+    "noLogs": {
+      "title": "No audit logs",
+      "tryAdjust": "No results — try adjusting your search or filters.",
+      "none": "There are no audit logs yet."
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "entity": "Entity",
+      "action": "Action",
+      "details": "Details"
+    },
+    "na": "N/A"
+  },
+  "groups": {
+    "title": "Waliigalteewwan",
+    "subtitle": "Waliigalteewwan uumuu fi to'achu.",
+    "searchPlaceholder": "Waliigalteewwan maqaa yookin ibsa barbaadi ...",
+    "search": {
+      "placeholder": "Waliigalteewwan maqaa yookin ibsa barbaadi ...",
+      "aria": "Waliigalteewwan barbaadi"
+    },
+    "newGroup": "Waliigalteewwan Haaraa",
+    "loading": "Waliigalteewwan fe'achuuf jira ...",
+    "noResults": "Waliigalteewwan hinqabdu.",
+    "noDescription": "Ibsa hinqabdu.",
+
+"confirmDelete": "Waliigalteewwan kana cufuuf dhugaadha?",
+    "messages": {
+      "loadFailed": "Waliigalteewwan fe'achuuf hin dandeenye",
+      "created": "Waliigalteewwan uumame.",
+      "updated": "Waliigalteewwan fooyya'e.",
+      "deleted": "Waliigalteewwan cufame.",
+      "saveFailed": "Waliigalteewwan sirreessuuf hin dandeenye",
+      "deleteFailed": "Waliigalteewwan cufuu hin dandeenye"
+    },
+    "table": {
+      "name": "Maqaa",
+      "description": "Ibsa",
+      "members": "Hirmaatota",
+      "created": "Uumame",
+      "updated": "Fooyya'e",
+      "actions": "Hojii"
+    },
+    "createdPrefix": "Uumame:",
+    "updatedPrefix": "Fooyya'e:",
+    "idPrefix": "Mallattoo:",
+    "actions": {
+      "edit": "Waliigalteewwan fooyyessu",
+      "delete": "Waliigalteewwan cufuu",
+      "toggle": "Faayiicha ulaagaalee"
+    },
+    "form": {
+      "title": {
+        "create": "Waliigalteewwan uumu",
+        "edit": "Waliigalteewwan fooyyessu"
+      },
+      "close": "Cufi",
+      "labels": {
+        "name": "Maqaa waliigalteewwan",
+        "description": "Ibsa"
+      },
+      "buttons": {
+        "uploadPicture": "Suuraa fe'uu",
+        "cancel": "Bakke","create": "Waliigalteewwan uumu",
+        "save": "Buutota sirreessu",
+        "saving": "Buu’oomsuuf jira..."
+      },
+      "errors": {
+        "nameRequired": "Maqaa waliigalteewwan dhibbaanerraa hafe.",
+        "nameTooLong": "Maqaa 50 malkaatti yookin dabalataan gahu.",
+        "descriptionTooLong": "Ibsa qabiyyee daqiiqaan 300 yookin dabalataan gahu.",
+        "invalidImage": "Fayilota suuraa hin dandeenye.",
+        "imageTooLarge": "Suuraan baay'ee jabaa dha (kallattiin 5 MB qofa)",
+        "saveFailed": "Waliigalteewwan sirreessuuf hin dandeenye"
+      }
+    },
+    "members": {
+      "title": {
+        "manage": "Hirmaatoo to'achuu"
+      },
+      "add": {
+        "title": "Hirmaataa dabaluu",
+        "selectUser": "Fayyadamaa filadhu",
+        "button": "Hirmaataa dabaluu",
+        "adding": "Dabaluu irratti jira...",
+        "noAvailable": "Dabaluu dhabu"
+      },
+      "current": {
+        "title": "Hirmaatota amma jiru",
+        "empty": "Waliigalteewwan keessatti hirmaatota hin qabdu."
+      },
+      "linkText": "{{count}} Hirmaataa (boodaa)",
+      "manage": "Hirmaatota to'achuu",
+      "label": "Hirmaatota",
+      "remove": {
+        "title": "Hirmaataa cufuu"
+      }
+    },
+    "reports": {
+      "noReports": "Amma ammaan tokkoo gabaasa hin qaban. Odeeffannoo argachuuf gabaasa uumu.",
+      "header": {
+        "title": "Gabaasa",
+        "subtitle": "Gabaasota eegu, to'achuu fi ergu."
+      },
+      "tabs": {
+        "review": "Ibsa",
+        "master": "Gabaabaa"
+      },
+      "search": {
+        "placeholder": "Gabaasota, fayyadamaa yookin qajeelfama barbaadi...",
+        "button": "Barbaadi"
+      },
+      "refresh": "Haaraa",
+      "filters": {
+        "all": "Hunda",
+        "pending": "Hojjetamuu",
+        "approved": "Dijjen",
+        "rejected": "Galmeen qabiyyee hintaane"
+      },
+      "pagination": {
+        "showingPage": "Fuula {{page}} keessaa {{totalPages}} --- {{total}} argama",
+        "first": "Jalqabaa",
+        "prev": "Darbaa",
+        "next": "Dhuftuu",
+        "last": "Xumuramuu"
+      },
+      "pageSize": "Ibsa fuula",
+      "status": {
+        "Approved": "Dijjen",
+        "Rejected": "Galmeen qabiyyee hintaane",
+        "Pending": "Hojjetamuu"
+      },
+      "narrative": "Ibsa",
+      "noNarrative": "Ibsa hinqabdu.",
+      "metrics_narrative": "Metrics",
+      "attachments": "Fuula",
+      "attachments_download": {
+        "download": "Buu'uu"
+      },
+      "adminComment_label": "Yaada Beeksis",
+      "resubmissionDeadline": "Guyyaa caba hikaa buufata",
+      "adminComment_placeholder": {
+        "placeholder": "Yaada gurguddoo galchaa"
+
+},
+      "actions": {
+        "approve": "Eramuu",
+        "reject": "Kufaatu"
+      },
+      "action": {
+        "updatedTo": "Hojii haala kanaan fooyya'e.",
+        "failed": "Tarkaanfii dhabu."
+      },
+      "noReports1": "Fakkeenya gabaasa tokkoo hin jiruu raawwachuuf.",
+      "noReports2": "Galmee gabaasahu hin argamuu.",
+      "noReports3": "Gabaasota hin argamuu.",
+      "noReports4": "Galmee gabaasatuurraa hin barbadhi",
+      "noReports5": "Galmee gabaasijedhu hin argamuu.",
+      "footer": {
+        "systemName": "SGMS"
+      },
+      "status2": {
+        "Approved": "Dijjen",
+        "Rejected": "Galmeen qabiyyee hintaane",
+        "Pending": "Hojjetamuu"
+      },
+      "review": {
+        "title": "Gabaasota qoradhu",
+        "subtitle": "Gabaabota kenname eegu yookan kufaatu"
+      },
+      "master": {
+        "title": "Gabaabaa",
+        "subtitle2": "Gabaabota gurguddoo hordofu yookan ergu.",
+        "loadButton": "Gabaabaa fe’achu",
+        "loadFirstAlert": "Ilaalcha fuula gurguddoo gadiklefi!",
+        "exportPDF": "Erga PDF",
+        "exportCSV": "Ergachu CSV",
+        "groupLabel": "Walitti dhufeenya",
+        "groupIdLabel": "Walitti dhufeenya mallattoo",
+        "groupIdPlaceholder": "Walitti dhufeenya mallattoo galchaa",
+        "narratives": "Ibsa",
+        "narrativesTitle": "Ibsa",
+        "noData": "Gabaabota hin fe’achu",
+        "noGoals": "Sakatta no gabaa'uu",
+        "noReports": "Galmeen gabaasatu dhabu nibereedha.",
+        "targetLabel": "Maqaa",
+        "subtitle": "Hojiiwwan gara log tayyita fi gabbareyiik caasaagaan dubbisi.",
+        "generatedAt": "Biebechuu maduu...",
+        "granularityLabel": "Caasaan",
+        "granularities": {
+          "monthly": "Ji'aa",
+          "quarterly": "Torba",
+          "annual": "Bara"
+        },
+        "periodColumns": "{{count}} Ji'aa (ti) -- {{granularity}}"
+      },
+      "table": {
+        "title": "Kallatti",
+        "weight": "Rakkina",
+        "metric": "Kallatti",
+        "target": "Maqaa",
+        "type": "Iaayni",
+        "goal": "Kallatti",
+        "task": "Hojii",
+        "activity": "Kira",
+        "titleFull": "Kallatti ibsa",
+        "noData": "Odeeffannoo hindhufne."
+      },
+      "metrics": {
+        "empty": "---",
+        "invalid": "Kallatti hin hojjeti."
+      },
+      "errors": {
+        "loadReports": "Gabaasaaf hin hujjeetuu.",
+        "attachments": "Fayilotaa isaa hujjeetummaa.",
+        "downloadFailed": "Buu’oomsi kanhintaane."
+      }
+    },
+    "admin": {
+      "na": "---",
+      "actions": {
+        "tryAgain": "Dubbisu",
+        "saveChanges": "Hojii keenya mirgaa",
+        "cancel": "Dhaabuu"
+      },
+      "roles": {
+        "title": "Hirmaannoofi Hayyama",
+        "subtitle": "Hirmaannoon tajaajiluu fi walitti dhufeenya hayyama afaanicha Баарг.",
+        "loading": "Hirmaannoofi hayyamaa fe’achuuf jira...",
+        "rolesList": "Hirmaannaa",
+        "addRole": "Hirmaanna dabaluu",
+        "roleNamePlaceholder": "Maqaa dhimmichaa gabaa’ee yaz urliec.",
+        "roleNameAria": "Maqaa dhimmichaa",
+        "noRoles": "Maqaa walitti dhufeenya yeroo baay’ee hinqabu.",
+        "noPermissions": "Seera walitti dhufeenya yokin hayyama hin qabdu.",
+        "roleName": "Maqaa dhimmicha",
+        "createdAt": "Uumame",
+        "updatedAt": "Fooyya'e",
+        "permission": "Hayyama",
+        "permissions": "Hayyama",
+        "enabled": "Hojjetu",
+        "disabled": "Dhaabatu",
+        "permissionStatus": "Hayyama {{permission}} dhimmicha {{role}} mormii miseensii {{status}}",
+        "editingRole": "Hirmaannaa fooyyessuu",
+        "deleteRole": "Hirmaannaa cimaa",
+        "deleteConfirm": {
+          "message": "Maqaa \"{{name}}\" hirmaannaa cufuu dhugaadha?"
+        },
+        "deleteDisabled": "Maqaan lakkamaan cufuu hin dandeenye.",
+
+"toasts": {
+          "createSuccess": "Maqaa \"{{name}}\" fi hirmaannaa uumame.",
+          "updateSuccess": "Kanqaba fooyya’utti hin beeku.",
+          "deleteSuccess": "Maqaa \"{{name}}\" hirmaannaa cufame."
+        },
+        "errors": {
+          "loadError": "Hirmaannaa fi hayyama hinbeeku.",
+          "title": "Hirmaannaa hirmaanaa yaadi.",
+          "saveError": "Mirga seeraag darbe. {{#if error}}: {{error}}{{/if}}",
+          "deleteError": "Maqaa killif hirmaannaa baasaa {{#if error}}: {{error}}{{/if}}."
+        },
+        "roleActions": {
+          "add": "Hirmaanna uumu",
+          "remove": "Hirmaannaa cufuu"
+        },
+        "aria": {
+          "permissionToggle": "Hayyama hirmaata kanaa fidu"
+        },
+        "placeholders": {
+          "search": "Hirmaannoofi hayyama barbaadi..."
+        }
+      },
+      "actions2": {
+        "edit": "Fooyyessu",
+        "delete": "Cufuu",
+        "close": "Cufi",
+        "cancel": "Dhaabuu",
+        "processing": "Argachuun bakkam dhabuuf...",
+        "saveChanges": "Hojii keenya mirgaa"
+      }
+    }
   }
 }

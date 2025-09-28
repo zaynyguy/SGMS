@@ -123,8 +123,7 @@ const UsersManagementPage = () => {
       errors.password = t("admin.users.errors.passwordRequired");
     else if (formData.password && formData.password.length < 8)
       errors.password = t("admin.users.errors.passwordTooShort");
-    if (!formData.roleId)
-      errors.roleId = t("admin.users.errors.roleRequired");
+    if (!formData.roleId) errors.roleId = t("admin.users.errors.roleRequired");
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -180,8 +179,7 @@ const UsersManagementPage = () => {
     }
     if (file.size > 5 * 1024 * 1024) {
       showToast(
-        t("admin.users.errors.imageTooLarge") ||
-          "Image too large (max 5 MB)",
+        t("admin.users.errors.imageTooLarge") || "Image too large (max 5 MB)",
         "error"
       );
       return;
@@ -329,7 +327,9 @@ const UsersManagementPage = () => {
     } catch (error) {
       console.error("delete user error:", error);
       showToast(
-        t("admin.users.errors.deleteFailed", { error: error?.message || error }),
+        t("admin.users.errors.deleteFailed", {
+          error: error?.message || error,
+        }),
         "error"
       );
     } finally {
@@ -359,7 +359,7 @@ const UsersManagementPage = () => {
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+      <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-4 min-w-0">
           <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-900 flex-shrink-0">
             <Users className="h-6 w-6 text-sky-600 dark:text-sky-300" />
@@ -368,7 +368,7 @@ const UsersManagementPage = () => {
             <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white truncate">
               {t("admin.users.title")}
             </h1>
-            <p className="mt-1 text-sm md:text-base text-gray-600 dark:text-gray-300 truncate">
+            <p className="mt-1 text-sm md:text-base text-gray-600 dark:text-gray-300">
               {t("admin.users.subtitle")}
             </p>
           </div>
@@ -382,7 +382,8 @@ const UsersManagementPage = () => {
             disabled={submitting}
             aria-label={t("admin.users.addUser")}
           >
-            <UserPlus size={16} /> <span className="hidden sm:inline">{t("admin.users.addUser")}</span>
+            <UserPlus size={16} />{" "}
+            <span className=" sm:inline">{t("admin.users.addUser")}</span>
           </button>
         </div>
       </div>
@@ -423,9 +424,12 @@ const UsersManagementPage = () => {
 
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {users.map((u) => {
-                  const avatar = u.profilePicture || u.profilePictureUrl || null;
+                  const avatar =
+                    u.profilePicture || u.profilePictureUrl || null;
                   const roleLabel =
-                    (u.role && (u.role.name || u.role)) || u.roleId || t("admin.users.noRole");
+                    (u.role && (u.role.name || u.role)) ||
+                    u.roleId ||
+                    t("admin.users.noRole");
                   return (
                     <tr
                       key={u.id}
@@ -443,7 +447,9 @@ const UsersManagementPage = () => {
                             <div
                               className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
                               style={{
-                                background: gradientFromString(u.name || u.username || "user"),
+                                background: gradientFromString(
+                                  u.name || u.username || "user"
+                                ),
                               }}
                               aria-hidden
                             >
@@ -458,7 +464,9 @@ const UsersManagementPage = () => {
                             >
                               {u.name || u.username}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">@{u.username}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              @{u.username}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -500,16 +508,20 @@ const UsersManagementPage = () => {
               </tbody>
             </table>
           ) : (
-            <div className="p-8 text-center bg-white dark:bg-gray-800">
+            <div className="flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-gray-800">
               <div className="text-gray-500 dark:text-gray-400 mb-4">
-                <UserPlus size={48} className="mx-auto opacity-50" />
+                <UserPlus size={48} className="opacity-50" />
               </div>
-              <h3 className="text-lg md:text-xl font-medium text-gray-900 dark:text-white mb-2">{t("admin.users.noUsers")}</h3>
-              <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mb-6">{t("admin.users.noUsersDescription")}</p>
+              <h3 className="text-lg md:text-xl font-medium text-gray-900 dark:text-white mb-2">
+                {t("admin.users.noUsers")}
+              </h3>
+              <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mb-6 max-w-md">
+                {t("admin.users.noUsersDescription")}
+              </p>
               <button
                 type="button"
                 onClick={() => handleOpenUserModal(null)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
                 disabled={submitting}
                 aria-label={t("admin.users.addUser")}
               >
@@ -525,7 +537,9 @@ const UsersManagementPage = () => {
             users.map((u) => {
               const avatar = u.profilePicture || u.profilePictureUrl || null;
               const roleLabel =
-                (u.role && (u.role.name || u.role)) || u.roleId || t("admin.users.noRole");
+                (u.role && (u.role.name || u.role)) ||
+                u.roleId ||
+                t("admin.users.noRole");
               return (
                 <article
                   key={u.id}
@@ -543,7 +557,9 @@ const UsersManagementPage = () => {
                         <div
                           className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
                           style={{
-                            background: gradientFromString(u.name || u.username || "user"),
+                            background: gradientFromString(
+                              u.name || u.username || "user"
+                            ),
                           }}
                           aria-hidden
                         >
@@ -552,8 +568,12 @@ const UsersManagementPage = () => {
                       )}
 
                       <div className="min-w-0">
-                        <div className="font-semibold text-gray-900 dark:text-white truncate">{u.name || u.username}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">@{u.username}</div>
+                        <div className="font-semibold text-gray-900 dark:text-white truncate">
+                          {u.name || u.username}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          @{u.username}
+                        </div>
                         <div className="mt-2">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             {roleLabel}
@@ -590,16 +610,23 @@ const UsersManagementPage = () => {
               );
             })
           ) : (
-            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col items-center justify-center text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
               <div className="text-gray-400 dark:text-gray-500 mb-4">
-                <UserPlus size={48} className="mx-auto" />
+                <UserPlus size={48} />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t("admin.users.noUsers")}</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 px-4">{t("admin.users.noUsersDescription")}</p>
+
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                {t("admin.users.noUsers")}
+              </h3>
+
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md">
+                {t("admin.users.noUsersDescription")}
+              </p>
+
               <button
                 type="button"
                 onClick={() => handleOpenUserModal(null)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
                 disabled={submitting}
                 aria-label={t("admin.users.addUser")}
               >
@@ -619,8 +646,13 @@ const UsersManagementPage = () => {
           >
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-start justify-between mb-6 gap-4">
-                <h3 id="user-modal-title" className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white">
-                  {userToEdit ? t("admin.users.editUserTitle") : t("admin.users.createUserTitle")}
+                <h3
+                  id="user-modal-title"
+                  className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white"
+                >
+                  {userToEdit
+                    ? t("admin.users.editUserTitle")
+                    : t("admin.users.createUserTitle")}
                 </h3>
                 <button
                   type="button"
@@ -651,10 +683,17 @@ const UsersManagementPage = () => {
                     ) : (
                       <div
                         className="w-24 h-24 rounded-full flex items-center justify-center text-white font-semibold"
-                        style={{ background: gradientFromString(formData.name || formData.username || "user") }}
+                        style={{
+                          background: gradientFromString(
+                            formData.name || formData.username || "user"
+                          ),
+                        }}
                         aria-hidden
                       >
-                        {initialsFromName(formData.name || "", formData.username || "")}
+                        {initialsFromName(
+                          formData.name || "",
+                          formData.username || ""
+                        )}
                       </div>
                     )}
                   </div>
@@ -664,83 +703,140 @@ const UsersManagementPage = () => {
                       {t("admin.users.form.picture")}
                     </label>
                     <div className="flex items-center gap-2">
-                      <input id="user-picture" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                      <label htmlFor="user-picture" className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm">
+                      <input
+                        id="user-picture"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="user-picture"
+                        className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+                      >
                         {t("admin.users.form.upload")}
                       </label>
                       {profilePicturePreview && (
-                        <button type="button" onClick={removeProfilePreview} className="text-sm text-red-600 dark:text-red-400">
+                        <button
+                          type="button"
+                          onClick={removeProfilePreview}
+                          className="text-sm text-red-600 dark:text-red-400"
+                        >
                           {t("admin.users.form.remove")}
                         </button>
                       )}
                     </div>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t("admin.users.form.pictureHint")}</p>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      {t("admin.users.form.pictureHint")}
+                    </p>
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label
+                    htmlFor="username"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
                     {t("admin.users.form.username")} *
                   </label>
                   <input
                     id="username"
                     name="username"
                     type="text"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${formErrors.username ? "border-red-500 ring-2 ring-red-500" : "border-gray-300 dark:border-gray-600"} bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                      formErrors.username
+                        ? "border-red-500 ring-2 ring-red-500"
+                        : "border-gray-300 dark:border-gray-600"
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                     placeholder={t("admin.users.form.usernamePlaceholder")}
                     value={formData.username}
                     onChange={handleFormChange}
                     disabled={submitting || !!userToEdit}
                     aria-invalid={!!formErrors.username}
                   />
-                  {formErrors.username && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.username}</p>}
+                  {formErrors.username && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      {formErrors.username}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
                     {t("admin.users.form.name")} *
                   </label>
                   <input
                     id="name"
                     name="name"
                     type="text"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${formErrors.name ? "border-red-500 ring-2 ring-red-500" : "border-gray-300 dark:border-gray-600"} bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                      formErrors.name
+                        ? "border-red-500 ring-2 ring-red-500"
+                        : "border-gray-300 dark:border-gray-600"
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                     placeholder={t("admin.users.form.namePlaceholder")}
                     value={formData.name}
                     onChange={handleFormChange}
                     disabled={submitting}
                     aria-invalid={!!formErrors.name}
                   />
-                  {formErrors.name && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.name}</p>}
+                  {formErrors.name && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      {formErrors.name}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {userToEdit ? t("admin.users.form.newPassword") : t("admin.users.form.password")}
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
+                    {userToEdit
+                      ? t("admin.users.form.newPassword")
+                      : t("admin.users.form.password")}
                     {!userToEdit && " *"}
                   </label>
                   <input
                     id="password"
                     name="password"
                     type="password"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${formErrors.password ? "border-red-500 ring-2 ring-red-500" : "border-gray-300 dark:border-gray-600"} bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                      formErrors.password
+                        ? "border-red-500 ring-2 ring-red-500"
+                        : "border-gray-300 dark:border-gray-600"
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                     placeholder={t("admin.users.form.passwordPlaceholder")}
                     value={formData.password}
                     onChange={handleFormChange}
                     disabled={submitting}
                     aria-invalid={!!formErrors.password}
                   />
-                  {formErrors.password && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.password}</p>}
+                  {formErrors.password && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      {formErrors.password}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label htmlFor="roleId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label
+                    htmlFor="roleId"
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                  >
                     {t("admin.users.form.role")} *
                   </label>
                   <select
                     id="roleId"
                     name="roleId"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${formErrors.roleId ? "border-red-500 ring-2 ring-red-500" : "border-gray-300 dark:border-gray-600"} bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                      formErrors.roleId
+                        ? "border-red-500 ring-2 ring-red-500"
+                        : "border-gray-300 dark:border-gray-600"
+                    } bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                     value={formData.roleId}
                     onChange={handleFormChange}
                     disabled={submitting}
@@ -753,7 +849,11 @@ const UsersManagementPage = () => {
                       </option>
                     ))}
                   </select>
-                  {formErrors.roleId && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{formErrors.roleId}</p>}
+                  {formErrors.roleId && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      {formErrors.roleId}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-4">
@@ -801,11 +901,19 @@ const UsersManagementPage = () => {
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
                   <Trash className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
-                <h3 id="delete-title" className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
+                <h3
+                  id="delete-title"
+                  className="mt-4 text-lg font-semibold text-gray-900 dark:text-white"
+                >
                   {t("admin.users.deleteConfirm.title")}
                 </h3>
-                <p id="delete-desc" className="mt-2 text-gray-600 dark:text-gray-400">
-                  {t("admin.users.deleteConfirm.message", { name: userToDelete.name })}
+                <p
+                  id="delete-desc"
+                  className="mt-2 text-gray-600 dark:text-gray-400"
+                >
+                  {t("admin.users.deleteConfirm.message", {
+                    name: userToDelete.name,
+                  })}
                 </p>
               </div>
 

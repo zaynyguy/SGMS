@@ -1,783 +1,818 @@
 {
-  "accessDenied": {
-    "title": "403",
-    "heading": "መዳረሻ የተከለ",
-    "message": "ይቅርታ፣ ይህን ገፅ ለማየት የበቂ ፈቃድ የለዎትም።",
-    "button": "ወደ ዳሽቦርድ ይሂዱ"
-  },
   "access": {
     "title": "የመዳረሻ አስተዳደር",
-    "openMenu": "የንባብ ምዝገባ ክፈት",
-    "closeMenu": "ምዝገባ ዝጋ",
+    "subtitle": "ማን ባህሪያትን እና ውሂብን በድርጅቱ ላይ መድረስ እንደሚችል ይቆጣጠሩ።",
     "nav": {
       "users": "ተጠቃሚዎች",
       "roles": "ሚናዎች",
       "groups": "ቡድኖች"
-    }
-  },
-  "app": {
-    "title": "የሪፖርት ዳሽቦርድ",
-    "subtitle": "ሪፖርቶችን ጫን፣ አስተያየት እና ሪፖርቶችን ይፍጠሩ",
-    "systemName": "የሪፖርት ስርዓት"
-  },
-  "tabs": {
-    "review": "እይታ",
-    "master": "ማስተር"
-  },
-  "common": {
-    "dash": "—"
-  },
-  "login": {
-    "title": "እንኳን ደህና መጡ",
-    "subtitle": "ወደ መለያዎ ይግቡ",
-    "prompt": "ለመቀጠል የመረጃዎን ያስገቡ",
-    "username_label": "የተጠቃሚ ስም",
-    "username_placeholder": "የተጠቃሚዎን ስም ያስገቡ",
-    "password_label": "የይለፍ ቃል",
-    "password_placeholder": "የይለፍ ቃልዎን ያስገቡ",
-    "password_too_short": "የይለፍ ቃል ቢያንስ 8 ፊደላት መሆን አለበት",
-    "remember_label": "አስታውስኝ",
-    "button_signin": "ግባ",
-    "logging_in": "በመግባት ላይ...",
-    "error_default": "ግባት አልተሳካም። እባክዎ ድገ ሞክሩ።",
-    "forgot_password": "የይለፍ ቃል ደረሰ?",
-    "no_account": "መለያ የለዎትም?",
-    "signup_link": "እዚህ ይመዝገቡ"
-  },
-  "errorBoundary": {
-    "title": "ነገር አልተስራ",
-    "message": "ያልተወሰነ ስህተት ተፈጥሯል። ገፁን እባክዎ ዳግም ያድርጉ።",
-    "detailsTitle": "የስህተት ዝርዝሮች",
-    "technicalDetails": "ቴክኒክ ዝርዝሮች:",
-    "componentStack": "የክፍለ-ዋና ሰንደቅ:",
-    "refreshButton": "ገፁን አዘጋጅ"
-  },
-  "dashboard": {
-    "title": "ዳሽቦርድ",
-    "refresh": "ዳግም አስመልስ",
-    "aria": {
-      "refresh": "ዳሽቦርድን አዘጋጅ",
-      "loading": "የዳሽቦርድ ዳታ በማስጫን ላይ",
-      "loaded": "የዳሽቦርድ ዳታ ተጫነ"
     },
-    "failedLoadPrefix": "እንደርስ አልተሳካም: ",
-    "errors": {
-      "summary": "የማጠቃለያ ዳታ",
-      "groupCharts": "የቡድን ገቢዎች",
-      "taskCharts": "የሥራ ገቢዎች",
-      "reports": "የሪፖርቶች ዳታ",
-      "overdue": "የቆራጥ ሥራዎች",
-      "notifications": "ማሳወቂያዎች",
-      "audit": "የኦዲት መዝገቦች"
-    },
-    "cards": {
-      "goals": {
-        "title": "የግብ እድገት",
-        "fromLast": "ከያለፈው ወር",
-        "noComparison": "የሚነጋገር ዳታ የለም"
-      },
-      "tasks": {
-        "title": "የሥራ እድገት",
-        "subtitle": "የተጠናቀቁ ሥራዎች"
-      },
-      "activities": {
-        "title": "የእንቅስቃሴ እድገት",
-        "subtitle": "የእንቅስቃሴ ጤና"
-      },
-      "pendingReports": {
-        "title": "የሚጠበቁ ሪፖርቶች",
-        "subtitle": "ሪፖርቶችን ለማክበር ጫን"
-      }
-    },
-    "groupProgress": "የቡድን እድገት",
-    "topTasks": "ከፍተኛ ሥራዎች",
-    "reportsDistribution": "የሪፖርቶች መዋደድ",
-    "overdueTitle": "የቆራጥ ሥራዎች",
-    "tasks": "ሥራዎች",
-    "open": "ክፈት",
-    "noOverdue": "የቆራጥ ሥራዎች የሉም።",
-    "noNotifications": "ማሳወቂያዎች የሉም",
-    "notifications": {
-      "title": "የቅርብ ጊዜ ማሳወቂያዎች",
-      "markAll": "ሁሉንም ንቁ ያድርጉ",
-      "marking": "በመስራት..."
-    },
-    "audit": {
-      "title": "የቅርብ ጊዜ ኦዲት",
-      "noPermission": "የኦዲት መዝገቦችን ለማየት ፈቃድ የለዎትም።",
-      "noLogs": "የኦዲት መዝገቦች የሉም።"
-    },
-    "table": {
-      "task": "ሥራ",
-      "due": "የሚያስፈልገው",
-      "daysOverdue": "ዕለታት የቀረ",
-      "assignee": "የተሰጠ",
-      "goal": "ግብ",
-      "group": "ቡድን",
-      "link": "አገናኝ"
-    },
-    "cards_small": {
-      "goals": {
-        "title": "ግቦች",
-        "subtitle": "እድገት"
-      }
-    },
-    "failedLoadPrefixLabel": "እንደርስ አልተሳካም"
-  },
-  "settings": {
-    "title": "የተጠቃሚ ቅንብሮች",
-    "loading": "ቅንብሮችን በመጫን...",
-    "personalInfo": "የግል መረጃ",
-    "username": "የተጠቃሚ ስም",
-    "name": "ስም",
-    "appearance": "አርእስት",
-    "language": "ቋንቋ",
-    "theme": "ቅርጸ ጽሑፍ",
-    "lightMode": "ብርሃን መገለጫ",
-    "darkMode": "ጨለማ መገለጫ",
-    "changePassword": "የይለፍ ቃል መቀየር",
-    "oldPassword": "የድሮ የይለፍ ቃል",
-    "newPassword": "አዲስ የይለፍ ቃል",
-    "passwordPlaceholder": "የይለፍ ቃልዎን ያስገቡ",
-    "saveChanges": "ለውጦችን አስቀምጥ",
-    "saving": "በማስቀመጥ...",
-    "passwordRequirements": "ቢያንስ 8 ፊደላት።",
-    "profilePicture": "የፕሮፋይል ምስል",
-    "themeLabel": "ቅርጸ ጽሑፍ",
-    "chooseImage": "ምስል ይምረጡ",
-    "pictureHint": "ምርጥ ውጤት ዘንድ አንጻር ምስል ያስገቡ",
-    "usernameHelp": "ይህ ለሌሎች ተጠቃሚዎች ይታያል",
-    "minimumCharacter": "ቢያንስ 3 ቁምፊዎች ያስፈልጋሉ",
-    "toasts": {
-      "updateSuccess": "ቅንብሮች በተሳካ ሁኔታ ተዘዋውሯል!",
-      "pictureSuccess": "የፕሮፋይል ምስል ተቀይሯል",
-      "updateSuccessShort": "ቅንብሮች ተዘዋውሯል"
-    },
-    "errors": {
-      "loadError": "ቅንብሮችን ማግኘት አልተቻለም",
-      "updateError": "ቅንብሮችን ማዘመን አልተቻለም",
-      "passwordTooShort": "የይለፍ ቃል ቢያንስ 8 ፊደላት መሆን አለበት",
-      "invalidImage": "የምስል ፋይል ትክክል አይደለም።",
-      "imageTooLarge": "ምስሉ በጣም ትልቅ ነው (ከፍተኛ {{max}}).",
-      "uploadError": "ምስሉን መጫን አልተቻለም።",
-      "oldPasswordRequired": "አዲስ የይለፍ ቃል ለመቀየር የድሮ የይለፍ ቃል ያስፈልጋል።",
-      "updateErrorDetailed": "የቅንብሮች ማዘመን አልተቻለም።"
-    }
-  },
-  "sidebar": {
-    "appName": "SGMS",
-    "logoAlt": "የኩባንያ አርማ",
-    "menu": {
-      "dashboard": "ዳሽቦርድ",
-      "settings": "ቅንብሮች",
-      "admin": "አስተዳደር",
-      "systemSettings": "የስርዓት አስተዳደር",
-      "audit": "የኦዲት መዝገብ",
-      "accessManagement": "የመዳረሻ አስተዳደር",
-      "reports": "ሪፖርቶች",
-      "projectManagement": "የፕሮጀክት አስተዳደር",
-      "attachments": "አትችማንቶች",
-      "notifications": "ማሳወቂያዎች"
-    },
-    "logout": "ውጣ",
-    "closeMenu": "ምዝገባ ዝጋ",
-    "openMenu": "ምዝገባ ክፈት",
-    "openMenuAria": "የናርኛ ምዝገባ ክፈት",
-    "closeMenuAria": "የናርኛ ምዝገባ ዝጋ",
-    "profileAlt": "የተጠቃሚ ፕሮፋይል ምስል",
-    "logoAltText": "የኩባንያ አርማ",
-    "appNameAlt": "ህትመትዎ"
-  },
-  "admin": {
-    "title": "የአስተዳደር ዳሽቦርድ",
-    "header": "የአስተዳደር ፓነል",
-    "mobileMenu": {
-      "toggle": "ምዝገባ ቀይር"
-    },
-    "tabs": {
-      "users": "ተጠቃሚዎች",
-      "roles": "ሚናዎች",
-      "settings": "ቅንብሮች",
-      "auditLog": "የኦዲት መዝገብ",
-      "switchTo": "ወደ {tab} ትክክለኛ ትር"
-    },
-    "user": {
-      "title": "የተጠቃሚ አስተዳደር",
-      "table": {
-        "username": "የተጠቃሚ ስም",
-        "name": "ሙሉ ስም",
-        "role": "ሚና",
-        "action": "እርምጃ"
-      }
-    },
-    "sidebar": {
-      "appName": "የአስተዳደር ፓነል",
-      "logoAlt": "የኩባንያ አርማ",
-      "menu": {
-        "dashboard": "ዳሽቦርድ",
-        "settings": "ቅንብሮች",
-        "admin": "አስተዳደር"
-      },
-      "logout": "ውጣ",
-      "closeMenu": "ምዝገባ ዝጋ",
-      "openMenu": "ምዝገባ ክፈት"
-    },
-    "actions": {
-      "cancel": "ሰንቀቅ",
-      "saveChanges": "ለውጦችን አስቀምጥ",
-      "create": "ፍጠር",
-      "delete": "ሰርዝ",
-      "tryAgain": "ማጥናት ይሞክሩ",
-      "processing": "በማስከናወን...",
-      "deleting": "በመሰረዝ...",
-      "close": "ዝጋ",
-      "edit": "አርትዕ"
-    },
-    "users": {
-      "addUser": "ተጠቃሚ አክል",
-      "edit": "አርትዕ",
-      "delete": "ሰርዝ",
-      "editUser": "የተጠቃሚውን {name} አርትዕ",
-      "deleteUser": "የተጠቃሚውን {name} ሰርዝ",
-      "editUserTitle": "የተጠቃሚ አርትዕ",
-      "createUserTitle": "ተጠቃሚ ፍጠር",
-      "noUsers": "ተጠቃሚዎች አልተገኙም",
-      "notAvailable": "አይገኝም",
-      "role": "ሚና",
-      "changeStatus": "ሁኔታውን ቀይር",
-      "statusChanged": "{name} ለ {status} ተቀይሯል",
-      "status": {
-        "active": "ንቁ",
-        "inactive": "ያልተንቀሳቀሰ",
-        "pending": "በሂደት"
-      },
-      "tableHeaders": {
-        "username": "የተጠቃሚ ስም",
-        "name": "ስም",
-        "role": "ሚና",
-        "status": "ሁኔታ",
-        "actions": "እርምጃዎች"
-      },
-      "form": {
-        "username": "የተጠቃሚ ስም",
-        "usernamePlaceholder": "የተጠቃሚ ስም ያስገቡ",
-        "name": "ሙሉ ስም",
-        "namePlaceholder": "ሙሉ ስም ያስገቡ",
-        "password": "የይለፍ ቃል",
-        "newPassword": "አዲስ የይለፍ ቃል",
-        "passwordPlaceholder": "የይለፍ ቃል ያስገቡ",
-        "role": "ሚና",
-        "selectRole": "ሚና ይምረጡ"
-      },
-      "deleteConfirm": {
-        "title": "የማስወገጃ ማረጋገጫ",
-        "message": "ለማስወገጅ ወደ ፊት ተጠይቀዋል፣ {name} የተጠቃሚውን መለያ ማስወገጃ እንደሚያስፈልግ ይረዳሉ።"
-      },
-      "toasts": {
-        "createSuccess": "{name} በተሳካ ሁኔታ ተፈጥሯል!",
-        "updateSuccess": "{name} በተሳካ ሁኔታ ተአዘዏል!",
-        "deleteSuccess": "{name} በተሳካ ሁኔታ ተሰርዟል!"
-      },
-      "errors": {
-        "loadFailed": "የተጠቃሚዎችን ጭነት ማግኘት አልተቻለም: {error}",
-        "saveFailed": "የተጠቃሚውን መዝገብ ማስቀመጥ አልተቻለም: {error}",
-        "deleteFailed": "የተጠቃሚውን ማጥፊያ ማስወገጃ አልተቻለም: {error}",
-        "passwordTooShort": "የይለፍ ቃል ቢያንስ 8 ፊደላት መሆን አለበት",
-        "usernameRequired": "የተጠቃሚ ስም ያስፈልጋል",
-        "nameRequired": "ስም ያስፈልጋል",
-        "passwordRequired": "የይለፍ ቃል ያስፈልጋል",
-        "roleRequired": "ሚና ያስፈልጋል",
-        "formValidation": "እባክዎ የቅፅ ስህተቶችን አስተካክሉ",
-        "deleteFailedDetailed": "የተጠቃሚውን ማጥፊያ ማስወገጃ አልተቻለም: {{error}}"
-      }
-    },
-    "roles": {
-      "title": "የሚና አስተዳደር",
-      "rolesList": "ሚናዎች",
-      "permissions": "ፈቃዶች",
-      "permission": "ፈቃድ",
-      "roleName": "የሚና ስም",
-      "roleNamePlaceholder": "የሚና ስም ያስገቡ",
-      "description": "መግለጫ",
-      "descriptionPlaceholder": "መግለጫ ያስገቡ",
-      "optional": "አማራጭ",
-      "noRoles": "ምንም ሚና የለም",
-      "noPermissions": "ፈቃዶች የሉም",
-      "addRole": "ሚና አክል",
-      "editRoleTitle": "ሚናን አርትዕ",
-      "createRoleTitle": "ሚና ፍጠር",
-      "editRole": "አርትዕ {name}",
-      "deleteRole": "ይሰርዙ {name}",
-      "enabled": "ይቻላል",
-      "disabled": "ዘገይ",
-      "permissionStatus": "{permission} ፈቃድ እንደ {role} ሁኔታ {status} ነው",
-      "loading": "ሚናዎችን እየተጫነ...",
-      "deleteConfirm": {
-        "title": "የሚናን ማስወገጃ ማረጋገጫ",
-        "message": "እርግጠኛ ነህ ይህን ሚና '{name}' ለማስወገጅ?"
-      },
-      "toasts": {
-        "createSuccess": "ሚና '{name}' በተሳካ ሁኔታ ተፈጥሯል",
-        "updateSuccess": "ሚና '{name}' በተሳካ ሁኔታ ታደሰ",
-        "deleteSuccess": "ሚና '{name}' በተሳካ ሁኔታ ተሰርዟል"
-      },
-      "errors": {
-        "title": "ስህተት የሚናን ማከናወን",
-        "loadError": "የሚና ዳታን ማግኘት አልተቻለም",
-        "saveError": "ሚናን ማስቀመጥ አልተቻለም: {error}",
-        "deleteError": "ሚናን ማስወገጃ አልተቻለም: {error}",
-        "noPermissionsFound": "ፈቃዶች አልተገኙም"
-      }
-    },
-    "settings": {
-      "title": "ቅንብሮች",
-      "loading": "ቅንብሮችን በመጫን...",
-      "saveButton": "ቅንብሮችን አስቀምጥ",
-      "saveSuccess": "ቅንብሮች በተሳካ ሁኔታ ተቀምጠዋል",
-      "connectionTesting": "የኢሜይል አገልግሎት ግንኙነት እየተፈተነ...",
-      "connectionSuccess": "የኢሜይል አገልግሎት ግንኙነት ተሳክቷል",
-      "reportingPeriod": {
-        "title": "የሪፖርት የጊዜ ገደብ ቅንብሮች",
-        "monthlyDueDate": "የወርሃዊ ሪፖርት የመጨረሻ ቀን",
-        "fiscalYearStart": "የግምገማ ዓመት የጀመረበት ወር"
-      },
-      "emailServer": {
-        "title": "የኢሜይል አገልግሎት ቅንብሮች",
-        "smtpHost": "SMTP ባለቤት",
-        "smtpHostPlaceholder": "ለምሳሌ smtp.example.com",
-        "port": "ፖርት",
-        "portPlaceholder": "ለምሳሌ 587",
-        "username": "የተጠቃሚ ስም",
-        "usernamePlaceholder": "የSMTP የተጠቃሚ ስም",
-        "password": "የይለፍ ቃል",
-        "passwordPlaceholder": "የSMTP የይለፍ ቃል",
-        "testConnection": "ግንኙነት ይፈትሹ"
-      },
-      "fileUpload": {
-        "title": "የፋይል ጫን ቅንብሮች",
-        "maxFileSize": "ከፍተኛ የፋይል መጠን (MB)",
-        "maxFileSizePlaceholder": "ለምሳሌ 10",
-        "allowedFileTypes": "የተፈቀዱ የፋይል ዓይነቶች",
-        "allowedFileTypesPlaceholder": "ለምሳሌ .pdf,.doc,.docx,.xls,.xlsx"
-      },
-      "notifications": {
-        "title": "የማሳወቂያ ቅንብሮች",
-        "reportDue": "ሪፖርት ሲደርስ ተጠቃሚዎችን አሳውቅ",
-        "onSubmission": "ሪፖርት ሲገናኝ ከፈቃድ አስተዳደሮችን አሳውቅ",
-        "weeklySummary": "ሳምንታዊ አጠቃላይ ኢሜይል ላክ"
-      },
-      "emailTemplates": {
-        "title": "የኢሜይል አብነቶች",
-        "placeholder": "የኢሜይል አብነትዎን እዚህ ያስገቡ...",
-        "default": "የነባር የኢሜይል አብነት ይዘት..."
-      },
-      "errors": {
-        "loadError": "ቅንብሮችን ማግኘት አልተቻለም",
-        "updateError": "ቅንብሮችን ማዘመን አልተቻለም",
-        "missingEmailDetails": "የኢሜይል አገልግሎት ዝርዝሮችን እባክዎ ያስገቡ",
-        "connectionFailed": "የኢሜይል አገልግሎት ግንኙነት ማጣት አለ"
-      },
-      "toasts": {
-        "updateSuccess": "ቅንብሮች በተሳካ ሁኔታ ተሻሽለዋል"
-      }
-    }
-  },
-  "audit": {
-    "title": "የኦዲት መዝገብ",
-    "exportCsv": "CSV ይላክ",
-    "searchPlaceholder": "በተጠቃሚ፣ ንጥል፣ እርምጃ ወይም ዝርዝር ፍለጋ...",
-    "searchAria": "የኦዲት መዝገቦችን ፈልግ",
-    "loading": "መጫን ላይ...",
-    "loadFailed": "የኦዲት መዝገቦችን ማግኘት አልተቻለም",
-    "na": "ማይገኝ",
-    "csv": {
-      "filename": "audit_log.csv"
-    },
-    "export": {
-      "success": "ውጤት ተሳክቷል!"
-    },
-    "filters": {
-      "show": "ማጣሪያዎችን አሳይ",
-      "hide": "ማጣሪያዎችን ደብቅ",
-      "title": "የመረጃ ጣሪያ",
-      "fromDate": "ከ ቀን",
-      "toDate": "እስከ ቀን",
-      "apply": "ማጣሪያዎችን ተግባር ላይ አስር",
-      "clear": "አጽዳ",
-      "applied": "ማጣሪያዎች ተግባር ላይ ነው",
-      "cleared": "ማጣሪያዎች ተነጻ"
-    },
-    "results": {
-      "showing": "ከ {{total}} ውስጥ {{filtered}} የተገኙ ቅጽበቶችን እየተገለጸ"
-    },
-    "table": {
-      "timestamp": "ጊዜ ማብራሪያ",
-      "user": "ተጠቃሚ",
-      "entity": "ንጥል",
-      "action": "እርምጃ",
-      "details": "ዝርዝር"
-    },
-    "noLogs": {
-      "title": "የኦዲት መዝገብ ምንም አልተገኘም",
-      "tryAdjust": "እባክዎ ፍለጋዎን ወይም ማጣሪያዎችን ያስተካክሉ",
-      "none": "ለማሳየት የኦዲት መዝገቦች የሉም"
-    },
-    "expanded": {
-      "fullDetails": "ሙሉ ዝርዝር",
-      "additionalInfo": "ተጨማሪ መረጃ",
-      "idLabel": "መለያ:",
-      "entityLabel": "ንጥል:",
-      "ipLabel": "የIP አድራሻ:",
-      "userAgentLabel": "የተጠቃሚ ወጪ:"
-    },
-    "pagination": {
-      "range": "ከ {{from}} እስከ {{to}} ድረስ እየታየ ከ {{total}} ውስጥ",
-      "previous": "የቀደም",
-      "next": "ቀጣይ"
-    },
-    "toast": {
-      "filtersApplied": "ማጣሪያዎች በተሳካ ሁኔታ ተገልጿል",
-      "exportSuccess": "የኦዲት መዝገብ ተላከ"
+    "mobileNav": {
+      "ariaLabel": "የመዳረሻ አሰሳ"
     }
   },
   "attachments": {
-    "title": "አትችማንቶች",
-    "searchPlaceholder": "ፋይሎችን፣ id ወይም ዓይነት ፍለጋ...",
-    "searchAria": "ፋይልን ፈልግ",
-    "clearSearchTitle": "ፍለጋ አጽዳ",
-    "clearSearchAria": "ፍለጋ አጽዳ",
+    "title": "አባሪዎች",
+    "subtitle": "ፋይሎችን፣ ሰቀላዎችን እና ሰነዶችን ለሪፖርቶች እና ዕቃዎች አስተዳድር።",
+    "viewToggleAria": "የአባሪዎችን እይታ ቀያይር",
     "view": {
-      "grid": "አሰሳ",
-      "table": "ሰንጠረዥ",
-      "gridTitle": "የአሰሳ እይታ",
-      "tableTitle": "የሰንጠረዥ እይታ"
+      "grid": "ፍርግርግ",
+      "gridTitle": "የፍርግርግ እይታ",
+      "table": "ዝርዝር",
+      "tableTitle": "የዝርዝር እይታ"
     },
-    "loading": "አትችማንቶችን በመጫን...",
-    "noAttachmentsTitle": "አትችማንቶች አልተገኙም",
-    "noAttachmentsSubtitle": "የሚፈለጉት ፋይሎች አይደሉም ወይም ፋይሎች አልተጫኑ",
+    "closePreview": "ቅድመ እይታን ዝጋ",
+    "messages": {
+      "failedLoad": "ዓባሪዎችን መጫን አልተሳካም።",
+      "noFileReturned": "ከአገልጋይ የተመለሰ ፋይል የለም።",
+      "downloadFailed": "ማውረድ አልተሳካም።",
+      "deleteFailed": "ዓባሪን መሰረዝ አልተሳካም።"
+    },
+    "loading": "አባሪዎችን በመጫን ላይ…",
+    "noAttachmentsTitle": "ምንም ዓባሪዎች የሉም",
+    "noAttachmentsSubtitle": "ለዚህ ሪፖርት ምንም ዓባሪዎች የሉም።",
     "table": {
       "file": "ፋይል",
       "type": "ዓይነት",
-      "uploaded": "ተጫነ",
-      "actions": "እርምጃዎች"
+      "uploaded": "ተጭኗል",
+      "actions": "ድርጊቶች"
     },
-    "download": "አውርድ",
-    "preview": "ንዑስ እይታ",
+    "idPrefix": "መታወቂያ፡",
+    "uploadedPrefix": "ተጭኗል፡",
+    "empty": "—",
+    "download": "ማውረድ",
+    "preview": "ቅድመ እይታ",
     "delete": "ሰርዝ",
-    "confirmDelete": "እርግጠኛ ነህ ይህን ማጥፊያ ለማስወገጅ?",
-    "messages": {
-      "failedLoad": "አትችማንቶችን ማግኘት አልተቻለም።",
-      "downloadFailed": "ውስጥ አውርድ አልተሳካም",
-      "deleteFailed": "ማጥፊያ ማስወገጃ አልተቻለም",
-      "noFileReturned": "ከአገልግሎቱ ፋይል አልተመለሰም"
+    "confirmDelete": "እርግጠኛ ነዎት ይህን ዓባሪ መሰረዝ ይፈልጋሉ?",
+    "searchPlaceholder": "ዓባሪዎችን በስም ፣ በመታወቂያ ወይም በአይነት ይፈልጉ…",
+    "searchAria": "አባሪዎችን ይፈልጉ",
+    "clearSearchAria": "ፍለጋን አጽዳ",
+    "clearSearchTitle": "ፍለጋን አጽዳ"
+  },
+  "audit": {
+    "title": "የኦዲት መዝገብ",
+    "subtitle": "የስርዓት ክስተቶች፣ ደህንነት እና የተጠቃሚ እንቅስቃሴ የዘመን ቅደም ተከተል መዝገብ ይመልከቱ።",
+    "loadFailed": "የኦዲት ምዝግብ ማስታወሻዎችን መጫን አልተሳካም።",
+    "exportCsv": "CSV ወደ ውጪ ላክ",
+    "csv": {
+      "filename": "ኦዲት-ምዝግብ ማስታወሻዎች.csv"
     },
-    "idPrefix": "መለያ:",
-    "uploadedPrefix": "ተጫነ:",
-    "closePreview": "ንዑስ እይታ ዝጋ",
-    "empty": "—"
+    "export": {
+      "success": "ወደ ውጭ መላክ ተጀምሯል - ማውረድዎ በቅርቡ መጀመር አለበት።"
+    },
+    "searchPlaceholder": "በተጠቃሚ፣ አካል፣ ድርጊት ወይም ዝርዝሮች ይፈልጉ",
+    "searchAria": "የኦዲት ምዝግብ ማስታወሻዎችን ይፈልጉ",
+    "results": {
+      "showing": "ከ{{total}} ምዝግብ ማስታወሻዎች ውስጥ {{filtered}} በማሳየት ላይ"
+    },
+    "loading": "በመጫን ላይ…",
+    "filters": {
+      "show": "ማጣሪያዎችን አሳይ",
+      "hide": "ማጣሪያዎችን ደብቅ",
+      "title": "ማጣሪያዎች",
+      "fromDate": "ከቀን",
+      "toDate": "እስከ ዛሬ ድረስ",
+      "apply": "ማጣሪያዎችን ይተግብሩ",
+      "clear": "ማጣሪያዎችን አጽዳ",
+      "applied": "ማጣሪያዎች ተተግብረዋል",
+      "cleared": "ማጣሪያዎች ጸድተዋል።"
+    },
+    "table": {
+      "timestamp": "የጊዜ ማህተም",
+      "user": "ተጠቃሚ",
+      "entity": "አካል",
+      "action": "ድርጊት",
+      "details": "ዝርዝሮች"
+    },
+    "noLogs": {
+      "title": "ምንም የኦዲት ምዝግብ ማስታወሻዎች አልተገኙም።",
+      "none": "እስካሁን ምንም የኦዲት ምዝግብ ማስታወሻዎች የሉም።",
+      "tryAdjust": "የእርስዎን ፍለጋ ወይም የቀን ማጣሪያዎች ለማስተካከል ይሞክሩ።"
+    },
+    "expanded": {
+      "fullDetails": "ሙሉ ዝርዝሮች",
+      "additionalInfo": "ተጨማሪ መረጃ",
+      "idLabel": "መታወቂያ፡",
+      "entityLabel": "አካል፡",
+      "ipLabel": "አይፒ፡",
+      "userAgentLabel": "የተጠቃሚ ወኪል፡-",
+      "show": "ዝርዝሮችን አሳይ",
+      "hide": "ዝርዝሮችን ደብቅ"
+    },
+    "na": "ኤን/ኤ",
+    "pagination": {
+      "range": "ከ{{total}} ወደ {{to}} ከ{{ጠቅላላ}}» በማሳየት ላይ",
+      "previous": "ቀዳሚ",
+      "next": "ቀጥሎ"
+    }
   },
   "groups": {
-    "title": "የቡድን አስተዳደር",
-    "searchPlaceholder": "ቡድኖችን ፈልግ...",
-    "searchAria": "ቡድን ፈለግ",
+    "title": "ቡድኖች",
+    "subtitle": "ቡድኖችን እና አባልነትን ይፍጠሩ እና ያስተዳድሩ።",
+    "searchPlaceholder": "ቡድኖችን በስም ወይም በመግለጫ ፈልግ…",
+    "search": {
+      "placeholder": "ቡድኖችን በስም ወይም በመግለጫ ፈልግ…",
+      "aria": "ቡድኖችን ፈልግ"
+    },
     "newGroup": "አዲስ ቡድን",
-    "loading": "ቡድኖችን እየተጫነ...",
-    "noResults": "ቡድኖች አልተገኙም",
-    "noDescription": "መግለጫ የለም",
-    "na": "አልተገኘ",
-    "confirmDelete": "እርግጠኛ ነህ ይህን ቡድን ለማስወገጅ?",
-    "createdPrefix": "ተፈጥሯል:",
-    "updatedPrefix": "አዘጋጅ:",
+    "loading": "ቡድኖችን በመጫን ላይ…",
+    "noResults": "ምንም ቡድኖች አልተገኙም።",
+    "noDescription": "የተሰጠ መግለጫ የለም።",
+    "confirmDelete": "እርግጠኛ ነዎት ይህን ቡድን መሰረዝ ይፈልጋሉ?",
+    "messages": {
+      "loadFailed": "ቡድኖችን መጫን አልተሳካም።",
+      "created": "ቡድን ተፈጠረ",
+      "updated": "ቡድን ዘምኗል",
+      "deleted": "ቡድን ተሰርዟል።",
+      "saveFailed": "ቡድን ማስቀመጥ አልተሳካም።",
+      "deleteFailed": "ቡድንን መሰረዝ አልተሳካም።"
+    },
     "table": {
-      "name": "የቡድን ስም",
+      "name": "ስም",
       "description": "መግለጫ",
       "members": "አባላት",
-      "created": "ተፈጥሯል",
-      "updated": "ተካሄዷል",
-      "actions": "እርምጃዎች"
+      "created": "ተፈጠረ",
+      "updated": "ተዘምኗል",
+      "actions": "ድርጊቶች"
     },
+    "createdPrefix": "ተፈጠረ:",
+    "updatedPrefix": "ተዘምኗል:",
+    "idPrefix": "መታወቂያ፡",
     "actions": {
-      "edit": "ቡድኑን አርትዕ",
-      "delete": "ቡድኑን ሰርዝ",
-      "toggle": "ዝርዝር አሳይ/ዝጋ"
-    },
-    "members": {
-      "label": "አባላት",
-      "linkText": "{{count}} አባላት",
-      "manage": "አባላትን አስተዳድር",
-      "title": {
-        "manage": "አባላትን አስተዳድር"
-      },
-      "add": {
-        "title": "አባል አክል",
-        "selectUser": "ተጠቃሚ ይምረጡ",
-        "button": "አባል አክል",
-        "adding": "በመጨመር...",
-        "noAvailable": "ሁሉም ተጠቃሚዎች ከዚህ ቡድን አባላት ናቸው."
-      },
-      "current": {
-        "title": "አሁን ያሉ አባላት ({{count}})",
-        "empty": "በዚህ ቡድን አሁን አባላት የሉም."
-      },
-      "remove": {
-        "title": "አባል አወግድ"
-      }
+      "edit": "ቡድን አርትዕ",
+      "delete": "ቡድን ሰርዝ",
+      "toggle": "ዝርዝሮችን ቀያይር"
     },
     "form": {
       "title": {
-        "create": "ቡድን ፍጠር",
-        "edit": "ቡድኑን አርትዕ"
+        "create": "ቡድን ይፍጠሩ",
+        "edit": "ቡድን አርትዕ"
       },
+      "close": "ገጠመ",
       "labels": {
         "name": "የቡድን ስም",
         "description": "መግለጫ"
       },
       "buttons": {
-        "cancel": "ሰንቀቅ",
-        "create": "ፍጠር",
-        "save": "አስቀምጥ",
-        "saving": "በመስቀመጥ..."
+        "uploadPicture": "ስዕል ስቀል",
+        "cancel": "ሰርዝ",
+        "create": "ቡድን ይፍጠሩ",
+        "save": "ለውጦችን ያስቀምጡ",
+        "saving": "በማስቀመጥ ላይ…",
+        "remove": "አስወግድ"
       },
       "errors": {
         "nameRequired": "የቡድን ስም ያስፈልጋል",
-        "nameTooLong": "ስም ከ50 ፊደላት ይበልጣል አይደለም",
-        "descriptionTooLong": "መግለጫ ከ300 ፊደላት ይበልጣል አይደለም"
-      },
-      "close": "ዝጋ"
+        "nameTooLong": "ስም 50 ቁምፊዎች ወይም ከዚያ ያነሰ መሆን አለበት።",
+        "descriptionTooLong": "መግለጫው 300 ቁምፊዎች ወይም ከዚያ ያነሰ መሆን አለበት።",
+        "invalidImage": "ልክ ያልሆነ የምስል ፋይል",
+        "imageTooLarge": "ምስል በጣም ትልቅ (ቢበዛ 5 ሜባ)",
+        "saveFailed": "ቡድን ማስቀመጥ አልተሳካም።"
+      }
     },
-    "messages": {
-      "loadFailed": "ዳታን ማግኘት አልተቻለም። እባክዎ ከዚያ በኋላ ደግመው ይሞክሩ።",
-      "created": "ቡድን በተሳካ ሁኔታ ተፈጥሯል!",
-      "updated": "ቡድን በተሳካ ሁኔታ ተዘዋውሯል!",
-      "saveFailed": "ቡድኑን ማስቀመጥ አልተቻለም።",
-      "deleted": "ቡድን በተሳካ ሁኔታ ተሰርዟል!",
-      "deleteFailed": "ቡድኑን ማስወገጃ አልተቻለም።"
+    "members": {
+      "title": {
+        "manage": "አባላትን አስተዳድር"
+      },
+      "add": {
+        "title": "አባል ጨምር",
+        "selectUser": "አባል ጨምር",
+        "button": "አባል ጨምር",
+        "adding": "በማከል ላይ…",
+        "noAvailable": "ምንም የሚታከሉ ተጠቃሚዎች የሉም"
+      },
+      "current": {
+        "title": "የአሁን አባላት",
+        "empty": "በዚህ ቡድን ውስጥ ምንም አባላት የሉም"
+      },
+      "linkText": "{{count}} አባል(ዎች)",
+      "manage": "አባላትን አስተዳድር",
+      "label": "አባላት",
+      "remove": {
+        "title": "አባል አስወግድ"
+      }
     }
   },
   "reports": {
+    "noReports": "እስካሁን ምንም ሪፖርቶች የሉም። እዚህ ውሂብ ለማየት ሪፖርት ይፍጠሩ።",
     "header": {
-      "title": "የሪፖርት ዳሽቦርድ",
-      "subtitle": "ሪፖርቶችን ጫን፣ እይታ እና እንዲፈጥሩ ያደርጉ"
+      "title": "ሪፖርቶች",
+      "subtitle": "ሪፖርቶችን ይገምግሙ፣ ያቀናብሩ እና ወደ ውጪ ይላኩ።"
     },
     "tabs": {
-      "review": "እይታ",
-      "master": "ማስተር"
+      "review": "ግምገማ",
+      "master": "ዋና ሪፖርት"
     },
-    "review": {
-      "title": "እይታ እና ማስተካከያ",
-      "subtitle": "የሚገኙ ሪፖርቶችን ያረጋግጡ ወይም ይቀበሉ",
-      "searchPlaceholder": "ሪፖርቶችን ፈልግ (Enter ይጫኑ)",
-      "searchButton": "ፈልግ",
-      "refresh": "ዳግም አዘጋጅ",
-      "narrative": "መግለጫ",
-      "noNarrative": "መግለጫ የለም",
-      "metrics": "ሜትሪክስ",
-      "adminComment": "የአስተዳደር አስተያየት",
-      "approve": "አረጋግጥ",
-      "reject": "አስከር",
-      "updatedTo": "ወደ {{status}} ተሻሽሏል",
-      "failed": "ማሻሻያ አልተሳካም",
-      "noReports": "ምንም ሪፖርቶች አልተገኙም።",
-      "showingPage": "ገፅ {{page}} / {{totalPages}} • {{total}} ሪፖርቶችን እየታየ"
+    "search": {
+      "placeholder": "ሪፖርቶችን፣ ተጠቃሚዎችን ወይም ጽሑፍን ይፈልጉ…",
+      "button": "ፈልግ"
     },
-    "status": {
-      "all": "ሁሉ",
-      "pending": "በሂደት",
-      "approved": "የተፈቀደ",
-      "rejected": "የተከለ",
-      "Approved": "የተፈቀደ",
-      "Rejected": "የተከለ",
-      "Pending": "በሂደት"
+    "refresh": "አድስ",
+    "filters": {
+      "all": "ሁሉም",
+      "pending": "በመጠባበቅ ላይ",
+      "approved": "ጸድቋል",
+      "rejected": "ውድቅ ተደርጓል"
     },
     "pagination": {
-      "first": "መጀመሪያ",
-      "prev": "የቀደም",
-      "next": "ቀጣይ",
-      "last": "መጨረሻ",
-      "pageSize": "የገፅ መጠን",
-      "showingPage": "ገፅ {{page}} / {{totalPages}} • {{total}} ሪፖርቶችን እየታየ"
+      "showingPage": "ገጽ {{ገጽ}} የ{{totalPages}} — {{ጠቅላላ}} ንጥሎች",
+      "first": "አንደኛ",
+      "prev": "ቀዳሚ",
+      "next": "ቀጥሎ",
+      "last": "የመጨረሻ"
+    },
+    "pageSize": "የገጽ መጠን",
+    "status": {
+      "Approved": "ጸድቋል",
+      "Rejected": "ውድቅ ተደርጓል",
+      "Pending": "በመጠባበቅ ላይ"
+    },
+    "narrative": "ትረካ",
+    "noNarrative": "ምንም ትረካ አልተሰጠም።",
+    "metrics_narrative": "መለኪያዎች",
+    "attachments": "አባሪዎች",
+    "attachments_download": {
+      "download": "አውርድ"
+    },
+    "adminComment": "የአስተዳዳሪ አስተያየት",
+    "resubmissionDeadline": "የዳግም ማስረከቢያ የመጨረሻ ቀን",
+    "adminComment_placeholder": {
+      "placeholder": "የውስጥ አስተያየት ያክሉ (አማራጭ)"
+    },
+    "actions": {
+      "approve": "አጽድቅ",
+      "reject": "እምቢ"
+    },
+    "action": {
+      "updatedTo": "ወደ {{status}} ተዘምኗል",
+      "failed": "እርምጃ አልተሳካም።"
+    },
+    "noReports1": "ምንም የሚታዩ ሪፖርቶች የሉም",
+    "noReports2": "ምንም ሪፖርቶች የሉም",
+    "noReports3": "ምንም ዘገባዎች የሉም",
+    "noReports4": "ምንም ዘገባዎች አልተገኙም።",
+    "noReports5": "ምንም ዘገባዎች አልተገኙም።",
+    "footer": {
+      "systemName": "SGMS"
+    },
+    "status2": {
+      "Approved": "ጸድቋል",
+      "Rejected": "ውድቅ ተደርጓል",
+      "Pending": "በመጠባበቅ ላይ"
+    },
+    "review": {
+      "title": "ሪፖርቶችን ይገምግሙ",
+      "subtitle": "የቀረቡ ሪፖርቶችን ማጽደቅ ወይም ውድቅ አድርግ"
     },
     "master": {
       "title": "ማስተር ሪፖርት",
-      "subtitle": "መግለጫዎች እና ማጭበርበር ዳታ ሰንጠረዥ። PDF ወይም CSV ይላክ።",
-      "groupIdLabel": "የቡድን መለያ (አማራጭ)",
-      "groupIdPlaceholder": "የቡድኑን መለያ ያስገቡ ወይም ባዶ ይተዉ",
-      "loadReport": "ሪፖርት ጫን",
-      "exportPdf": "PDF ይላክ",
-      "exportCsv": "CSV ይላክ",
-      "granularity": "የጊዜ ክፍል",
-      "periodColumns": "የፐሪዮድ ኮሎሞች: {{count}}",
-      "narrativesHeading": "መግለጫዎች",
-      "noDataLoaded": "ዳታ አልተጫነም።",
-      "noGoals": "ግቦች አልተገኙም።",
-      "targetShort": "ግብ",
-      "done": "ተጠናቋል",
-      "open": "ክፈት",
-      "noReports": "ሪፖርቶች የሉም።",
-      "dataTableHeading": "የዳታ ሰንጠረዥ",
-      "noDataToDisplay": "ለማሳየት ዳታ የለም",
-      "failedToFetch": "ሪፖርት ማግኘት አልተቻለም",
+      "subtitle2": "ዋና ሪፖርቶችን ሰብስብ እና ወደ ውጪ ላክ",
+      "loadButton": "ሪፖርትን ጫን",
+      "loadFirstAlert": "እባክዎ መጀመሪያ ዋና ሪፖርት ይጫኑ",
+      "exportPDF": "ወደ ውጪ ላክ (PDF)",
+      "exportCSV": "ወደ ውጪ ላክ (CSV)",
       "groupLabel": "ቡድን",
-      "generated": "የተፈጠረ",
-      "targetLabel": "ግብ",
-      "loadFirst": "ሪፖርት አስመልክተው ይጀምሩ",
-      "allGroups": "ሁሉ"
+      "groupIdLabel": "የቡድን መታወቂያ",
+      "groupIdPlaceholder": "የቡድን መታወቂያ አስገባ (አማራጭ)",
+      "narratives": "ትረካዎች",
+      "narrativesTitle": "ትረካዎች",
+      "noData": "ምንም ዋና ዘገባ አልተጫነም።",
+      "noGoals": "ምንም ግቦች የሉም",
+      "noReports": "ለዚህ እንቅስቃሴ ምንም ሪፖርቶች የሉም",
+      "targetLabel": "ዒላማ",
+      "targetText": "ዒላማ",
+      "done": "ተከናውኗል",
+      "open": "ክፈት",
+      "subtitle": "የተዋሃዱ ግቦችን፣ ተግባሮችን እና የእንቅስቃሴ ውሂብን ይመልከቱ",
+      "generatedAt": "የተፈጠረው በ{{date}}",
+      "granularityLabel": "ግራኑላርነት",
+      "granularities": {
+        "monthly": "ወርሃዊ",
+        "quarterly": "በየሩብ ዓመቱ",
+        "annual": "አመታዊ"
+      },
+      "periodColumns": "{{count}} ጊዜ(ዎች) — {{granularity}}"
     },
     "table": {
       "title": "ርዕስ",
       "weight": "ክብደት",
-      "metric": "ሜትሪክ",
-      "target": "ግብ"
-    },
-    "csv": {
+      "metric": "መለኪያ",
+      "target": "ዒላማ",
       "type": "ዓይነት",
       "goal": "ግብ",
-      "task": "ሥራ",
+      "task": "ተግባር",
       "activity": "እንቅስቃሴ",
-      "weight": "ክብደት",
-      "metric": "ሜትሪክ",
-      "target": "ግብ"
+      "titleFull": "ሙሉ የውሂብ ሰንጠረዥ",
+      "noData": "ምንም ውሂብ አይገኝም"
     },
-    "granularity": {
-      "monthly": "ወርሃዊ",
-      "quarterly": "ሩብሃዊ",
-      "annual": "ዓመታዊ"
-    },
-    "footer": {
-      "systemName": "የሪፖርት ስርዓት"
-    },
-    "action": {
-      "updatedTo": "ወደ {{status}} ተሻሽሏል",
-      "failed": "አልተሳካም"
-    }
-  },
-  "projectManager": {
-    "projectManager": "የፕሮጀክት አስተዳደር",
-    "searchGoalsPlaceholder": "ግቦችን ፈልግ...",
-    "refresh": "ዳግም አስመልስ",
-    "addGoal": "ግብ አክል",
-    "addTask": "ሥራ አክል",
-    "addActivity": "እንቅስቃሴ አክል",
-    "noGoalsFoundCreate": "ግቦች አልተገኙም። የመጀመሪያዎን ግብ ፍጠሩ።",
-    "noGoalsMatchSearch": "ለፍለጋዎ ምንም ግቦች አልተገኙም።",
-    "noTasksForGoal": "ለዚህ ግብ ምንም ሥራ የለም።",
-    "noActivitiesForTask": "ለዚህ ሥራ ምንም እንቅስቃሴ የለም።",
-    "tasksTitle": "ሥራዎች",
-    "activitiesTitle": "እንቅስቃሴዎች",
-    "submitReports": "ሪፖርት አቅርብ",
-    "targetMetrics": "የግብ / ሜትሪክስ",
-    "labels": {
-      "group": "ቡድን",
-      "unassigned": "ያልተወሰነ",
-      "weight": "ክብደት",
-      "due": "የመጨረሻ ቀን"
-    },
-    "status": {
-      "completed": "ተጠናቋል",
-      "open": "ክፈት"
-    },
-    "pagination": {
-      "showing": "እየታየ {{from}} - {{to}} ከ {{total}}",
-      "perPage": "በገፅ"
-    },
-    "previous": "የቀደም",
-    "next": "ቀጣይ",
-    "aria": {
-      "toggleGoal": "ግብ አቀይ",
-      "toggleTask": "ሥራ አቀይ"
-    },
-    "success": {
-      "goalCreated": "ግብ ተፈጥሯል",
-      "goalUpdated": "ግብ ታድሷል",
-      "goalDeleted": "ግብ ተሰርዟል",
-      "taskCreated": "ሥራ ተፈጥሯል",
-      "taskUpdated": "ሥራ ታድሷል",
-      "taskDeleted": "ሥራ ተሰርዟል",
-      "activityCreated": "እንቅስቃሴ ተፈጥሯል",
-      "activityUpdated": "እንቅስቃሴ ታድሷል",
-      "activityDeleted": "እንቅስቃሴ ተሰርዟል",
-      "reportSubmitted": "ሪፖርት ተልኳል"
+    "metrics": {
+      "empty": "—",
+      "invalid": "ልክ ያልሆኑ መለኪያዎች"
     },
     "errors": {
-      "failedToLoadGoals": "ግቦችን ማግኘት አልተቻለም",
-      "failedToLoadGroups": "ቡድኖችን ማግኘት አልተቻለም",
-      "failedToLoadTasks": "ሥራዎችን ማግኘት አልተቻለም",
-      "failedToLoadActivities": "እንቅስቃሴዎችን ማግኘት አልተቻለም",
-      "failedToCreateGoal": "ግብ ማፍጠር አልተቻለም",
-      "failedToUpdateGoal": "ግብ ማዘመን አልተቻለም",
-      "failedToDeleteGoal": "ግብ ማስወገጃ አልተቻለም",
-      "failedToCreateTask": "ሥራ ማፍጠር አልተቻለም",
-      "failedToUpdateTask": "ሥራ ማዘመን አልተቻለም",
-      "failedToDeleteTask": "ሥራ ማስወገጃ አልተቻለም",
-      "failedToCreateActivity": "እንቅስቃሴ ማፍጠር አልተቻለም",
-      "failedToUpdateActivity": "እንቅስቃሴ ማዘመን አልተቻለም",
-      "failedToDeleteActivity": "እንቅስቃሴ ማስወገጃ አልተቻለም",
-      "failedToSubmitReport": "ሪፖርት ማስገባት አልተቻለም"
+      "loadReports": "ሪፖርቶችን መጫን አልተሳካም።",
+      "attachments": "ዓባሪዎችን መጫን አልተሳካም።",
+      "downloadFailed": "ማውረድ አልተሳካም"
+    }
+  },
+  "admin": {
+    "na": "—",
+    "actions": {
+      "tryAgain": "እንደገና ይሞክሩ",
+      "saveChanges": "ለውጦችን ያስቀምጡ",
+      "cancel": "ሰርዝ",
+      "processing": "በማስሄድ ላይ...",
+      "deleting": "በመሰረዝ ላይ"
     },
-    "confirm": {
-      "deleteGoal": "ይህን ግብ እና ልጆቹን ማስወገጅ ይፈልጋሉ?",
-      "deleteTask": "ይህን ሥራ እና እንቅስቃሴዎችን ማስወገጅ ይፈልጋሉ?",
-      "deleteActivity": "ይህን እንቅስቃሴ ማስወገጅ ይፈልጋሉ?"
+    "roles": {
+      "title": "ሚናዎች እና ፈቃዶች",
+      "subtitle": "ለተጠቃሚዎች እና ቡድኖች ሚናዎች እና አጠቃላይ ፈቃዶችን ይግለጹ።",
+      "loading": "ሚናዎችን እና ፈቃዶችን በመጫን ላይ…",
+      "rolesList": "ሚናዎች",
+      "addRole": "ሚና ጨምር",
+      "roleNamePlaceholder": "ሚና ስም አስገባ እና አስገባን ተጫን",
+      "roleNameAria": "የሚና ስም",
+      "noRoles": "ምንም ሚናዎች አይገኙም።",
+      "noPermissions": "ምንም ፈቃዶች የሉም።",
+      "roleName": "የሚና ስም",
+      "createdAt": "ተፈጠረ",
+      "updatedAt": "ተዘምኗል",
+      "permission": "ፍቃድ",
+      "permissions": "ፈቃዶች",
+      "enabled": "የነቃ",
+      "disabled": "ተሰናክሏል",
+      "permissionStatus": "ለሚና {{role}} ፍቃድ {{status}} ነው",
+      "editingRole": "ፈቃዶችን ያርትዑ",
+      "deleteRole": "ሚና ሰርዝ",
+      "deleteConfirm": {
+        "message": "እርግጠኛ ነህ ሚና \"{{name}}\" መሰረዝ ትፈልጋለህ?"
+      },
+      "deleteDisabled": "ይህ ሚና ሊሰረዝ አይችልም።",
+      "toasts": {
+        "createSuccess": "ሚና \"{{ስም}}\" ተፈጥሯል።",
+        "updateSuccess": "ፈቃዶች ተዘምነዋል",
+        "deleteSuccess": "ሚና \"{{name}}\" ተሰርዟል።"
+      },
+      "errors": {
+        "loadError": "ሚናዎችን ወይም ፈቃዶችን መጫን አልተሳካም።",
+        "title": "ሚናዎችን መጫን አልተቻለም",
+        "saveError": "ለውጦችን ማስቀመጥ አልተሳካም {{#ስህተት}}፡ {{ስህተት}}{{/if}}",
+        "deleteError": "ሚናን መሰረዝ አልተሳካም {{#if error}}: {{error}}{{/if}}"
+      },
+      "roleActions": {
+        "add": "ሚና ይፍጠሩ",
+        "remove": "ሚናን ያስወግዱ"
+      },
+      "aria": {
+        "permissionToggle": "ለሚና ፈቃድ ቀይር"
+      },
+      "placeholders": {
+        "search": "ሚናዎችን ፈልግ..."
+      }
     },
+    "actions2": {
+      "edit": "አስተካክል",
+      "delete": "ሰርዝ",
+      "close": "ገጠመ",
+      "cancel": "ሰርዝ",
+      "processing": "በማስሄድ ላይ...",
+      "saveChanges": "ለውጦችን ያስቀምጡ",
+      "create": "ፍጠር",
+      "deleting": "በመሰረዝ ላይ..."
+    },
+    "users": {
+      "title": "ተጠቃሚዎች",
+      "subtitle": "የመተግበሪያ ተጠቃሚዎችን እና ሚናቸውን ይፍጠሩ፣ ያርትዑ እና ያስተዳድሩ።",
+      "addUser": "ተጠቃሚ ጨምር",
+      "noUsers": "ተጠቃሚዎች የሉም",
+      "noUsersDescription": "እስካሁን ምንም ተጠቃሚዎች የሉም። ለመጀመር አንድ ይፍጠሩ።",
+      "table": {
+        "user": "ተጠቃሚ",
+        "role": "ሚና",
+        "actions": "ድርጊቶች"
+      },
+      "noRole": "ያልተመደበ",
+      "editUserTitle": "ተጠቃሚን ያርትዑ",
+      "createUserTitle": "ተጠቃሚ ፍጠር",
+      "form": {
+        "picture": "የመገለጫ ሥዕል",
+        "upload": "ስቀል",
+        "remove": "አስወግድ",
+        "pictureHint": "ምስል መስቀል ወይም ባዶ መተው ትችላለህ።",
+        "username": "የተጠቃሚ ስም",
+        "usernamePlaceholder": "የተጠቃሚ ስም አስገባ",
+        "name": "ሙሉ ስም",
+        "namePlaceholder": "ሙሉ ስም አስገባ",
+        "password": "የይለፍ ቃል",
+        "newPassword": "አዲስ የይለፍ ቃል (አሁኑን ለማቆየት ባዶውን ይተው)",
+        "passwordPlaceholder": "የይለፍ ቃል አስገባ",
+        "role": "ሚና",
+        "selectRole": "ሚና ይምረጡ"
+      },
+      "deleteConfirm": {
+        "title": "ተጠቃሚን ሰርዝ",
+        "message": "እርግጠኛ ነህ {{name}}ን መሰረዝ ትፈልጋለህ?"
+      },
+      "toasts": {
+        "createSuccess": "ተጠቃሚ \"{{ስም}}\" ተፈጥሯል።",
+        "updateSuccess": "ተጠቃሚ \"{{ስም}}\" ዘምኗል",
+        "deleteSuccess": "ተጠቃሚ \"{{name}}\" ተሰርዟል"
+      },
+      "errors": {
+        "loadFailed": "ተጠቃሚዎችን መጫን አልተሳካም፦ {{error}}",
+        "invalidImage": "የተመረጠው ፋይል ምስል አይደለም",
+        "imageTooLarge": "ምስሉ በጣም ትልቅ ነው (ቢበዛ 5 ሜባ)",
+        "usernameRequired": "የተጠቃሚ ስም ያስፈልጋል",
+        "nameRequired": "ሙሉ ስም ያስፈልጋል",
+        "passwordRequired": "ለአዲስ ተጠቃሚዎች የይለፍ ቃል ያስፈልጋል",
+        "passwordTooShort": "የይለፍ ቃል ቢያንስ 8 ቁምፊዎች መሆን አለበት",
+        "roleRequired": "እባክዎ ሚና ይምረጡ",
+        "formValidation": "እባክዎ የቅጹን ስህተቶች ያስተካክሉ",
+        "pictureUploadFailed": "የመገለጫ ሥዕል መስቀል አልተሳካም",
+        "saveFailed": "ተጠቃሚን ማስቀመጥ አልተሳካም፦ {{error}}",
+        "deleteFailed": "ተጠቃሚን መሰረዝ አልተሳካም፦ {{error}}"
+      },
+      "placeholders": {
+        "search": "ተጠቃሚዎችን ፈልግ..."
+      }
+    }
+  },
+  "settings": {
+    "title": "ቅንብሮች",
+    "subtitle": "የመተግበሪያ-ሰፊ ምርጫዎችን፣ መልክን እና ውህደቶችን ያቀናብሩ።",
+    "loading": "ቅንብሮችን በመጫን ላይ…",
+    "profilePicture": "የመገለጫ ሥዕል",
+    "chooseImage": "ምስል ይምረጡ",
+    "pictureHint": "የካሬ ምስል በተሻለ ሁኔታ ይሰራል (ቢበዛ 5 ሜባ)",
+    "uploading": "በመስቀል ላይ...",
+    "upload": "ስቀል",
+    "personalInfo": "የግል መረጃ",
+    "username": "የተጠቃሚ ስም",
+    "usernameHelp": "የተጠቃሚ ስም ሊስተካከል አይችልም።",
+    "name": "ሙሉ ስም",
+    "namePlaceholder": "የማሳያ ስምህ",
+    "appearance": "መልክ",
+    "language": "ቋንቋ",
+    "changePassword": "የይለፍ ቃል ቀይር",
+    "oldPassword": "የድሮ የይለፍ ቃል",
+    "newPassword": "አዲስ የይለፍ ቃል",
+    "passwordPlaceholder": "••••••••",
+    "passwordRequirements": "ቢያንስ 8 ቁምፊዎች።",
+    "saving": "በማስቀመጥ ላይ…",
+    "saveChanges": "ለውጦችን ያስቀምጡ",
+    "toasts": {
+      "pictureSuccess": "የመገለጫ ሥዕል ተዘምኗል",
+      "updateSuccess": "ቅንብሮች ተዘምነዋል"
+    },
+    "errors": {
+      "loadError": "ቅንብሮችን መጫን አልተሳካም።",
+      "invalidImage": "ልክ ያልሆነ የምስል ፋይል",
+      "imageTooLarge": "ምስሉ በጣም ትልቅ ነው (ቢበዛ 5 ሜባ)",
+      "uploadError": "የመገለጫ ሥዕል መስቀል አልተሳካም",
+      "oldPasswordRequired": "የይለፍ ቃልህን ለመለወጥ የድሮ ይለፍ ቃል ያስፈልጋል",
+      "passwordTooShort": "የይለፍ ቃል ቢያንስ 8 ቁምፊዎች መሆን አለበት"
+    }
+  },
+  "sidebar": {
+    "menu": {
+      "dashboard": "ዳሽቦርድ",
+      "settings": "ቅንብሮች",
+      "systemSettings": "የስርዓት ቅንብሮች",
+      "audit": "የኦዲት ምዝግብ ማስታወሻዎች",
+      "accessManagement": "የመዳረሻ አስተዳደር",
+      "reports": "ሪፖርቶች",
+      "projectManagement": "የፕሮጀክት አስተዳደር",
+      "attachments": "አባሪዎች",
+      "notification": "ማሳወቂያዎች"
+    },
+    "logoAlt": "የኩባንያ አርማ",
+    "appName": "SGMS",
+    "profileAlt": "የተጠቃሚ መገለጫ ሥዕል",
+    "logout": "ዘግተህ ውጣ",
+    "openMenu": "የጎን አሞሌ ምናሌን ይክፈቱ",
+    "closeMenu": "የጎን አሞሌ ምናሌን ዝጋ"
+  },
+  "systemSettings": {
+    "title": "የስርዓት ቅንብሮች",
+    "subtitle": "የስርዓት ባህሪን፣ ውህደቶችን፣ ምትኬዎችን እና የአካባቢ አማራጮችን ያዋቅሩ።",
+    "allowedAttachmentTypes": {
+      "label": "የተፈቀዱ የአባሪ ዓይነቶች",
+      "help": "ለፋይል ሰቀላ የትኞቹ የ MIME አይነቶች እንደሚፈቀዱ ይግለጹ።"
+    },
+    "current": "የአሁኑ ዋጋ",
+    "auditRetention": {
+      "label": "የኦዲት ማቆየት (ቀናት)",
+      "help": "የኦዲት መዝገቦችን ለማቆየት የቀኖች ብዛት። ላልተወሰነ ጊዜ እንዲቆይ ወደ 0 አቀናብር።",
+      "placeholder": "0"
+    },
+    "maxAttachmentSize": {
+      "label": "ከፍተኛ የአባሪ መጠን (ሜባ)",
+      "help": "በሜጋባይት ውስጥ ላሉ አባሪዎች የሚፈቀደው ከፍተኛው የፋይል መጠን። ገደብን ለማሰናከል ወደ 0 ያቀናብሩ።",
+      "placeholder": "0"
+    },
+    "reporting": {
+      "label": "ሪፖርት ማድረግ",
+      "help": "በስርዓቱ ውስጥ የሪፖርት ማድረጊያ ባህሪያትን አንቃ ወይም አሰናክል።"
+    },
+    "enabled": "ነቅቷል",
+    "disabled": "ተሰናክሏል",
+    "saving": "በማስቀመጥ ላይ…",
+    "saveButton": "ቅንብሮችን ያስቀምጡ",
+    "saveButtonAria": "የስርዓት ቅንብሮችን ያስቀምጡ",
+    "messages": {
+      "failedLoad": "የስርዓት ቅንብሮችን መጫን አልተሳካም።",
+      "noChanges": "ለማስቀመጥ ምንም ለውጦች የሉም",
+      "saved": "ቅንብሮች ተቀምጠዋል",
+      "failedSave": "ቅንብሮችን ማስቀመጥ አልተሳካም"
+    },
+    "description": "እንደ የተፈቀዱ አባሪዎች፣ የኦዲት ማቆየት እና ሪፖርት ማድረግን የመሳሰሉ አለምአቀፍ የስርዓት ቅንብሮችን ያዋቅሩ።"
+  },
+  "project": {
+    "title": "የፕሮጀክት አስተዳዳሪ",
+    "subtitle": "ግቦችን ፣ ተግባሮችን እና ተግባሮችን ያደራጁ",
+    "na": "—",
+    "searchPlaceholder": "ግቦችን ፈልግ...",
+    "searchAria": "ግቦችን ይፈልጉ",
+    "unassigned": "ያልተመደበ",
+    "none": "- ምንም ለውጥ የለም -",
+
+    "actions": {
+      "refresh": "አድስ",
+      "addGoal": "ግብ ጨምር",
+      "addTask": "ተግባር ጨምር",
+      "addActivity": "እንቅስቃሴን ጨምር",
+      "edit": "አስተካክል",
+      "delete": "ሰርዝ",
+      "toggleGoal": "ግብ ቀይር",
+      "toggleTask": "ተግባር ቀያይር",
+      "remove": "አስወግድ",
+      "removeShort": "X",
+      "addMetric": "መለኪያ አክል",
+      "cancel": "ሰርዝ",
+      "save": "አስቀምጥ",
+      "create": "ፍጠር",
+      "submit": "አስገባ",
+      "mobileMenu": "ምናሌ ክፈት",
+      "open": "ክፈት",
+      "close": "ገጠመ",
+      "submitReport": "ሪፖርት አስገባ"
+    },
+
+    "fields": {
+      "group": "ቡድን",
+      "weight": "ክብደት",
+      "due": "ሁለት",
+      "dueDate": "ሁለት ቀኖች",
+      "startDate": "የመጀመሪያ ቀን",
+      "endDate": "የመጨረሻ ቀን",
+      "title": "ርዕስ",
+      "description": "መግለጫ",
+      "progress": "እድገት",
+      "assignGroup": "ለቡድን መድብ",
+      "narrative": "ትረካ",
+      "newStatus": "አዲስ ሁኔታ",
+      "status": "ሁኔታ"
+    },
+
+    "sections": {
+      "tasks": "ተግባራት",
+      "activities": "እንቅስቃሴዎች"
+    },
+
+    "labels": {
+      "targetMetrics": "የዒላማ መለኪያዎች",
+      "activity": "እንቅስቃሴ",
+      "metrics": "ዒላማ / መለኪያዎች",
+      "attachments": "አባሪዎች"
+    },
+
+    "placeholders": {
+      "metricKey": "ቁልፍ",
+      "metricValue": "ዋጋ"
+    },
+
+    "hints": {
+      "taskWeight": "የተግባር አጠቃላይ፡ {{taskWeight}}። በሌሎች ተግባራት ጥቅም ላይ የዋለ፡ {{used}}። ይገኛል፡ {{available}}።",
+      "goalWeight": "አጠቃላይ ግብ፡ {{goalWeight}}። በሌሎች ተግባራት ጥቅም ላይ የዋለ፡ {{used}}። ይገኛል፡ {{available}}.",
+      "systemWeight": "ጥቅም ላይ የዋለው የሥርዓት ክብደት፡ {{used}}፣ ይገኛል፡ {{available}}",
+      "metrics": "መለኪያዎችን እንደ ቁልፍ/እሴት ጥንዶች ያክሉ።",
+      "attachments": "ከፍተኛ ፋይሎች፡ የአገልጋይ-ጎን ገደብ ተፈጻሚ ነው።"
+    },
+
+    "empty": {
+      "noGoals": "ምንም ግቦች አልተገኙም። የመጀመሪያ ግብዎን ይፍጠሩ።",
+      "noMatch": "ከፍለጋህ ጋር የሚዛመዱ ግቦች የሉም።",
+      "noTasks": "ለዚህ ግብ ምንም ተግባራት የሉም።",
+      "noActivities": "ለዚህ ተግባር ምንም እንቅስቃሴዎች የሉም።"
+    },
+
+    "errors": {
+      "loadGoals": "ግቦችን መጫን አልተሳካም.",
+      "loadTasks": "ተግባራትን መጫን አልተሳካም።",
+      "loadActivities": "እንቅስቃሴዎችን መጫን አልተሳካም.",
+      "createGoal": "ግብ መፍጠር አልተሳካም.",
+      "updateGoal": "ግብን ማዘመን አልተሳካም።",
+      "deleteGoal": "ግብን መሰረዝ አልተሳካም.",
+      "createTask": "ተግባር መፍጠር አልተሳካም።",
+      "updateTask": "ተግባርን ማዘመን አልተሳካም።",
+      "deleteTask": "ተግባርን መሰረዝ አልተሳካም.",
+      "createActivity": "እንቅስቃሴ መፍጠር አልተሳካም።",
+      "updateActivity": "እንቅስቃሴን ማዘመን አልተሳካም።",
+      "deleteActivity": "እንቅስቃሴን መሰረዝ አልተሳካም።",
+      "submitReport": "ሪፖርት ማስገባት አልተሳካም.",
+      "missingGoalId": "የጠፋ የግብ መታወቂያ።",
+      "weightNonNegative": "ክብደት ከ0 በላይ ወይም እኩል መሆን አለበት።",
+      "weightExceeds": "ክብደትን ወደ {{newWeight}} ማዋቀር አልተቻለም። ጠቅላላ ግብ {{goalWeight}} ነው እና {{used}} አስቀድሞ ጥቅም ላይ ውሏል። ይገኛል፡ {{available}}።",
+      "missingTaskId": "የተግባር መታወቂያ ይጎድላል።",
+      "weightExceedsTask": "ክብደትን ወደ {{newWeight}} ማዋቀር አልተቻለም። የተግባር አጠቃላይ {{taskWeight}} ነው እና {{used}} አስቀድሞ ጥቅም ላይ ውሏል። ይገኛል፡ {{available}}።",
+      "modalSubmit": "የሞዳል ቅጽ ማስገባት አልተሳካም።",
+      "metricKeyMissing": "እሴት ሲቀርብ የሜትሪክ ቁልፎች ባዶ ሊሆኑ አይችሉም።"
+    },
+
+    "toasts": {
+      "goalCreated": "የተፈጠረ ግብ",
+      "goalUpdated": "ግብ የዘመነ",
+      "goalDeleted": "ግብ ተሰርዟል",
+      "taskCreated": "ተግባር ተፈጥሯል",
+      "taskUpdated": "ተግባር ተዘምኗል",
+      "taskDeleted": "ተግባር ተሰርዟል",
+      "activityCreated": "የተፈጠረ እንቅስቃሴ",
+      "activity Updated": "እንቅስቃሴ ተዘምኗል",
+      "activityDeleted": "እንቅስቃሴ ተሰርዟል",
+      "reportSubmitted": "ሪፖርት ገብቷል"
+    },
+
     "modal": {
       "createGoal": "ግብ ፍጠር",
       "editGoal": "ግብ አርትዕ",
-      "createTask": "ሥራ ፍጠር",
-      "editTask": "ሥራ አርትዕ",
+      "createTask": "ተግባር ፍጠር",
+      "editTask": "ተግባርን አርትዕ",
       "createActivity": "እንቅስቃሴ ፍጠር",
-      "editActivity": "እንቅስቃሴ አርትዕ",
-      "title": "ርዕስ",
-      "description": "መግለጫ",
-      "startDate": "የመጀመሪያ ቀን",
-      "endDate": "የማብቂያ ቀን",
-      "dueDate": "የመጨረሻ ቀን",
-      "status": "ሁኔታ",
-      "notStarted": "አልተጀመረ",
-      "inProgress": "በሂደት ላይ",
-      "completed": "ተጠናቋል",
-      "cancel": "ሰንቀቅ",
-      "save": "አስቀምጥ",
-      "create": "ፍጠር"
+      "editActivity": "እንቅስቃሴን አርትዕ",
+      "submitReport": "ሪፖርት አስገባ"
     },
-    "submitReport": {
-      "activity": "እንቅስቃሴ",
-      "narrative": "መግለጫ",
-      "targetMetrics": "ግብ / ሜትሪክስ",
-      "addMetric": "+ ሜትሪክ ጨምር",
-      "metricsHelp": "ሜትሪኮችን እንደ key/value ያስገቡ.",
-      "newStatusOptional": "አዲስ ሁኔታ (አማራጭ)",
-      "noChange": "— ምንም ለውጥ —",
-      "done": "ተጠናቋል",
-      "inProgress": "በሂደት",
-      "notStarted": "አልተጀመረ",
-      "attachments": "አትችማንቶች",
-      "maxFilesNote": "ከፍተኛ ፋይሎች: የሰርቨር ገደብ ይተገበራል.",
-      "metricKeyEmpty": "የሜትሪክ ቁልፍ ከዋጋ ጋር ሲሰጥ አይታወስም።"
+
+    "pagination": {
+      "showing": "{{from}} - {{to}} ከ{{total}} በማሳየት ላይ",
+      "perPage": "{{n}} በገጽ",
+      "prev": "ቀዳሚ",
+      "next": "ቀጥሎ"
+    },
+
+    "inspector": {
+      "title": "ኢንስፔክተር",
+      "empty": "ዝርዝሮችን ለማየት ግብ ምረጥ"
+    },
+
+    "status": {
+      "notStarted": "አልተጀመረም",
+      "inProgress": "በሂደት ላይ",
+      "completed": "የተጠናቀቀ",
+      "open": "ክፍት"
+    },
+
+    "labelsSmall": {
+      "activity": "እንቅስቃሴ"
+    },
+    "confirm": {
+      "deleteGoal": "እርግጠኛ ነዎት ይህን ግብ መሰረዝ ይፈልጋሉ? ሁሉም ተዛማጅ ተግባራት ይወገዳሉ እና ይህ እርምጃ ሊቀለበስ አይችልም።",
+      "deleteTask": "እርግጠኛ ነዎት የተመረጡትን ተግባራት መሰረዝ ይፈልጋሉ? ይህ እርምጃ ሊቀለበስ አይችልም።",
+      "deleteActivity": "እርግጠኛ ነዎት ይህን እንቅስቃሴ መሰረዝ ይፈልጋሉ? ይህ እርምጃ ሊቀለበስ አይችልም።"
     }
   },
-  "Settings": {
-    "profilePicure": "የፕሮፋይል ምስል",
-    "themeLabel": "ቅርጸ ጽሑፍ",
-    "choosemage": "ምስል ይምረጡ",
-    "picturehint": "የሚመከረው መጠን: 200x200",
-    "usernameHelp": "የህዝብ የማስታወቂያ ስምዎ",
-    "minimumCharacter": "ከፍተኛ የሚገፋ ቁምፊ"
+  "login": {
+    "company_logo_alt": "የኩባንያ አርማ",
+    "title": "እንኳን ተመለሱ",
+    "subtitle": "የከተማ ልማት እና ግንባታ ቤሩ",
+    "form_title": "ወደ መለያህ ግባ",
+    "username_label": "የተጠቃሚ ስም",
+    "username_placeholder": "የተጠቃሚ ስምህን አስገባ",
+    "password_label": "የይለፍ ቃል",
+    "password_placeholder": "የይለፍ ቃልዎን ያስገቡ",
+    "show_password": "የይለፍ ቃል አሳይ",
+    "hide_password": "የይለፍ ቃል ደብቅ",
+    "password_too_short": "የይለፍ ቃል ቢያንስ 8 ቁምፊዎች መሆን አለበት",
+    "error_default": "መግባት አልተቻለም። እባክዎ ምስክርነቶችዎን ያረጋግጡ እና እንደገና ይሞክሩ።",
+    "logging_in": "መግባት...",
+    "button_signin": "ግባ"
   },
-  "systemSettings": {
-    "current": "ወቅታዊ",
-    "auditRentention": {
-      "label": "የኦዲት መዝገብ መቆያ (ቀናት)",
-      "help": "የኦዲት መዝገቦችን ለምን ይዞ እንዲቆይ ይወስናሉ"
+  "dashboard": {
+    "title": "ዳሽቦርድ",
+    "subtitle": "የግቦች፣ ተግባራት፣ ሪፖርቶች እና የቅርብ ጊዜ እንቅስቃሴዎች አጠቃላይ እይታ",
+    "aria": {
+      "refresh": "ዳሽቦርድ አድስ",
+      "loading": "ዳሽቦርድ በመጫን ላይ",
+      "loaded": "ዳሽቦርድ ተጭኗል"
     },
-    "maxAttachmentSize": {
-      "label": "ከፍተኛ የአትችማንቶች መጠን (MB)",
-      "help": "በሜጋባይት የሚፈቀደ ከፍተኛ መጠን"
+    "refresh": "አድስ",
+    "failedLoadPrefix": "መጫን አልተሳካም: ",
+    "errors": {
+      "summary": "ማጠቃለያ",
+      "groupCharts": "የቡድን ገበታዎች",
+      "taskCharts": "የተግባር ገበታዎች",
+      "reports": "ሪፖርቶች ስርጭት",
+      "overdue": "የዘገዩ ተግባራት",
+      "notifications": "ማሳወቂያዎች",
+      "audit": "የኦዲት መዝገቦች"
     },
-    "disabled": "ዘገይ",
-    "resubmissonDeadline": {
-      "label": "የድጋሚ ጥቅም መድረሻ",
-      "help": "ሪፖርቱ ለማስተካከል የሚሰጠው መድረሻ"
+    "cards": {
+      "goals": {
+        "title": "ግቦች",
+        "aria": "ክፍት ግቦች",
+        "fromLast": "ከመጨረሻው ጊዜ",
+        "noComparison": "አጠቃላይ የግብ ግስጋሴ"
+      },
+      "tasks": {
+        "title": "ተግባራት",
+        "aria": "ክፍት ተግባራት",
+        "subtitle": "አጠቃላይ የተግባር ሂደት"
+      },
+      "activities": {
+        "title": "እንቅስቃሴዎች",
+        "aria": "ክፍት እንቅስቃሴዎች",
+        "subtitle": "አጠቃላይ የእንቅስቃሴ ሂደት"
+      },
+      "pendingReports": {
+        "title": "በመጠባበቅ ላይ ያሉ ሪፖርቶች",
+        "aria": "ክፍት በመጠባበቅ ላይ ያሉ ሪፖርቶች",
+        "subtitle": "ግምገማ በመጠባበቅ ላይ ያሉ ሪፖርቶች"
+      }
     },
-    "saveButton": "አስቀምጥ"
+    "groupProgress": "የቡድን እድገት",
+    "topTasks": "ዋና ተግባራት",
+    "reportsDistribution1": "የሪፖርት ስርጭት",
+    "reportsDistribution": {
+      "aria": "ክፍት ሪፖርቶች"
+    },
+    "overdueTitle": "የዘገዩ ተግባራት",
+    "tasks": "ተግባራት",
+    "open": "ክፍት",
+    "nooverdue": "የዘገዩ ተግባራት የሉም",
+    "table": {
+      "task": "ተግባር",
+      "due": "የተጠናቀቀ",
+      "daysOverdue": "ቀናቶች አልፈዋል",
+      "assignee": "መዳቢ",
+      "goal": "ግብ",
+      "group": "ቡድን",
+      "link": "አገናኝ"
+    },
+    "noNotifications": "ምንም ማሳወቂያዎች የሉም",
+    "notifications": {
+      "title": "ማሳወቂያዎች",
+      "marking": "ምልክት ማድረግ...",
+      "markAll": "ሁሉንም እንደተነበቡ ምልክት ያድርጉበት"
+    },
+    "audit": {
+      "title": "የኦዲት መዝገብ",
+      "noPermission": "የኦዲት ምዝግብ ማስታወሻዎችን ለማየት ፍቃድ የለዎትም።",
+      "noLogs": "ምንም የኦዲት ምዝግብ ማስታወሻዎች አልተገኙም"
+    }
+  },
+  "notifications": {
+    "title": "ማሳወቂያዎች",
+    "subtitle": "ማንቂያዎችን፣ መልዕክቶችን እና የስርዓት ማስታወቂያዎችን ይመልከቱ እና ያቀናብሩ - እንደተነበቡ ምልክት ያድርጉ፣ ያጣሩ እና አስፈላጊ በሆኑ ነገሮች ላይ እርምጃ ይውሰዱ።",
+    "unreadCount": "{{count}} ያልተነበበ",
+    "markAll": "ሁሉንም እንደተነበቡ ምልክት ያድርጉበት",
+    "filter": {
+      "label": "ማጣሪያ:",
+      "all": "ሁሉም",
+      "unread": "ያልተነበበ",
+      "read": "አንብብ"
+    },
+    "loading": "ማሳወቂያዎችን በመጫን ላይ…",
+    "noNotifications": "ምንም የሚታዩ ማሳወቂያዎች የሉም",
+    "markAsRead": "እንደተነበበ ምልክት አድርግበት",
+    "loadMore": "ተጨማሪ ጫን",
+    "loadingMore": "ተጨማሪ በመጫን ላይ...",
+    "errors": {
+      "loadFailed": "ማሳወቂያዎችን መጫን አልተሳካም",
+      "markReadFailed": "ማሳወቂያ እንደተነበበ ምልክት ማድረግ አልተሳካም",
+      "markAllFailed": "ሁሉንም ማሳወቂያዎች እንደተነበቡ ምልክት ማድረግ አልተሳካም"
+    },
+    "aria": {
+      "title": "የማሳወቂያዎች ገጽ",
+      "filter": "የማሳወቂያ ማጣሪያ",
+      "markAll": "ሁሉንም ማሳወቂያዎች እንደተነበቡ ምልክት ያድርጉባቸው",
+      "loadMore": "ተጨማሪ ማሳወቂያዎችን ጫን"
+    },
+    "meta": {
+      "unreadSingular": "{{count}} ያልተነበበ",
+      "unreadPlural": "{{count}} ያልተነበበ"
+    },
+    "timestamps": {
+      "formatted": "{{date}}"
+    }
+  },
+  "notificationsPreview": {
+    "recentAria": "የቅርብ ጊዜ ማሳወቂያዎች",
+    "title": "ማሳወቂያዎች",
+    "label": "ማሳወቂያዎች",
+    "unreadCount": "{{count}} ያልተነበበ",
+    "noNotifications": "ምንም ማሳወቂያዎች የሉም",
+    "mark": "ምልክት",
+    "open": "ክፍት",
+    "viewAll": "ሁሉንም ይመልከቱ",
+    "refresh": "አድስ"
   }
 }

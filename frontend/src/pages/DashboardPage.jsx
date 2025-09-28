@@ -245,7 +245,6 @@ const OverdueTable = ({ rows = [], loading, t }) => {
             <th className="p-2">{t("dashboard.table.task")}</th>
             <th className="p-2">{t("dashboard.table.due")}</th>
             <th className="p-2">{t("dashboard.table.daysOverdue")}</th>
-            <th className="p-2">{t("dashboard.table.assignee")}</th>
             <th className="p-2">{t("dashboard.table.goal")}</th>
             <th className="p-2">{t("dashboard.table.group")}</th>
           </tr>
@@ -257,10 +256,6 @@ const OverdueTable = ({ rows = [], loading, t }) => {
               <td className="p-2 dark:text-gray-300">{formatDate(r.dueDate)}</td>
               <td className="p-2">
                 <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs">{r.daysOverdue}</span>
-              </td>
-              <td className="p-2 flex items-center gap-2">
-                {r.assigneeAvatar && <img src={r.assigneeAvatar} alt="" className="w-6 h-6 rounded-full" />}
-                <span className="dark:text-gray-300">{r.assigneeName}</span>
               </td>
               <td className="p-2 dark:text-gray-300">{r.goalTitle}</td>
               <td className="p-2 dark:text-gray-300">{r.groupName}</td>
