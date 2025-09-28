@@ -340,24 +340,53 @@ const RolesManagementPage = () => {
 
                 {/* add role */}
                 {isAddingRole ? (
-                  <div className="flex gap-2">
-                    <input
-                      autoFocus
-                      value={newRoleName}
-                      onChange={(e) => setNewRoleName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddRole();
-                        if (e.key === 'Escape') { setIsAddingRole(false); setNewRoleName(''); }
-                      }}
-                      placeholder={t('admin.roles.roleNamePlaceholder')}
-                      className="flex-1 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white border-gray-300 dark:border-gray-600"
-                      aria-label={t('admin.roles.roleNameAria')}
-                    />
-                    <button onClick={() => { setIsAddingRole(false); setNewRoleName(''); }} className="p-2 text-gray-500">
-                      <X size={18} />
-                    </button>
-                    <button onClick={handleAddRole} className="px-3 py-2 bg-blue-600 text-white rounded-md">{t('admin.actions.create')}</button>
-                  </div>
+                  <div className="flex flex-col gap-2 w-full">
+  {/* Row 1: input + X button */}
+  <div className="flex gap-2 w-full">
+    <input
+      autoFocus
+      value={newRoleName}
+      onChange={(e) => setNewRoleName(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") handleAddRole();
+        if (e.key === "Escape") {
+          setIsAddingRole(false);
+          setNewRoleName("");
+        }
+      }}
+      placeholder={t("admin.roles.roleNamePlaceholder")}
+      aria-label={t("admin.roles.roleNameAria")}
+      className="
+        flex-1 p-2 border rounded-md 
+        bg-gray-50 dark:bg-gray-700 dark:text-white 
+        border-gray-300 dark:border-gray-600 
+        focus:outline-none focus:ring-2 focus:ring-blue-400
+        w-full sm:w-full md:max-w-md lg:max-w-lg
+      "
+    />
+    <button
+      onClick={() => {
+        setIsAddingRole(false);
+        setNewRoleName("");
+      }}
+      className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+      aria-label={t("admin.roles.roleActions.remove")}
+      title={t("admin.roles.roleActions.remove")}
+    >
+      <X size={18} />
+    </button>
+  </div>
+
+  {/* Row 2: Create button */}
+  <button
+    onClick={handleAddRole}
+    className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition"
+    aria-label={t("admin.roles.roleActions.add")}
+  >
+    {t("admin.roles.roleActions.add")}
+  </button>
+</div>
+
                 ) : (
                   <button
                     onClick={() => setIsAddingRole(true)}

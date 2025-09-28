@@ -53,7 +53,7 @@ export default function AccessManagement() {
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Top Navigation Bar */}
       <nav className="bg-gray-200 dark:bg-gray-900">
-        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-6 lg:pt-4">
           <div className="flex items-center gap-4 h-16 md:h-20">
             {/* Left: Title (single-line, truncates) */}
             <div className="flex-1 min-w-0">
@@ -66,7 +66,7 @@ export default function AccessManagement() {
                     {t("access.title")}
                   </h1>
                   {/* subtitle hidden on md and below to avoid layout issues */}
-                  <p className="hidden lg:block mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                  <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
                     {t("access.subtitle")}
                   </p>
                 </div>

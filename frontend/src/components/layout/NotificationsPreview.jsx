@@ -13,11 +13,14 @@ import {
   initNotificationsSocket,
   disconnectNotificationsSocket,
 } from "../../services/notificationsSocket";
+import { useTranslation } from "react-i18next";
+
 export default function NotificationPreview({
   item = { to: "/notification", label: "Notifications" },
   showExpanded = false,
   position = "bottom-left",
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -312,7 +315,7 @@ export default function NotificationPreview({
       ? createPortal(
           <div
             role="dialog"
-            aria-label="Recent notifications"
+            aria-label={t("notificationsPreview.recentAria")}
             tabIndex={-1}
             onMouseEnter={() => {
               if (hideTimer.current) {
@@ -332,13 +335,13 @@ export default function NotificationPreview({
           >
             <div className="w-80 max-h-[420px] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">Notifications</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{unread} unread</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-white">{t("notificationsPreview.title")}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t("notificationsPreview.unreadCount", { count: unread })}</div>
               </div>
 
               <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto max-h-[340px]">
                 {buildDisplayList(notifications).length === 0 && (
-                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400">No notifications</div>
+                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("notificationsPreview.noNotifications")}</div>
                 )}
                 {buildDisplayList(notifications).map((n) => (
                   <div key={n.id} className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 ${
@@ -365,7 +368,7 @@ export default function NotificationPreview({
                           onClick={() => handleMarkRead(n.id)}
                           className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                         >
-                          Mark
+                          {t("notificationsPreview.mark")}
                         </button>
                       )}
                       <button
@@ -375,7 +378,7 @@ export default function NotificationPreview({
                         }}
                         className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                       >
-                        Open
+                        {t("notificationsPreview.open")}
                       </button>
                     </div>
                   </div>
@@ -387,13 +390,13 @@ export default function NotificationPreview({
                   onClick={() => navigate(item?.to || "/notification")} 
                   className="text-sm px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                 >
-                  View all
+                  {t("notificationsPreview.viewAll")}
                 </button>
                 <button 
                   onClick={loadPreview} 
                   className="text-sm px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                 >
-                  Refresh
+                  {t("notificationsPreview.refresh")}
                 </button>
               </div>
             </div>
@@ -461,7 +464,7 @@ export default function NotificationPreview({
           tabIndex={0}
           onClick={handleBellClick}
           onKeyDown={handleBellKeyDown}
-          aria-label={item?.label || "Notifications"}
+          aria-label={item?.label || t("notificationsPreview.label")}
           className={`flex items-center p-2 rounded-full transition-colors duration-200 ${
             showExpanded ? "justify-normal" : "justify-center"
           } cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800`}
@@ -474,7 +477,7 @@ export default function NotificationPreview({
               </span>
             )}
           </div>
-          {showExpanded && <span className="ml-3 truncate text-gray-700 dark:text-gray-300">{item?.label || "Notifications"}</span>}
+          {showExpanded && <span className="ml-3 truncate text-gray-700 dark:text-gray-300">{item?.label || t("notificationsPreview.label")}</span>}
         </div>
       </div>
 
@@ -484,13 +487,13 @@ export default function NotificationPreview({
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)}>
         <div className="p-4 bg-white dark:bg-gray-900">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">{unread} unread</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-white">{t("notificationsPreview.title")}</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">{t("notificationsPreview.unreadCount", { count: unread })}</div>
           </div>
 
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {buildDisplayList(notifications).length === 0 && (
-              <div className="p-3 text-sm text-gray-600 dark:text-gray-400">No notifications</div>
+              <div className="p-3 text-sm text-gray-600 dark:text-gray-400">{t("notificationsPreview.noNotifications")}</div>
             )}
             {buildDisplayList(notifications).map((n) => (
               <div key={n.id} className={`p-3 flex items-start gap-3 ${
@@ -511,7 +514,7 @@ export default function NotificationPreview({
                       onClick={() => handleMarkRead(n.id)} 
                       className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                     >
-                      Mark
+                      {t("notificationsPreview.mark")}
                     </button>
                   )}
                 </div>
@@ -527,13 +530,13 @@ export default function NotificationPreview({
               }}
               className="text-sm px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
-              View all
+              {t("notificationsPreview.viewAll")}
             </button>
             <button 
               onClick={loadPreview} 
               className="text-sm px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
             >
-              Refresh
+              {t("notificationsPreview.refresh")}
             </button>
           </div>
         </div>

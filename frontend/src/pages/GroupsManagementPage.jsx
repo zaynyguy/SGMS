@@ -768,12 +768,11 @@ function GroupsManager() {
                               <Trash2 className="h-5 w-5" />
                             </button>
                             <button onClick={() => toggleGroupExpand(g.id)} className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={t("groups.actions.toggle")}>
-                              {expandedGroup === g.id ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                              
                             </button>
                           </div>
                         </div>
 
-                        {expandedGroup === g.id && (
                           <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
                             <div className="grid grid-cols-2 gap-3">
                               <div>
@@ -782,16 +781,8 @@ function GroupsManager() {
                               <div>
                                 <span className="font-medium text-gray-700 dark:text-gray-300">{t("groups.updatedPrefix")}</span> <span className="ml-1">{formatDate(g.updatedAt)}</span>
                               </div>
-
-                              <div className="col-span-2 flex items-center justify-between">
-                                <span className="font-medium">{t("groups.members.label")}</span>
-                                <button onClick={() => openMembersModal(g)} className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
-                                  {t("groups.members.manage")}
-                                </button>
-                              </div>
                             </div>
                           </div>
-                        )}
                       </div>
                     ))
                   ) : (
@@ -845,7 +836,10 @@ function GroupsManager() {
                           </button>
                         </div>
 
-                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.createdPrefix")} {formatDate(g.createdAt)}</div>
+                        <div className="flex gap-11">
+                          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.createdPrefix")} {formatDate(g.createdAt)}</div>
+                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.updatedPrefix")} {formatDate(g.updatedAt)}</div>
+                        </div>
                       </div>
                     ))
                   ) : (

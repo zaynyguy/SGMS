@@ -95,7 +95,9 @@
       "idLabel": "ID:",
       "entityLabel": "Entity:",
       "ipLabel": "IP:",
-      "userAgentLabel": "User agent:"
+      "userAgentLabel": "User agent:",
+      "show": "Show details",
+      "hide": "Hide details"
     },
     "na": "N/A",
     "pagination": {
@@ -156,7 +158,8 @@
         "cancel": "Cancel",
         "create": "Create group",
         "save": "Save changes",
-        "saving": "Saving…"
+        "saving": "Saving…",
+        "remove": "Remove"
       },
       "errors": {
         "nameRequired": "Group name is required",
@@ -231,7 +234,7 @@
     "attachments_download": {
       "download": "Download"
     },
-    "adminComment_label": "Admin comment",
+    "adminComment": "Admin comment",
     "resubmissionDeadline": "Resubmission deadline",
     "adminComment_placeholder": {
       "placeholder": "Add an internal comment (optional)"
@@ -277,6 +280,9 @@
       "noGoals": "No goals available",
       "noReports": "No reports available for this activity",
       "targetLabel": "Target",
+      "targetText": "Target",
+      "done": "Done",
+      "open": "Open",
       "subtitle": "View aggregated goals, tasks and activity data",
       "generatedAt": "Generated at {{date}}",
       "granularityLabel": "Granularity",
@@ -314,7 +320,9 @@
     "actions": {
       "tryAgain": "Try again",
       "saveChanges": "Save changes",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "processing": "Processing...",
+      "deleting": "Deleting"
     },
     "roles": {
       "title": "Roles & Permissions",
@@ -586,6 +594,7 @@
     "hints": {
       "taskWeight": "Task total: {{taskWeight}}. Used by other activities: {{used}}. Available: {{available}}.",
       "goalWeight": "Goal total: {{goalWeight}}. Used by other tasks: {{used}}. Available: {{available}}.",
+      "systemWeight": "System weight used: {{used}}, available: {{available}}",
       "metrics": "Add metrics as key/value pairs.",
       "attachments": "Max files: server-side limit applies."
     },
@@ -794,5 +803,16 @@
     "timestamps": {
       "formatted": "{{date}}"
     }
+  },
+  "notificationsPreview": {
+    "recentAria": "Recent notifications",
+    "title": "Notifications",
+    "label": "Notifications",
+    "unreadCount": "{{count}} unread",
+    "noNotifications": "No notifications",
+    "mark": "Mark",
+    "open": "Open",
+    "viewAll": "View all",
+    "refresh": "Refresh"
   }
 }

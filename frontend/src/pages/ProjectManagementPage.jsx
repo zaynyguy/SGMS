@@ -69,8 +69,8 @@ const ProgressBar = ({ progress = 0, variant = "normal" }) => {
     : "bg-gradient-to-r from-sky-400 to-indigo-500";
   const labelInFill = pct >= 30;
   const labelClass = labelInFill
-    ? "text-white font-medium text-xs"
-    : "text-gray-800 dark:text-gray-200 font-medium text-xs";
+    ? "text-black dark:text-white font-medium text-xs"
+    : "text-black dark:text-white font-medium text-xs";
 
   return (
     <div
@@ -890,9 +890,8 @@ const ProjectManagement = () => {
                               {canManageGTA && (
                                 <div className="relative">
                                   <button className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <MoreVertical className="h-5 w-5" />
                                   </button>
-                                  <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                  <div className="absolute right-0 text-center mt-1 w-fit bg-white dark:bg-gray-900 rounded-md py-1 z-10 border border-gray-200 dark:border-gray-700">
                                     <button
                                       onClick={() =>
                                         setModal({
@@ -901,15 +900,15 @@ const ProjectManagement = () => {
                                           data: goal,
                                         })
                                       }
-                                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                      className="block w-full text-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
-                                      <Edit className="inline-block mr-2 h-4 w-4" /> {t("project.actions.edit")}
+                                      <Edit className="inline-block h-4 w-4" />
                                     </button>
                                     <button
                                       onClick={() => handleDeleteGoal(goal.id)}
-                                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                      className="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
-                                      <Trash2 className="inline-block mr-2 h-4 w-4" /> {t("project.actions.delete")}
+                                      <Trash2 className="inline-block h-4 w-4" />
                                     </button>
                                   </div>
                                 </div>
@@ -1072,9 +1071,8 @@ const ProjectManagement = () => {
                                           {canManageGTA && (
                                             <div className="relative">
                                               <button className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                                <MoreVertical className="h-5 w-5" />
                                               </button>
-                                              <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                              <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-800 rounded-md  py-1 z-10 border border-gray-200 dark:border-gray-700">
                                                 <button
                                                   onClick={() =>
                                                     setModal({
@@ -1088,7 +1086,7 @@ const ProjectManagement = () => {
                                                   }
                                                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                 >
-                                                  <Edit className="inline-block mr-2 h-4 w-4" /> {t("project.actions.edit")}
+                                                  <Edit className="inline-block h-4 w-4" />
                                                 </button>
                                                 <button
                                                   onClick={() =>
@@ -1096,7 +1094,7 @@ const ProjectManagement = () => {
                                                   }
                                                   className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                 >
-                                                  <Trash2 className="inline-block mr-2 h-4 w-4" /> {t("project.actions.deleteTask")}
+                                                  <Trash2 className="inline-block h-4 w-4" /> 
                                                 </button>
                                               </div>
                                             </div>
@@ -1304,11 +1302,10 @@ const ProjectManagement = () => {
               data: { goalId: goal.id, taskId: task.id, ...activity },
             })
           }
-          className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-white hover:bg-gray-100 dark:bg-gray-900"
+          className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm dark:text-white text-gray-700 hover:bg-gray-100 dark:bg-gray-900"
           aria-label={t("project.actions.edit")}
         >
           <Edit className="h-4 w-4" />
-          <span className="text-xs">{t("project.actions.edit")}</span>
         </button>
 
         <button
@@ -1317,7 +1314,6 @@ const ProjectManagement = () => {
           aria-label={t("project.actions.delete")}
         >
           <Trash2 className="h-4 w-4" />
-          <span className="text-xs">{t("project.actions.delete")}</span>
         </button>
       </div>
     </>
