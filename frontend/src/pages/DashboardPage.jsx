@@ -13,6 +13,7 @@ import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
 import { useNavigate } from "react-router-dom";
 import { Home } from "lucide-react";
+import { useAuth } from "../context/AuthContext"; 
 
 /* ---------------------------
    Small UI helpers & modal
@@ -244,7 +245,6 @@ const OverdueTable = ({ rows = [], loading, t }) => {
             <th className="p-2">{t("dashboard.table.task")}</th>
             <th className="p-2">{t("dashboard.table.due")}</th>
             <th className="p-2">{t("dashboard.table.daysOverdue")}</th>
-            <th className="p-2">{t("dashboard.table.assignee")}</th>
             <th className="p-2">{t("dashboard.table.goal")}</th>
             <th className="p-2">{t("dashboard.table.group")}</th>
           </tr>
@@ -256,10 +256,6 @@ const OverdueTable = ({ rows = [], loading, t }) => {
               <td className="p-2 dark:text-gray-300">{formatDate(r.dueDate)}</td>
               <td className="p-2">
                 <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs">{r.daysOverdue}</span>
-              </td>
-              <td className="p-2 flex items-center gap-2">
-                {r.assigneeAvatar && <img src={r.assigneeAvatar} alt="" className="w-6 h-6 rounded-full" />}
-                <span className="dark:text-gray-300">{r.assigneeName}</span>
               </td>
               <td className="p-2 dark:text-gray-300">{r.goalTitle}</td>
               <td className="p-2 dark:text-gray-300">{r.groupName}</td>
@@ -345,6 +341,7 @@ const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
 export default function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { user } = useAuth(); // <<-- use auth context
 
   const [dashboardData, setDashboardData] = useState({
     summary: null,
@@ -366,22 +363,36 @@ export default function DashboardPage() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showTasksModal, setShowTasksModal] = useState(false);
 
+  // derive permissions from user context
+  const permissionArray = Array.isArray(user?.permissions) ? user.permissions : [];
+  const hasAuditPerm = permissionArray.includes("view_audit_logs");
+  const hasViewDashboardPerm = permissionArray.includes("view_dashboard");
+  const hasManageDashboardPerm = permissionArray.includes("manage_dashboard");
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     setAuditPermDenied(false);
 
     try {
-      const results = await Promise.allSettled([
+      // Build list of promises — only call fetchAuditLogs if user has permission
+      const promises = [
         fetchDashboardSummary({ groupId: filters.group, dateFrom: filters.dateFrom, dateTo: filters.dateTo, status: filters.status }),
         fetchDashboardCharts({ type: "group", groupId: filters.group, dateFrom: filters.dateFrom, dateTo: filters.dateTo }),
         fetchDashboardCharts({ type: "task", groupId: filters.group, top: 8 }),
         fetchDashboardCharts({ type: "reports", groupId: filters.group }),
         fetchOverdueTasks({ limit: 10, groupId: filters.group }),
         fetchNotifications({ limit: 5 }),
-        fetchAuditLogs({ limit: 5 }),
-      ]);
+      ];
 
+      if (hasAuditPerm) {
+        promises.push(fetchAuditLogs({ limit: 5 }));
+      } else {
+        // stable placeholder so we can destructure reliably below
+        promises.push(Promise.resolve([]));
+      }
+
+      const results = await Promise.allSettled(promises);
       const [summaryRes, groupRes, taskRes, reportsRes, overdueRes, notifsRes, auditRes] = results;
 
       const newData = {
@@ -396,14 +407,25 @@ export default function DashboardPage() {
             : [],
         overdueRows: overdueRes.status === "fulfilled" ? overdueRes.value : [],
         notifications: notifsRes.status === "fulfilled" ? notifsRes.value : [],
-        auditLogs: auditRes.status === "fulfilled" ? auditRes.value : [],
+        auditLogs: [],
       };
 
       newData.groups = Array.isArray(newData.groupBars) ? newData.groupBars.map((g) => ({ groupId: g.groupId ?? g.id, name: g.name, value: g.progress ?? g.value ?? 0, color: g.color })) : [];
 
-      if (auditRes.status === "rejected") {
-        const reason = auditRes.reason;
-        if (reason && reason.status === 403) setAuditPermDenied(true);
+      if (hasAuditPerm) {
+        if (auditRes.status === "fulfilled") {
+          newData.auditLogs = auditRes.value || [];
+        } else {
+          const reason = auditRes.reason;
+          if (reason && reason.status === 403) {
+            setAuditPermDenied(true);
+            newData.auditLogs = [];
+          } else {
+            newData.auditLogs = [];
+          }
+        }
+      } else {
+        newData.auditLogs = [];
       }
 
       setDashboardData(newData);
@@ -415,7 +437,7 @@ export default function DashboardPage() {
         reportsRes.status === "rejected" && t("dashboard.errors.reports"),
         overdueRes.status === "rejected" && t("dashboard.errors.overdue"),
         notifsRes.status === "rejected" && t("dashboard.errors.notifications"),
-        auditRes.status === "rejected" && t("dashboard.errors.audit"),
+        hasAuditPerm && auditRes.status === "rejected" && t("dashboard.errors.audit"),
       ].filter(Boolean);
 
       if (errors.length) setError(t("dashboard.failedLoadPrefix") + errors.join(", "));
@@ -425,11 +447,14 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, t]);
+  }, [filters, t, hasAuditPerm]);
 
+  // load data when component mounts and when user or filters change
   useEffect(() => {
+    // The AuthProvider you provided ensures children render only after it finished initial load,
+    // but user may be null for logged-out state — still safe to call loadAll which will behave gracefully.
     loadAll();
-  }, [loadAll]);
+  }, [loadAll, user]); // reload when user changes (permissions might change)
 
   const handleRefresh = () => loadAll();
 
@@ -468,7 +493,13 @@ export default function DashboardPage() {
   const goToActivities = () => navigate("/project?tab=activities");
   const goToPendingReports = () => navigate("/report?status=Pending");
   const goToNotifications = () => navigate("/notification");
-  const goToAudit = () => navigate("/auditLog");
+  const goToAudit = () => {
+    if (!hasAuditPerm) {
+      console.warn("User attempted to access audit without permission");
+      return;
+    }
+    navigate("/auditLog");
+  };
 
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-gray-200 dark:bg-gray-900 min-h-screen transition-colors duration-300">
@@ -476,11 +507,11 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center min-w-0 gap-4">
           <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-                        <Home className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                      </div>
+            <Home className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+          </div>
           <div>
             <h1 className="flex text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white truncate">{t("dashboard.title")}</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{t("dashboard.subtitle")}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{t("dashboard.subtitle")}</p>
           </div>
         </div>
 
@@ -580,39 +611,37 @@ export default function DashboardPage() {
             )}
           </Card>
 
-          {/* <-- Changed: reportsDistribution is now a clickable Card that navigates to /report */}
+          {/* reportsDistribution clickable */}
           <Card title={t("dashboard.reportsDistribution1")} onClick={() => navigate("/report")} className="p-4" ariaLabel={t("dashboard.reportsDistribution.aria")}>
             {loading ? <LoadingSkeleton className="h-28" /> : <div className="flex justify-center"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
           </Card>
         </div>
 
         {/* Overdue + Notifications */}
-        {/* Overdue (replace the previous Overdue Card block) */}
-<div className="lg:col-span-8">
-  <Card
-    title={
-      <div className="flex items-center justify-between h-6 min-w-0">
-        <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{t("dashboard.overdueTitle")}</span>
-        <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
-          {(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}
-        </span>
-      </div>
-    }
-    headerActions={
-      <div className="flex items-center gap-2">
-        <button
-          onClick={(e) => { e.stopPropagation(); goToTasks(); }}
-          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-        >
-          {t("dashboard.openAll")}
-        </button>
-      </div>
-    }
-  >
-    <OverdueTable rows={dashboardData.overdueRows} loading={loading} t={t} />
-  </Card>
-</div>
-
+        <div className="lg:col-span-8">
+          <Card
+            title={
+              <div className="flex items-center justify-between h-6 min-w-0">
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{t("dashboard.overdueTitle")}</span>
+                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
+                  {(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}
+                </span>
+              </div>
+            }
+            headerActions={
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); goToTasks(); }}
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {t("dashboard.openAll")}
+                </button>
+              </div>
+            }
+          >
+            <OverdueTable rows={dashboardData.overdueRows} loading={loading} t={t} />
+          </Card>
+        </div>
 
         <div className="lg:col-span-4">
           <Card title={t("dashboard.notifications.title")} onClick={goToNotifications}>
@@ -628,12 +657,14 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Audit panel */}
-        <div className="lg:col-span-12">
-          <Card title={t("dashboard.audit.title")} onClick={goToAudit}>
-            <AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} />
-          </Card>
-        </div>
+        {/* Audit panel: only render when user has view_audit_logs permission */}
+        {hasAuditPerm ? (
+          <div className="lg:col-span-12">
+            <Card title={t("dashboard.audit.title")} onClick={goToAudit}>
+              <AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} />
+            </Card>
+          </div>
+        ) : null}
       </div>
 
       {/* Group Modal */}

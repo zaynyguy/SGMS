@@ -1,6 +1,7 @@
 const db = require("../db");
 const { logAudit } = require("../helpers/audit");
 const notificationService = require("../services/notificationService");
+const EPS = 1e-9;
 
 exports.getTasksByGoal = async (req, res) => {
   const { goalId } = req.params;
@@ -43,7 +44,6 @@ exports.createTask = async (req, res) => {
 
   try {
     const task = await db.tx(async (client) => {
-      // lock goal row
       const g = await client.query(
         'SELECT id, weight FROM "Goals" WHERE id=$1 FOR UPDATE',
         [goalId]
@@ -54,10 +54,17 @@ exports.createTask = async (req, res) => {
         throw err;
       }
 
-      const goalWeight = Number(g.rows[0].weight ?? 100);
-      const newWeight = Number(weight ?? 0);
-      if (newWeight < 0) {
-        const err = new Error("Task weight must be >= 0");
+      const goalWeight = parseFloat(g.rows[0].weight) || 100;
+
+      const newWeight =
+        weight !== undefined && weight !== null ? parseFloat(String(weight)) : 0;
+      if (Number.isNaN(newWeight)) {
+        const err = new Error("Task weight must be a number");
+        err.status = 400;
+        throw err;
+      }
+      if (newWeight <= 0) {
+        const err = new Error("Task weight must be > 0");
         err.status = 400;
         throw err;
       }
@@ -66,9 +73,9 @@ exports.createTask = async (req, res) => {
         'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Tasks" WHERE "goalId"=$1',
         [goalId]
       );
-      const sumOther = Number(sumRes.rows[0].sum || 0);
+      const sumOther = parseFloat(sumRes.rows[0].sum || 0);
 
-      if (newWeight + sumOther > goalWeight) {
+      if (newWeight + sumOther > goalWeight + EPS) {
         const err = new Error(
           `Cannot set task weight to ${newWeight}. Goal total is ${goalWeight} and ${sumOther} is already used.`
         );
@@ -90,7 +97,6 @@ exports.createTask = async (req, res) => {
       );
       const newTask = insertRes.rows[0];
 
-      // Audit
       try {
         await logAudit({
           userId: req.user.id,
@@ -161,9 +167,14 @@ exports.updateTask = async (req, res) => {
       }
 
       let newWeight = weight ?? currentRes.rows[0].weight;
-      newWeight = Number(newWeight);
-      if (newWeight < 0) {
-        const err = new Error("Task weight must be >= 0");
+      newWeight = parseFloat(String(newWeight));
+      if (Number.isNaN(newWeight)) {
+        const err = new Error("Task weight must be a number");
+        err.status = 400;
+        throw err;
+      }
+      if (newWeight <= 0) {
+        const err = new Error("Task weight must be > 0");
         err.status = 400;
         throw err;
       }
@@ -173,15 +184,15 @@ exports.updateTask = async (req, res) => {
         'SELECT weight FROM "Goals" WHERE id=$1 FOR UPDATE',
         [goalId]
       );
-      const goalWeight = Number(gRes.rows[0].weight ?? 100);
+      const goalWeight = parseFloat(gRes.rows[0].weight) || 100;
 
       const sumRes = await client.query(
         'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Tasks" WHERE "goalId"=$1 AND id<>$2',
         [goalId, taskId]
       );
-      const sumOther = Number(sumRes.rows[0].sum || 0);
+      const sumOther = parseFloat(sumRes.rows[0].sum || 0);
 
-      if (newWeight + sumOther > goalWeight) {
+      if (newWeight + sumOther > goalWeight + EPS) {
         const err = new Error(
           `Cannot set task weight to ${newWeight}. Goal total is ${goalWeight} and ${sumOther} is already used.`
         );

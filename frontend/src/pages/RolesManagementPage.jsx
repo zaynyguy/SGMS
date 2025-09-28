@@ -1,8 +1,8 @@
+// src/pages/RolesManagementPage.jsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Shield, Settings, Trash, AlertTriangle, X, FileText, Eye, Send, Zap, Bell, Monitor, Folder,
-  Key
+  Plus, Shield, Settings, Trash, AlertTriangle, X, FileText, Eye,
 } from 'lucide-react';
 import {
   fetchRoles,
@@ -19,15 +19,15 @@ import Toast from '../components/common/Toast';
 const PERMISSION_META = {
   manage_gta: { label: "Manage GTA", description: "Create & edit GTA items", Icon: Settings },
   view_gta: { label: "View GTA", description: "View GTA items", Icon: Eye },
-  submit_reports: { label: "Submit Reports", description: "Create and submit reports for activities", Icon: Send },
+  submit_reports: { label: "Submit Reports", description: "Create and submit reports for activities", Icon: FileText },
   view_reports: { label: "View Reports", description: "View submitted reports", Icon: FileText },
-  manage_reports: { label: "Manage Reports", description: "Approve/Reject or manage reports", Icon: Zap },
+  manage_reports: { label: "Manage Reports", description: "Approve/Reject or manage reports", Icon: FileText },
   manage_settings: { label: "Manage Settings", description: "Access and modify system settings", Icon: Shield },
   view_audit_logs: { label: "View Audit Logs", description: "See audit log entries", Icon: FileText },
-  manage_notifications: { label: "Manage Notifications", description: "Create and manage notifications", Icon: Bell },
-  manage_dashboard: { label: "Manage Dashboard", description: "Edit dashboards & widgets", Icon: Monitor },
-  view_dashboard: { label: "View Dashboard", description: "View dashboards", Icon: Monitor },
-  manage_attachments: { label: "Manage Attachments", description: "Add/remove attachments", Icon: Folder },
+  manage_notifications: { label: "Manage Notifications", description: "Create and manage notifications", Icon: FileText },
+  manage_dashboard: { label: "Manage Dashboard", description: "Edit dashboards & widgets", Icon: FileText },
+  view_dashboard: { label: "View Dashboard", description: "View dashboards", Icon: FileText },
+  manage_attachments: { label: "Manage Attachments", description: "Add/remove attachments", Icon: FileText },
   manage_access: { label: "Manage Access", description: "Role & group management controls", Icon: Shield },
 };
 
@@ -148,7 +148,7 @@ const RolesManagementPage = () => {
     }
   };
 
-  /* Toggle permission change */
+  /* Toggle permission change (keeps pendingPermissionChanges structure) */
   const handlePermissionChange = (roleId, permissionId, checked) => {
     setPendingPermissionChanges(prev => {
       const next = { ...prev };
@@ -157,6 +157,15 @@ const RolesManagementPage = () => {
       return next;
     });
     setHasUnsavedChanges(true);
+  };
+
+  /* helper to toggle current value (makes click-on-row easy) */
+  const togglePermission = (roleId, permissionId) => {
+    // find current state using roleHasPermission helper (below)
+    const role = roles.find(r => r.id === roleId);
+    if (!role) return;
+    const current = roleHasPermission(role, permissionId);
+    handlePermissionChange(roleId, permissionId, !current);
   };
 
   /* Save changes to roles (applies pendingPermissionChanges) */
@@ -208,6 +217,18 @@ const RolesManagementPage = () => {
   };
 
   /* ---------------------------
+     Render helpers & checks
+     --------------------------- */
+  const roleHasPermission = (role, permissionId) => {
+    const pendingForRole = pendingPermissionChanges[role.id] || {};
+    if (permissionId in pendingForRole) return pendingForRole[permissionId];
+    return (role.permissions || []).includes(permissionId);
+  };
+
+  /* Selected role object for mobile */
+  const selectedRole = roles.find(r => r.id === selectedRoleId) || roles[0] || null;
+
+  /* ---------------------------
      Render
      --------------------------- */
   if (loading) {
@@ -240,16 +261,6 @@ const RolesManagementPage = () => {
     );
   }
 
-  /* helpers for checking current/changed state */
-  const roleHasPermission = (role, permissionId) => {
-    const pendingForRole = pendingPermissionChanges[role.id] || {};
-    if (permissionId in pendingForRole) return pendingForRole[permissionId];
-    return (role.permissions || []).includes(permissionId);
-  };
-
-  /* Selected role object for mobile */
-  const selectedRole = roles.find(r => r.id === selectedRoleId) || roles[0] || null;
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
       {/* Toast */}
@@ -260,16 +271,16 @@ const RolesManagementPage = () => {
         <div className="flex items-center justify-between gap-3">
           <div className='flex items-center min-w-0 gap-4'>
             <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-800">
-                        <Key className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                      </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
-            {t('admin.roles.title')}
-          </h1>
-          <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+              <Shield className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
+                {t('admin.roles.title')}
+              </h1>
+              <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
                 {t("admin.roles.subtitle")}
               </p>
-          </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -287,9 +298,6 @@ const RolesManagementPage = () => {
       </div>
 
       <section className="max-w-7xl mx-auto">
-        {/* GRID: left (roles list) + right (permissions)
-            On mobile we'll replace the left column with horizontal chips and show permissions below
-        */}
         <div className="grid grid-cols-12 gap-6">
           {/* Roles column (desktop) */}
           <aside className="col-span-12 md:col-span-4 lg:col-span-3">
@@ -332,24 +340,53 @@ const RolesManagementPage = () => {
 
                 {/* add role */}
                 {isAddingRole ? (
-                  <div className="flex gap-2">
-                    <input
-                      autoFocus
-                      value={newRoleName}
-                      onChange={(e) => setNewRoleName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddRole();
-                        if (e.key === 'Escape') { setIsAddingRole(false); setNewRoleName(''); }
-                      }}
-                      placeholder={t('admin.roles.roleNamePlaceholder')}
-                      className="flex-1 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white border-gray-300 dark:border-gray-600"
-                      aria-label={t('admin.roles.roleNameAria')}
-                    />
-                    <button onClick={() => { setIsAddingRole(false); setNewRoleName(''); }} className="p-2 text-gray-500">
-                      <X size={18} />
-                    </button>
-                    <button onClick={handleAddRole} className="px-3 py-2 bg-blue-600 text-white rounded-md">{t('admin.actions.create')}</button>
-                  </div>
+                  <div className="flex flex-col gap-2 w-full">
+  {/* Row 1: input + X button */}
+  <div className="flex gap-2 w-full">
+    <input
+      autoFocus
+      value={newRoleName}
+      onChange={(e) => setNewRoleName(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") handleAddRole();
+        if (e.key === "Escape") {
+          setIsAddingRole(false);
+          setNewRoleName("");
+        }
+      }}
+      placeholder={t("admin.roles.roleNamePlaceholder")}
+      aria-label={t("admin.roles.roleNameAria")}
+      className="
+        flex-1 p-2 border rounded-md 
+        bg-gray-50 dark:bg-gray-700 dark:text-white 
+        border-gray-300 dark:border-gray-600 
+        focus:outline-none focus:ring-2 focus:ring-blue-400
+        w-full sm:w-full md:max-w-md lg:max-w-lg
+      "
+    />
+    <button
+      onClick={() => {
+        setIsAddingRole(false);
+        setNewRoleName("");
+      }}
+      className="p-2 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+      aria-label={t("admin.roles.roleActions.remove")}
+      title={t("admin.roles.roleActions.remove")}
+    >
+      <X size={18} />
+    </button>
+  </div>
+
+  {/* Row 2: Create button */}
+  <button
+    onClick={handleAddRole}
+    className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition"
+    aria-label={t("admin.roles.roleActions.add")}
+  >
+    {t("admin.roles.roleActions.add")}
+  </button>
+</div>
+
                 ) : (
                   <button
                     onClick={() => setIsAddingRole(true)}
@@ -454,12 +491,31 @@ const RolesManagementPage = () => {
                             {roles.map(role => {
                               const checked = roleHasPermission(role, permission.id);
                               return (
-                                <td key={`perm-${permission.id}-role-${role.id}`} className="px-4 py-3 whitespace-nowrap text-center">
+                                <td
+                                  key={`perm-${permission.id}-role-${role.id}`}
+                                  className="px-4 py-3 whitespace-nowrap text-center cursor-pointer select-none"
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={() => togglePermission(role.id, permission.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      togglePermission(role.id, permission.id);
+                                    }
+                                  }}
+                                  aria-pressed={checked}
+                                  title={checked ? t('admin.roles.enabled') : t('admin.roles.disabled')}
+                                >
                                   <input
                                     type="checkbox"
-                                    className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent cursor-pointer"
+                                    className="h-6 w-6 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent cursor-pointer"
                                     checked={Boolean(checked)}
-                                    onChange={(e) => handlePermissionChange(role.id, permission.id, e.target.checked)}
+                                    readOnly
+                                    onClick={(e) => {
+                                      // stop propagation so the cell handler doesn't run twice
+                                      e.stopPropagation();
+                                      togglePermission(role.id, permission.id);
+                                    }}
                                     aria-label={t('admin.roles.permissionStatus', {
                                       permission: permission.name,
                                       role: role.name,
@@ -492,7 +548,20 @@ const RolesManagementPage = () => {
                         const checked = roleHasPermission(selectedRole, permission.id);
 
                         return (
-                          <div key={permission.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+                          <div
+                            key={permission.id}
+                            className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 cursor-pointer"
+                            onClick={() => togglePermission(selectedRole.id, permission.id)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                togglePermission(selectedRole.id, permission.id);
+                              }
+                            }}
+                            aria-pressed={checked}
+                          >
                             <div className="p-2 rounded-md bg-gray-100 dark:bg-gray-700/20">
                               <Icon className="w-5 h-5 text-gray-700 dark:text-gray-300" />
                             </div>
@@ -505,8 +574,12 @@ const RolesManagementPage = () => {
                               <input
                                 type="checkbox"
                                 checked={Boolean(checked)}
-                                onChange={(e) => handlePermissionChange(selectedRole.id, permission.id, e.target.checked)}
-                                className="h-5 w-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                readOnly
+                                className="h-6 w-6 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // prevent double-toggle (row + input)
+                                  togglePermission(selectedRole.id, permission.id);
+                                }}
                                 aria-label={t('admin.roles.permissionStatus', {
                                   permission: permission.name,
                                   role: selectedRole.name,
@@ -527,7 +600,7 @@ const RolesManagementPage = () => {
                         className="flex-1 px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md"
                         aria-label={t('admin.roles.deleteRole', { name: selectedRole.name })}
                       >
-                         <span className="ml-2">{t('admin.roles.deleteRole')}</span>
+                        <span className="ml-2">{t('admin.roles.deleteRole')}</span>
                       </button>
 
                       <button

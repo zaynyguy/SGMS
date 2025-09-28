@@ -60,7 +60,6 @@ CREATE TABLE "Users" (
   "password" VARCHAR(255) NOT NULL,
   "roleId" INTEGER REFERENCES "Roles"("id") ON DELETE SET NULL,
   "language" VARCHAR(10) DEFAULT 'en',
-  "darkMode" BOOLEAN DEFAULT false,
   "token_version" INTEGER DEFAULT 0 NOT NULL,
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()

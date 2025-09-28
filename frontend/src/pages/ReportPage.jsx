@@ -1,12 +1,13 @@
-// src/pages/ReportsUI.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { Loader, FileText, Plus } from "lucide-react";
+import { Loader, FileText, ChevronRight, User } from "lucide-react";
 import { fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
+import { fetchAttachments, downloadAttachment } from "../api/attachments";
 import { useTranslation } from "react-i18next";
 import TopBar from "../components/layout/TopBar";
+import { useAuth } from "../context/AuthContext";
 
 /* -------------------------
-   Small helper: render metrics nicely (object or JSON)
+Small helper: render metrics nicely (object or JSON)
 ------------------------- */
 function renderMetricsList(metrics) {
   if (!metrics) return <div className="text-xs text-gray-400">—</div>;
@@ -35,23 +36,27 @@ function renderMetricsList(metrics) {
 
   return (
     <div className="space-y-1">
-      {keys.map((k) => (
+      {keys.map((k) => {
+        const value = obj[k];
+        const displayValue = value !== null && typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+        return(
         <div
           key={k}
-          className="flex items-center justify-between bg-white dark:bg-gray-900 rounded px-2 py-1 border dark:border-gray-700"
+          className="flex items-start justify-between bg-white dark:bg-gray-900 rounded px-2 py-1 border dark:border-gray-700 gap-4"
         >
-          <div className="text-xs text-gray-600 dark:text-gray-300">{k}</div>
-          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 break-words">
-            {String(obj[k])}
+          <div className="text-xs text-gray-600 dark:text-gray-300 pt-px">{k}</div>
+          <div className="text-xs font-mono text-gray-900 dark:text-gray-100 break-all text-right whitespace-pre-wrap">
+            {displayValue}
           </div>
         </div>
-      ))}
+        )
+      })}
     </div>
   );
 }
 
 /* -------------------------
-   Pills (desktop center) + Mobile bottom nav
+Pills (desktop center) + Mobile bottom nav
 ------------------------- */
 function TabsPills({ value, onChange }) {
   const { t } = useTranslation();
@@ -132,22 +137,25 @@ function TabsPills({ value, onChange }) {
 }
 
 /* -------------------------
-   REVIEW PAGE
+REVIEW PAGE (now supports readonly mode)
+- attachments are fetched when a report is expanded
 ------------------------- */
-function ReviewReportsPage() {
+function ReviewReportsPage({ permissions, readonly = false }) {
   const { t } = useTranslation();
-
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [actionState, setActionState] = useState({});
-  // actionLoading keyed by report id; value: 'approving' | 'rejecting' | null
   const [actionLoading, setActionLoading] = useState({});
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
+
+  // attachments cache per reportId
+  const [attachmentsMap, setAttachmentsMap] = useState({}); // { [reportId]: [attachments] }
+  const [attachmentDownloading, setAttachmentDownloading] = useState({}); // { [attachmentId]: bool }
 
   useEffect(() => {
     loadReports();
@@ -161,7 +169,6 @@ function ReviewReportsPage() {
       const useSize = opts.pageSize || pageSize;
       const status = statusFilter === "All" ? undefined : statusFilter;
       const q = opts.q !== undefined ? opts.q : search ? search : undefined;
-
       const data = await fetchReports(usePage, useSize, status, q);
       setReports(Array.isArray(data.rows) ? data.rows : []);
       setPage(data.page || usePage);
@@ -176,11 +183,51 @@ function ReviewReportsPage() {
     }
   }
 
+  function formatDateLocal(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d)) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // when expanding, prefill admin fields + fetch attachments if needed
+  useEffect(() => {
+    if (!expanded) return;
+    const r = reports.find((x) => x.id === expanded);
+    if (!r) return;
+    setActionState((s) => ({
+      ...s,
+      [expanded]: {
+        ...(s[expanded] || {}),
+        comment: r.adminComment || "",
+        deadline: r.resubmissionDeadline ? formatDateLocal(r.resubmissionDeadline) : "",
+      },
+    }));
+
+    // FETCH ATTACHMENTS if not already cached
+    (async () => {
+      try {
+        if (!attachmentsMap[expanded]) {
+          const fetched = await fetchAttachments(expanded);
+          // fetched may be array or object; ensure array
+          const arr = Array.isArray(fetched) ? fetched : fetched.rows || [];
+          setAttachmentsMap((m) => ({ ...m, [expanded]: arr }));
+        }
+      } catch (err) {
+        console.error("fetchAttachments error for report", expanded, err);
+        // keep silent; attachments not critical
+      }
+    })();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded]);
+
   async function handleReview(id, status) {
     const adminComment = actionState[id]?.comment || null;
     const resubmissionDeadline = actionState[id]?.deadline || null;
-
-    // set action-specific loading state so only clicked button shows spinner
     const actionKey = status === "Approved" ? "approving" : "rejecting";
 
     try {
@@ -206,8 +253,40 @@ function ReviewReportsPage() {
         },
       }));
     } finally {
-      // clear loading
       setActionLoading((s) => ({ ...s, [id]: null }));
+    }
+  }
+
+  async function handleDownloadAttachment(attachment) {
+    if (!attachment || !attachment.id) return;
+    const aid = attachment.id;
+    try {
+      setAttachmentDownloading((s) => ({ ...s, [aid]: true }));
+      const res = await downloadAttachment(aid);
+      // res may be { url } or { blob, filename }
+      if (res && res.url) {
+        // open signed url in new tab
+        window.open(res.url, "_blank");
+      } else if (res && res.blob) {
+        const blob = res.blob;
+        const filename = res.filename || attachment.fileName || attachment.attachment_name || `attachment_${aid}`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } else {
+        // fallback: open direct endpoint (browser will attempt download)
+        window.open(`/api/reports/attachments/${encodeURIComponent(aid)}/download`, "_blank");
+      }
+    } catch (err) {
+      console.error("downloadAttachment error", err);
+      alert(err?.message || "Download failed");
+    } finally {
+      setAttachmentDownloading((s) => ({ ...s, [aid]: false }));
     }
   }
 
@@ -224,7 +303,6 @@ function ReviewReportsPage() {
   }
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
   const statusOptions = [
     { id: "All", key: "reports.filters.all" },
     { id: "Pending", key: "reports.filters.pending" },
@@ -232,21 +310,16 @@ function ReviewReportsPage() {
     { id: "Rejected", key: "reports.filters.rejected" },
   ];
 
+  // Header text: use different title when readonly for users
+  const headerTitle = readonly ? t("reports.myReports.title", "My Reports") : t("reports.review.title");
+  const headerSubtitle = readonly ? t("reports.myReports.subtitle", "Your submitted reports and their review status.") : t("reports.review.subtitle");
+
   return (
     <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
-        <div className="flex items-center min-w-0 gap-4">
-          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-900">
-                        <Plus className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                      </div>
-          <div>
-            <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">
-            {t("reports.review.title")}
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">
-            {t("reports.review.subtitle")}
-          </p>
-          </div>
+        <div>
+          <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">{headerTitle}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">{headerSubtitle}</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full lg:w-auto">
@@ -273,7 +346,7 @@ function ReviewReportsPage() {
             onClick={handleRefresh}
             className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="opacity-80" aria-hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="opacity-80">
               <path d="M21 12A9 9 0 1 0 6 20.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -292,18 +365,14 @@ function ReviewReportsPage() {
                 setStatusFilter(s.id);
               }}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                statusFilter === s.id
-                  ? "bg-sky-600 text-white"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                statusFilter === s.id ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             >
               {t(s.key)}
             </button>
           ))}
         </div>
-        <div className="ml-auto text-xs text-gray-500 dark:text-gray-400">
-          {t("reports.pagination.showingPage", { page, totalPages, total })}
-        </div>
+        <div className="ml-auto text-xs text-gray-500 dark:text-gray-400">{t("reports.pagination.showingPage", { page, totalPages, total })}</div>
       </div>
 
       <div className="space-y-4">
@@ -313,165 +382,186 @@ function ReviewReportsPage() {
               <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
                 <div className="min-w-0 w-full">
                   <div className="flex items-center gap-4">
-                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24" />
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
+                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
                   </div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-40 mt-3" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-40 mt-3"></div>
                 </div>
                 <div className="flex gap-2 items-center">
-                  <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded" />
+                  <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
                 </div>
               </div>
               <div className="p-4 bg-gray-50 dark:bg-gray-800">
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full" />
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
               </div>
             </div>
           ))
         ) : (
           <>
             {reports.map((r) => {
-              const isLoading = !!actionLoading[r.id];
-              const approving = actionLoading[r.id] === "approving";
-              const rejecting = actionLoading[r.id] === "rejecting";
+               const isLoading = !!actionLoading[r.id];
+               const approving = actionLoading[r.id] === "approving";
+               const rejecting = actionLoading[r.id] === "rejecting";
               return (
-                <div key={r.id} className="border rounded-lg overflow-hidden transition-all">
-                  <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 md:gap-4">
-                        <div className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">Report #{r.id}</div>
-                        <div
-                          className={`px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs md:text-sm font-medium ${
-                            r.status === "Approved"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                              : r.status === "Rejected"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                          }`}
-                        >
-                          {t(`reports.status.${r.status}`, { defaultValue: r.status })}
-                        </div>
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-1">
-                        {r.activity_title} • {r.user_name}
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 items-center">
-                      <button
-                        onClick={() => setExpanded(expanded === r.id ? null : r.id)}
-                        aria-expanded={expanded === r.id}
-                        className="flex items-center gap-2 px-3 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <svg className={`transition-transform ${expanded === r.id ? "rotate-180" : "rotate-0"}`} width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
+              <div key={r.id} className="border rounded-lg overflow-hidden transition-all">
+              <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 md:gap-4">
+                    <div className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">Report #{r.id}</div>
+                    <div className={`px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs md:text-sm font-medium ${
+                      r.status === "Approved" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                      : r.status === "Rejected" ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                    }`}>
+                      {t(`reports.status.${r.status}`, { defaultValue: r.status })}
                     </div>
                   </div>
-
-                  {expanded === r.id && (
-  <div className="p-4 bg-gray-50 dark:bg-gray-800 space-y-4">
-    {/* side-by-side: narrative | metrics */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-  {/* Left: Narrative */}
-  <section className="space-y-2">
-    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-      {t("reports.narrative")}
-    </h3>
-
-    <div
-      className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1 whitespace-pre-wrap"
-      aria-live="polite"
-    >
-      {r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}
-    </div>
-  </section>
-
-  {/* Right: Metrics */}
-  <aside className="space-y-2">
-    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-      {t("reports.metrics_narrative")}
-    </h3>
-
-    <div className="mt-2">
-      {renderMetricsList(r.metrics_data)}
-    </div>
-  </aside>
-</div>
-
-
-    <div className="flex flex-col md:flex-row md:items-start gap-3">
-      <textarea
-        rows={3}
-        placeholder={t("reports.adminComment_placeholder.placeholder")}
-        value={actionState[r.id]?.comment || ""}
-        onChange={(e) =>
-          setActionState((s) => ({
-            ...s,
-            [r.id]: {
-              ...(s[r.id] || {}),
-              comment: e.target.value,
-            },
-          }))
-        }
-        className="flex-1 px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-y"
-        disabled={isLoading}
-        aria-label={t("reports.adminComment_placeholder.placeholder")}
-      />
-
-      <div className="w-full md:w-56 flex flex-col gap-2">
-        <input
-          type="date"
-          value={actionState[r.id]?.deadline || ""}
-          onChange={(e) =>
-            setActionState((s) => ({
-              ...s,
-              [r.id]: {
-                ...(s[r.id] || {}),
-                deadline: e.target.value,
-              },
-            }))
-          }
-          className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent w-full"
-          disabled={isLoading}
-          aria-label={t("reports.deadline")}
-        />
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleReview(r.id, "Approved")}
-            className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
-            disabled={isLoading}
-            aria-busy={approving}
-          >
-            {approving ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.approve")}
-          </button>
-
-          <button
-            onClick={() => handleReview(r.id, "Rejected")}
-            className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 transition-colors"
-            disabled={isLoading}
-            aria-busy={rejecting}
-          >
-            {rejecting ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.reject")}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    {actionState[r.id]?._lastResult && (
-      <div className="text-sm text-green-700 dark:text-green-300">{actionState[r.id]._lastResult}</div>
-    )}
-    {actionState[r.id]?._lastError && (
-      <div className="text-sm text-red-600 dark:text-red-400">{actionState[r.id]._lastError}</div>
-    )}
-  </div>
-)}
-
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-x-4 gap-y-1 mt-2">
+                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center flex-wrap min-w-0">
+                            <span className="font-medium text-gray-600 dark:text-gray-300 truncate" title={r.goal_title || 'Goal'}>{r.goal_title || 'Goal'}</span>
+                            <ChevronRight className="h-4 w-4 text-gray-400 mx-1 flex-shrink-0" />
+                            <span className="font-medium text-gray-600 dark:text-gray-300 truncate" title={r.task_title || 'Task'}>{r.task_title || 'Task'}</span>
+                            <ChevronRight className="h-4 w-4 text-gray-400 mx-1 flex-shrink-0" />
+                            <span className="text-gray-800 dark:text-gray-100 font-semibold truncate" title={r.activity_title || 'Activity'}>{r.activity_title || 'Activity'}</span>
+                        </div>
+                         <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full whitespace-nowrap self-start sm:self-center">
+                            <User className="h-3.5 w-3.5" />
+                            <span>{r.user_name || 'Unknown User'}</span>
+                        </div>
+                    </div>
                 </div>
-              );
-            })}
+
+                <div className="flex gap-2 items-center pl-4">
+                  <button onClick={() => setExpanded(expanded === r.id ? null : r.id)} aria-expanded={expanded === r.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <svg className={`transition-transform ${expanded === r.id ? "rotate-180" : "rotate-0"}`} width="18" height="18" viewBox="0 0 24 24" fill="none">
+                      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {expanded === r.id && (
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 space-y-4">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.narrative")}</div>
+                    <div className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1 whitespace-pre-wrap p-2 bg-white dark:bg-gray-900/30 rounded border border-gray-200 dark:border-gray-700">{r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}</div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.metrics.title", "Current Metrics")}</div>
+                    <div className="mt-2">{renderMetricsList(r.metrics_data)}</div>
+                  </div>
+
+                  {((attachmentsMap[r.id] && attachmentsMap[r.id].length) || (Array.isArray(r.attachments) && r.attachments.length)) && (
+                    <div>
+                      <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.attachments")}</div>
+                      <ul className="mt-2 space-y-2">
+                        {( (attachmentsMap[r.id] && attachmentsMap[r.id].length ? attachmentsMap[r.id] : r.attachments) || [] ).map((a) => (
+                          <li key={a.id} className="flex items-center justify-between gap-3 p-2 bg-white dark:bg-gray-900/30 rounded border border-gray-200 dark:border-gray-700">
+                            <button
+                              onClick={(e) => { e.preventDefault(); handleDownloadAttachment(a); }}
+                              className="text-left text-sky-600 dark:text-sky-400 hover:underline text-sm flex-1 truncate"
+                              title={a.fileName || a.attachment_name || `attachment-${a.id}`}
+                            >
+                              {a.fileName || a.attachment_name || `attachment-${a.id}`}
+                            </button>
+
+                            <div className="flex items-center gap-2">
+                              {a.size && <div className="text-xs text-gray-400 hidden sm:inline">{(a.size/1024).toFixed(1)} KB</div>}
+                              {a.mimeType && <div className="text-xs text-gray-400 hidden sm:inline">{a.mimeType}</div>}
+                              <button
+                                onClick={(e) => { e.preventDefault(); handleDownloadAttachment(a); }}
+                                className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs"
+                                aria-label={`Download ${a.fileName || a.attachment_name || a.id}`}
+                              >
+                                {attachmentDownloading[a.id] ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.attachments.download", "Download")}
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {!readonly ? (
+                    <div className="pt-2">
+                        <div className="flex flex-col md:flex-row md:items-start gap-3">
+                            <textarea
+                                rows={3}
+                                placeholder={t("reports.adminComment_placeholder.placeholder")}
+                                value={actionState[r.id]?.comment || ""}
+                                onChange={(e) =>
+                                setActionState((s) => ({
+                                    ...s,
+                                    [r.id]: { ...(s[r.id] || {}), comment: e.target.value },
+                                }))
+                                }
+                                className="flex-1 px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-y"
+                                disabled={isLoading}
+                                aria-label={t("reports.adminComment_placeholder.placeholder")}
+                            />
+
+                            <div className="w-full md:w-56 flex flex-col gap-2">
+                                <input
+                                    type="date"
+                                    value={actionState[r.id]?.deadline || ""}
+                                    onChange={(e) =>
+                                        setActionState((s) => ({
+                                        ...s,
+                                        [r.id]: { ...(s[r.id] || {}), deadline: e.target.value },
+                                        }))
+                                    }
+                                    className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent w-full"
+                                    disabled={isLoading}
+                                    aria-label={t("reports.deadline")}
+                                />
+
+                                <div className="flex gap-2">
+                                    <button
+                                    onClick={() => handleReview(r.id, "Approved")}
+                                    className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-colors disabled:opacity-60"
+                                    disabled={isLoading}
+                                    aria-busy={approving}
+                                    >
+                                    {approving ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.approve")}
+                                    </button>
+
+                                    <button
+                                    onClick={() => handleReview(r.id, "Rejected")}
+                                    className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 transition-colors disabled:opacity-60"
+                                    disabled={isLoading}
+                                    aria-busy={rejecting}
+                                    >
+                                    {rejecting ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.reject")}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 pt-2">
+                      {r.adminComment && (
+                        <div>
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t("reports.adminComment")}</div>
+                          <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900/50 p-2 rounded">{r.adminComment}</div>
+                        </div>
+                      )}
+                      {r.resubmissionDeadline && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {t("reports.resubmissionDeadline")}: {new Date(r.resubmissionDeadline).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {actionState[r.id]?._lastResult && <div className="text-sm text-green-700 dark:text-green-300">{actionState[r.id]._lastResult}</div>}
+                  {actionState[r.id]?._lastError && <div className="text-sm text-red-600 dark:text-red-400">{actionState[r.id]._lastError}</div>}
+                </div>
+              )}
+            </div>
+            )})}
+
             {reports.length === 0 && !loading && (
               <div className="text-center text-gray-500 dark:text-gray-400 py-6">{t("reports.noReports")}</div>
             )}
@@ -481,66 +571,21 @@ function ReviewReportsPage() {
 
       <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            disabled={page <= 1}
-            onClick={() => {
-              setPage(1);
-              loadReports({ page: 1 });
-            }}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t("reports.pagination.first")}
-          </button>
-          <button
-            disabled={page <= 1}
-            onClick={() => {
-              setPage((p) => Math.max(1, p - 1));
-              loadReports({ page: Math.max(1, page - 1) });
-            }}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t("reports.pagination.prev")}
-          </button>
-          <div className="px-3 py-1.5 text-sm">
-            {page} / {totalPages}
-          </div>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => {
-              setPage((p) => Math.min(totalPages, p + 1));
-              loadReports({ page: Math.min(totalPages, page + 1) });
-            }}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t("reports.pagination.next")}
-          </button>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => {
-              setPage(totalPages);
-              loadReports({ page: totalPages });
-            }}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t("reports.pagination.last")}
-          </button>
+          <button disabled={page <= 1} onClick={() => { setPage(1); loadReports({ page: 1 });
+          }} className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{t("reports.pagination.first")}</button>
+          <button disabled={page <= 1} onClick={() => { setPage((p) => Math.max(1, p - 1)); loadReports({ page: Math.max(1, page - 1) });
+          }} className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{t("reports.pagination.prev")}</button>
+          <div className="px-3 py-1.5 text-sm">{page} / {totalPages}</div>
+          <button disabled={page >= totalPages} onClick={() => { setPage((p) => Math.min(totalPages, p + 1)); loadReports({ page: Math.min(totalPages, page + 1) });
+          }} className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{t("reports.pagination.next")}</button>
+          <button disabled={page >= totalPages} onClick={() => { setPage(totalPages); loadReports({ page: totalPages });
+          }} className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{t("reports.pagination.last")}</button>
         </div>
 
         <div className="flex items-center gap-2">
           <label className="text-sm text-gray-500 dark:text-gray-400">{t("reports.pageSize")}</label>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(1);
-            }}
-            className="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent"
-          >
-            {[10, 20, 50, 100].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
+          <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent">
+            {[10, 20, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
         </div>
       </div>
@@ -549,15 +594,15 @@ function ReviewReportsPage() {
 }
 
 /* -------------------------
-   Master report helpers & table row
+Master report helpers & table row
 ------------------------- */
 
 /**
- * Normalize period keys returned from backend into canonical monthly/quarterly/annual keys:
- * - monthly -> "YYYY-MM" (from any of: "YYYY-M", "YYYY-MM", "YYYY-MM-DD", ISO string)
- * - quarterly -> "YYYY-Qn"
- * - annual -> "YYYY"
- */
+* Normalize period keys returned from backend into canonical monthly/quarterly/annual keys:
+* - monthly -> "YYYY-MM" (from any of: "YYYY-M", "YYYY-MM", "YYYY-MM-DD", ISO string)
+* - quarterly -> "YYYY-Qn"
+* - annual -> "YYYY"
+*/
 function normalizePeriodKey(rawKey, granularity) {
   if (!rawKey) return null;
   // if rawKey is a Date-like string "2025-10-01T00:00:00Z" or "2025-10-01"
@@ -744,7 +789,7 @@ function ActivityRow({ activity, periods, granularity }) {
 }
 
 /* -------------------------
-   Master Report page wrapper
+Master Report page wrapper
 ------------------------- */
 function MasterReportPageWrapper() {
   const { t } = useTranslation();
@@ -871,51 +916,51 @@ th{background:#f3f4f6}
 <p style="margin-top:2px;margin-bottom:8px">${escapeHtml(groupLabel)}: ${escapeHtml(String(groupId || "All"))} • ${escapeHtml(generated)}</p>
 
 <section>
-  <h2>${escapeHtml(narratives)}</h2>
-  ${data.goals
-    .map(
-      (g) => `
-    <div style="margin-bottom:12px;padding:10px;border:1px solid #eee;border-radius:6px;background:#fbfbfb">
-      <div style="font-weight:700;font-size:15px">${escapeHtml(g.title)} <span style="font-weight:400;color:#6b7280">• ${escapeHtml(String(g.status || "—"))} • ${escapeHtml(String(g.progress ?? 0))}% • weight: ${escapeHtml(String(g.weight ?? "-"))}</span></div>
-      <div style="margin-top:8px;padding-left:8px">
-        ${(g.tasks || [])
-          .map(
-            (task) => `
-          <div style="margin-bottom:8px">
-            <div style="font-weight:600">${escapeHtml(task.title)} <span style="color:#6b7280">(${escapeHtml(String(task.progress ?? 0))}%) • weight: ${escapeHtml(String(task.weight ?? "-"))}</span></div>
-            ${(task.activities || [])
-              .map(
-                (activity) => `
-              <div style="margin-left:16px;margin-top:6px;padding:8px;border:1px solid #f1f5f9;border-radius:4px;background:#fff">
-                <div style="font-weight:600">${escapeHtml(activity.title)}</div>
-                <div style="color:#6b7280;margin-top:6px">${escapeHtml(t("reports.master.targetLabel"))}: ${activity.targetMetric ? escapeHtml(JSON.stringify(activity.targetMetric)) : "-"}</div>
-                <div style="margin-top:8px">${(activity.reports || [])
-                  .map(
-                    (r) =>
-                      `<div style="padding:6px;border-top:1px dashed #eee"><strong>#${escapeHtml(String(r.id))}</strong> • ${escapeHtml(String(r.status || "—"))} • ${r.createdAt ? escapeHtml(new Date(r.createdAt).toLocaleString()) : ""}<div class="narrative" style="margin-top:6px">${escapeHtml(r.narrative || "")}</div></div>`
-                  )
-                  .join("")}</div>
-              </div>
-            `
-              )
-              .join("")}
-          </div>
-        `
-          )
-          .join("")}
-      </div>
-    </div>
-  `
-    )
-    .join("")}
+<h2>${escapeHtml(narratives)}</h2>
+${data.goals
+  .map(
+    (g) => `
+<div style="margin-bottom:12px;padding:10px;border:1px solid #eee;border-radius:6px;background:#fbfbfb">
+<div style="font-weight:700;font-size:15px">${escapeHtml(g.title)} <span style="font-weight:400;color:#6b7280">• ${escapeHtml(String(g.status || "—"))} • ${escapeHtml(String(g.progress ?? 0))}% • weight: ${escapeHtml(String(g.weight ?? "-"))}</span></div>
+<div style="margin-top:8px;padding-left:8px">
+${(g.tasks || [])
+  .map(
+    (task) => `
+<div style="margin-bottom:8px">
+<div style="font-weight:600">${escapeHtml(task.title)} <span style="color:#6b7280">(${escapeHtml(String(task.progress ?? 0))}%) • weight: ${escapeHtml(String(task.weight ?? "-"))}</span></div>
+${(task.activities || [])
+  .map(
+    (activity) => `
+<div style="margin-left:16px;margin-top:6px;padding:8px;border:1px solid #f1f5f9;border-radius:4px;background:#fff">
+<div style="font-weight:600">${escapeHtml(activity.title)}</div>
+<div style="color:#6b7280;margin-top:6px">${escapeHtml(t("reports.master.targetLabel"))}: ${activity.targetMetric ? escapeHtml(JSON.stringify(activity.targetMetric)) : "-"}</div>
+<div style="margin-top:8px">${(activity.reports || [])
+  .map(
+    (r) =>
+      `<div style="padding:6px;border-top:1px dashed #eee"><strong>#${escapeHtml(String(r.id))}</strong> • ${escapeHtml(String(r.status || "—"))} • ${r.createdAt ? escapeHtml(new Date(r.createdAt).toLocaleString()) : ""}<div class="narrative" style="margin-top:6px">${escapeHtml(r.narrative || "")}</div></div>`
+  )
+  .join("")}</div>
+</div>
+`
+  )
+  .join("")}
+</div>
+`
+  )
+  .join("")}
+</div>
+</div>
+`
+  )
+  .join("")}
 </section>
 
 <section style="margin-top:18px">
-  <h2>${escapeHtml(dataTable)}</h2>
-  <table>
-    <thead><tr><th>${escapeHtml(t("reports.table.title"))}</th><th>${escapeHtml(t("reports.table.weight"))}</th><th>${escapeHtml(t("reports.table.metric"))}</th><th>${escapeHtml(t("reports.table.target"))}</th>${columnsHtml}</tr></thead>
-    <tbody>${rowsHtml}</tbody>
-  </table>
+<h2>${escapeHtml(dataTable)}</h2>
+<table>
+<thead><tr><th>${escapeHtml(t("reports.table.title"))}</th><th>${escapeHtml(t("reports.table.weight"))}</th><th>${escapeHtml(t("reports.table.metric"))}</th><th>${escapeHtml(t("reports.table.target"))}</th>${columnsHtml}</tr></thead>
+<tbody>${rowsHtml}</tbody>
+</table>
 </section>
 
 </body>
@@ -1023,7 +1068,8 @@ th{background:#f3f4f6}
           <label className="text-sm text-gray-600 dark:text-gray-300">{t("reports.master.granularityLabel")}</label>
           <div className="flex gap-2 mt-1">
             {["monthly", "quarterly", "annual"].map((g) => (
-              <button key={g} onClick={() => setGranularity(g)} className={`px-3 py-1.5 rounded-lg transition-colors ${granularity === g ? "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}>
+              <button key={g} onClick={() => setGranularity(g)} className={`px-3 py-1.5 rounded-lg transition-colors ${granularity === g ?
+                "bg-sky-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}>
                 {t(`reports.master.granularities.${g}`)}
               </button>
             ))}
@@ -1079,7 +1125,7 @@ th{background:#f3f4f6}
                                     <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{r.narrative || <em className="text-gray-400">{t("reports.noNarrative")}</em>}</div>
                                     {r.metrics && (
                                       <div className="mt-2">
-                                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t("reports.metrics")}</div>
+                                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">{t("reports.metrics.title", "Metrics")}</div>
                                         <div className="mt-1">{renderMetricsList(r.metrics)}</div>
                                       </div>
                                     )}
@@ -1158,12 +1204,16 @@ th{background:#f3f4f6}
   );
 }
 
+
 /* -------------------------
-   Main wrapper - switch between review & master
+Main wrapper - switch between review & master
 ------------------------- */
 export default function ReportsUI() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [page, setPage] = useState("review");
+
+  const isAdmin = Array.isArray(user?.permissions) && user.permissions.includes("manage_reports");
 
   return (
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 md:p-6 lg:p-8 max-w-8xl mx-auto transition-colors duration-200">
@@ -1171,35 +1221,46 @@ export default function ReportsUI() {
         <div className="flex items-start md:items-center justify-between gap-4">
           <div className="flex items-center min-w-0 gap-4">
             <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-                        <FileText className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                      </div>
+              <FileText className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+            </div>
             <div>
               <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold text-gray-900 dark:text-gray-100 truncate">{t("reports.header.title")}</h1>
-            <p className="text-base text-gray-600 dark:text-gray-300 mt-2">{t("reports.header.subtitle")}</p>
+              <p className="text-base text-gray-600 dark:text-gray-300 mt-2">{t("reports.header.subtitle")}</p>
             </div>
           </div>
 
           <div className="flex items-center justify-end gap-4">
-            <div className="mt-4 hidden md:block">
-              <TabsPills value={page} onChange={setPage} />
-            </div>
+             {isAdmin && (
+                <div className="mt-4 hidden md:block">
+                    <TabsPills value={page} onChange={setPage} />
+                </div>
+             )}
             <div className="flex-shrink-0 ml-4">
               <TopBar />
             </div>
           </div>
         </div>
+        {isAdmin && (
+            <div className="md:hidden">
+                <TabsPills value={page} onChange={setPage} />
+            </div>
+        )}
       </header>
 
-      {page === "review" && <ReviewReportsPage />}
-      {page === "master" && <MasterReportPageWrapper />}
+      {isAdmin ? (
+        page === "review" ? (
+          <ReviewReportsPage permissions={user.permissions} readonly={false} />
+        ) : (
+          <MasterReportPageWrapper />
+        )
+      ) : (
+        // Non-admin users see read-only "My Reports" page
+        <ReviewReportsPage permissions={user?.permissions} readonly={true} />
+      )}
 
       <footer className="flex justify-center mt-10 md:mt-14 text-center text-gray-500 dark:text-gray-400 text-sm">
         <p>© {new Date().getFullYear()} {t("reports.footer.systemName")} | v2.0</p>
       </footer>
-
-      <div className="md:hidden">
-        <TabsPills value={page} onChange={setPage} />
-      </div>
     </div>
   );
 }

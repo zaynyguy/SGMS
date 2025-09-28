@@ -2,7 +2,7 @@
 import React, { Suspense } from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import { SidebarProvider } from "./context/SidebarContext"; // <-- add this import
+import { SidebarProvider } from "./context/SidebarContext"; 
 
 import ProtectedRoute from "./components/layout/PrivateRoute";
 import MainLayout from "./components/layout/MainLayout";

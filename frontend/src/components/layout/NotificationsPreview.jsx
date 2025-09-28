@@ -3,61 +3,43 @@ import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bell, CheckCircle, Info, AlertTriangle } from "lucide-react";
-import BottomSheet from "../BottomSheet"; // adjust path if needed
+import BottomSheet from "../BottomSheet";
 import {
   fetchNotifications,
   fetchUnreadCount,
   markNotificationRead,
 } from "../../api/notifications";
-
-/**
- * NotificationPreview
- *
- * - Desktop (hover-capable): popover positioned by `position` prop
- * - Touch devices: BottomSheet
- * - Preview always shows unread first, then recent read to fill up to 5 items
- * - WebSocket for real-time new notifications (default endpoint: /ws/notifications)
- * - Single toast shown once for a truly new notification when preview is closed
- *
- * Props:
- *  - item: { to, label } (default { to: "/notification", label: "Notifications" })
- *  - showExpanded: boolean
- *  - position: "bottom-left" | "bottom-right" | "top-left" | "top-right" | "left" | "right"
- *  - wsUrl?: string (optional websocket URL)
- */
+import {
+  initNotificationsSocket,
+  disconnectNotificationsSocket,
+} from "../../services/notificationsSocket";
+import { useTranslation } from "react-i18next";
 
 export default function NotificationPreview({
   item = { to: "/notification", label: "Notifications" },
   showExpanded = false,
   position = "bottom-left",
-  wsUrl = "",
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // refs & timers
   const bellRef = useRef(null);
   const hideTimer = useRef(null);
   const toastTimer = useRef(null);
-  const wsRef = useRef(null);
-  const reconnectRef = useRef({ attempt: 0, timer: null });
 
-  // state
-  const [open, setOpen] = useState(false); // desktop popover open
-  const [sheetOpen, setSheetOpen] = useState(false); // bottom sheet open on touch
-  const [notifications, setNotifications] = useState([]); // candidate list (we fetch >5 to fill)
+  const [open, setOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
   const [coords, setCoords] = useState({ top: 0, left: 0, transform: "translate(0,0)" });
 
-  // toast for single new item
   const [latestNew, setLatestNew] = useState(null);
   const [showToast, setShowToast] = useState(false);
 
-  // tracking refs to avoid duplicate toasts / re-toast on hover fetch
   const lastKnownIdRef = useRef(null);
   const shownToastIdsRef = useRef(new Set());
 
-  // detection: hover-capable device?
   const [canHover, setCanHover] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
@@ -78,12 +60,10 @@ export default function NotificationPreview({
     };
   }, []);
 
-  // constants
   const TOAST_MS = 4200;
   const POPOVER_WIDTH = 320;
   const POPOVER_HEIGHT = 420;
 
-  // ---------- helpers ----------
   const iconFor = (level) => {
     switch (level) {
       case "success":
@@ -97,7 +77,6 @@ export default function NotificationPreview({
     }
   };
 
-  // compute coords and clamp for various positions
   const computeCoords = (rect, scrollY, pos) => {
     let top = rect.top + scrollY;
     let left = rect.left;
@@ -140,11 +119,10 @@ export default function NotificationPreview({
     const clampedTop = Math.min(Math.max(top, minTop), maxTop);
 
     let transform = "translate(0,0)";
-    if (pos === "right" || pos === "left") transform = "translate(0,-50%)"; // vertically center
+    if (pos === "right" || pos === "left") transform = "translate(0,-50%)";
     return { top: clampedTop, left: clampedLeft, transform };
   };
 
-  // Build display list: unread first, then recent read to fill up to 5
   const buildDisplayList = (candidates) => {
     const unreadList = (candidates || []).filter((n) => !n.isRead).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const readList = (candidates || []).filter((n) => n.isRead).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -152,8 +130,6 @@ export default function NotificationPreview({
     return combined.slice(0, 5);
   };
 
-  // ---------- API / load preview ----------
-  // load a generous candidate set (10) so we can fill to 5 after excluding some items
   const loadPreview = async () => {
     try {
       const res = await fetchNotifications(1, 10);
@@ -161,28 +137,22 @@ export default function NotificationPreview({
       setNotifications(rows);
       const u = await fetchUnreadCount();
       setUnread(u?.unread ?? 0);
-      // treat the top fetched item as known so we don't toast on initial load
       lastKnownIdRef.current = rows?.[0]?.id ?? lastKnownIdRef.current;
     } catch (err) {
       console.error("loadPreview failed", err);
     }
   };
 
-  // mark single notification read (optimistic update)
   const handleMarkRead = async (id) => {
     try {
-      // optimistic update
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
       setUnread((u) => Math.max(0, u - 1));
       await markNotificationRead(id);
-      // server-confirmation could trigger a refresh if needed
     } catch (err) {
       console.error("mark read failed", err);
-      // optional: revert optimistic update on failure (not implemented)
     }
   };
 
-  // initial load (first mount)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -200,149 +170,89 @@ export default function NotificationPreview({
     return () => {
       mounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---------- WebSocket (real-time) with reconnection ----------
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const defaultWsUrl = (() => {
-      try {
-        if (wsUrl) return wsUrl;
-        const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-        return `${proto}//${window.location.host}/ws/notifications`;
-      } catch {
-        return wsUrl || "";
-      }
-    })();
-
-    if (!defaultWsUrl) {
-      console.warn("NotificationPreview: no WebSocket URL available — provide wsUrl prop or server endpoint at /ws/notifications");
-      return;
+    let storedUser = null;
+    try {
+      storedUser = localStorage.getItem("user");
+    } catch {
+      storedUser = null;
     }
+    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+    const userId = parsedUser?.id || window.__USER_ID || null;
 
-    let closedByUser = false;
+    if (!userId) return;
 
-    function connect() {
-      if (wsRef.current) {
-        try { wsRef.current.close(); } catch {}
-        wsRef.current = null;
+    let mounted = true;
+
+    const onNewNotification = (payload) => {
+      if (!mounted) return;
+      const latest = payload?.notification ? payload.notification : payload;
+      if (!latest || !latest.id) return;
+
+      if (typeof payload?.unread === "number") setUnread(payload.unread);
+      else setUnread((u) => u + 1);
+
+      const knownId = lastKnownIdRef.current;
+      const previewTopId = notifications?.[0]?.id;
+
+      if (
+        latest.id &&
+        latest.id !== knownId &&
+        latest.id !== previewTopId &&
+        !open &&
+        location.pathname !== (item?.to || "/notification") &&
+        !shownToastIdsRef.current.has(latest.id)
+      ) {
+        shownToastIdsRef.current.add(latest.id);
+        setLatestNew(latest);
+        setShowToast(true);
+
+        setNotifications((prev) => {
+          if (!prev) return [latest];
+          if (prev[0]?.id === latest.id) return prev;
+          return [latest, ...prev].slice(0, 20);
+        });
+
+        if (toastTimer.current) clearTimeout(toastTimer.current);
+        toastTimer.current = setTimeout(() => {
+          setShowToast(false);
+          toastTimer.current = null;
+        }, TOAST_MS);
+
+        lastKnownIdRef.current = latest.id;
+      } else {
+        setNotifications((prev) => {
+          if (!prev) return [latest];
+          if (prev[0]?.id === latest.id) return prev;
+          return [latest, ...prev].slice(0, 20);
+        });
+        lastKnownIdRef.current = latest.id ?? lastKnownIdRef.current;
       }
+    };
 
-      const ws = new WebSocket(defaultWsUrl);
-      wsRef.current = ws;
-
-      ws.addEventListener("open", () => {
-        reconnectRef.current.attempt = 0;
-      });
-
-      ws.addEventListener("message", (ev) => {
-        try {
-          const payload = JSON.parse(ev.data);
-          const type = payload?.type || payload?.event;
-
-          if (type === "notification:new" && payload.notification) {
-            const latest = payload.notification;
-            // update unread if provided
-            if (typeof payload.unread === "number") setUnread(payload.unread);
-
-            const knownId = lastKnownIdRef.current;
-            const previewTopId = notifications?.[0]?.id;
-
-            // if it's really new and preview closed and not on notifications page -> show toast once
-            if (
-              latest?.id &&
-              latest.id !== knownId &&
-              latest.id !== previewTopId &&
-              !open &&
-              location.pathname !== (item?.to || "/notification") &&
-              !shownToastIdsRef.current.has(latest.id)
-            ) {
-              shownToastIdsRef.current.add(latest.id);
-              setLatestNew(latest);
-              setShowToast(true);
-
-              // prepend to candidate list
-              setNotifications((prev) => {
-                const dedup = prev?.[0]?.id === latest.id ? prev : [latest, ...(prev || [])];
-                return dedup?.slice(0, 20); // keep capped
-              });
-
-              if (toastTimer.current) clearTimeout(toastTimer.current);
-              toastTimer.current = setTimeout(() => {
-                setShowToast(false);
-                toastTimer.current = null;
-              }, TOAST_MS);
-
-              lastKnownIdRef.current = latest.id;
-              if (typeof payload.unread === "number") setUnread(payload.unread);
-            } else {
-              // silent prepend and update unread
-              setNotifications((prev) => {
-                if (latest?.id && prev?.[0]?.id === latest.id) return prev;
-                return [latest, ...(prev || [])].slice(0, 20);
-              });
-              lastKnownIdRef.current = latest.id ?? lastKnownIdRef.current;
-              if (typeof payload.unread === "number") setUnread(payload.unread);
-            }
-            return;
-          }
-
-          if (type === "notification:bulk" && Array.isArray(payload.notifications)) {
-            const rows = payload.notifications.slice(0, 20);
-            setNotifications(rows);
-            if (typeof payload.unread === "number") setUnread(payload.unread);
-            lastKnownIdRef.current = rows?.[0]?.id ?? lastKnownIdRef.current;
-            return;
-          }
-
-          if (type === "unread_count" && typeof payload.unread === "number") {
-            setUnread(payload.unread);
-            return;
-          }
-
-          // fallback raw notification object
-          if (payload && payload.id && payload.message) {
-            const latest = payload;
-            setNotifications((prev) => [latest, ...(prev || [])].slice(0, 20));
-            lastKnownIdRef.current = latest.id ?? lastKnownIdRef.current;
-            return;
-          }
-        } catch (err) {
-          console.error("WebSocket message parse error", err, ev.data);
-        }
-      });
-
-      ws.addEventListener("close", () => {
-        wsRef.current = null;
-        if (closedByUser) return;
-        reconnectRef.current.attempt = (reconnectRef.current.attempt || 0) + 1;
-        const attempt = reconnectRef.current.attempt;
-        const backoff = Math.min(30000, 1000 * Math.pow(1.6, attempt));
-        reconnectRef.current.timer = setTimeout(() => connect(), backoff);
-      });
-
-      ws.addEventListener("error", () => {
-        try { ws.close(); } catch {}
-      });
+    try {
+      initNotificationsSocket(userId, onNewNotification);
+    } catch (err) {
+      console.error("initNotificationsSocket failed:", err);
     }
-
-    connect();
 
     return () => {
-      closedByUser = true;
-      if (reconnectRef.current.timer) clearTimeout(reconnectRef.current.timer);
-      if (wsRef.current) {
-        try { wsRef.current.close(); } catch {}
-        wsRef.current = null;
+      mounted = false;
+      try {
+        disconnectNotificationsSocket();
+      } catch {}
+      if (toastTimer.current) {
+        clearTimeout(toastTimer.current);
+        toastTimer.current = null;
       }
-      if (toastTimer.current) clearTimeout(toastTimer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wsUrl, open, location.pathname, notifications, item?.to]);
+  }, [open, location.pathname]);
 
-  // ---------- popover open/close (desktop) ----------
   const openPreviewAtBell = () => {
     if (!bellRef.current) return;
     const rect = bellRef.current.getBoundingClientRect();
@@ -372,7 +282,6 @@ export default function NotificationPreview({
     }, 150);
   };
 
-  // ---------- click/tap handling ----------
   const handleBellClick = () => {
     if (hideTimer.current) {
       clearTimeout(hideTimer.current);
@@ -380,11 +289,9 @@ export default function NotificationPreview({
     }
 
     if (!canHover) {
-      // open bottom sheet on touch devices
       setSheetOpen(true);
       loadPreview();
     } else {
-      // navigate to notifications on desktop click
       navigate(item?.to || "/notification");
     }
   };
@@ -403,13 +310,12 @@ export default function NotificationPreview({
     navigate(item?.to || "/notification");
   };
 
-  // ---------- portals ----------
   const popover =
     open && bellRef.current
       ? createPortal(
           <div
             role="dialog"
-            aria-label="Recent notifications"
+            aria-label={t("notificationsPreview.recentAria")}
             tabIndex={-1}
             onMouseEnter={() => {
               if (hideTimer.current) {
@@ -429,13 +335,13 @@ export default function NotificationPreview({
           >
             <div className="w-80 max-h-[420px] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">Notifications</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{unread} unread</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-white">{t("notificationsPreview.title")}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t("notificationsPreview.unreadCount", { count: unread })}</div>
               </div>
 
               <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto max-h-[340px]">
                 {buildDisplayList(notifications).length === 0 && (
-                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400">No notifications</div>
+                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("notificationsPreview.noNotifications")}</div>
                 )}
                 {buildDisplayList(notifications).map((n) => (
                   <div key={n.id} className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 ${
@@ -462,7 +368,7 @@ export default function NotificationPreview({
                           onClick={() => handleMarkRead(n.id)}
                           className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                         >
-                          Mark
+                          {t("notificationsPreview.mark")}
                         </button>
                       )}
                       <button
@@ -472,7 +378,7 @@ export default function NotificationPreview({
                         }}
                         className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                       >
-                        Open
+                        {t("notificationsPreview.open")}
                       </button>
                     </div>
                   </div>
@@ -484,13 +390,13 @@ export default function NotificationPreview({
                   onClick={() => navigate(item?.to || "/notification")} 
                   className="text-sm px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                 >
-                  View all
+                  {t("notificationsPreview.viewAll")}
                 </button>
                 <button 
                   onClick={loadPreview} 
                   className="text-sm px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                 >
-                  Refresh
+                  {t("notificationsPreview.refresh")}
                 </button>
               </div>
             </div>
@@ -543,20 +449,13 @@ export default function NotificationPreview({
         )
       : null;
 
-  // cleanup timers and ws on unmount
   useEffect(() => {
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
       if (hideTimer.current) clearTimeout(hideTimer.current);
-      if (reconnectRef.current.timer) clearTimeout(reconnectRef.current.timer);
-      if (wsRef.current) {
-        try { wsRef.current.close(); } catch {}
-        wsRef.current = null;
-      }
     };
   }, []);
 
-  // ---------- render ----------
   return (
     <>
       <div ref={bellRef} className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
@@ -565,7 +464,7 @@ export default function NotificationPreview({
           tabIndex={0}
           onClick={handleBellClick}
           onKeyDown={handleBellKeyDown}
-          aria-label={item?.label || "Notifications"}
+          aria-label={item?.label || t("notificationsPreview.label")}
           className={`flex items-center p-2 rounded-full transition-colors duration-200 ${
             showExpanded ? "justify-normal" : "justify-center"
           } cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800`}
@@ -578,7 +477,7 @@ export default function NotificationPreview({
               </span>
             )}
           </div>
-          {showExpanded && <span className="ml-3 truncate text-gray-700 dark:text-gray-300">{item?.label || "Notifications"}</span>}
+          {showExpanded && <span className="ml-3 truncate text-gray-700 dark:text-gray-300">{item?.label || t("notificationsPreview.label")}</span>}
         </div>
       </div>
 
@@ -588,13 +487,13 @@ export default function NotificationPreview({
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)}>
         <div className="p-4 bg-white dark:bg-gray-900">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">{unread} unread</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-white">{t("notificationsPreview.title")}</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">{t("notificationsPreview.unreadCount", { count: unread })}</div>
           </div>
 
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {buildDisplayList(notifications).length === 0 && (
-              <div className="p-3 text-sm text-gray-600 dark:text-gray-400">No notifications</div>
+              <div className="p-3 text-sm text-gray-600 dark:text-gray-400">{t("notificationsPreview.noNotifications")}</div>
             )}
             {buildDisplayList(notifications).map((n) => (
               <div key={n.id} className={`p-3 flex items-start gap-3 ${
@@ -615,7 +514,7 @@ export default function NotificationPreview({
                       onClick={() => handleMarkRead(n.id)} 
                       className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                     >
-                      Mark
+                      {t("notificationsPreview.mark")}
                     </button>
                   )}
                 </div>
@@ -631,13 +530,13 @@ export default function NotificationPreview({
               }}
               className="text-sm px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
             >
-              View all
+              {t("notificationsPreview.viewAll")}
             </button>
             <button 
               onClick={loadPreview} 
               className="text-sm px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
             >
-              Refresh
+              {t("notificationsPreview.refresh")}
             </button>
           </div>
         </div>

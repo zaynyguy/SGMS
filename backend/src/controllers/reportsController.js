@@ -1,4 +1,3 @@
-// src/controllers/reportsController.js
 const db = require("../db");
 const path = require("path");
 const fs = require("fs");
@@ -238,6 +237,78 @@ exports.submitReport = async (req, res) => {
       }
     }
 
+    // -------------------------------
+    // NEW: Post-commit: notify relevant users (admins and task assignee)
+    // -------------------------------
+    try {
+      const recipients = new Set();
+
+      // 1) Users who have the 'manage_reports' permission (typically admins/managers)
+      try {
+        const permRes = await db.query(
+          `
+          SELECT DISTINCT u.id
+          FROM "Users" u
+          JOIN "Roles" r ON u."roleId" = r.id
+          JOIN "RolePermissions" rp ON rp."roleId" = r.id
+          JOIN "Permissions" p ON p.id = rp."permissionId"
+          WHERE p.name = $1
+          `,
+          ["manage_reports"]
+        );
+        for (const r of permRes.rows) {
+          if (r && r.id) recipients.add(r.id);
+        }
+      } catch (permErr) {
+        console.error("submitReport: failed to query manage_reports users:", permErr);
+      }
+
+      // 2) Task assignee for the activity (if any)
+      try {
+        const actRes = await db.query(
+          `SELECT a.title AS activity_title, t."assigneeId" AS task_assignee
+           FROM "Activities" a
+           LEFT JOIN "Tasks" t ON t.id = a."taskId"
+           WHERE a.id = $1 LIMIT 1`,
+          [activityId]
+        );
+        const arow = actRes.rows[0];
+        const activityTitle = (arow && arow.activity_title) || null;
+        const taskAssignee = arow ? arow.task_assignee : null;
+        if (taskAssignee) recipients.add(taskAssignee);
+
+        // Build a friendly message
+        const actorName = req.user?.name || req.user?.username || "Someone";
+        const activityLabel = activityTitle || `#${activityId}`;
+        const baseMessage = `${actorName} submitted a report for activity ${activityLabel}.`;
+
+        // Remove the reporter themselves from recipients (don't notify the reporter)
+        if (recipients.has(req.user.id)) recipients.delete(req.user.id);
+
+        // Send notifications
+        for (const uid of recipients) {
+          try {
+            await notificationService({
+              userId: uid,
+              type: "report_submitted",
+              message: baseMessage,
+              meta: { reportId: report.id, activityId },
+              level: "info",
+            });
+          } catch (nerr) {
+            console.error(
+              `submitReport: failed to notify user ${uid} about report ${report.id}:`,
+              nerr
+            );
+          }
+        }
+      } catch (aerr) {
+        console.error("submitReport: failed to fetch activity/task assignee:", aerr);
+      }
+    } catch (outerNotifyErr) {
+      console.error("submitReport: notify recipients failed:", outerNotifyErr);
+    }
+
     res.status(201).json(report);
   } catch (err) {
     await client.query("ROLLBACK");
@@ -362,7 +433,7 @@ exports.reviewReport = async (req, res) => {
         );
       }
 
-      
+      // Fetch activity + task + goal for progress snapshot
       const aRes = await client.query(
         `SELECT a.id, a."taskId", t."goalId" AS "goalId", a."currentMetric", a."targetMetric", a."isDone"
         FROM "Activities" a
@@ -374,27 +445,25 @@ exports.reviewReport = async (req, res) => {
       if (aRes.rows[0]) {
         const act = aRes.rows[0];
 
-        
         const gRes = await client.query(
           `SELECT "groupId" FROM "Goals" WHERE id = $1 LIMIT 1`,
           [act.goalId]
         );
         const groupId = gRes.rows[0] ? gRes.rows[0].groupId : null;
 
-      
+        // compute progress: if activity is done, 100 else 0 (this matches current approach)
         const progress = act.isDone ? 100 : 0;
 
-        
+        // snapshot month string (YYYY-MM-DD first of month) - use UTC to be consistent
         const now = new Date();
         const snapshotMonth = new Date(
           Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
         );
-        const snapshotMonthStr = snapshotMonth.toISOString().slice(0, 10); 
+        const snapshotMonthStr = snapshotMonth.toISOString().slice(0, 10);
 
         const metricsObj = {
           currentMetric: act.currentMetric ?? null,
           targetMetric: act.targetMetric ?? null,
-        
         };
 
         await client.query(
@@ -437,13 +506,6 @@ exports.reviewReport = async (req, res) => {
     client.release();
   }
 };
-
-/**
- * GET /api/reports
- * - If user has manage_reports permission -> return all reports (admin)
- * - Else if user has view_reports -> return reports in user's groups OR reports submitted by that user
- * - Paginated, optional status filter, q search
- */
 exports.getAllReports = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page || "1", 10), 1);
@@ -477,9 +539,7 @@ exports.getAllReports = async (req, res) => {
         params.push(groupIds);
         // r is Reports alias, later joins will include Goals as g
         whereClauses.push(
-          `(g."groupId" = ANY($${params.length}) OR r."userId" = ${
-            db._escape ? db._escape(req.user.id) : "$$USERID_PLACEHOLDER$$"
-          })`
+          `(g."groupId" = ANY($${params.length}) OR r."userId" = ${db._escape ? db._escape(req.user.id) : "$$USERID_PLACEHOLDER$$"})`
         );
         // Note: we can't use req.user.id directly inside SQL string as param index (we'll replace below).
         // We'll patch this properly below to avoid SQL injection.
@@ -650,8 +710,7 @@ ORDER BY g.id, t.id, a.id, r.id
 
     const raw = rows.rows || [];
 
-    // --- Build Activity Change History from ProgressHistory table (preferred)
-    // This builds monthly snapshots, then groups into monthly/quarterly/annual buckets.
+    // Primary approach: build Activity Change History from ProgressHistory table (preferred)
     const phRowsQ = await db.query(
       `
       SELECT entity_id::int as activity_id, snapshot_month, progress, metrics, recorded_at
@@ -676,13 +735,96 @@ ORDER BY g.id, t.id, a.id, r.id
       });
     }
 
+    // If ProgressHistory is empty (no rows), fall back to building history from report rows (older behavior)
+    if (Object.keys(historyByActivity).length === 0) {
+      // --- Build Change History from Reports (fallback) ---
+      for (const row of raw) {
+        if (!row.activity_id || !row.report_id) continue;
+
+        const actId = row.activity_id;
+        const createdAt = row.report_createdat;
+        const metrics = row.report_metrics || {};
+
+        if (!historyByActivity[actId]) historyByActivity[actId] = [];
+
+        historyByActivity[actId].push({
+          reportId: row.report_id,
+          date: createdAt,
+          metrics,
+          newStatus: row.report_new_status,
+        });
+      }
+
+      // Convert report-based lists into a faux snapshot structure grouped by month/quarter/year
+      const reportBasedBreakdowns = {};
+      for (const [actId, reports] of Object.entries(historyByActivity)) {
+        reportBasedBreakdowns[actId] = {
+          monthly: {},
+          quarterly: {},
+          annual: {},
+        };
+
+        for (const rep of reports) {
+          const d = new Date(rep.date);
+          if (isNaN(d)) continue;
+
+          const monthKey = `${d.getFullYear()}-${d.getMonth() + 1}`;
+          const quarterKey = `${d.getFullYear()}-Q${
+            Math.floor(d.getMonth() / 3) + 1
+          }`;
+          const yearKey = `${d.getFullYear()}`;
+
+          if (!reportBasedBreakdowns[actId].monthly[monthKey])
+            reportBasedBreakdowns[actId].monthly[monthKey] = [];
+          reportBasedBreakdowns[actId].monthly[monthKey].push(rep);
+
+          if (!reportBasedBreakdowns[actId].quarterly[quarterKey])
+            reportBasedBreakdowns[actId].quarterly[quarterKey] = [];
+          reportBasedBreakdowns[actId].quarterly[quarterKey].push(rep);
+
+          if (!reportBasedBreakdowns[actId].annual[yearKey])
+            reportBasedBreakdowns[actId].annual[yearKey] = [];
+          reportBasedBreakdowns[actId].annual[yearKey].push(rep);
+        }
+      }
+
+      // Inject into JSON using the report-based breakdowns
+      const masterJson = generateReportJson(raw);
+      for (const goal of masterJson.goals || []) {
+        for (const task of goal.tasks || []) {
+          for (const activity of task.activities || []) {
+            activity.history = reportBasedBreakdowns[activity.id] || {
+              monthly: {},
+              quarterly: {},
+              annual: {},
+            };
+          }
+        }
+      }
+
+      if (
+        format === "html" ||
+        (req.headers.accept &&
+          req.headers.accept.includes("text/html") &&
+          !req.query.format)
+      ) {
+        const html = generateReportHtml(raw);
+        return res.set("Content-Type", "text/html").send(html);
+      }
+
+      return res.json(masterJson);
+    }
+
+    // --- If we have ProgressHistory rows, convert them into the standard breakdown structure ---
     const breakdowns = {};
     for (const [actId, snaps] of Object.entries(historyByActivity)) {
       const numericActId = Number(actId);
       breakdowns[numericActId] = { monthly: {}, quarterly: {}, annual: {} };
 
       for (const snap of snaps) {
-        const d = new Date(snap.snapshot_month);
+        // Accept both snapshot_month (preferred) and recorded_at/date
+        const dateStr = snap.snapshot_month || snap.recorded_at || snap.date;
+        const d = new Date(dateStr);
         if (isNaN(d)) continue;
 
         const monthKey = `${d.getFullYear()}-${d.getMonth() + 1}`; // e.g. "2025-10"
@@ -694,7 +836,7 @@ ORDER BY g.id, t.id, a.id, r.id
         if (!breakdowns[numericActId].monthly[monthKey])
           breakdowns[numericActId].monthly[monthKey] = [];
         breakdowns[numericActId].monthly[monthKey].push({
-          date: snap.snapshot_month,
+          date: dateStr,
           progress: snap.progress,
           metrics: snap.metrics,
           recorded_at: snap.recorded_at,
@@ -703,7 +845,7 @@ ORDER BY g.id, t.id, a.id, r.id
         if (!breakdowns[numericActId].quarterly[quarterKey])
           breakdowns[numericActId].quarterly[quarterKey] = [];
         breakdowns[numericActId].quarterly[quarterKey].push({
-          date: snap.snapshot_month,
+          date: dateStr,
           progress: snap.progress,
           metrics: snap.metrics,
           recorded_at: snap.recorded_at,
@@ -712,7 +854,7 @@ ORDER BY g.id, t.id, a.id, r.id
         if (!breakdowns[numericActId].annual[yearKey])
           breakdowns[numericActId].annual[yearKey] = [];
         breakdowns[numericActId].annual[yearKey].push({
-          date: snap.snapshot_month,
+          date: dateStr,
           progress: snap.progress,
           metrics: snap.metrics,
           recorded_at: snap.recorded_at,

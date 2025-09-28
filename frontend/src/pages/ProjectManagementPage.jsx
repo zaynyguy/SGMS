@@ -69,8 +69,8 @@ const ProgressBar = ({ progress = 0, variant = "normal" }) => {
     : "bg-gradient-to-r from-sky-400 to-indigo-500";
   const labelInFill = pct >= 30;
   const labelClass = labelInFill
-    ? "text-white font-medium text-xs"
-    : "text-gray-800 dark:text-gray-200 font-medium text-xs";
+    ? "text-black dark:text-white font-medium text-xs"
+    : "text-black dark:text-white font-medium text-xs";
 
   return (
     <div
@@ -890,9 +890,8 @@ const ProjectManagement = () => {
                               {canManageGTA && (
                                 <div className="relative">
                                   <button className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                    <MoreVertical className="h-5 w-5" />
                                   </button>
-                                  <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-900 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                  <div className="absolute right-0 text-center mt-1 w-fit bg-white dark:bg-gray-900 rounded-md py-1 z-10 border border-gray-200 dark:border-gray-700">
                                     <button
                                       onClick={() =>
                                         setModal({
@@ -901,15 +900,15 @@ const ProjectManagement = () => {
                                           data: goal,
                                         })
                                       }
-                                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                      className="block w-full text-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
-                                      <Edit className="inline-block mr-2 h-4 w-4" /> {t("project.actions.edit")}
+                                      <Edit className="inline-block h-4 w-4" />
                                     </button>
                                     <button
                                       onClick={() => handleDeleteGoal(goal.id)}
-                                      className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                      className="block w-full text-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
-                                      <Trash2 className="inline-block mr-2 h-4 w-4" /> {t("project.actions.delete")}
+                                      <Trash2 className="inline-block h-4 w-4" />
                                     </button>
                                   </div>
                                 </div>
@@ -1072,9 +1071,8 @@ const ProjectManagement = () => {
                                           {canManageGTA && (
                                             <div className="relative">
                                               <button className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                                <MoreVertical className="h-5 w-5" />
                                               </button>
-                                              <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+                                              <div className="absolute right-0 mt-1 w-fit bg-white dark:bg-gray-800 rounded-md  py-1 z-10 border border-gray-200 dark:border-gray-700">
                                                 <button
                                                   onClick={() =>
                                                     setModal({
@@ -1088,7 +1086,7 @@ const ProjectManagement = () => {
                                                   }
                                                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                 >
-                                                  <Edit className="inline-block mr-2 h-4 w-4" /> {t("project.actions.edit")}
+                                                  <Edit className="inline-block h-4 w-4" />
                                                 </button>
                                                 <button
                                                   onClick={() =>
@@ -1096,7 +1094,7 @@ const ProjectManagement = () => {
                                                   }
                                                   className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                                                 >
-                                                  <Trash2 className="inline-block mr-2 h-4 w-4" /> {t("project.actions.deleteTask")}
+                                                  <Trash2 className="inline-block h-4 w-4" /> 
                                                 </button>
                                               </div>
                                             </div>
@@ -1304,11 +1302,10 @@ const ProjectManagement = () => {
               data: { goalId: goal.id, taskId: task.id, ...activity },
             })
           }
-          className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-white hover:bg-gray-100 dark:bg-gray-900"
+          className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm dark:text-white text-gray-700 hover:bg-gray-100 dark:bg-gray-900"
           aria-label={t("project.actions.edit")}
         >
           <Edit className="h-4 w-4" />
-          <span className="text-xs">{t("project.actions.edit")}</span>
         </button>
 
         <button
@@ -1317,7 +1314,6 @@ const ProjectManagement = () => {
           aria-label={t("project.actions.delete")}
         >
           <Trash2 className="h-4 w-4" />
-          <span className="text-xs">{t("project.actions.delete")}</span>
         </button>
       </div>
     </>
@@ -1447,7 +1443,7 @@ function GenericModal({
         title: initial.title || "",
         description: initial.description || "",
         dueDate: initial.dueDate || "",
-        weight: initial.weight ?? 0,
+        weight: initial.weight ?? 1,
         status: initial.status || "not-started",
         isDone: initial.isDone ?? false,
         targetMetrics: (() => {
@@ -1455,7 +1451,6 @@ function GenericModal({
             if (!initial.targetMetric) return [{ key: "", value: "" }];
             if (typeof initial.targetMetric === "string")
               return JSON.parse(initial.targetMetric);
-            // converted by helper below
             return Object.keys(initial.targetMetric || {}).map((k) => ({
               key: k,
               value: String(initial.targetMetric[k]),
@@ -1470,7 +1465,7 @@ function GenericModal({
         title: initial.title || "",
         description: initial.description || "",
         dueDate: initial.dueDate || "",
-        weight: initial.weight ?? 0,
+        weight: initial.weight ?? 1,
         status: initial.status || "not-started",
       });
     } else if (modal.type === "createGoal" || modal.type === "editGoal") {
@@ -1480,7 +1475,7 @@ function GenericModal({
         groupId: initial.groupId ? String(initial.groupId) : "",
         startDate: initial.startDate || "",
         endDate: initial.endDate || "",
-        weight: initial.weight ?? 100,
+        weight: initial.weight ?? 1,
         status: initial.status || "active",
       });
     } else {
@@ -1528,15 +1523,20 @@ function GenericModal({
     });
   };
 
+  const parseNum = (v, fallback = 0) => {
+    const n = parseFloat(String(v));
+    return Number.isNaN(n) ? fallback : n;
+  };
+
   const computeGoalWeightAvailable = (goalId, excludeTaskId = null) => {
     const g = goals.find(
       (x) => String(x.id) === String(goalId) || x.id === goalId
     );
-    const goalWeight = Number(g?.weight ?? 100);
+    const goalWeight = parseNum(g?.weight, 0);
     const list = tasks[goalId] || [];
     const sumOther = list.reduce((s, t) => {
       if (excludeTaskId && String(t.id) === String(excludeTaskId)) return s;
-      return s + Number(t.weight || 0);
+      return s + parseNum(t.weight, 0);
     }, 0);
     return {
       goalWeight,
@@ -1550,18 +1550,28 @@ function GenericModal({
     const task = allTasksLists.find(
       (t) => String(t.id) === String(taskId) || t.id === taskId
     );
-    const taskWeight = Number(task?.weight ?? 0);
+    const taskWeight = parseNum(task?.weight, 0);
     const list = activities[taskId] || [];
     const sumOther = list.reduce((s, a) => {
       if (excludeActivityId && String(a.id) === String(excludeActivityId))
         return s;
-      return s + Number(a.weight || 0);
+      return s + parseNum(a.weight, 0);
     }, 0);
     return {
       taskWeight,
       used: sumOther,
       available: Math.max(0, taskWeight - sumOther),
     };
+  };
+
+  const computeSystemWeightAvailable = (excludeGoalId = null) => {
+    const sumOther = goals.reduce((s, g) => {
+      if (excludeGoalId && String(g.id) === String(excludeGoalId)) return s;
+      return s + parseNum(g.weight, 0);
+    }, 0);
+    const used = sumOther;
+    const available = Math.max(0, 100 - used);
+    return { used, available };
   };
 
   const submitLocal = async (e) => {
@@ -1576,15 +1586,15 @@ function GenericModal({
           setInlineError(t("project.errors.missingGoalId"));
           return;
         }
-        const newWeight = Number(local.weight || 0);
+        const newWeight = parseNum(local.weight, 0);
         const excludeTaskId = modal.type === "editTask" ? modal.data?.id : null;
         const { goalWeight, used, available } = computeGoalWeightAvailable(
           goalId,
           excludeTaskId
         );
 
-        if (newWeight < 0) {
-          setInlineError(t("project.errors.weightNonNegative"));
+        if (newWeight <= 0) {
+          setInlineError(t("project.errors.weightPositive") || "Weight must be > 0");
           return;
         }
 
@@ -1608,7 +1618,7 @@ function GenericModal({
           setInlineError(t("project.errors.missingTaskId"));
           return;
         }
-        const newWeight = Number(local.weight || 0);
+        const newWeight = parseNum(local.weight, 0);
         const excludeActivityId =
           modal.type === "editActivity" ? modal.data?.id : null;
         const { taskWeight, used, available } = computeTaskWeightAvailable(
@@ -1616,8 +1626,8 @@ function GenericModal({
           excludeActivityId
         );
 
-        if (newWeight < 0) {
-          setInlineError(t("project.errors.weightNonNegative"));
+        if (newWeight <= 0) {
+          setInlineError(t("project.errors.weightPositive") || "Weight must be > 0");
           return;
         }
 
@@ -1629,6 +1639,26 @@ function GenericModal({
               used,
               available,
             })
+          );
+          return;
+        }
+      }
+
+      if (modal.type === "createGoal" || modal.type === "editGoal") {
+        const newWeight = parseNum(local.weight, 0);
+        if (newWeight <= 0) {
+          setInlineError(t("project.errors.weightPositive") || "Weight must be > 0");
+          return;
+        }
+        const excludeGoalId = modal.type === "editGoal" ? modal.data?.id : null;
+        const { used, available } = computeSystemWeightAvailable(excludeGoalId);
+        if (newWeight > available) {
+          setInlineError(
+            t("project.errors.weightExceedsSystem", {
+              newWeight,
+              used,
+              available,
+            }) || `Cannot set weight to ${newWeight}. System used ${used}, available ${available}.`
           );
           return;
         }
@@ -1702,6 +1732,15 @@ function GenericModal({
 
   if (!modal.isOpen) return null;
 
+  const systemHint =
+    modal.type === "createGoal" || modal.type === "editGoal"
+      ? (() => {
+          const excludeGoalId = modal.type === "editGoal" ? modal.data?.id : null;
+          const { used, available } = computeSystemWeightAvailable(excludeGoalId);
+          return { used, available };
+        })()
+      : null;
+
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded shadow overflow-auto max-h-[90vh]">
@@ -1768,10 +1807,11 @@ function GenericModal({
                   </label>
                   <input
                     name="weight"
-                    value={local.weight ?? 0}
+                    value={local.weight ?? 1}
                     onChange={(e) => onLocalChange(e)}
                     type="number"
-                    min="0"
+                    min="0.01"
+                    step="any"
                     className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -1786,12 +1826,11 @@ function GenericModal({
                 onChange={(e) => onLocalChange(e)}
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               >
-                <option value="not-started">{t("project.status.notStarted")}</option>
-                <option value="in-progress">{t("project.status.inProgress")}</option>
-                <option value="completed">{t("project.status.completed")}</option>
+                <option value="To Do">{t("project.status.notStarted")}</option>
+                <option value="In Progress">{t("project.status.inProgress")}</option>
+                <option value="Done">{t("project.status.completed")}</option>
               </select>
 
-              {/* show available space for activity within task */}
               {modal.data?.taskId && (
                 <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
                   {(() => {
@@ -1893,10 +1932,11 @@ function GenericModal({
               </label>
               <input
                 name="weight"
-                value={local.weight ?? 0}
+                value={local.weight ?? 1}
                 onChange={(e) => onLocalChange(e)}
                 type="number"
-                min="0"
+                min="0.01"
+                step="any"
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               {modal.type === "createTask" && modal.data?.goalId && (
@@ -1980,17 +2020,25 @@ function GenericModal({
               </label>
               <input
                 name="weight"
-                value={local.weight ?? 100}
+                value={local.weight ?? 1}
                 onChange={(e) => onLocalChange(e)}
                 type="number"
-                min="1"
+                min="0.01"
+                step="any"
                 max="100"
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
+              {systemHint && (
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                  {t("project.hints.systemWeight", {
+                    used: systemHint.used,
+                    available: systemHint.available,
+                  }) || `System used: ${systemHint.used}, available: ${systemHint.available}`}
+                </div>
+              )}
             </>
           )}
 
-          {/* inline error for validation */}
           {inlineError && (
             <div className="text-sm text-red-600 dark:text-red-400">
               {inlineError}
@@ -2020,6 +2068,7 @@ function GenericModal({
     </div>
   );
 }
+
 
 /* ---------------------------
    SubmitReportInline (i18n)
