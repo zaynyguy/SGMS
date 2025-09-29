@@ -1,6 +1,13 @@
 // src/pages/NotificationsPage.jsx
 import React, { useEffect, useState } from "react";
-import { CheckCircle, Info, AlertTriangle, Loader, Filter, Bell } from "lucide-react";
+import {
+  CheckCircle,
+  Info,
+  AlertTriangle,
+  Loader,
+  Filter,
+  Bell,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   fetchNotifications,
@@ -98,7 +105,9 @@ export default function NotificationsPage() {
       case "success":
         return <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />;
       case "warning":
-        return <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />;
+        return (
+          <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+        );
       case "error":
         return <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />;
       default:
@@ -117,59 +126,73 @@ export default function NotificationsPage() {
     <div className="min-h-screen bg-gray-200 dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-8xl mx-auto p-4 sm:p-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-          <div className="flex items-center min-w-0 gap-4">
-            <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-                        <Bell className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                      </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1">
-              {t("notifications.title")}
-            </h1>
-            <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
-                {t("settings.subtitle")}
-              </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t("notifications.unreadCount", { count: unread })}
-            </p>
+        <div className="flex flex-col mb-6">
+          {/* Row 1: title + topbar */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center min-w-0 gap-4">
+              <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+                <Bell className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+              </div>
+
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-1 truncate">
+                  {t("notifications.title")}
+                </h1>
+                <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl truncate">
+                  {t("settings.subtitle")}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("notifications.unreadCount", { count: unread })}
+                </p>
+              </div>
+            </div>
+
+            {/* TopBar stays on the right of the first row */}
+            <div className="flex-shrink-0">
+              <TopBar />
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Row 2: actions (Mark all) — full width on small, auto on sm+ */}
+        </div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 mb-6 justify-between">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mr-2">
+            <div
+              className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mr-2"
+              aria-hidden
+            >
+              <Filter size={16} />
+              <span>{t("notifications.filter.label")}</span>
+            </div>
+            {["all", "unread", "read"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
+                  filter === f
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+                aria-pressed={filter === f}
+                aria-label={t("notifications.filter." + f)}
+              >
+                {t(`notifications.filter.${f}`)}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-end gap-3">
             {unread > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm transition-colors duration-200"
+                className="w-full sm:w-auto px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm transition-colors duration-200"
                 aria-label={t("notifications.aria.markAll")}
               >
                 {t("notifications.markAll")}
               </button>
             )}
-            <TopBar />
           </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mr-2" aria-hidden>
-            <Filter size={16} />
-            <span>{t("notifications.filter.label")}</span>
-          </div>
-          {["all", "unread", "read"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${
-                filter === f
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-              aria-pressed={filter === f}
-              aria-label={t("notifications.filter." + f)}
-            >
-              {t(`notifications.filter.${f}`)}
-            </button>
-          ))}
         </div>
 
         {/* Body */}
@@ -201,7 +224,9 @@ export default function NotificationsPage() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <p
                       className={`text-sm break-words ${
-                        n.isRead ? "text-gray-600 dark:text-gray-300" : "text-gray-900 dark:text-white font-medium"
+                        n.isRead
+                          ? "text-gray-600 dark:text-gray-300"
+                          : "text-gray-900 dark:text-white font-medium"
                       }`}
                     >
                       {n.message}
@@ -217,7 +242,9 @@ export default function NotificationsPage() {
                         </button>
                       )}
                       <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
-                        {t("notifications.timestamps.formatted", { date: new Date(n.createdAt).toLocaleString() })}
+                        {t("notifications.timestamps.formatted", {
+                          date: new Date(n.createdAt).toLocaleString(),
+                        })}
                       </span>
                     </div>
                   </div>
