@@ -101,7 +101,7 @@
     },
     "na": "ኤን/ኤ",
     "pagination": {
-      "range": "ከ{{total}} ወደ {{to}} ከ{{ጠቅላላ}}» በማሳየት ላይ",
+      "range": "ከ{{total}} ወደ {{to}} ከ{{from}}» በማሳየት ላይ",
       "previous": "ቀዳሚ",
       "next": "ቀጥሎ"
     }
@@ -215,7 +215,7 @@
       "rejected": "ውድቅ ተደርጓል"
     },
     "pagination": {
-      "showingPage": "ገጽ {{ገጽ}} የ{{totalPages}} — {{ጠቅላላ}} ንጥሎች",
+      "showingPage": "ገጽ {{page}} የ{{totalPages}} — {{total}} ንጥሎች",
       "first": "አንደኛ",
       "prev": "ቀዳሚ",
       "next": "ቀጥሎ",
@@ -349,14 +349,14 @@
       },
       "deleteDisabled": "ይህ ሚና ሊሰረዝ አይችልም።",
       "toasts": {
-        "createSuccess": "ሚና \"{{ስም}}\" ተፈጥሯል።",
+        "createSuccess": "ሚና \"{{name}}\" ተፈጥሯል።",
         "updateSuccess": "ፈቃዶች ተዘምነዋል",
         "deleteSuccess": "ሚና \"{{name}}\" ተሰርዟል።"
       },
       "errors": {
         "loadError": "ሚናዎችን ወይም ፈቃዶችን መጫን አልተሳካም።",
         "title": "ሚናዎችን መጫን አልተቻለም",
-        "saveError": "ለውጦችን ማስቀመጥ አልተሳካም {{#ስህተት}}፡ {{ስህተት}}{{/if}}",
+        "saveError": "ለውጦችን ማስቀመጥ አልተሳካም {{#if error}}: {{error}}{{/if}}",
         "deleteError": "ሚናን መሰረዝ አልተሳካም {{#if error}}: {{error}}{{/if}}"
       },
       "roleActions": {
@@ -414,8 +414,8 @@
         "message": "እርግጠኛ ነህ {{name}}ን መሰረዝ ትፈልጋለህ?"
       },
       "toasts": {
-        "createSuccess": "ተጠቃሚ \"{{ስም}}\" ተፈጥሯል።",
-        "updateSuccess": "ተጠቃሚ \"{{ስም}}\" ዘምኗል",
+        "createSuccess": "ተጠቃሚ \"{{name}}\" ተፈጥሯል።",
+        "updateSuccess": "ተጠቃሚ \"{{name}}\" ዘምኗል",
         "deleteSuccess": "ተጠቃሚ \"{{name}}\" ተሰርዟል"
       },
       "errors": {
@@ -593,7 +593,7 @@
 
     "hints": {
       "taskWeight": "የተግባር አጠቃላይ፡ {{taskWeight}}። በሌሎች ተግባራት ጥቅም ላይ የዋለ፡ {{used}}። ይገኛል፡ {{available}}።",
-      "goalWeight": "አጠቃላይ ግብ፡ {{goalWeight}}። በሌሎች ተግባራት ጥቅም ላይ የዋለ፡ {{used}}። ይገኛል፡ {{available}}.",
+      "goalWeight": "አጠቃላይ ግብ፡ {{goalWeight}}። በሌሎች ተግባራት ጥቅም ላይ የዋለ፡ {{used}}። ይገኛል፡ {{available}}።",
       "systemWeight": "ጥቅም ላይ የዋለው የሥርዓት ክብደት፡ {{used}}፣ ይገኛል፡ {{available}}",
       "metrics": "መለኪያዎችን እንደ ቁልፍ/እሴት ጥንዶች ያክሉ።",
       "attachments": "ከፍተኛ ፋይሎች፡ የአገልጋይ-ጎን ገደብ ተፈጻሚ ነው።"
