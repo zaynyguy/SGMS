@@ -1,12 +1,10 @@
-// src/helpers/reportsHelper.js
-
 /**
  * Escapes HTML special characters to prevent XSS.
  * @param {*} s The input to escape.
  * @returns {string} The escaped string.
  */
 function escapeHtml(s) {
-    if (!s && s !== 0) return '';
+    if (s === null || s === undefined) return '';
     return String(s)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -61,31 +59,103 @@ function generateReportHtml(rows) {
         return `<div class="progress-bar-container"><div class="progress-bar-inner" style="width: ${p}%;">${p}%</div></div>`;
     }
 
-    // --- 2. Data Aggregation (no changes here) ---
+    // --- 2. Data Aggregation (with group + code support) ---
+    // We'll build nested Maps and also capture code fields when present.
     const goals = new Map();
+
+    // helper to collect first seen code/group for entities
+    const goalMeta = new Map();   // goalId => { code, groupName }
+    const taskMeta = new Map();   // taskId => { code }
+    const activityMeta = new Map();// activityId => { code }
+
     for (const r of rows) {
-        const goalId = r.goal_id || null;
-        if (!goals.has(goalId)) goals.set(goalId, { id: goalId, title: r.goal_title || '—', progress: r.goal_progress || 0, status: r.goal_status || '—', tasks: new Map() });
+        const goalId = (r.goal_id === undefined) ? null : r.goal_id;
+        const taskId = (r.task_id === undefined) ? null : r.task_id;
+        const activityId = (r.activity_id === undefined) ? null : r.activity_id;
+
+        // capture roll/code info if present (controller might have injected goalCode/taskCode/activityCode
+        const gCode = r.goalCode ?? r.goal_rollno ?? null;
+        const tCode = r.taskCode ?? r.task_rollno ?? null;
+        const aCode = r.activityCode ?? r.activity_rollno ?? null;
+        if (goalId != null && gCode != null && !goalMeta.has(goalId)) goalMeta.set(goalId, { code: String(gCode), groupName: r.group_name ?? null });
+        if (goalId != null && !goalMeta.has(goalId) && r.group_name) goalMeta.set(goalId, { code: null, groupName: r.group_name });
+        if (taskId != null && tCode != null && !taskMeta.has(taskId)) taskMeta.set(taskId, { code: String(tCode) });
+        if (activityId != null && aCode != null && !activityMeta.has(activityId)) activityMeta.set(activityId, { code: String(aCode) });
+
+        if (!goals.has(goalId)) {
+            goals.set(goalId, {
+                id: goalId,
+                title: r.goal_title || '—',
+                progress: r.goal_progress ?? 0,
+                status: r.goal_status || '—',
+                weight: typeof r.goal_weight !== 'undefined' ? r.goal_weight : null,
+                tasks: new Map()
+            });
+        }
         const g = goals.get(goalId);
-        const taskId = r.task_id || null;
+
         if (taskId !== null) {
-            if (!g.tasks.has(taskId)) g.tasks.set(taskId, { id: taskId, title: r.task_title || '—', progress: r.task_progress || 0, status: r.task_status || '—', assignee: r.task_assignee || null, activities: new Map() });
+            if (!g.tasks.has(taskId)) {
+                g.tasks.set(taskId, {
+                    id: taskId,
+                    title: r.task_title || '—',
+                    progress: r.task_progress ?? 0,
+                    status: r.task_status || '—',
+                    assignee: r.task_assignee || null,
+                    weight: typeof r.task_weight !== 'undefined' ? r.task_weight : null,
+                    activities: new Map()
+                });
+            }
             const t = g.tasks.get(taskId);
-            const actId = r.activity_id || null;
-            if (actId !== null) {
-                if (!t.activities.has(actId)) t.activities.set(actId, { id: actId, title: r.activity_title || '—', description: r.activity_description || '', currentMetric: r.currentMetric, targetMetric: r.targetMetric, status: r.activity_status || '—', reports: new Map() });
-                const a = t.activities.get(actId);
-                if (r.report_id && !a.reports.has(r.report_id)) a.reports.set(r.report_id, { id: r.report_id, narrative: r.report_narrative, status: r.report_status, metrics: r.report_metrics, createdAt: r.report_createdAt, attachments: [] });
-                if (r.attachment_id) {
-                    const report = a.reports.get(r.report_id);
-                    if (report && !report.attachments.some(att => att.id === r.attachment_id)) report.attachments.push({ id: r.attachment_id, name: r.attachment_name, });
+
+            if (activityId !== null) {
+                if (!t.activities.has(activityId)) {
+                    t.activities.set(activityId, {
+                        id: activityId,
+                        title: r.activity_title || '—',
+                        description: r.activity_description || '',
+                        currentMetric: r.currentMetric ?? r.currentmetric ?? {},
+                        targetMetric: r.targetMetric ?? r.targetmetric ?? {},
+                        status: r.activity_status || '—',
+                        weight: typeof r.activity_weight !== 'undefined' ? r.activity_weight : 0,
+                        isDone: !!r.activity_done,
+                        reports: new Map()
+                    });
+                }
+                const a = t.activities.get(activityId);
+
+                if (r.report_id) {
+                    if (!a.reports.has(r.report_id)) {
+                        a.reports.set(r.report_id, {
+                            id: r.report_id,
+                            narrative: r.report_narrative || null,
+                            status: r.report_status || null,
+                            metrics: r.report_metrics || null,
+                            new_status: r.report_new_status || null,
+                            createdAt: r.report_createdAt || null,
+                            attachments: []
+                        });
+                    }
+                    const rep = a.reports.get(r.report_id);
+                    if (r.attachment_id) {
+                        // avoid duplicates
+                        if (!rep.attachments.some(att => att.id === r.attachment_id)) {
+                            rep.attachments.push({
+                                id: r.attachment_id,
+                                name: r.attachment_name,
+                                path: r.attachment_path,
+                                type: r.attachment_type
+                            });
+                        }
+                    }
                 }
             }
         }
     }
+
     const generationDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-    // --- 3. HTML Generation ---
+    // --- 3. HTML Generation (render group + code breadcrumb where available) ---
     let html = `
     <!doctype html>
     <html>
@@ -105,39 +175,37 @@ function generateReportHtml(rows) {
             }
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
             
-            /* --- Base & Typography --- */
             body { font-family: var(--font-family-sans); margin: 0; background-color: var(--color-bg-body); color: var(--color-text-primary); line-height: 1.6; }
             .container { max-width: 90vw; margin: 2rem auto; padding: 0 1rem; }
             h1, h2, h3 { font-weight: 600; line-height: 1.3; }
             h1 { font-size: 2.25rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.25rem; }
             p { margin: 0 0 1rem; }
             
-            /* --- Header & Page Controls --- */
             .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
             .report-title h1 { margin: 0; }
             .report-title .subtitle { font-size: 1.1rem; color: var(--color-text-secondary); margin: 0; }
             .print-btn { display: inline-flex; align-items: center; gap: 0.5rem; background-color: var(--color-primary); color: white; border: none; padding: 0.75rem 1.25rem; border-radius: var(--border-radius); font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
             .print-btn:hover { background-color: #2b6cb0; }
             
-            /* --- Layout & Cards --- */
             .goal-card { background-color: var(--color-bg-card); border-radius: var(--border-radius); box-shadow: var(--shadow-lg); margin-bottom: 2.5rem; }
             .goal-card-header { display: flex; align-items: center; gap: 1rem; padding: 1.5rem; border-bottom: 1px solid var(--color-border); }
-            .goal-card-header h2 { flex-grow: 1; margin: 0; }
+            .goal-card-header h2 { flex-grow: 1; margin: 0; display:flex; gap:0.75rem; align-items:center; }
+            .goal-code { font-weight:700; color:var(--color-text-secondary); font-size:0.95rem; margin-right:0.5rem; }
+            .goal-meta { font-size:0.9rem; color:var(--color-text-secondary); margin-left: 1rem; }
             .goal-card-body { padding: 1.5rem; }
             .task-block { border: 1px solid var(--color-border); border-radius: var(--border-radius); margin-bottom: 1.5rem; }
             .task-header { display: flex; align-items: center; gap: 1rem; padding: 1rem; background-color: #fcfdff; border-bottom: 1px solid var(--color-border); }
-            .task-header h3 { flex-grow: 1; margin: 0; }
+            .task-header h3 { flex-grow: 1; margin: 0; display:flex; gap:0.5rem; align-items:center; }
+            .task-code { font-weight:600; color:var(--color-text-secondary); margin-right:0.5rem; }
             .task-meta { display: flex; align-items: center; gap: 1.5rem; padding: 1rem; flex-wrap: wrap; }
             .task-meta-item { display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-secondary); font-size: 0.9rem; }
             
-            /* --- Tables & Lists --- */
             table { width:100%; border-collapse:collapse; }
             th, td { padding: 1rem 1.5rem; text-align: left; font-size: 0.9rem; border-bottom: 1px solid var(--color-border); vertical-align: top; }
             thead th { background: #f9fafb; color: var(--color-text-muted); text-transform: uppercase; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.05em; }
             tbody tr:last-child td { border-bottom: none; }
             .empty-state { text-align: center; padding: 2rem; color: var(--color-text-muted); }
             
-            /* --- Components --- */
             .icon { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--color-text-secondary); flex-shrink: 0; }
             .goal-card-header .icon { color: var(--color-primary); }
             .badge { display: inline-block; padding: .25em .6em; font-size: 85%; font-weight: 600; line-height: 1; text-align: center; border-radius: 9999px; }
@@ -153,14 +221,12 @@ function generateReportHtml(rows) {
             .metric-value { font-weight: 600; }
             .metric-empty { color: var(--color-text-muted); }
             
-            /* --- Report Block --- */
             .report-wrapper { background: #f9fafb; padding: 1rem; margin-top: 1rem; border-radius: var(--border-radius); border: 1px solid var(--color-border); }
             .report-wrapper h4 { margin: 0 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0.5rem; }
             .report-item { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px dashed var(--color-border); }
             .report-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
             .report-meta, .report-attachments { display: flex; align-items: center; gap: 0.5rem; color: var(--color-text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
             
-            /* --- Print Styles --- */
             @media print {
                 body { background-color: #fff; }
                 .container { max-width: 100%; margin: 0; padding: 0; }
@@ -184,21 +250,38 @@ function generateReportHtml(rows) {
         html += `<div class="goal-card"><div class="goal-card-body empty-state"><p>No goals or data available for this report.</p></div></div>`;
     } else {
         for (const [gid, g] of goals) {
+            // determine code & group name if available
+            const meta = goalMeta.get(gid) || {};
+            const gCode = meta.code || null;
+            const groupName = meta.groupName || (rows.find(r => r.goal_id === gid) || {}).group_name || null;
+
+            // Build breadcrumb line: group > goalCode - goalTitle
+            let breadcrumbLine = '';
+            if (groupName) breadcrumbLine += `<span class="goal-meta">${escapeHtml(groupName)}</span> &nbsp;›&nbsp; `;
+            if (gCode) breadcrumbLine += `<span class="goal-code">${escapeHtml(String(gCode))}</span>`;
+            breadcrumbLine += `<span>${escapeHtml(g.title)}</span>`;
+
             html += `
             <div class="goal-card">
                 <div class="goal-card-header">
-                    ${getIcon('goal')} <h2>${escapeHtml(g.title)}</h2> ${getStatusBadge(g.status)}
+                    ${getIcon('goal')}
+                    <h2><span>${breadcrumbLine}</span></h2>
+                    <div class="goal-meta">${getStatusBadge(g.status)} &nbsp; ${renderProgressBar(g.progress)}</div>
                 </div>
                 <div class="goal-card-body">`;
-            
+
             if (g.tasks.size === 0) {
                 html += `<div class="empty-state"><p>This goal has no tasks.</p></div>`;
             } else {
                 for (const [tid, t] of g.tasks) {
+                    const tMeta = taskMeta.get(tid) || {};
+                    const tCode = tMeta.code || null;
+
                     html += `
                     <div class="task-block">
                         <div class="task-header">
-                            ${getIcon('task')} <h3>${escapeHtml(t.title)}</h3>
+                            ${getIcon('task')}
+                            <h3>${tCode ? `<span class="task-code">${escapeHtml(String(tCode))}</span>` : ''}<span>${escapeHtml(t.title)}</span></h3>
                         </div>
                         <div class="task-meta">
                             <div class="task-meta-item">${getIcon('user')} <strong>Assignee:</strong> ${escapeHtml(t.assignee || 'Unassigned')}</div>
@@ -214,14 +297,17 @@ function generateReportHtml(rows) {
                                 <th style="width:15%">Status</th>
                             </tr></thead>
                             <tbody>`;
-                    
+
                     if (t.activities.size > 0) {
                         for (const [aid, a] of t.activities) {
                             const reports = Array.from(a.reports.values());
+                            const aMeta = activityMeta.get(aid) || {};
+                            const aCode = aMeta.code || null;
+
                             html += `
                             <tr>
                                 <td>
-                                    <p style="font-weight: 500; margin-bottom: 0.25rem;">${escapeHtml(a.title)}</p>
+                                    <p style="font-weight: 500; margin-bottom: 0.25rem;">${aCode ? `<strong>${escapeHtml(String(aCode))}</strong> ` : ''}${escapeHtml(a.title)}</p>
                                     <p style="font-size: 0.85rem; color: var(--color-text-secondary); margin:0;">${escapeHtml(a.description)}</p>
                                 </td>
                                 <td>
@@ -237,15 +323,15 @@ function generateReportHtml(rows) {
                             if (reports.length > 0) {
                                 html += `<tr><td colspan="3"><div class="report-wrapper"><h4>${getIcon('report')} Activity Reports</h4>`;
                                 for (const rep of reports) {
-                                    const reportDate = new Date(rep.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                    const reportDate = rep.createdAt ? new Date(rep.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
                                     html += `
                                     <div class="report-item">
                                         <div class="report-meta">
-                                            <span><strong>Report #${rep.id}</strong></span> | <span>${getStatusBadge(rep.status)}</span> | <span style="display:inline-flex; align-items:center; gap: 0.25rem;">${getIcon('calendar')} ${reportDate}</span>
+                                            <span><strong>Report #${rep.id}</strong></span> | <span>${getStatusBadge(rep.status)}</span> | <span style="display:inline-flex; align-items:center; gap: 0.25rem;">${getIcon('calendar')} ${escapeHtml(reportDate)}</span>
                                         </div>
                                         <p>${escapeHtml(rep.narrative)}</p>
                                         <div style="margin-bottom: 0.5rem;"><strong>Metrics Reported:</strong> ${formatMetrics(rep.metrics)}</div>
-                                        ${rep.attachments.length > 0 ? `<div class="report-attachments">${getIcon('attachment')} <strong>Attachments:</strong> ${rep.attachments.map(att => escapeHtml(att.name)).join(', ')}</div>` : ''}
+                                        ${rep.attachments && rep.attachments.length > 0 ? `<div class="report-attachments">${getIcon('attachment')} <strong>Attachments:</strong> ${rep.attachments.map(att => escapeHtml(att.name)).join(', ')}</div>` : ''}
                                     </div>`;
                                 }
                                 html += `</div></td></tr>`;
@@ -257,6 +343,7 @@ function generateReportHtml(rows) {
                     html += `</tbody></table></div></div>`;
                 }
             }
+
             html += `</div></div>`; // .goal-card-body, .goal-card
         }
     }
@@ -264,6 +351,7 @@ function generateReportHtml(rows) {
     html += `</div></body></html>`;
     return html;
 }
+
 function generateReportJson(rows) {
   const goals = new Map();
 
@@ -273,11 +361,31 @@ function generateReportJson(rows) {
     return map.get(key);
   }
 
+  // We'll collect the first seen roll/code and group_name per entity into maps so
+  // we can attach goalCode/taskCode/activityCode and group to the JSON output.
+  const goalMeta = new Map();   // goalId -> { goalCode, groupName }
+  const taskMeta = new Map();   // taskId -> { taskCode }
+  const activityMeta = new Map();// activityId -> { activityCode }
+
   for (const r of rows) {
-    // treat NULL/undefined ids gracefully
-    const gid = r.goal_id ?? null;
-    const tid = r.task_id ?? null;
-    const aid = r.activity_id ?? null;
+    const gid = (r.goal_id === undefined) ? null : r.goal_id;
+    const tid = (r.task_id === undefined) ? null : r.task_id;
+    const aid = (r.activity_id === undefined) ? null : r.activity_id;
+
+    // record meta (prefer controller-injected code fields, then rollno columns)
+    if (gid != null) {
+      const gCode = r.goalCode ?? r.goal_rollno ?? null;
+      const gName = r.group_name ?? null;
+      if (!goalMeta.has(gid)) goalMeta.set(gid, { goalCode: gCode != null ? String(gCode) : null, groupName: gName });
+    }
+    if (tid != null) {
+      const tCode = r.taskCode ?? r.task_rollno ?? null;
+      if (!taskMeta.has(tid)) taskMeta.set(tid, { taskCode: tCode != null ? String(tCode) : null });
+    }
+    if (aid != null) {
+      const aCode = r.activityCode ?? r.activity_rollno ?? null;
+      if (!activityMeta.has(aid)) activityMeta.set(aid, { activityCode: aCode != null ? String(aCode) : null });
+    }
 
     // create goal
     const goal = getOrCreate(goals, gid, () => ({
@@ -309,7 +417,6 @@ function generateReportJson(rows) {
         id: aid,
         title: r.activity_title || null,
         description: r.activity_description || null,
-        // parenthesize the nullish coalescing part before using ||
         currentMetric: (r.currentMetric ?? r.currentmetric) || {},
         targetMetric: (r.targetMetric ?? r.targetmetric) || {},
         weight: typeof r.activity_weight !== 'undefined' ? Number(r.activity_weight) : 0,
@@ -320,7 +427,6 @@ function generateReportJson(rows) {
 
       // add report (if exists)
       if (r.report_id) {
-        // create a minimal report object; attachments (if any) added here
         const rep = {
           id: r.report_id,
           narrative: r.report_narrative || null,
@@ -369,7 +475,7 @@ function generateReportJson(rows) {
             }
           }
         }
-        const mergedReports = Array.from(mergedReportsMap.values()).sort((a,b)=> new Date(a.createdAt) - new Date(b.createdAt));
+        const mergedReports = Array.from(mergedReportsMap.values()).sort((a,b)=> new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
 
         // compute metric time series from APPROVED reports only
         const approvedReports = mergedReports.filter(r => r.status === 'Approved' && r.metrics);
@@ -380,13 +486,11 @@ function generateReportJson(rows) {
           const dt = new Date(rep.createdAt);
           if (isNaN(dt)) continue;
           const ym = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
-          // if first or newer than saved one, take it
           const prev = monthly[ym];
           if (!prev || new Date(rep.createdAt) > new Date(prev._ts)) {
             monthly[ym] = { _ts: rep.createdAt, metrics: rep.metrics };
           }
         }
-        // remove _ts from monthly and keep metrics
         for (const k of Object.keys(monthly)) monthly[k] = monthly[k].metrics;
 
         // quarterly: for each quarter in the months collected, take the HIGHEST numeric value for each metric key
@@ -396,7 +500,6 @@ function generateReportJson(rows) {
           const q = Math.floor((m-1)/3) + 1;
           return `${y}-Q${q}`;
         }
-        // build per metric maximum per quarter
         const perQuarter = {};
         for (const ym of Object.keys(monthly)) {
           const qk = qKeyFromYM(ym);
@@ -426,6 +529,8 @@ function generateReportJson(rows) {
         }
         for (const y of Object.keys(yearlyLatest)) annual[y] = yearlyLatest[y].metrics;
 
+        // attach code metadata if available
+        const actMeta = activityMeta.get(act.id) || {};
         activitiesOut.push({
           id: act.id,
           title: act.title,
@@ -440,10 +545,13 @@ function generateReportJson(rows) {
             monthly,
             quarterly,
             annual
-          }
+          },
+          activityCode: actMeta.activityCode || null
         });
       } // activities loop
 
+      // attach task code if present
+      const tMeta = taskMeta.get(task.id) || {};
       tasksOut.push({
         id: task.id,
         title: task.title,
@@ -451,17 +559,22 @@ function generateReportJson(rows) {
         status: task.status,
         assignee: task.assignee,
         weight: task.weight,
-        activities: activitiesOut
+        activities: activitiesOut,
+        taskCode: tMeta.taskCode || null
       });
     } // tasks loop
 
+    // attach goal code and group name if present
+    const gMeta = goalMeta.get(goal.id) || {};
     goalsOut.push({
       id: goal.id,
       title: goal.title,
       progress: goal.progress,
       status: goal.status,
       weight: goal.weight,
-      tasks: tasksOut
+      tasks: tasksOut,
+      goalCode: gMeta.goalCode || null,
+      groupName: gMeta.groupName || null
     });
   } // goals loop
 

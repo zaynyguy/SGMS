@@ -17,6 +17,7 @@ DROP TABLE IF EXISTS "AuditLogs" CASCADE;
 DROP TABLE IF EXISTS "ProgressHistory" CASCADE;
 DROP TABLE IF EXISTS "RefreshTokens" CASCADE;
 
+DROP SEQUENCE IF EXISTS goals_rollno_seq CASCADE;
 
 DROP TYPE IF EXISTS goal_status CASCADE;
 DROP TYPE IF EXISTS task_status CASCADE;
@@ -29,9 +30,7 @@ DROP TYPE IF EXISTS report_status CASCADE;
 CREATE TYPE goal_status AS ENUM ('Not Started', 'In Progress', 'Completed', 'On Hold');
 CREATE TYPE task_status AS ENUM ('To Do', 'In Progress', 'Done', 'Blocked');
 CREATE TYPE activity_status AS ENUM ('To Do', 'In Progress', 'Done');
-CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 
-'Rejected');
-
+CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 'Rejected');
 
 -- =========================
 -- ROLES & PERMISSIONS
@@ -98,8 +97,12 @@ CREATE TABLE "UserGroups" (
 -- =========================
 -- GOALS
 -- =========================
+-- Sequence for global goal roll numbers (1,2,3,...)
+CREATE SEQUENCE goals_rollno_seq START 1;
+
 CREATE TABLE "Goals" (
   "id" SERIAL PRIMARY KEY,
+  "rollNo" INTEGER DEFAULT nextval('goals_rollno_seq') , -- global human-facing roll number
   "title" VARCHAR(255) NOT NULL,
   "description" TEXT,
   "groupId" INTEGER REFERENCES "Groups"("id") ON DELETE SET NULL,
@@ -111,14 +114,21 @@ CREATE TABLE "Goals" (
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ensure rollNo > 0 and unique
+ALTER TABLE "Goals" ADD CONSTRAINT chk_goals_rollno_positive CHECK ("rollNo" > 0);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_goals_rollno ON "Goals" ("rollNo");
+
 CREATE INDEX idx_goals_group_status ON "Goals" ("groupId","status");
 
 -- =========================
 -- TASKS
 -- =========================
+-- Tasks have rollNo unique *within* a goal (e.g., 2.1, 2.2) — stored as integer '1,2,...' and combined in UI with goal.rollNo
 CREATE TABLE "Tasks" (
   "id" SERIAL PRIMARY KEY,
   "goalId" INTEGER NOT NULL REFERENCES "Goals"("id") ON DELETE CASCADE,
+  "rollNo" INTEGER, -- unique per goal, >0
   "title" VARCHAR(255) NOT NULL,
   "description" TEXT,
   "status" task_status NOT NULL DEFAULT 'To Do',
@@ -129,16 +139,21 @@ CREATE TABLE "Tasks" (
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE "Tasks" ADD CONSTRAINT chk_tasks_rollno_positive CHECK ("rollNo" IS NULL OR "rollNo" > 0);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_tasks_goal_roll ON "Tasks" ("goalId","rollNo");
+
 CREATE INDEX idx_tasks_goal_id ON "Tasks" ("goalId");
 CREATE INDEX idx_tasks_assignee_id ON "Tasks" ("assigneeId");
 
 -- =========================
 -- ACTIVITIES
 -- =========================
+-- Activities have rollNo unique *within* a task (e.g., 2.1.1, 2.1.2)
 CREATE TABLE "Activities" (
   "id" SERIAL PRIMARY KEY,
   "taskId" INTEGER NOT NULL REFERENCES "Tasks"("id") ON DELETE CASCADE,
   "parentId" INTEGER REFERENCES "Activities"("id") ON DELETE CASCADE,
+  "rollNo" INTEGER, -- unique per task, >0
   "title" VARCHAR(255) NOT NULL,
   "description" TEXT,
   "status" activity_status NOT NULL DEFAULT 'To Do',
@@ -150,6 +165,9 @@ CREATE TABLE "Activities" (
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE "Activities" ADD CONSTRAINT chk_activities_rollno_positive CHECK ("rollNo" IS NULL OR "rollNo" > 0);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_activities_task_roll ON "Activities" ("taskId","rollNo");
+
 CREATE INDEX idx_activities_task_id ON "Activities" ("taskId");
 CREATE INDEX idx_activities_parent_id ON "Activities" ("parentId");
 
@@ -244,7 +262,6 @@ CREATE TABLE "RefreshTokens" (
 );
 CREATE INDEX idx_refresh_tokens_userid ON "RefreshTokens"("userId");
 
-
 -- =========================
 -- PROGRESS HISTORY
 -- =========================
@@ -266,17 +283,18 @@ CREATE INDEX IF NOT EXISTS idx_progresshistory_snapshot_month ON "ProgressHistor
 CREATE UNIQUE INDEX IF NOT EXISTS ux_progresshistory_entity_month
   ON "ProgressHistory"(entity_type, entity_id, snapshot_month);
 
-
 -- =========================
 -- TRIGGERS & FUNCTIONS
 -- =========================
+
+-- update_updatedAt_column() used by many tables
 CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
 BEGIN
   NEW."updatedAt" = NOW();
   RETURN NEW;
 END; $$ LANGUAGE plpgsql;
 
--- Attach triggers
+-- Attach triggers for updatedAt
 CREATE TRIGGER set_updatedAt_Roles BEFORE UPDATE ON "Roles" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
 CREATE TRIGGER set_updatedAt_Permissions BEFORE UPDATE ON "Permissions" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
 CREATE TRIGGER set_updatedAt_Users BEFORE UPDATE ON "Users" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
@@ -288,6 +306,56 @@ CREATE TRIGGER set_updatedAt_Tasks BEFORE UPDATE ON "Tasks" FOR EACH ROW EXECUTE
 CREATE TRIGGER set_updatedAt_Activities BEFORE UPDATE ON "Activities" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
 CREATE TRIGGER set_updatedAt_SystemSettings BEFORE UPDATE ON "SystemSettings" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
 CREATE TRIGGER set_updatedAt_Reports BEFORE UPDATE ON "Reports" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+
+-- ===== Automatic rollNo assignment for Tasks (unique per goal) =====
+CREATE OR REPLACE FUNCTION trg_assign_task_rollno() RETURNS TRIGGER AS $$
+DECLARE
+  v_max INT;
+BEGIN
+  -- If client provided rollNo (positive integer), accept it (uniqueness is enforced by unique index).
+  IF NEW."rollNo" IS NOT NULL THEN
+    IF NEW."rollNo" <= 0 THEN
+      RAISE EXCEPTION 'task rollNo must be > 0';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  -- Compute next available rollNo within the given goal
+  SELECT COALESCE(MAX("rollNo"), 0) + 1 INTO v_max FROM "Tasks" WHERE "goalId" = NEW."goalId";
+  NEW."rollNo" := v_max;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS before_tasks_insert_assign_rollno ON "Tasks";
+CREATE TRIGGER before_tasks_insert_assign_rollno
+BEFORE INSERT ON "Tasks"
+FOR EACH ROW
+EXECUTE FUNCTION trg_assign_task_rollno();
+
+-- ===== Automatic rollNo assignment for Activities (unique per task) =====
+CREATE OR REPLACE FUNCTION trg_assign_activity_rollno() RETURNS TRIGGER AS $$
+DECLARE
+  v_max INT;
+BEGIN
+  IF NEW."rollNo" IS NOT NULL THEN
+    IF NEW."rollNo" <= 0 THEN
+      RAISE EXCEPTION 'activity rollNo must be > 0';
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  SELECT COALESCE(MAX("rollNo"), 0) + 1 INTO v_max FROM "Activities" WHERE "taskId" = NEW."taskId";
+  NEW."rollNo" := v_max;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS before_activities_insert_assign_rollno ON "Activities";
+CREATE TRIGGER before_activities_insert_assign_rollno
+BEFORE INSERT ON "Activities"
+FOR EACH ROW
+EXECUTE FUNCTION trg_assign_activity_rollno();
 
 -- =========================
 -- PROGRESS RECALCULATION
@@ -328,6 +396,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS after_activities_change ON "Activities";
 CREATE TRIGGER after_activities_change
 AFTER INSERT OR UPDATE OR DELETE ON "Activities"
 FOR EACH ROW EXECUTE FUNCTION trg_recalc_task_progress();
@@ -369,6 +438,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS after_tasks_change ON "Tasks";
 CREATE TRIGGER after_tasks_change
 AFTER INSERT OR UPDATE OR DELETE ON "Tasks"
 FOR EACH ROW EXECUTE FUNCTION trg_recalc_goal_progress();
+
+-- =========================
+-- Helpful: ensure initial rollNo assignment for existing rows (no-op when db empty)
+-- This will ensure deterministic rollNo if you run on DB with existing rows.
+-- For fresh DB this simply sets each to 1..N by createdAt order.
+WITH seeded_goals AS (
+  SELECT id, ROW_NUMBER() OVER (ORDER BY "createdAt", id) AS rn FROM "Goals"
+)
+UPDATE "Goals" g SET "rollNo" = s.rn
+FROM seeded_goals s WHERE g.id = s.id AND (g."rollNo" IS NULL OR g."rollNo" = 0);
+
+WITH seeded_tasks AS (
+  SELECT id, "goalId", ROW_NUMBER() OVER (PARTITION BY "goalId" ORDER BY "createdAt", id) AS rn FROM "Tasks"
+)
+UPDATE "Tasks" t SET "rollNo" = s.rn
+FROM seeded_tasks s WHERE t.id = s.id AND (t."rollNo" IS NULL OR t."rollNo" = 0);
+
+WITH seeded_activities AS (
+  SELECT id, "taskId", ROW_NUMBER() OVER (PARTITION BY "taskId" ORDER BY "createdAt", id) AS rn FROM "Activities"
+)
+UPDATE "Activities" a SET "rollNo" = s.rn
+FROM seeded_activities s WHERE a.id = s.id AND (a."rollNo" IS NULL OR a."rollNo" = 0);
+
+-- Done

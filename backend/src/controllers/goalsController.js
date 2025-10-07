@@ -1,7 +1,12 @@
-// src/controllers/goalsController.js
 const db = require('../db');
 const { logAudit } = require('../helpers/audit');
 const EPS = 1e-9;
+
+const asPositiveInt = (v) => {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 ? n : NaN;
+};
 
 exports.getGoals = async (req, res) => {
   const page = Math.max(parseInt(req.query.page || '1', 10), 1);
@@ -15,11 +20,14 @@ exports.getGoals = async (req, res) => {
       const { rows } = await db.query(
         `SELECT g.*, grp.name AS "groupName"
          FROM "Goals" g LEFT JOIN "Groups" grp ON g."groupId"=grp.id
-         ORDER BY g."createdAt" DESC
+         ORDER BY g."rollNo" ASC, g."createdAt" DESC
          LIMIT $1 OFFSET $2`,
         [pageSize, offset]
       );
-      return res.json({ page, pageSize, rows });
+
+      // add breadcrumb-style code
+      const out = rows.map(r => ({ ...r, goalCode: r.rollNo != null ? String(r.rollNo) : null }));
+      return res.json({ page, pageSize, rows: out });
     }
 
     const { rows } = await db.query(
@@ -28,11 +36,13 @@ exports.getGoals = async (req, res) => {
        JOIN "Groups" grp ON g."groupId" = grp.id
        JOIN "UserGroups" ug ON ug."groupId" = grp.id
        WHERE ug."userId" = $1
-       ORDER BY g."createdAt" DESC
+       ORDER BY g."rollNo" ASC, g."createdAt" DESC
        LIMIT $2 OFFSET $3`,
       [req.user.id, pageSize, offset]
     );
-    res.json({ page, pageSize, rows });
+
+    const out = rows.map(r => ({ ...r, goalCode: r.rollNo != null ? String(r.rollNo) : null }));
+    res.json({ page, pageSize, rows: out });
   } catch (err) {
     console.error("getGoals error:", err);
     res.status(500).json({ message: "Internal server error.", error: err.message });
@@ -40,7 +50,7 @@ exports.getGoals = async (req, res) => {
 };
 
 exports.createGoal = async (req, res) => {
-  const { title, description, groupId, startDate, endDate, weight } = req.body;
+  const { title, description, groupId, startDate, endDate, weight, rollNo } = req.body;
   if (!title) return res.status(400).json({ message: "Title is required." });
 
   try {
@@ -77,10 +87,28 @@ exports.createGoal = async (req, res) => {
         throw err;
       }
 
+      // rollNo handling: manual preferred, else sequence will assign (DB sequence default)
+      let desiredRoll = asPositiveInt(rollNo);
+      if (Number.isNaN(desiredRoll)) {
+        const err = new Error("rollNo must be a positive integer");
+        err.status = 400;
+        throw err;
+      }
+
+      if (desiredRoll !== null) {
+        // check uniqueness
+        const check = await client.query(`SELECT 1 FROM "Goals" WHERE "rollNo" = $1 LIMIT 1`, [desiredRoll]);
+        if (check.rowCount > 0) {
+          const err = new Error(`rollNo ${desiredRoll} is already used by another goal`);
+          err.status = 409;
+          throw err;
+        }
+      }
+
       const r = await client.query(
-        `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", "weight", "createdAt", "updatedAt")
-         VALUES ($1,$2,$3,$4,$5,$6, NOW(), NOW()) RETURNING *`,
-        [title.trim(), description?.trim() || null, groupId || null, startDate || null, endDate || null, newWeight]
+        `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", "weight", "rollNo", "createdAt", "updatedAt")
+         VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW()) RETURNING *`,
+        [title.trim(), description?.trim() || null, groupId || null, startDate || null, endDate || null, newWeight, desiredRoll]
       );
       const newGoal = r.rows[0];
 
@@ -90,7 +118,7 @@ exports.createGoal = async (req, res) => {
           action: "GOAL_CREATED",
           entity: "Goal",
           entityId: newGoal.id,
-          details: { title: newGoal.title, groupId: newGoal.groupId },
+          details: { title: newGoal.title, groupId: newGoal.groupId, rollNo: newGoal.rollNo },
           client,
           req,
         });
@@ -101,17 +129,20 @@ exports.createGoal = async (req, res) => {
       return newGoal;
     });
 
-    res.status(201).json({ message: 'Goal created successfully.', goal });
+    // attach goalCode before returning
+    const outGoal = { ...goal, goalCode: goal.rollNo != null ? String(goal.rollNo) : null };
+    res.status(201).json({ message: 'Goal created successfully.', goal: outGoal });
   } catch (err) {
     console.error("createGoal error:", err);
     if (err && err.status === 400) return res.status(400).json({ message: err.message });
+    if (err && err.status === 409) return res.status(409).json({ message: err.message });
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
 
 exports.updateGoal = async (req, res) => {
   const { goalId } = req.params;
-  const { title, description, groupId, startDate, endDate, status, weight } = req.body;
+  const { title, description, groupId, startDate, endDate, status, weight, rollNo } = req.body;
 
   try {
     const updatedGoal = await db.tx(async (client) => {
@@ -154,11 +185,35 @@ exports.updateGoal = async (req, res) => {
         throw err;
       }
 
+      // rollNo handling on update
+      let newRollNo = before.rollNo;
+      if (rollNo !== undefined) {
+        const parsed = asPositiveInt(rollNo);
+        if (Number.isNaN(parsed)) {
+          const err = new Error("rollNo must be a positive integer");
+          err.status = 400;
+          throw err;
+        }
+        if (parsed !== null && parsed !== before.rollNo) {
+          // ensure uniqueness
+          const rExist = await client.query(
+            `SELECT 1 FROM "Goals" WHERE "rollNo" = $1 AND id <> $2 LIMIT 1`,
+            [parsed, goalId]
+          );
+          if (rExist.rowCount > 0) {
+            const err = new Error(`rollNo ${parsed} is already used by another goal`);
+            err.status = 409;
+            throw err;
+          }
+          newRollNo = parsed;
+        }
+      }
+
       const r = await client.query(
         `UPDATE "Goals" SET title=$1, description=$2, "groupId"=$3, "startDate"=$4, "endDate"=$5,
-           status=COALESCE($6,status), "weight" = $7, "updatedAt"=NOW()
-         WHERE id=$8 RETURNING *`,
-        [title?.trim() || null, description?.trim() || null, groupId || null, startDate || null, endDate || null, status || null, newWeight, goalId]
+           status=COALESCE($6,status), "weight" = $7, "rollNo" = $8, "updatedAt"=NOW()
+         WHERE id=$9 RETURNING *`,
+        [title?.trim() || null, description?.trim() || null, groupId || null, startDate || null, endDate || null, status || null, newWeight, newRollNo, goalId]
       );
       const updated = r.rows[0];
 
@@ -180,11 +235,13 @@ exports.updateGoal = async (req, res) => {
       return updated;
     });
 
-    res.json({ message: 'Goal updated successfully.', goal: updatedGoal });
+    const outGoal = { ...updatedGoal, goalCode: updatedGoal.rollNo != null ? String(updatedGoal.rollNo) : null };
+    res.json({ message: 'Goal updated successfully.', goal: outGoal });
   } catch (err) {
     console.error("updateGoal error:", err);
     if (err && err.status === 404) return res.status(404).json({ message: err.message });
     if (err && err.status === 400) return res.status(400).json({ message: err.message });
+    if (err && err.status === 409) return res.status(409).json({ message: err.message });
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };

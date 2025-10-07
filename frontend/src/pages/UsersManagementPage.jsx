@@ -751,7 +751,7 @@ const UsersManagementPage = () => {
                     placeholder={t("admin.users.form.usernamePlaceholder")}
                     value={formData.username}
                     onChange={handleFormChange}
-                    disabled={submitting || !!userToEdit}
+                    disabled={submitting} 
                     aria-invalid={!!formErrors.username}
                   />
                   {formErrors.username && (

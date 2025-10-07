@@ -54,32 +54,60 @@ exports.createUser = async (req, res) => {
 // UPDATE user
 exports.updateUser = async (req, res) => {
   const { id } = req.params;
-  const { name, password, roleId, language, profilePicture } = req.body;
+  // include username here
+  const { username, name, password, roleId, language, profilePicture } = req.body;
+
   try {
+    // if username was provided explicitly, normalize it
+    let usernameValue = undefined;
+    if (typeof username !== 'undefined') {
+      if (username === null || String(username).trim() === '') {
+        return res.status(400).json({ message: 'username cannot be empty' });
+      }
+      usernameValue = String(username).trim();
+    }
+
     const bumpTokenVersion = Boolean(password);
     const hash = password ? await bcrypt.hash(password, 10) : null;
 
     const { rows } = await db.query(
       `UPDATE "Users" SET
-         name = COALESCE($1, name),
-         password = COALESCE($2, password),
-         "roleId" = COALESCE($3, "roleId"),
-         language = COALESCE($4, language),
-         "profilePicture" = COALESCE($5, "profilePicture"),
-         token_version = CASE WHEN $6 THEN COALESCE(token_version,0) + 1 ELSE token_version END,
+         username = COALESCE($1, username),
+         name = COALESCE($2, name),
+         password = COALESCE($3, password),
+         "roleId" = COALESCE($4, "roleId"),
+         language = COALESCE($5, language),
+         "profilePicture" = COALESCE($6, "profilePicture"),
+         token_version = CASE WHEN $7 THEN COALESCE(token_version,0) + 1 ELSE token_version END,
          "updatedAt" = NOW()
-       WHERE id = $7
+       WHERE id = $8
        RETURNING id, username, name, "roleId", language, COALESCE("profilePicture",'') AS "profilePicture", COALESCE(token_version,0) AS token_version, "createdAt", "updatedAt"`,
-      [name?.trim() || null, hash, roleId || null, language || null, profilePicture ?? null, bumpTokenVersion, id]
+      [
+        // param positions:
+        // $1 -> usernameValue (may be undefined -> COALESCE will keep existing)
+        usernameValue,
+        name?.trim() || null,
+        hash,
+        roleId || null,
+        language || null,
+        typeof profilePicture !== 'undefined' ? profilePicture : null,
+        bumpTokenVersion,
+        id,
+      ]
     );
 
     if (!rows.length) return res.status(404).json({ message: 'User not found.' });
     res.json(rows[0]);
   } catch (err) {
+    // handle unique constraint violation (username collision)
+    if (err && err.code === '23505' && /username/i.test(err.detail || err.message || '')) {
+      return res.status(400).json({ message: 'Username already in use.' });
+    }
     console.error('usersController.updateUser error', err);
     res.status(500).json({ message: 'Internal server error.' });
   }
 };
+
 
 // DELETE user
 exports.deleteUser = async (req, res) => {
