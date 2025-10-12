@@ -93,64 +93,12 @@ async function run() {
     const adminPass = process.env.ADMIN_PASSWORD || "admin123";
     const adminHash = await bcrypt.hash(adminPass, 12);
     const adminInsert = await client.query(
-      `INSERT INTO "Users"(username, name, password, "roleId", "profilePicture") VALUES ($1,$2,$3,$4,$5) ON CONFLICT (username) DO UPDATE SET name=EXCLUDED.name RETURNING id`,
-      [adminUser, "System Admin", adminHash, roleIds["Admin"], "/uploads/admin.png"]
+      `INSERT INTO "Users"(username, name, password, "roleId") VALUES ($1,$2,$3,$4) ON CONFLICT (username) DO UPDATE SET name=EXCLUDED.name RETURNING id`,
+      [adminUser, "System Admin", adminHash, roleIds["Admin"]]
     );
     const adminId = adminInsert.rows[0].id;
 
-    const groupRes = await client.query(
-      `INSERT INTO "Groups"(name, description) VALUES ($1,$2) ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description RETURNING id`,
-      ["Development Team", "Team handling core development"]
-    );
-    const devGroupId = groupRes.rows[0].id;
-
-    await client.query(`INSERT INTO "UserGroups"("userId","groupId") VALUES ($1,$2) ON CONFLICT ("userId","groupId") DO NOTHING`, [
-      adminId,
-      devGroupId,
-    ]);
-
-    const goalRes = await client.query(
-      `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", status, progress, weight)
-       VALUES ($1,$2,$3,CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days','In Progress', 10, 100)
-       RETURNING id`,
-      ["Initial Goal", "A small seeded goal", devGroupId]
-    );
-    const goalId = goalRes.rows[0].id;
-
-    const taskRes = await client.query(
-      `INSERT INTO "Tasks"(title, description, "goalId", status, "assigneeId", "dueDate", progress, weight)
-       VALUES ($1,$2,$3,'To Do',$4,CURRENT_DATE + INTERVAL '10 days', 0, 50)
-       RETURNING id`,
-      ["Initial Task", "First seed task", goalId, adminId]
-    );
-    const taskId = taskRes.rows[0].id;
-
-    const activityRes = await client.query(
-      `INSERT INTO "Activities"(title, description, "taskId", status, weight, "targetMetric", "currentMetric", "isDone", "dueDate")
-       VALUES ($1,$2,$3,'To Do',50,$4,$5,false, CURRENT_DATE + INTERVAL '9 days')
-       RETURNING id`,
-      ["Initial Activity", "First seeded activity", taskId, JSON.stringify({ target: "any" }), JSON.stringify({ current: "none" })]
-    );
-    const activityId = activityRes.rows[0].id;
-
-    const now = new Date();
-    const snapshot = snapshotMonthFrom(now);
-
-    await client.query(
-      `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at, snapshot_month)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (entity_type, entity_id, snapshot_month)
-       DO UPDATE SET progress = EXCLUDED.progress, recorded_at = EXCLUDED.recorded_at, metrics = EXCLUDED.metrics`,
-      ["Task", taskId, devGroupId, 0, now, snapshot]
-    );
-
-    await client.query(
-      `INSERT INTO "ProgressHistory"(entity_type, entity_id, group_id, progress, recorded_at, snapshot_month)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (entity_type, entity_id, snapshot_month)
-       DO UPDATE SET progress = EXCLUDED.progress, recorded_at = EXCLUDED.recorded_at, metrics = EXCLUDED.metrics`,
-      ["Activity", activityId, devGroupId, 0, now, snapshot]
-    );
+   
 
     const settings = [
       { key: "max_attachment_size_mb", value: 10, description: "Max attachment upload size (MB)" },
