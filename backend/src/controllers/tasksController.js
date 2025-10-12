@@ -1,3 +1,4 @@
+// src/controllers/tasksController.js
 const db = require("../db");
 const { logAudit } = require("../helpers/audit");
 const notificationService = require("../services/notificationService");
@@ -11,7 +12,7 @@ const asPositiveInt = (v) => {
 
 exports.getTasksByGoal = async (req, res) => {
   const { goalId } = req.params;
-  const isManager = req.user.permissions.includes("manage_gta");
+  const isManager = Array.isArray(req.user?.permissions) && req.user.permissions.includes("manage_gta");
 
   if (!isManager) {
     const check = await db.query(
@@ -26,13 +27,14 @@ exports.getTasksByGoal = async (req, res) => {
   }
 
   try {
+    // Order by rollNo (if present) then createdAt to give deterministic ordering for UI
     const { rows } = await db.query(
       `SELECT t.*, u.username AS assignee, g."rollNo" AS "goalRollNo"
        FROM "Tasks" t
        LEFT JOIN "Users" u ON t."assigneeId" = u.id
        JOIN "Goals" g ON t."goalId" = g.id
        WHERE t."goalId" = $1
-       ORDER BY t."rollNo" ASC, t."createdAt" DESC`,
+       ORDER BY COALESCE(t."rollNo", 999999), t."createdAt" DESC`,
       [goalId]
     );
 
@@ -116,19 +118,56 @@ exports.createTask = async (req, res) => {
         }
       }
 
-      const insertRes = await client.query(
-        `INSERT INTO "Tasks" ("goalId", title, description, "assigneeId", "dueDate", "weight", "rollNo", "createdAt", "updatedAt")
-         VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW()) RETURNING *`,
-        [
-          goalId,
-          title.trim(),
-          description?.trim() || null,
-          assigneeId || null,
-          dueDate || null,
-          newWeight,
-          desiredRoll
-        ]
-      );
+      // Optional rollNo handling
+      let insertRes;
+      if (rollNo !== undefined && rollNo !== null && String(rollNo).trim() !== "") {
+        const rn = Number(rollNo);
+        if (!Number.isInteger(rn) || rn <= 0) {
+          const err = new Error("rollNo must be a positive integer");
+          err.status = 400;
+          throw err;
+        }
+
+        // uniqueness check within same goal
+        const dup = await client.query(
+          `SELECT id FROM "Tasks" WHERE "goalId" = $1 AND "rollNo" = $2`,
+          [goalId, rn]
+        );
+        if (dup.rows.length) {
+          const err = new Error(`rollNo ${rn} is already in use for this goal`);
+          err.status = 409;
+          throw err;
+        }
+
+        insertRes = await client.query(
+          `INSERT INTO "Tasks" ("goalId", "rollNo", title, description, "assigneeId", "dueDate", "weight", "createdAt", "updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW()) RETURNING *`,
+          [
+            goalId,
+            rn,
+            title.trim(),
+            description?.trim() || null,
+            assigneeId || null,
+            dueDate || null,
+            newWeight,
+          ]
+        );
+      } else {
+        // let DB trigger/logic assign rollNo
+        insertRes = await client.query(
+          `INSERT INTO "Tasks" ("goalId", title, description, "assigneeId", "dueDate", "weight", "createdAt", "updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6, NOW(), NOW()) RETURNING *`,
+          [
+            goalId,
+            title.trim(),
+            description?.trim() || null,
+            assigneeId || null,
+            dueDate || null,
+            newWeight,
+          ]
+        );
+      }
+
       const newTask = insertRes.rows[0];
 
       try {
@@ -178,12 +217,14 @@ exports.createTask = async (req, res) => {
       .json({ message: "Task created successfully.", task: outTask });
   } catch (err) {
     console.error("createTask error:", err);
-    if (err && err.status === 404)
-      return res.status(404).json({ message: err.message });
+    if (err && (err.status === 404 || err.status === 409))
+      return res.status(err.status).json({ message: err.message });
     if (err && err.status === 400)
       return res.status(400).json({ message: err.message });
-    if (err && err.status === 409)
-      return res.status(409).json({ message: err.message });
+    // unique-violation fallback
+    if (err && err.code === "23505") {
+      return res.status(409).json({ message: "rollNo conflict: that roll number is already in use for this goal." });
+    }
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
@@ -208,6 +249,26 @@ exports.updateTask = async (req, res) => {
         const e = new Error("Task not found.");
         e.status = 404;
         throw e;
+      }
+
+      // rollNo uniqueness check (if provided)
+      const current = currentRes.rows[0];
+      if (rollNo !== undefined && rollNo !== null && String(rollNo).trim() !== "") {
+        const rn = Number(rollNo);
+        if (!Number.isInteger(rn) || rn <= 0) {
+          const err = new Error("rollNo must be a positive integer");
+          err.status = 400;
+          throw err;
+        }
+        const dup = await client.query(
+          `SELECT id FROM "Tasks" WHERE "goalId" = $1 AND "rollNo" = $2 AND id <> $3`,
+          [current.goalId, rn, taskId]
+        );
+        if (dup.rows.length) {
+          const err = new Error(`rollNo ${rn} is already in use for this goal`);
+          err.status = 409;
+          throw err;
+        }
       }
 
       let newWeight = weight ?? currentRes.rows[0].weight;
@@ -269,17 +330,18 @@ exports.updateTask = async (req, res) => {
 
       const r = await client.query(
         `UPDATE "Tasks" 
-         SET title = COALESCE($1, title),
-             description = COALESCE($2, description),
-             "assigneeId" = COALESCE($3, "assigneeId"),
-             "dueDate" = COALESCE($4, "dueDate"),
-             status = COALESCE($5, status),
-             weight = $6,
-             "rollNo" = $7,
+         SET "rollNo" = COALESCE($1, "rollNo"),
+             title = COALESCE($2, title),
+             description = COALESCE($3, description),
+             "assigneeId" = COALESCE($4, "assigneeId"),
+             "dueDate" = COALESCE($5, "dueDate"),
+             status = COALESCE($6, status),
+             weight = $7,
              "updatedAt" = NOW()
          WHERE id = $8
          RETURNING *`,
         [
+          rollNo !== undefined && rollNo !== null && String(rollNo).trim() !== "" ? Number(rollNo) : null,
           title?.trim() || null,
           description?.trim() || null,
           assigneeId || null,
@@ -334,9 +396,11 @@ exports.updateTask = async (req, res) => {
     res.json({ message: "Task updated successfully.", task: outTask });
   } catch (err) {
     console.error("updateTask error:", err);
-    if (err && err.status === 404) return res.status(404).json({ message: err.message });
+    if (err && (err.status === 404 || err.status === 409)) return res.status(err.status).json({ message: err.message });
     if (err && err.status === 400) return res.status(400).json({ message: err.message });
-    if (err && err.status === 409) return res.status(409).json({ message: err.message });
+    if (err && err.code === "23505") {
+      return res.status(409).json({ message: "rollNo conflict: that roll number is already in use for this goal." });
+    }
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
@@ -351,7 +415,7 @@ exports.deleteTask = async (req, res) => {
         [taskId]
       );
       if (!cur.rows.length) {
-        const e = new Error("Task not found.");
+        const e = new Error("Task not found");
         e.status = 404;
         throw e;
       }

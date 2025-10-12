@@ -43,8 +43,7 @@ function App() {
                 {/* No special permissions needed */}
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/settings" element={<UserSettingsPage />} />{" "}
-                {/* Add settings route */}
-                {/* Admin Routes with specific permissions */}
+                
                 <Route
                   path="/systemsettings"
                   element={

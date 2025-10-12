@@ -1,10 +1,8 @@
-// src/components/project/GoalCard.jsx
 import React, { memo } from "react";
 import { ChevronRight, ChevronDown, Edit, Trash2, Calendar, CheckSquare, Plus as PlusIcon } from "lucide-react";
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
 import TaskList from "./TaskList";
-import ActivityList from "./ActivityList";
 import { formatDate } from "../../uites/projectUtils";
 
 function GoalCard({
@@ -15,13 +13,13 @@ function GoalCard({
   canManageGTA,
   handleDeleteGoal,
 
-  // NEW props (wire these from parent)
+  // props forwarded from parent (expect the parent to accept goalId first, taskId second)
   onEditGoal,
   onCreateTask,
-  onEditTask,        // (goalId, taskId, taskPayload) or (goalId, taskObj)
+  onEditTask,
   onDeleteTask,
-  onCreateActivity,  // (goalId, taskId, payload)
-  onEditActivity,    // (goalId, taskId, activityId, payload)
+  onCreateActivity,
+  onEditActivity,
   onDeleteActivity,
   openSubmitModal,
   canSubmitReport,
@@ -48,7 +46,13 @@ function GoalCard({
 
             <div className="min-w-0 flex-1" onClick={() => setSelectedGoal(goal)} style={{ cursor: "pointer" }}>
               <div className="flex items-start justify-between">
-                <h3 id={`goal-${goal.id}-title`} className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white break-words">{goal.title}</h3>
+                {/* rollNo displayed before title */}
+                <h3 id={`goal-${goal.id}-title`} className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-3">
+                  {goal?.rollNo !== undefined && goal?.rollNo !== null ? (
+                    <span className="text-sky-600 dark:text-sky-400 font-semibold">{String(goal.rollNo)}.</span>
+                  ) : null}
+                  <span>{goal.title}</span>
+                </h3>
 
                 <div className="md:hidden flex items-center gap-2 ml-2">
                   <button onClick={() => toggleGoal(goal)} className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">{isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}</button>
@@ -72,7 +76,6 @@ function GoalCard({
             <div className="flex items-center gap-2">
               {canManageGTA && (
                 <>
-                  {/* EDIT: call parent's onEditGoal */}
                   <button
                     onClick={() => onEditGoal && onEditGoal(goal)}
                     className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md hidden sm:block"
@@ -110,7 +113,7 @@ function GoalCard({
                     onClick={() => onCreateTask && onCreateTask(goal.id)}
                     className="px-2 py-1 bg-blue-500 text-white rounded text-xs flex items-center gap-1"
                   >
-                    <PlusIcon className="h-3 w-3" /> Add
+                    <PlusIcon className="h-3 w-3" />  Add Task
                   </button>
                 )}
               </div>
@@ -118,19 +121,23 @@ function GoalCard({
 
             <TaskList
               goal={goal}
-              tasks={tasks[goal.id] || []}
-              tasksLoading={tasksLoading ? tasksLoading[goal.id] : false}
+              tasks={tasks}
+              tasksLoading={tasksLoading}
               toggleTask={toggleTask}
               expandedTask={expandedTask}
-              onEditTask={(task) => onEditTask && onEditTask(goal.id, task)}
-              onDeleteTask={(taskId) => onDeleteTask && onDeleteTask(goal.id, taskId)}
-              // pass activity-level handlers down so TaskList or ActivityList can use them
-              onCreateActivity={(taskId) => onCreateActivity && onCreateActivity(goal.id, taskId)}
-              onEditActivity={(taskId, activity) => onEditActivity && onEditActivity(goal.id, taskId, activity)}
-              onDeleteActivity={(taskId, activityId) => onDeleteActivity && onDeleteActivity(goal.id, taskId, activityId)}
+              // forward parent handlers directly (signatures expected: (goalId, taskId, ...) )
+              onEditTask={onEditTask}
+              onDeleteTask={onDeleteTask}
+              onCreateActivity={onCreateActivity}
+              onEditActivity={onEditActivity}
+              onDeleteActivity={onDeleteActivity}
               openSubmitModal={openSubmitModal}
               canSubmitReport={canSubmitReport}
               reportingActive={reportingActive}
+              activities={activities}
+              activitiesLoading={activitiesLoading}
+              // <-- pass canManageGTA down
+              canManageGTA={canManageGTA}
             />
           </div>
         )}

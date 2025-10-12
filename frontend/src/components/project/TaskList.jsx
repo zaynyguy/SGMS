@@ -1,4 +1,3 @@
-// src/components/project/TaskList.jsx
 import React from "react";
 import { ChevronRight, ChevronDown, Edit, Trash2, Calendar, List, Plus as PlusIcon } from "lucide-react";
 import ProgressBar from "../ui/ProgressBar";
@@ -8,27 +7,25 @@ import { formatDate } from "../../uites/projectUtils";
 
 /**
  * Props expected:
- * - goal: object
- * - tasks: array (tasks for the goal)
- * - tasksLoading: boolean | object keyed by goalId (we expect tasksLoading for this goal to be boolean)
+ * - goal: object (required to build composite roll)
+ * - tasks: object keyed by goalId -> task array OR a plain array (we will support both)
+ * - tasksLoading: boolean | object keyed by goalId
  * - toggleTask: function(goal, task)
  * - expandedTask: id of currently expanded task
  *
- * - onEditTask(goalId, task)          // parent should open edit modal or handle update
- * - onDeleteTask(goalId, taskId)      // parent should delete the task
- * - onCreateActivity(goalId, taskId)  // parent should open create activity modal
+ * - onEditTask(goalId, task)
+ * - onDeleteTask(goalId, taskId)
+ * - onCreateActivity(goalId, taskId)
  * - onEditActivity(goalId, taskId, activity)
  * - onDeleteActivity(goalId, taskId, activityId)
  * - openSubmitModal(goalId, taskId, activityId)
  *
  * - activities: object keyed by taskId -> activity array
  * - activitiesLoading: object keyed by taskId -> boolean
- *
- * - canSubmitReport, reportingActive (for conditional buttons)
  */
 export default function TaskList({
   goal,
-  tasks = [],
+  tasks = {},
   tasksLoading = false,
   toggleTask,
   expandedTask,
@@ -48,8 +45,13 @@ export default function TaskList({
 
   canSubmitReport,
   reportingActive,
+  // <-- accept canManageGTA from parent
+  canManageGTA,
 }) {
-  // defensive defaults
+  // tasks might be passed as an object keyed by goal.id OR as an array for this goal.
+  const goalTasks =
+    Array.isArray(tasks) ? tasks : (tasks && tasks[goal.id]) ? tasks[goal.id] : [];
+
   const loading = typeof tasksLoading === "object" ? tasksLoading[goal.id] : tasksLoading;
 
   if (loading) {
@@ -63,14 +65,22 @@ export default function TaskList({
     );
   }
 
-  if (!tasks || tasks.length === 0) {
+  if (!goalTasks || goalTasks.length === 0) {
     return <div className="p-3 text-sm text-gray-500">No tasks for this goal.</div>;
   }
 
   return (
     <div className="space-y-3">
-      {tasks.map((task) => {
+      {goalTasks.map((task) => {
         const taskIsExpanded = expandedTask === task.id;
+
+        // compute composite roll: goal.rollNo.task.rollNo (if available)
+        const compositeRoll = (goal?.rollNo !== undefined && goal?.rollNo !== null && task?.rollNo !== undefined && task?.rollNo !== null)
+          ? `${String(goal.rollNo)}.${String(task.rollNo)}`
+          : (task?.rollNo !== undefined && task?.rollNo !== null)
+            ? String(task.rollNo)
+            : null;
+
         return (
           <div key={task.id} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-100 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
@@ -85,8 +95,11 @@ export default function TaskList({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between">
-                    <div className="font-medium text-gray-900 dark:text-white break-words">
-                      {task.title}
+                    <div className="font-medium text-gray-900 dark:text-white break-words flex items-center gap-2">
+                      {compositeRoll && (
+                        <span className="text-sky-600 dark:text-sky-400 font-semibold">{compositeRoll}.</span>
+                      )}
+                      <span>{task.title}</span>
                     </div>
 
                     {/* Mobile inline toggle */}
@@ -182,19 +195,23 @@ export default function TaskList({
                       onClick={() => onCreateActivity && onCreateActivity(goal.id, task.id)}
                       className="px-2 py-1 text-xs bg-blue-500 text-white rounded"
                     >
-                      <PlusIcon className="inline-block h-3 w-3 mr-1" /> Add activity
+                      <PlusIcon className="inline-block h-3 w-3 mr-1" />  Add Activity
                     </button>
                   </div>
                 </div>
 
                 <ActivityList
-                  goalId={goal.id}
-                  taskId={task.id}
+                  goal={goal}
+                  task={task}
                   activities={activities[task.id] || []}
                   activitiesLoading={activitiesLoading ? activitiesLoading[task.id] : false}
                   onEditActivity={(gId, tId, activity) => onEditActivity && onEditActivity(gId, tId, activity)}
                   onDeleteActivity={(gId, tId, activityId) => onDeleteActivity && onDeleteActivity(gId, tId, activityId)}
                   openSubmitModal={(gId, tId, activityId) => openSubmitModal && openSubmitModal(gId, tId, activityId)}
+                  canSubmitReport={canSubmitReport}
+                  reportingActive={reportingActive}
+                  // <-- pass canManageGTA down so ActivityList can show edit/delete
+                  canManageGTA={canManageGTA}
                 />
               </div>
             )}

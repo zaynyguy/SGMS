@@ -1,4 +1,3 @@
-// src/components/project/GoalList.jsx
 import React from "react";
 import PropTypes from "prop-types";
 import ProgressBar from "../ui/ProgressBar";
@@ -23,7 +22,12 @@ export default function GoalList({ goals, isLoading, onToggleGoal, onCreate, onU
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <h3 className="text-sm font-semibold">{g.title}</h3>
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  {g?.rollNo !== undefined && g?.rollNo !== null && (
+                    <span className="text-sky-600 font-semibold text-sm">{String(g.rollNo)}.</span>
+                  )}
+                  <span>{g.title}</span>
+                </h3>
                 <StatusBadge status={g.status} />
               </div>
               <div className="text-xs text-gray-500 mt-1">{g.description}</div>

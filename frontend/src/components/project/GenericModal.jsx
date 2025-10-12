@@ -1,16 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Loader } from "lucide-react";
 
-/**
- * GenericModal
- * Props:
- * - modal: { isOpen, type, data }
- * - setModal
- * - groups, tasks, goals, activities
- * - onCreateGoal, onUpdateGoal, onCreateTask, onUpdateTask, onCreateActivity, onUpdateActivity
- * - isSubmitting
- * - t (i18n function)
- */
 export default function GenericModal({
   modal,
   setModal,
@@ -39,6 +29,14 @@ export default function GenericModal({
     const initial = modal.data || {};
     setInlineError(null);
 
+    // shared helper to normalize rollNo into either number or empty string
+    const initRoll = (val) => {
+      if (val === null || val === undefined) return "";
+      // keep numeric values as numbers, string numbers to Number
+      const n = Number(val);
+      return Number.isFinite(n) && String(n).trim() !== "" ? Math.floor(n) : "";
+    };
+
     if (modal.type === "createActivity" || modal.type === "editActivity") {
       setLocal({
         title: initial.title || "",
@@ -47,6 +45,7 @@ export default function GenericModal({
         weight: initial.weight ?? 1,
         status: initial.status || "not-started",
         isDone: initial.isDone ?? false,
+        rollNo: initRoll(initial.rollNo),
         targetMetrics: (() => {
           try {
             if (!initial.targetMetric) return [{ key: "", value: "" }];
@@ -64,6 +63,7 @@ export default function GenericModal({
         dueDate: initial.dueDate || "",
         weight: initial.weight ?? 1,
         status: initial.status || "not-started",
+        rollNo: initRoll(initial.rollNo),
       });
     } else if (modal.type === "createGoal" || modal.type === "editGoal") {
       setLocal({
@@ -74,6 +74,7 @@ export default function GenericModal({
         endDate: initial.endDate || "",
         weight: initial.weight ?? 1,
         status: initial.status || "active",
+        rollNo: initRoll(initial.rollNo),
       });
     } else {
       setLocal({});
@@ -193,6 +194,16 @@ export default function GenericModal({
     try {
       setInlineError(null);
 
+      // rollNo client-side validation (positive integer if provided)
+      const rollVal = local.rollNo;
+      if (rollVal !== "" && rollVal !== undefined && rollVal !== null) {
+        const asNum = Number(rollVal);
+        if (!Number.isFinite(asNum) || !Number.isInteger(asNum) || asNum <= 0) {
+          setInlineError(t("project.errors.rollNoPositive") || "Roll number must be a positive integer");
+          return;
+        }
+      }
+
       // Task weight validations
       if (modal.type === "createTask" || modal.type === "editTask") {
         const goalId = modal.data?.goalId;
@@ -250,21 +261,25 @@ export default function GenericModal({
         }
       }
 
-      // CRUD actions
+      // CRUD actions (include rollNo if provided)
       if (modal.type === "createGoal") {
         const payload = { ...local, groupId: local.groupId === "" ? null : Number(local.groupId) };
+        if (payload.rollNo === "") delete payload.rollNo;
         await onCreateGoal(payload);
         return;
       }
       if (modal.type === "editGoal") {
         const { id } = modal.data || {};
         const payload = { ...local, groupId: local.groupId === "" ? null : Number(local.groupId) };
+        if (payload.rollNo === "") delete payload.rollNo;
         await onUpdateGoal(id, payload);
         return;
       }
       if (modal.type === "createTask") {
         const goalId = modal.data?.goalId;
-        await onCreateTask(goalId, local);
+        const payload = { ...local };
+        if (payload.rollNo === "") delete payload.rollNo;
+        await onCreateTask(goalId, payload);
         return;
       }
 
@@ -289,7 +304,9 @@ export default function GenericModal({
           return;
         }
 
-        await onUpdateTask(goalIdNum, taskIdNum, local);
+        const payload = { ...local };
+        if (payload.rollNo === "") delete payload.rollNo;
+        await onUpdateTask(goalIdNum, taskIdNum, payload);
         return;
       }
 
@@ -304,6 +321,7 @@ export default function GenericModal({
           payload.targetMetric = obj;
         }
         delete payload.targetMetrics;
+        if (payload.rollNo === "") delete payload.rollNo;
         await onCreateActivity(goalId, taskId, payload);
         return;
       }
@@ -319,6 +337,7 @@ export default function GenericModal({
           payload.targetMetric = obj;
         }
         delete payload.targetMetrics;
+        if (payload.rollNo === "") delete payload.rollNo;
         await onUpdateActivity(goalId, taskId, id, payload);
         return;
       }
@@ -382,6 +401,22 @@ export default function GenericModal({
                 <option value="done">{t("project.status.completed")}</option>
               </select>
 
+              {/* Roll number input for activity */}
+              <div className="mt-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Roll number (optional)</label>
+                <input
+                  name="rollNo"
+                  value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
+                  onChange={onLocalChange}
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
+                  className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+                <div className="text-xs text-gray-500 mt-1">Optional. Positive integer. If left blank the system will auto-assign. Uniqueness enforced by backend.</div>
+              </div>
+
               {modal.data?.taskId && (
                 <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
                   {(() => {
@@ -421,6 +456,19 @@ export default function GenericModal({
 
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.dueDate")}</label>
               <input name="dueDate" value={local.dueDate || ""} onChange={onLocalChange} type="date" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
+
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Roll number (optional)</label>
+              <input
+                name="rollNo"
+                value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
+                onChange={onLocalChange}
+                type="number"
+                min="1"
+                step="1"
+                placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
+                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              <div className="text-xs text-gray-500 mt-1">Optional. Positive integer. If left blank the system will auto-assign. Uniqueness enforced per-goal on the backend.</div>
 
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.weight")}</label>
               <input name="weight" value={local.weight ?? 1} onChange={onLocalChange} type="number" min="0.01" step="any" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
@@ -463,6 +511,19 @@ export default function GenericModal({
                   <input name="endDate" value={local.endDate || ""} onChange={onLocalChange} type="date" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
                 </div>
               </div>
+
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Roll number (optional)</label>
+              <input
+                name="rollNo"
+                value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
+                onChange={onLocalChange}
+                type="number"
+                min="1"
+                step="1"
+                placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
+                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              <div className="text-xs text-gray-500 mt-1">Optional. Positive integer. If left blank the system will auto-assign. Uniqueness enforced by backend across goals.</div>
 
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.weight")}</label>
               <input name="weight" value={local.weight ?? 1} onChange={onLocalChange} type="number" min="0.01" step="any" max="100" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />

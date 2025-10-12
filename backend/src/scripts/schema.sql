@@ -97,13 +97,12 @@ CREATE TABLE "UserGroups" (
 -- =========================
 -- GOALS
 -- =========================
--- Sequence for global goal roll numbers (1,2,3,...)
+
 CREATE SEQUENCE goals_rollno_seq START 1;
 
 CREATE TABLE "Goals" (
   "id" SERIAL PRIMARY KEY,
-  "rollNo" INTEGER DEFAULT nextval('goals_rollno_seq') , -- global human-facing roll number
-  "title" VARCHAR(255) NOT NULL,
+  "rollNo" INTEGER DEFAULT nextval('goals_rollno_seq') ,
   "description" TEXT,
   "groupId" INTEGER REFERENCES "Groups"("id") ON DELETE SET NULL,
   "startDate" DATE,
@@ -124,7 +123,7 @@ CREATE INDEX idx_goals_group_status ON "Goals" ("groupId","status");
 -- =========================
 -- TASKS
 -- =========================
--- Tasks have rollNo unique *within* a goal (e.g., 2.1, 2.2) — stored as integer '1,2,...' and combined in UI with goal.rollNo
+
 CREATE TABLE "Tasks" (
   "id" SERIAL PRIMARY KEY,
   "goalId" INTEGER NOT NULL REFERENCES "Goals"("id") ON DELETE CASCADE,
@@ -148,12 +147,12 @@ CREATE INDEX idx_tasks_assignee_id ON "Tasks" ("assigneeId");
 -- =========================
 -- ACTIVITIES
 -- =========================
--- Activities have rollNo unique *within* a task (e.g., 2.1.1, 2.1.2)
+
 CREATE TABLE "Activities" (
   "id" SERIAL PRIMARY KEY,
   "taskId" INTEGER NOT NULL REFERENCES "Tasks"("id") ON DELETE CASCADE,
   "parentId" INTEGER REFERENCES "Activities"("id") ON DELETE CASCADE,
-  "rollNo" INTEGER, -- unique per task, >0
+  "rollNo" INTEGER, 
   "title" VARCHAR(255) NOT NULL,
   "description" TEXT,
   "status" activity_status NOT NULL DEFAULT 'To Do',
