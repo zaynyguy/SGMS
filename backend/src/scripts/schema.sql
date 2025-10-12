@@ -102,7 +102,8 @@ CREATE SEQUENCE goals_rollno_seq START 1;
 
 CREATE TABLE "Goals" (
   "id" SERIAL PRIMARY KEY,
-  "rollNo" INTEGER DEFAULT nextval('goals_rollno_seq') ,
+  "rollNo" INTEGER DEFAULT nextval('goals_rollno_seq'),
+  "title" VARCHAR(255) NOT NULL,
   "description" TEXT,
   "groupId" INTEGER REFERENCES "Groups"("id") ON DELETE SET NULL,
   "startDate" DATE,
