@@ -1,7 +1,6 @@
-// src/components/project/ActivityList.jsx
 import React from "react";
 import PropTypes from "prop-types";
-import { Loader } from "lucide-react";
+import { Loader, Edit, Trash2 } from "lucide-react";
 import StatusBadge from "../ui/StatusBadge";
 import MetricsList from "../ui/MetricsList";
 import { formatDate } from "../../uites/projectUtils";
@@ -11,8 +10,9 @@ export default function ActivityList({
   task,
   activities = [],
   activitiesLoading = false,
-  handleDeleteActivity,
-  openSubmitModal,
+  onDeleteActivity,      // signature: (goalId, taskId, activityId)
+  onEditActivity,        // signature: (goalId, taskId, activity)
+  openSubmitModal,       // signature: (goalId, taskId, activityId)
   canSubmitReport,
   reportingActive,
   canManageGTA,
@@ -32,7 +32,10 @@ export default function ActivityList({
   return (
     <div className="space-y-2">
       {activities.map((activity) => (
-        <div key={activity.id} className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-3">
+        <div
+          key={activity.id}
+          className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-3"
+        >
           <div className="min-w-0 flex-1">
             <div className="font-medium text-gray-900 dark:text-white break-words">{activity.title}</div>
             <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 break-words">{activity.description || "—"}</div>
@@ -58,23 +61,55 @@ export default function ActivityList({
 
             <div className="flex items-center gap-2">
               {canSubmitReport && reportingActive === true && (
-                <button onClick={() => openSubmitModal(goal?.id, task?.id, activity.id)} className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs">
+                <button
+                  onClick={() => openSubmitModal && openSubmitModal(goal?.id, task?.id, activity.id)}
+                  className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs"
+                  title="Submit report"
+                  aria-label={`Submit report for ${activity.title}`}
+                >
                   Submit report
                 </button>
               )}
 
               {canManageGTA && (
                 <>
-                  <button onClick={() => {/* parent should open edit modal */}} className="p-2 text-blue-600 hidden sm:block">
-                    Edit
-                  </button>
-                  <button onClick={() => handleDeleteActivity(goal?.id, task?.id, activity.id)} className="p-2 text-red-600 hidden sm:block">
-                    Delete
+                  {/* Icon buttons for larger screens (matches Goal/Task sections) */}
+                  <button
+                    onClick={() => onEditActivity && onEditActivity(goal?.id, task?.id, activity)}
+                    className="p-2 text-blue-600 hidden sm:block rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title="Edit activity"
+                    aria-label={`Edit ${activity.title}`}
+                  >
+                    <Edit className="h-4 w-4" />
                   </button>
 
+                  <button
+                    onClick={() => onDeleteActivity && onDeleteActivity(goal?.id, task?.id, activity.id)}
+                    className="p-2 text-red-600 hidden sm:block rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title="Delete activity"
+                    aria-label={`Delete ${activity.title}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+
+                  {/* Compact mobile buttons (text + icon) */}
                   <div className="inline-flex sm:hidden items-center gap-1">
-                    <button onClick={() => {/* parent open edit */}} className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border rounded-md text-sm">Edit</button>
-                    <button onClick={() => handleDeleteActivity(goal?.id, task?.id, activity.id)} className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border text-red-600 rounded-md text-sm">Delete</button>
+                    <button
+                      onClick={() => onEditActivity && onEditActivity(goal?.id, task?.id, activity)}
+                      className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border rounded-md text-sm"
+                      title="Edit activity"
+                      aria-label={`Edit ${activity.title}`}
+                    >
+                      <Edit className="h-4 w-4" /> Edit
+                    </button>
+                    <button
+                      onClick={() => onDeleteActivity && onDeleteActivity(goal?.id, task?.id, activity.id)}
+                      className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border text-red-600 rounded-md text-sm"
+                      title="Delete activity"
+                      aria-label={`Delete ${activity.title}`}
+                    >
+                      <Trash2 className="h-4 w-4" /> Delete
+                    </button>
                   </div>
                 </>
               )}
@@ -91,7 +126,8 @@ ActivityList.propTypes = {
   task: PropTypes.object,
   activities: PropTypes.array,
   activitiesLoading: PropTypes.bool,
-  handleDeleteActivity: PropTypes.func,
+  onDeleteActivity: PropTypes.func,
+  onEditActivity: PropTypes.func,
   openSubmitModal: PropTypes.func,
   canSubmitReport: PropTypes.bool,
   reportingActive: PropTypes.bool,

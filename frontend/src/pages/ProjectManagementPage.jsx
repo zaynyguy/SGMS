@@ -12,6 +12,7 @@ import GoalCard from "../components/project/GoalCard";
 import PaginationFooter from "../components/project/PaginationFooter";
 import GenericModal from "../components/project/GenericModal";
 import SubmitReportInline from "../components/project/SubmitReportInline";
+import { Target } from "lucide-react";
 
 import SkeletonCard from "../components/ui/SkeletonCard";
 
@@ -68,9 +69,12 @@ export default function ProjectManagement() {
           // ask the unified hook to load reporting status (it updates internal state too)
           if (typeof api.loadReportingStatus === "function") {
             await api.loadReportingStatus();
+            // use the hook's reportingActive value (do NOT force true)
+            setReportingActive(Boolean(api.reportingActive));
+          } else {
+            // fallback to whatever the hook exposes
+            setReportingActive(Boolean(api.reportingActive));
           }
-          // optimistic: treat reporting active true if hook set it; the hook also stores its own reportingActive
-          setReportingActive(Boolean(api.reportingActive) || true);
         } catch (err) {
           console.error("loadReportingStatus error:", err);
           setReportingActive(false);
@@ -391,8 +395,7 @@ export default function ProjectManagement() {
           <div className="flex items-start md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-                {/* icon placeholder */}
-                <svg className="h-6 w-6 text-sky-600" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" /></svg>
+                <Target className="h-6 w-6 text-sky-600 dark:text-sky-300" />
               </div>
 
               <div>
@@ -421,7 +424,7 @@ export default function ProjectManagement() {
             {error && (
               <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-200 px-3 py-2 rounded relative">
                 <div className="flex items-center gap-2"><span className="text-sm">{error}</span></div>
-                <button onClick={() => setError(null)} className="absolute top-1 right-1 p-2">×</button>
+                <button onClick={() => setError(null)} className="absolute top-1 right-1 p-2">x</button>
               </div>
             )}
 
@@ -445,34 +448,33 @@ export default function ProjectManagement() {
             ) : (
               filteredGoals.map((goal) => (
                 <GoalCard
-  key={goal.id}
-  goal={goal}
-  expandedGoal={expandedGoal}
-  toggleGoal={toggleGoal}
-  setSelectedGoal={setSelectedGoal}
-  canManageGTA={canManageGTA}
-  handleDeleteGoal={handleDeleteGoal}
+                  key={goal.id}
+                  goal={goal}
+                  expandedGoal={expandedGoal}
+                  toggleGoal={toggleGoal}
+                  setSelectedGoal={setSelectedGoal}
+                  canManageGTA={canManageGTA}
+                  handleDeleteGoal={handleDeleteGoal}
 
-  // NEW: wire to parent handlers
-  onEditGoal={(g) => setModal({ isOpen: true, type: "editGoal", data: g })}
-  onCreateTask={(goalId) => setModal({ isOpen: true, type: "createTask", data: { goalId } })}
-  onEditTask={(goalId, task) => setModal({ isOpen: true, type: "editTask", data: { goalId, ...task } })}
-  onDeleteTask={handleDeleteTask}
-  onCreateActivity={(goalId, taskId) => setModal({ isOpen: true, type: "createActivity", data: { goalId, taskId } })}
-  onEditActivity={(goalId, taskId, activity) => setModal({ isOpen: true, type: "editActivity", data: { goalId, taskId, ...activity } })}
-  onDeleteActivity={handleDeleteActivity}
+                  // NEW: wire to parent handlers
+                  onEditGoal={(g) => setModal({ isOpen: true, type: "editGoal", data: g })}
+                  onCreateTask={(goalId) => setModal({ isOpen: true, type: "createTask", data: { goalId } })}
+                  onEditTask={(goalId, task) => setModal({ isOpen: true, type: "editTask", data: { goalId, ...task } })}
+                  onDeleteTask={handleDeleteTask}
+                  onCreateActivity={(goalId, taskId) => setModal({ isOpen: true, type: "createActivity", data: { goalId, taskId } })}
+                  onEditActivity={(goalId, taskId, activity) => setModal({ isOpen: true, type: "editActivity", data: { goalId, taskId, ...activity } })}
+                  onDeleteActivity={handleDeleteActivity}
 
-  tasks={api.tasks}
-  tasksLoading={api.tasksLoading}
-  toggleTask={toggleTask}
-  expandedTask={expandedTask}
-  activities={api.activities}
-  activitiesLoading={api.activitiesLoading}
-  openSubmitModal={openSubmitModal}
-  canSubmitReport={canSubmitReport}
-  reportingActive={reportingActive}
-/>
-
+                  tasks={api.tasks}
+                  tasksLoading={api.tasksLoading}
+                  toggleTask={toggleTask}
+                  expandedTask={expandedTask}
+                  activities={api.activities}
+                  activitiesLoading={api.activitiesLoading}
+                  openSubmitModal={openSubmitModal}
+                  canSubmitReport={canSubmitReport}
+                  reportingActive={reportingActive}
+                />
               ))
             )}
 

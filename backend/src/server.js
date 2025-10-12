@@ -6,6 +6,7 @@ const { initSocket } = require("./services/socketService");
 const db = require("./db")
 const cookieParser = require('cookie-parser');
 const { scheduleMonthlySnapshots } = require('./jobs/monthlySnapshot');
+const { UPLOAD_DIR } = require("./middleware/uploadMiddleware");
 
 const app = express();
 const server = http.createServer(app);
@@ -37,6 +38,9 @@ app.use("/api/audit", require("./routes/auditRoutes"));
 app.get("/", (req, res) => {
   res.send("The API server is running...");
 });
+
+// Serve uploaded files statically
+app.use("/uploads", express.static(UPLOAD_DIR));
 
 // --- Start Server ---
 const PORT = process.env.PORT || 5000;

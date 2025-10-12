@@ -4,10 +4,17 @@ const path = require("path");
 const cloudinary = require("cloudinary").v2;
 const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 
+// Detect cloudinary usage
 const useCloudinary =
   process.env.CLOUDINARY_CLOUD_NAME &&
   process.env.CLOUDINARY_API_KEY &&
   process.env.CLOUDINARY_API_SECRET;
+
+// Determine backend base URL for local uploads
+// e.g. http://localhost:5000 or https://yourdomain.com
+const BASE_URL =
+  process.env.PUBLIC_BACKEND_URL ||
+  `http://localhost:${process.env.PORT || 5000}`;
 
 if (useCloudinary) {
   cloudinary.config({
@@ -24,16 +31,14 @@ exports.uploadFile = async (file) => {
   if (!file) throw new Error("No file uploaded");
 
   if (useCloudinary) {
-    // use resource_type=raw so docx/pdf/zip/xlsx all work
+    // Cloud upload
     const res = await cloudinary.uploader.upload(file.path, {
       folder: "sgms_attachments",
       resource_type: "raw",
     });
 
-    // remove temp file
     try { fs.unlinkSync(file.path); } catch (e) {}
 
-    // capture public_id for later deletes
     return {
       url: res.secure_url,
       provider: "cloudinary",
@@ -42,11 +47,15 @@ exports.uploadFile = async (file) => {
       public_id: res.public_id || null,
     };
   } else {
-    // local storage: multer already wrote to UPLOAD_DIR
+    // Local storage
     const filename = path.basename(file.filename || file.path);
-    const localUrl = `/uploads/${filename}`;
+    const relativePath = `/uploads/${filename}`;
+
+    // 🔥 Make URL absolute using backend's base URL
+    const absoluteUrl = `${BASE_URL}${relativePath}`;
+
     return {
-      url: localUrl,
+      url: absoluteUrl,
       provider: "local",
       fileName: file.originalname,
       fileType: file.mimetype,
@@ -56,20 +65,16 @@ exports.uploadFile = async (file) => {
 
 /**
  * Delete a file either from Cloudinary or local uploads folder.
- * Accepts the stored filePath (value from DB).
  */
 exports.deleteFile = async (filePath, extra = {}) => {
-  // filePath should be either a cloudinary URL or a local URL (/uploads/filename)
   if (!filePath) return;
   if (useCloudinary) {
     try {
-      // prefer public_id if caller passed it in extra.public_id
       if (extra.public_id) {
         await cloudinary.uploader.destroy(extra.public_id, { resource_type: "raw" });
         return;
       }
-      // fallback: derive public id from URL (crude but often works)
-      const parsed = filePath.split("/").pop(); // filename.ext or public_id
+      const parsed = filePath.split("/").pop();
       const publicId = parsed.split(".")[0];
       const cloudPath = `sgms_attachments/${publicId}`;
       await cloudinary.uploader.destroy(cloudPath, { resource_type: "raw" });
@@ -81,7 +86,6 @@ exports.deleteFile = async (filePath, extra = {}) => {
       const fullPath = path.join(UPLOAD_DIR, path.basename(filePath));
       if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
     } catch (err) {
-      // ignore
       console.error("Local delete failed:", err);
     }
   }

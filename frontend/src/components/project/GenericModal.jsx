@@ -1,16 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Loader } from "lucide-react";
 
-/**
- * GenericModal
- * Props:
- * - modal: { isOpen, type, data }
- * - setModal
- * - groups, tasks, goals, activities
- * - onCreateGoal, onUpdateGoal, onCreateTask, onUpdateTask, onCreateActivity, onUpdateActivity
- * - isSubmitting
- * - t (i18n function)
- */
+
 export default function GenericModal({
   modal,
   setModal,

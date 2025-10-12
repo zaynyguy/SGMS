@@ -1,3 +1,4 @@
+// src/controllers/reportsController.js
 const db = require("../db");
 const path = require("path");
 const fs = require("fs");
@@ -18,6 +19,32 @@ function hasPermission(req, perm) {
   if (!req.user) return false;
   const perms = req.user.permissions || req.user.perms || [];
   return Array.isArray(perms) && perms.includes(perm);
+}
+
+/**
+ * Helper: fetch a single report enriched with activity -> task -> goal -> group info
+ * Returns the same columns as the plain report row plus:
+ *   activity_title, task_title, goal_title, group_id, group_name
+ */
+async function fetchReportWithGroup(reportId) {
+  const q = `
+    SELECT r.*, u.name as user_name,
+           a.title as activity_title,
+           t.title as task_title,
+           g.title as goal_title,
+           g."groupId" as group_id,
+           gr.name as group_name
+    FROM "Reports" r
+    LEFT JOIN "Users" u ON r."userId" = u.id
+    LEFT JOIN "Activities" a ON r."activityId" = a.id
+    LEFT JOIN "Tasks" t ON a."taskId" = t.id
+    LEFT JOIN "Goals" g ON t."goalId" = g.id
+    LEFT JOIN "Groups" gr ON g."groupId" = gr.id
+    WHERE r.id = $1
+    LIMIT 1
+  `;
+  const { rows } = await db.query(q, [reportId]);
+  return rows[0] || null;
 }
 
 exports.canSubmitReport = async (req, res) => {
@@ -309,7 +336,15 @@ exports.submitReport = async (req, res) => {
       console.error("submitReport: notify recipients failed:", outerNotifyErr);
     }
 
-    res.status(201).json(report);
+    // --- Return enriched report (with group info) ---
+    try {
+      const enriched = await fetchReportWithGroup(report.id);
+      return res.status(201).json(enriched || report);
+    } catch (fetchErr) {
+      console.error("submitReport: failed to fetch enriched report:", fetchErr);
+      // fallback to raw report if enrichment fails
+      return res.status(201).json(report);
+    }
   } catch (err) {
     await client.query("ROLLBACK");
 
@@ -497,7 +532,14 @@ exports.reviewReport = async (req, res) => {
       console.error("reviewReport: notify failed", nerr);
     }
 
-    res.json(updatedReport);
+    // --- Return enriched updated report ---
+    try {
+      const enrichedUpdated = await fetchReportWithGroup(updatedReport.id);
+      return res.json(enrichedUpdated || updatedReport);
+    } catch (fetchErr) {
+      console.error("reviewReport: failed to fetch enriched report:", fetchErr);
+      return res.json(updatedReport);
+    }
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Error reviewing report:", err);
@@ -506,6 +548,7 @@ exports.reviewReport = async (req, res) => {
     client.release();
   }
 };
+
 exports.getAllReports = async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page || "1", 10), 1);
@@ -632,12 +675,15 @@ exports.getAllReports = async (req, res) => {
              a.title as activity_title,
              t.title as task_title,
              g.title as goal_title,
+             g."groupId" as group_id,
+             gr.name as group_name,
              COUNT(*) OVER() AS total_count
       FROM "Reports" r
       LEFT JOIN "Users" u ON r."userId" = u.id
       LEFT JOIN "Activities" a ON r."activityId" = a.id
       LEFT JOIN "Tasks" t ON a."taskId" = t.id
       LEFT JOIN "Goals" g ON t."goalId" = g.id
+      LEFT JOIN "Groups" gr ON g."groupId" = gr.id
       ${rebuiltWhere}
       ORDER BY r."createdAt" DESC
       LIMIT $1 OFFSET $2
