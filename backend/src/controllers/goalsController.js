@@ -3,6 +3,23 @@ const db = require('../db');
 const { logAudit } = require('../helpers/audit');
 const EPS = 1e-9;
 
+/**
+ * Helper: set goals_rollno_seq to at least the current max rollNo.
+ * This ensures nextval won't later return an already-used rollNo.
+ */
+async function bumpGoalsSequence(client) {
+  try {
+    // determine maximum rollNo currently used
+    const mres = await client.query(`SELECT COALESCE(MAX("rollNo"), 0) AS m FROM "Goals"`);
+    const maxRoll = parseInt(mres.rows[0].m || 0, 10) || 0;
+    // set sequence last_value to maxRoll (nextval will return maxRoll+1)
+    await client.query(`SELECT setval('goals_rollno_seq', $1)`, [maxRoll]);
+  } catch (e) {
+    // don't fail the main tx just for sequence maintenance, but log
+    console.error("bumpGoalsSequence failed:", e);
+  }
+}
+
 exports.getGoals = async (req, res) => {
   const page = Math.max(parseInt(req.query.page || '1', 10), 1);
   const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || '20', 10), 1), 100);
@@ -40,13 +57,13 @@ exports.getGoals = async (req, res) => {
 };
 
 exports.createGoal = async (req, res) => {
-  const { title, description, groupId, startDate, endDate, weight } = req.body;
+  const { title, description, groupId, startDate, endDate, weight, rollNo } = req.body;
   if (!title) return res.status(400).json({ message: "Title is required." });
 
   try {
     const goal = await db.tx(async (client) => {
+      // weight validations (existing logic)
       const existing = await client.query(`SELECT id, weight FROM "Goals" FOR UPDATE`);
-
       const sumOther = existing.rows.reduce(
         (acc, r) => acc + (parseFloat(r.weight) || 0),
         0
@@ -77,20 +94,52 @@ exports.createGoal = async (req, res) => {
         throw err;
       }
 
-      const r = await client.query(
-        `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", "weight", "createdAt", "updatedAt")
-         VALUES ($1,$2,$3,$4,$5,$6, NOW(), NOW()) RETURNING *`,
-        [title.trim(), description?.trim() || null, groupId || null, startDate || null, endDate || null, newWeight]
-      );
-      const newGoal = r.rows[0];
+      // rollNo handling (optional)
+      let ins;
+      if (rollNo !== undefined && rollNo !== null && String(rollNo).trim() !== "") {
+        const rn = Number(rollNo);
+        if (!Number.isInteger(rn) || rn <= 0) {
+          const err = new Error("rollNo must be a positive integer");
+          err.status = 400;
+          throw err;
+        }
 
+        // check uniqueness
+        const dup = await client.query(`SELECT id FROM "Goals" WHERE "rollNo" = $1`, [rn]);
+        if (dup.rows.length) {
+          const err = new Error(`rollNo ${rn} is already in use`);
+          err.status = 409;
+          throw err;
+        }
+
+        // insert explicit rollNo
+        ins = await client.query(
+          `INSERT INTO "Goals"("rollNo", title, description, "groupId", "startDate", "endDate", "weight", "createdAt", "updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW()) RETURNING *`,
+          [rn, title.trim(), description?.trim() || null, groupId || null, startDate || null, endDate || null, newWeight]
+        );
+      } else {
+        // let DB assign rollNo (default nextval)
+        ins = await client.query(
+          `INSERT INTO "Goals"(title, description, "groupId", "startDate", "endDate", "weight", "createdAt", "updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6, NOW(), NOW()) RETURNING *`,
+          [title.trim(), description?.trim() || null, groupId || null, startDate || null, endDate || null, newWeight]
+        );
+      }
+
+      const newGoal = ins.rows[0];
+
+      // if we inserted a manual rollNo, or even generally, bump sequence to max
+      await bumpGoalsSequence(client);
+
+      // audit
       try {
         await logAudit({
           userId: req.user.id,
           action: "GOAL_CREATED",
           entity: "Goal",
           entityId: newGoal.id,
-          details: { title: newGoal.title, groupId: newGoal.groupId },
+          details: { title: newGoal.title, groupId: newGoal.groupId, rollNo: newGoal.rollNo },
           client,
           req,
         });
@@ -104,14 +153,18 @@ exports.createGoal = async (req, res) => {
     res.status(201).json({ message: 'Goal created successfully.', goal });
   } catch (err) {
     console.error("createGoal error:", err);
-    if (err && err.status === 400) return res.status(400).json({ message: err.message });
+    if (err && (err.status === 400 || err.status === 409)) return res.status(err.status).json({ message: err.message });
+    // handle unique-violation fallback (in case race condition slipped through)
+    if (err && err.code === "23505") {
+      return res.status(409).json({ message: "rollNo conflict: that roll number is already in use." });
+    }
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
 
 exports.updateGoal = async (req, res) => {
   const { goalId } = req.params;
-  const { title, description, groupId, startDate, endDate, status, weight } = req.body;
+  const { title, description, groupId, startDate, endDate, status, weight, rollNo } = req.body;
 
   try {
     const updatedGoal = await db.tx(async (client) => {
@@ -123,6 +176,7 @@ exports.updateGoal = async (req, res) => {
       }
       const before = cur.rows[0];
 
+      // weight checks (existing)
       const others = await client.query(
         `SELECT id, weight FROM "Goals" WHERE id <> $1 FOR UPDATE`,
         [goalId]
@@ -154,13 +208,52 @@ exports.updateGoal = async (req, res) => {
         throw err;
       }
 
+      // rollNo handling: if provided, validate & ensure uniqueness (excluding current)
+      let rnParam = null;
+      if (rollNo !== undefined && rollNo !== null && String(rollNo).trim() !== "") {
+        const rn = Number(rollNo);
+        if (!Number.isInteger(rn) || rn <= 0) {
+          const err = new Error("rollNo must be a positive integer");
+          err.status = 400;
+          throw err;
+        }
+        // check uniqueness excluding this goal
+        const dup = await client.query(`SELECT id FROM "Goals" WHERE "rollNo" = $1 AND id <> $2`, [rn, goalId]);
+        if (dup.rows.length) {
+          const err = new Error(`rollNo ${rn} is already in use`);
+          err.status = 409;
+          throw err;
+        }
+        rnParam = rn;
+      } else {
+        // if rollNo not provided, we will leave it unchanged; use COALESCE in update
+        rnParam = null;
+      }
+
       const r = await client.query(
-        `UPDATE "Goals" SET title=$1, description=$2, "groupId"=$3, "startDate"=$4, "endDate"=$5,
-           status=COALESCE($6,status), "weight" = $7, "updatedAt"=NOW()
-         WHERE id=$8 RETURNING *`,
-        [title?.trim() || null, description?.trim() || null, groupId || null, startDate || null, endDate || null, status || null, newWeight, goalId]
+        `UPDATE "Goals" SET
+           "rollNo" = COALESCE($1, "rollNo"),
+           title = $2,
+           description = $3,
+           "groupId" = $4,
+           "startDate" = $5,
+           "endDate" = $6,
+           status = COALESCE($7, status),
+           "weight" = $8,
+           "updatedAt" = NOW()
+         WHERE id=$9
+         RETURNING *`,
+        [rnParam, title?.trim() || null, description?.trim() || null, groupId || null, startDate || null, endDate || null, status || null, newWeight, goalId]
       );
       const updated = r.rows[0];
+
+      // if rollNo changed or set manually, bump sequence
+      if (rnParam !== null) {
+        await bumpGoalsSequence(client);
+      } else {
+        // still safe to bump to ensure sequence >= max(rollNo)
+        await bumpGoalsSequence(client);
+      }
 
       try {
         await logAudit({
@@ -185,6 +278,11 @@ exports.updateGoal = async (req, res) => {
     console.error("updateGoal error:", err);
     if (err && err.status === 404) return res.status(404).json({ message: err.message });
     if (err && err.status === 400) return res.status(400).json({ message: err.message });
+    if (err && err.status === 409) return res.status(409).json({ message: err.message });
+    // unique-violation fallback
+    if (err && err.code === "23505") {
+      return res.status(409).json({ message: "rollNo conflict: that roll number is already in use." });
+    }
     res.status(500).json({ message: "Internal server error.", error: err.message });
   }
 };
@@ -195,7 +293,7 @@ exports.deleteGoal = async (req, res) => {
     const deleted = await db.tx(async (client) => {
       const cur = await client.query('SELECT * FROM "Goals" WHERE id=$1 FOR UPDATE', [goalId]);
       if (!cur.rows.length) {
-        const e = new Error("Goal not found.");
+        const e = new Error("Goal not found");
         e.status = 404;
         throw e;
       }
@@ -215,6 +313,9 @@ exports.deleteGoal = async (req, res) => {
       } catch (e) {
         console.error("GOAL_DELETED audit failed (in-tx):", e);
       }
+
+      // bump sequence after deletion to reflect any changes
+      await bumpGoalsSequence(client);
 
       return toDelete;
     });

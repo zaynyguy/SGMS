@@ -7,7 +7,7 @@ import { formatDate } from "../../uites/projectUtils";
 
 /**
  * Props expected:
- * - goal: object
+ * - goal: object (required to build composite roll)
  * - tasks: object keyed by goalId -> task array OR a plain array (we will support both)
  * - tasksLoading: boolean | object keyed by goalId
  * - toggleTask: function(goal, task)
@@ -73,6 +73,14 @@ export default function TaskList({
     <div className="space-y-3">
       {goalTasks.map((task) => {
         const taskIsExpanded = expandedTask === task.id;
+
+        // compute composite roll: goal.rollNo.task.rollNo (if available)
+        const compositeRoll = (goal?.rollNo !== undefined && goal?.rollNo !== null && task?.rollNo !== undefined && task?.rollNo !== null)
+          ? `${String(goal.rollNo)}.${String(task.rollNo)}`
+          : (task?.rollNo !== undefined && task?.rollNo !== null)
+            ? String(task.rollNo)
+            : null;
+
         return (
           <div key={task.id} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-100 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
@@ -87,8 +95,11 @@ export default function TaskList({
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between">
-                    <div className="font-medium text-gray-900 dark:text-white break-words">
-                      {task.title}
+                    <div className="font-medium text-gray-900 dark:text-white break-words flex items-center gap-2">
+                      {compositeRoll && (
+                        <span className="text-sky-600 dark:text-sky-400 font-semibold">{compositeRoll}.</span>
+                      )}
+                      <span>{task.title}</span>
                     </div>
 
                     {/* Mobile inline toggle */}

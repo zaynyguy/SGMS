@@ -31,92 +31,107 @@ export default function ActivityList({
 
   return (
     <div className="space-y-2">
-      {activities.map((activity) => (
-        <div
-          key={activity.id}
-          className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-3"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="font-medium text-gray-900 dark:text-white break-words">{activity.title}</div>
-            <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 break-words">{activity.description || "—"}</div>
+      {activities.map((activity) => {
+        // compute composite roll: goal.rollNo.task.rollNo.activity.rollNo (if available)
+        const compositeRoll =
+          (goal?.rollNo !== undefined && goal?.rollNo !== null &&
+           task?.rollNo !== undefined && task?.rollNo !== null &&
+           activity?.rollNo !== undefined && activity?.rollNo !== null)
+            ? `${String(goal.rollNo)}.${String(task.rollNo)}.${String(activity.rollNo)}`
+            : (activity?.rollNo !== undefined && activity?.rollNo !== null)
+              ? String(activity.rollNo)
+              : null;
 
-            <div className="mt-2 text-xs text-gray-500 dark:text-gray-300 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              <div>Due: {formatDate(activity.dueDate)}</div>
-              <div>Weight: {activity.weight ?? "-"}</div>
-              <div>{activity.isDone ? "Completed" : "Open"}</div>
+        return (
+          <div
+            key={activity.id}
+            className="p-3 bg-white dark:bg-gray-800 rounded-md border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-3"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-gray-900 dark:text-white break-words flex items-center gap-2">
+                {compositeRoll && <span className="text-sky-600 dark:text-sky-400 font-semibold">{compositeRoll}.</span>}
+                <span>{activity.title}</span>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-300 mt-1 break-words">{activity.description || "—"}</div>
+
+              <div className="mt-2 text-xs text-gray-500 dark:text-gray-300 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                <div>Due: {formatDate(activity.dueDate)}</div>
+                <div>Weight: {activity.weight ?? "-"}</div>
+                <div>{activity.isDone ? "Completed" : "Open"}</div>
+              </div>
+
+              {activity.targetMetric ? (
+                <div className="mt-2">
+                  <div className="text-xs p-2 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
+                    <div className="font-medium text-xs mb-1">Target metrics</div>
+                    <MetricsList metrics={activity.targetMetric} />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
-            {activity.targetMetric ? (
-              <div className="mt-2">
-                <div className="text-xs p-2 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100">
-                  <div className="font-medium text-xs mb-1">Target metrics</div>
-                  <MetricsList metrics={activity.targetMetric} />
-                </div>
-              </div>
-            ) : null}
-          </div>
+            <div className="flex flex-col sm:items-end gap-2 mt-2 sm:mt-0">
+              <StatusBadge status={activity.status} />
 
-          <div className="flex flex-col sm:items-end gap-2 mt-2 sm:mt-0">
-            <StatusBadge status={activity.status} />
-
-            <div className="flex items-center gap-2">
-              {canSubmitReport && reportingActive === true && (
-                <button
-                  onClick={() => openSubmitModal && openSubmitModal(goal?.id, task?.id, activity.id)}
-                  className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs"
-                  title="Submit report"
-                  aria-label={`Submit report for ${activity.title}`}
-                >
-                  Submit report
-                </button>
-              )}
-
-              {canManageGTA && (
-                <>
-                  {/* Icon buttons for larger screens (matches Goal/Task sections) */}
+              <div className="flex items-center gap-2">
+                {canSubmitReport && reportingActive === true && (
                   <button
-                    onClick={() => onEditActivity && onEditActivity(goal?.id, task?.id, activity)}
-                    className="p-2 text-blue-600 hidden sm:block rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title="Edit activity"
-                    aria-label={`Edit ${activity.title}`}
+                    onClick={() => openSubmitModal && openSubmitModal(goal?.id, task?.id, activity.id)}
+                    className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs"
+                    title="Submit report"
+                    aria-label={`Submit report for ${activity.title}`}
                   >
-                    <Edit className="h-4 w-4" />
+                    Submit report
                   </button>
+                )}
 
-                  <button
-                    onClick={() => onDeleteActivity && onDeleteActivity(goal?.id, task?.id, activity.id)}
-                    className="p-2 text-red-600 hidden sm:block rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title="Delete activity"
-                    aria-label={`Delete ${activity.title}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-
-                  {/* Compact mobile buttons (text + icon) */}
-                  <div className="inline-flex sm:hidden items-center gap-1">
+                {canManageGTA && (
+                  <>
+                    {/* Icon buttons for larger screens (matches Goal/Task sections) */}
                     <button
                       onClick={() => onEditActivity && onEditActivity(goal?.id, task?.id, activity)}
-                      className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border rounded-md text-sm"
+                      className="p-2 text-blue-600 hidden sm:block rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                       title="Edit activity"
                       aria-label={`Edit ${activity.title}`}
                     >
-                      <Edit className="h-4 w-4" /> Edit
+                      <Edit className="h-4 w-4" />
                     </button>
+
                     <button
                       onClick={() => onDeleteActivity && onDeleteActivity(goal?.id, task?.id, activity.id)}
-                      className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border text-red-600 rounded-md text-sm"
+                      className="p-2 text-red-600 hidden sm:block rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
                       title="Delete activity"
                       aria-label={`Delete ${activity.title}`}
                     >
-                      <Trash2 className="h-4 w-4" /> Delete
+                      <Trash2 className="h-4 w-4" />
                     </button>
-                  </div>
-                </>
-              )}
+
+                    {/* Compact mobile buttons (text + icon) */}
+                    <div className="inline-flex sm:hidden items-center gap-1">
+                      <button
+                        onClick={() => onEditActivity && onEditActivity(goal?.id, task?.id, activity)}
+                        className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border rounded-md text-sm"
+                        title="Edit activity"
+                        aria-label={`Edit ${activity.title}`}
+                      >
+                        <Edit className="h-4 w-4" /> Edit
+                      </button>
+                      <button
+                        onClick={() => onDeleteActivity && onDeleteActivity(goal?.id, task?.id, activity.id)}
+                        className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border text-red-600 rounded-md text-sm"
+                        title="Delete activity"
+                        aria-label={`Delete ${activity.title}`}
+                      >
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

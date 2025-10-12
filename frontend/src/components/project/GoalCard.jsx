@@ -46,7 +46,13 @@ function GoalCard({
 
             <div className="min-w-0 flex-1" onClick={() => setSelectedGoal(goal)} style={{ cursor: "pointer" }}>
               <div className="flex items-start justify-between">
-                <h3 id={`goal-${goal.id}-title`} className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white break-words">{goal.title}</h3>
+                {/* rollNo displayed before title */}
+                <h3 id={`goal-${goal.id}-title`} className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-3">
+                  {goal?.rollNo !== undefined && goal?.rollNo !== null ? (
+                    <span className="text-sky-600 dark:text-sky-400 font-semibold">{String(goal.rollNo)}.</span>
+                  ) : null}
+                  <span>{goal.title}</span>
+                </h3>
 
                 <div className="md:hidden flex items-center gap-2 ml-2">
                   <button onClick={() => toggleGoal(goal)} className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700">{isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}</button>

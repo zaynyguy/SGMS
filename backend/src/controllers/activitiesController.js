@@ -1,3 +1,4 @@
+// src/controllers/activitiesController.js
 const db = require("../db");
 const notificationService = require("../services/notificationService");
 const { logAudit } = require("../helpers/audit");
@@ -18,7 +19,7 @@ exports.getActivitiesByTask = async (req, res) => {
         JOIN "Goals" gl ON t."goalId" = gl.id
         JOIN "Groups" g ON gl."groupId" = g.id
         WHERE a."taskId" = $1
-        ORDER BY a."createdAt" DESC
+        ORDER BY COALESCE(a."rollNo", 999999), a."createdAt" DESC
       `;
       const { rows } = await db.query(q, [taskId]);
       return res.json(rows);
@@ -32,7 +33,7 @@ exports.getActivitiesByTask = async (req, res) => {
       JOIN "Groups" g ON gl."groupId" = g.id
       JOIN "UserGroups" ug ON ug."groupId" = g.id
       WHERE a."taskId" = $1 AND ug."userId" = $2
-      ORDER BY a."createdAt" DESC
+      ORDER BY COALESCE(a."rollNo", 999999), a."createdAt" DESC
     `;
     const { rows } = await db.query(q, [taskId, req.user.id]);
     res.json(rows);
@@ -46,7 +47,7 @@ exports.getActivitiesByTask = async (req, res) => {
 
 exports.createActivity = async (req, res) => {
   const { taskId } = req.params;
-  const { title, description, dueDate, weight, targetMetric } = req.body;
+  const { title, description, dueDate, weight, targetMetric, rollNo } = req.body;
 
   if (!title || String(title).trim() === "") {
     return res.status(400).json({ message: "Title is required." });
@@ -95,23 +96,62 @@ exports.createActivity = async (req, res) => {
         throw err;
       }
 
-      const r = await client.query(
-        `INSERT INTO "Activities"
-        ("taskId", title, description, "dueDate", "weight", "targetMetric", "createdAt", "updatedAt")
-        VALUES ($1,$2,$3,$4,$5,$6, NOW(), NOW())
-        RETURNING *`,
-        [
-          taskId,
-          String(title).trim(),
-          description?.trim() || null,
-          dueDate || null,
-          newWeight,
-          targetMetric ?? null,
-        ]
-      );
-      if (!r.rows || !r.rows[0]) throw new Error("Failed to create activity");
+      // rollNo handling (optional)
+      let insertRes;
+      if (rollNo !== undefined && rollNo !== null && String(rollNo).trim() !== "") {
+        const rn = Number(rollNo);
+        if (!Number.isInteger(rn) || rn <= 0) {
+          const err = new Error("rollNo must be a positive integer");
+          err.status = 400;
+          throw err;
+        }
 
-      const newActivity = r.rows[0];
+        // uniqueness check per task
+        const dup = await client.query(
+          `SELECT id FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2`,
+          [taskId, rn]
+        );
+        if (dup.rows.length) {
+          const err = new Error(`rollNo ${rn} is already in use for this task`);
+          err.status = 409;
+          throw err;
+        }
+
+        insertRes = await client.query(
+          `INSERT INTO "Activities"
+            ("taskId", "rollNo", title, description, "dueDate", "weight", "targetMetric", "createdAt", "updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6,$7, NOW(), NOW())
+           RETURNING *`,
+          [
+            taskId,
+            rn,
+            String(title).trim(),
+            description?.trim() || null,
+            dueDate || null,
+            newWeight,
+            targetMetric ?? null,
+          ]
+        );
+      } else {
+        insertRes = await client.query(
+          `INSERT INTO "Activities"
+            ("taskId", title, description, "dueDate", "weight", "targetMetric", "createdAt", "updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6, NOW(), NOW())
+           RETURNING *`,
+          [
+            taskId,
+            String(title).trim(),
+            description?.trim() || null,
+            dueDate || null,
+            newWeight,
+            targetMetric ?? null,
+          ]
+        );
+      }
+
+      if (!insertRes.rows || !insertRes.rows[0]) throw new Error("Failed to create activity");
+
+      const newActivity = insertRes.rows[0];
 
       try {
         await logAudit({
@@ -119,7 +159,7 @@ exports.createActivity = async (req, res) => {
           action: "ACTIVITY_CREATED",
           entity: "Activity",
           entityId: newActivity.id,
-          details: { title: newActivity.title, taskId: newActivity.taskId },
+          details: { title: newActivity.title, taskId: newActivity.taskId, rollNo: newActivity.rollNo },
           client,
           req,
         });
@@ -146,10 +186,14 @@ exports.createActivity = async (req, res) => {
       .json({ message: "Activity created successfully.", activity });
   } catch (err) {
     console.error("createActivity error:", err);
-    if (err && err.status === 404)
-      return res.status(404).json({ message: err.message });
+    if (err && (err.status === 404 || err.status === 409))
+      return res.status(err.status).json({ message: err.message });
     if (err && err.status === 400)
       return res.status(400).json({ message: err.message });
+    // unique-violation fallback
+    if (err && err.code === "23505") {
+      return res.status(409).json({ message: "rollNo conflict: that roll number is already in use for this task." });
+    }
     return res
       .status(500)
       .json({ message: "Failed to create activity.", error: err.message });
@@ -158,7 +202,7 @@ exports.createActivity = async (req, res) => {
 
 exports.updateActivity = async (req, res) => {
   const { activityId } = req.params;
-  const { title, description, status, dueDate, weight, targetMetric, isDone } =
+  const { title, description, status, dueDate, weight, targetMetric, isDone, rollNo } =
     req.body;
 
   const bRes = await db.query('SELECT * FROM "Activities" WHERE id=$1', [
@@ -176,6 +220,25 @@ exports.updateActivity = async (req, res) => {
         const e = new Error("Activity not found");
         e.status = 404;
         throw e;
+      }
+
+      // rollNo uniqueness (if provided)
+      if (rollNo !== undefined && rollNo !== null && String(rollNo).trim() !== "") {
+        const rn = Number(rollNo);
+        if (!Number.isInteger(rn) || rn <= 0) {
+          const err = new Error("rollNo must be a positive integer");
+          err.status = 400;
+          throw err;
+        }
+        const dup = await client.query(
+          `SELECT id FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2 AND id <> $3`,
+          [c.rows[0].taskId, rn, activityId]
+        );
+        if (dup.rows.length) {
+          const err = new Error(`rollNo ${rn} is already in use for this task`);
+          err.status = 409;
+          throw err;
+        }
       }
 
       let newWeight = weight ?? c.rows[0].weight;
@@ -213,13 +276,15 @@ exports.updateActivity = async (req, res) => {
 
       const r = await client.query(
         `UPDATE "Activities"
-         SET title=$1, description=$2, status=COALESCE($3, status),
-             "dueDate"=$4, "weight"=$5,
-             "targetMetric"=COALESCE($6, "targetMetric"),
-             "isDone"=COALESCE($7, "isDone"), "updatedAt"=NOW()
-         WHERE id=$8
+         SET "rollNo" = COALESCE($1, "rollNo"),
+             title=$2, description=$3, status=COALESCE($4, status),
+             "dueDate"=$5, "weight"=$6,
+             "targetMetric"=COALESCE($7, "targetMetric"),
+             "isDone"=COALESCE($8, "isDone"), "updatedAt"=NOW()
+         WHERE id=$9
          RETURNING *`,
         [
+          rollNo !== undefined && rollNo !== null && String(rollNo).trim() !== "" ? Number(rollNo) : null,
           title?.trim() || null,
           description?.trim() || null,
           status || null,
@@ -266,10 +331,13 @@ exports.updateActivity = async (req, res) => {
     res.json({ message: "Activity updated successfully.", activity });
   } catch (err) {
     console.error("updateActivity error:", err);
-    if (err && err.status === 404)
-      return res.status(404).json({ message: err.message });
+    if (err && (err.status === 404 || err.status === 409))
+      return res.status(err.status).json({ message: err.message });
     if (err && err.status === 400)
       return res.status(400).json({ message: err.message });
+    if (err && err.code === "23505") {
+      return res.status(409).json({ message: "rollNo conflict: that roll number is already in use for this task." });
+    }
     return res
       .status(500)
       .json({ message: "Failed to update activity.", error: err.message });
