@@ -198,12 +198,11 @@ export default function NotificationsPage() {
         {/* Body */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-200">
           {loading && notifications.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-              <div className="flex justify-center">
-                <Loader className="h-5 w-5 animate-spin" />
-              </div>
-              <p className="mt-2">{t("notifications.loading")}</p>
-            </div>
+            <div className="p-6 flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400 min-h-[100px]">
+  <Loader className="h-5 w-5 animate-spin" />
+  <p className="mt-2">{t("notifications.loading")}</p>
+</div>
+
           ) : visible.length === 0 ? (
             <div className="p-6 text-center text-gray-500 dark:text-gray-400">
               {t("notifications.noNotifications")}

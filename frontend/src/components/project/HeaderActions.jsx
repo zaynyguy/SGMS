@@ -1,5 +1,7 @@
+// src/components/project/HeaderActions.jsx
 import React from "react";
 import { Search, RefreshCw, Plus } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function HeaderActions({
   searchTerm,
@@ -9,8 +11,11 @@ export default function HeaderActions({
   canManageGTA,
   onAddGoal,
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="mt-4">
+      {/* Desktop layout */}
       <div className="hidden md:flex items-center gap-3">
         <div className="relative flex-1 min-w-0">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -19,8 +24,8 @@ export default function HeaderActions({
           <input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search..."
-            aria-label="Search"
+            placeholder={t("project.searchPlaceholder")}
+            aria-label={t("project.searchAria")}
             className="pl-10 pr-3 py-2 rounded-md border bg-white dark:bg-gray-700 text-sm w-full"
           />
         </div>
@@ -33,7 +38,7 @@ export default function HeaderActions({
             className={`h-4 w-4 ${isLoadingGoals ? "animate-spin" : ""}`}
             aria-hidden="true"
           />
-          <span className="hidden lg:inline">Refresh</span>
+          <span className="hidden lg:inline">{t("project.actions.refresh")}</span>
         </button>
 
         {canManageGTA && (
@@ -42,11 +47,12 @@ export default function HeaderActions({
             className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            <span className="hidden lg:inline">Add goal</span>
+            <span className="hidden lg:inline">{t("project.actions.addGoal")}</span>
           </button>
         )}
       </div>
 
+      {/* Mobile layout */}
       <div className="md:hidden space-y-2">
         <div className="relative w-full">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -55,8 +61,8 @@ export default function HeaderActions({
           <input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search..."
-            aria-label="Search"
+            placeholder={t("project.searchPlaceholder")}
+            aria-label={t("project.searchAria")}
             className="pl-10 pr-3 py-2 rounded-md border bg-white dark:bg-gray-700 text-sm w-full"
           />
         </div>
@@ -65,10 +71,8 @@ export default function HeaderActions({
             onClick={() => loadGoals({ page: 1 })}
             className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-white text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
-            <RefreshCw
-              className={`h-4 w-4 ${isLoadingGoals ? "animate-spin" : ""}`}
-            />
-            <span>Refresh</span>
+            <RefreshCw className={`h-4 w-4 ${isLoadingGoals ? "animate-spin" : ""}`} />
+            <span>{t("project.actions.refresh")}</span>
           </button>
 
           {canManageGTA && (
@@ -77,7 +81,7 @@ export default function HeaderActions({
               className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors"
             >
               <Plus className="h-4 w-4" />
-              <span>Add goal</span>
+              <span>{t("project.actions.addGoal")}</span>
             </button>
           )}
         </div>

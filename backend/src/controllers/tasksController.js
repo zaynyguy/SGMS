@@ -4,12 +4,6 @@ const { logAudit } = require("../helpers/audit");
 const notificationService = require("../services/notificationService");
 const EPS = 1e-9;
 
-const asPositiveInt = (v) => {
-  if (v === undefined || v === null || v === '') return null;
-  const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : NaN;
-};
-
 exports.getTasksByGoal = async (req, res) => {
   const { goalId } = req.params;
   const isManager = Array.isArray(req.user?.permissions) && req.user.permissions.includes("manage_gta");
@@ -29,23 +23,15 @@ exports.getTasksByGoal = async (req, res) => {
   try {
     // Order by rollNo (if present) then createdAt to give deterministic ordering for UI
     const { rows } = await db.query(
-      `SELECT t.*, u.username AS assignee, g."rollNo" AS "goalRollNo"
+      `SELECT t.*, u.username AS assignee 
        FROM "Tasks" t
        LEFT JOIN "Users" u ON t."assigneeId" = u.id
-       JOIN "Goals" g ON t."goalId" = g.id
        WHERE t."goalId" = $1
        ORDER BY COALESCE(t."rollNo", 999999), t."createdAt" DESC`,
       [goalId]
     );
 
-    // compose taskCode from goalRollNo and task.rollNo
-    const out = rows.map(t => {
-      const goalRoll = t.goalRollNo != null ? String(t.goalRollNo) : null;
-      const taskRoll = t.rollNo != null ? String(t.rollNo) : null;
-      return { ...t, taskCode: (goalRoll && taskRoll) ? `${goalRoll}.${taskRoll}` : null };
-    });
-
-    res.json(out);
+    res.json(rows);
   } catch (err) {
     console.error("getTasksByGoal error:", err);
     res.status(500).json({ message: "Failed to fetch tasks.", error: err.message });
@@ -61,7 +47,7 @@ exports.createTask = async (req, res) => {
   try {
     const task = await db.tx(async (client) => {
       const g = await client.query(
-        'SELECT id, weight, "rollNo" FROM "Goals" WHERE id=$1 FOR UPDATE',
+        'SELECT id, weight FROM "Goals" WHERE id=$1 FOR UPDATE',
         [goalId]
       );
       if (!g.rows.length) {
@@ -97,25 +83,6 @@ exports.createTask = async (req, res) => {
         );
         err.status = 400;
         throw err;
-      }
-
-      // rollNo handling: validate provided rollNo (unique within goal) if present
-      let desiredRoll = asPositiveInt(rollNo);
-      if (Number.isNaN(desiredRoll)) {
-        const err = new Error("rollNo must be a positive integer");
-        err.status = 400;
-        throw err;
-      }
-      if (desiredRoll !== null) {
-        const chk = await client.query(
-          `SELECT 1 FROM "Tasks" WHERE "goalId" = $1 AND "rollNo" = $2 LIMIT 1`,
-          [goalId, desiredRoll]
-        );
-        if (chk.rowCount > 0) {
-          const err = new Error(`rollNo ${desiredRoll} is already used for this goal`);
-          err.status = 409;
-          throw err;
-        }
       }
 
       // Optional rollNo handling
@@ -189,8 +156,6 @@ exports.createTask = async (req, res) => {
         console.error("TASK_CREATED audit failed (in-tx):", e);
       }
 
-      // include goalRollNo for response composition
-      newTask.goalRollNo = g.rows[0].rollNo;
       return newTask;
     });
 
@@ -207,14 +172,9 @@ exports.createTask = async (req, res) => {
       }
     }
 
-    // attach taskCode for response
-    const goalRoll = task.goalRollNo != null ? String(task.goalRollNo) : null;
-    const taskRoll = task.rollNo != null ? String(task.rollNo) : null;
-    const outTask = { ...task, taskCode: (goalRoll && taskRoll) ? `${goalRoll}.${taskRoll}` : null };
-
     res
       .status(201)
-      .json({ message: "Task created successfully.", task: outTask });
+      .json({ message: "Task created successfully.", task });
   } catch (err) {
     console.error("createTask error:", err);
     if (err && (err.status === 404 || err.status === 409))
@@ -286,7 +246,7 @@ exports.updateTask = async (req, res) => {
 
       const goalId = currentRes.rows[0].goalId;
       const gRes = await client.query(
-        'SELECT weight, "rollNo" FROM "Goals" WHERE id=$1 FOR UPDATE',
+        'SELECT weight FROM "Goals" WHERE id=$1 FOR UPDATE',
         [goalId]
       );
       const goalWeight = parseFloat(gRes.rows[0].weight) || 100;
@@ -303,29 +263,6 @@ exports.updateTask = async (req, res) => {
         );
         err.status = 400;
         throw err;
-      }
-
-      // rollNo update handling
-      let newRollNo = currentRes.rows[0].rollNo;
-      if (rollNo !== undefined) {
-        const parsed = asPositiveInt(rollNo);
-        if (Number.isNaN(parsed)) {
-          const err = new Error("rollNo must be a positive integer");
-          err.status = 400;
-          throw err;
-        }
-        if (parsed !== null && parsed !== newRollNo) {
-          const rExist = await client.query(
-            `SELECT 1 FROM "Tasks" WHERE "goalId" = $1 AND "rollNo" = $2 AND id <> $3 LIMIT 1`,
-            [goalId, parsed, taskId]
-          );
-          if (rExist.rowCount > 0) {
-            const err = new Error(`rollNo ${parsed} is already used for this goal`);
-            err.status = 409;
-            throw err;
-          }
-          newRollNo = parsed;
-        }
       }
 
       const r = await client.query(
@@ -348,7 +285,6 @@ exports.updateTask = async (req, res) => {
           dueDate || null,
           status || null,
           newWeight,
-          newRollNo,
           taskId,
         ]
       );
@@ -370,8 +306,6 @@ exports.updateTask = async (req, res) => {
         console.error("TASK_UPDATED audit failed (in-tx):", e);
       }
 
-      // include goalRollNo for response composition
-      updated.goalRollNo = gRes.rows[0].rollNo;
       return updated;
     });
 
@@ -388,12 +322,7 @@ exports.updateTask = async (req, res) => {
       }
     }
 
-    // compose and return taskCode
-    const goalRoll = updatedTask.goalRollNo != null ? String(updatedTask.goalRollNo) : null;
-    const taskRoll = updatedTask.rollNo != null ? String(updatedTask.rollNo) : null;
-    const outTask = { ...updatedTask, taskCode: (goalRoll && taskRoll) ? `${goalRoll}.${taskRoll}` : null };
-
-    res.json({ message: "Task updated successfully.", task: outTask });
+    res.json({ message: "Task updated successfully.", task: updatedTask });
   } catch (err) {
     console.error("updateTask error:", err);
     if (err && (err.status === 404 || err.status === 409)) return res.status(err.status).json({ message: err.message });

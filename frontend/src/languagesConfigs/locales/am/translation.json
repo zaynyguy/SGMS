@@ -535,6 +535,7 @@
     "searchAria": "ግቦችን ይፈልጉ",
     "unassigned": "ያልተመደበ",
     "none": "- ምንም ለውጥ የለም -",
+    "loadingTasks":"የመጫኛ ተግባራት",
 
     "actions": {
       "refresh": "አድስ",
@@ -583,12 +584,14 @@
       "targetMetrics": "የዒላማ መለኪያዎች",
       "activity": "እንቅስቃሴ",
       "metrics": "ዒላማ / መለኪያዎች",
-      "attachments": "አባሪዎች"
+      "attachments": "አባሪዎች",
+      "rollLabel": "ጥቅል ቁጥር (አማራጭ)"
     },
 
     "placeholders": {
       "metricKey": "ቁልፍ",
-      "metricValue": "ዋጋ"
+      "metricValue": "ዋጋ",
+      "rollNo":"ጥቅል ቁጥር"
     },
 
     "hints": {
@@ -596,7 +599,8 @@
       "goalWeight": "አጠቃላይ ግብ፡ {{goalWeight}}። በሌሎች ተግባራት ጥቅም ላይ የዋለ፡ {{used}}። ይገኛል፡ {{available}}።",
       "systemWeight": "ጥቅም ላይ የዋለው የሥርዓት ክብደት፡ {{used}}፣ ይገኛል፡ {{available}}",
       "metrics": "መለኪያዎችን እንደ ቁልፍ/እሴት ጥንዶች ያክሉ።",
-      "attachments": "ከፍተኛ ፋይሎች፡ የአገልጋይ-ጎን ገደብ ተፈጻሚ ነው።"
+      "attachments": "ከፍተኛ ፋይሎች፡ የአገልጋይ-ጎን ገደብ ተፈጻሚ ነው።",
+      "hint":"አማራጭ። አዎንታዊ ኢንቲጀር. ባዶ ከሆነ ስርዓቱ በራስ-ሰር ይመድባል።"
     },
 
     "empty": {

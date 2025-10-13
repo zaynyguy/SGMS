@@ -4,12 +4,6 @@ const notificationService = require("../services/notificationService");
 const { logAudit } = require("../helpers/audit");
 const EPS = 1e-9;
 
-const asPositiveInt = (v) => {
-  if (v === undefined || v === null || v === '') return null;
-  const n = Number(v);
-  return Number.isInteger(n) && n > 0 ? n : NaN;
-};
-
 exports.getActivitiesByTask = async (req, res) => {
   const { taskId } = req.params;
   try {
@@ -19,7 +13,7 @@ exports.getActivitiesByTask = async (req, res) => {
 
     if (isManager) {
       const q = `
-        SELECT a.*, t."goalId", gl."rollNo" AS "goalRollNo", t."rollNo" AS "taskRollNo", g.name AS "groupName"
+        SELECT a.*, t."goalId", gl."groupId", g.name AS "groupName"
         FROM "Activities" a
         JOIN "Tasks" t ON a."taskId" = t.id
         JOIN "Goals" gl ON t."goalId" = gl.id
@@ -28,20 +22,11 @@ exports.getActivitiesByTask = async (req, res) => {
         ORDER BY COALESCE(a."rollNo", 999999), a."createdAt" DESC
       `;
       const { rows } = await db.query(q, [taskId]);
-      const out = rows.map(a => {
-        const goalRoll = a.goalRollNo != null ? String(a.goalRollNo) : null;
-        const taskRoll = a.taskRollNo != null ? String(a.taskRollNo) : null;
-        const actRoll = a.rollNo != null ? String(a.rollNo) : null;
-        return {
-          ...a,
-          activityCode: (goalRoll && taskRoll && actRoll) ? `${goalRoll}.${taskRoll}.${actRoll}` : null
-        };
-      });
-      return res.json(out);
+      return res.json(rows);
     }
 
     const q = `
-      SELECT a.*, t."goalId", gl."rollNo" AS "goalRollNo", t."rollNo" AS "taskRollNo", g.name AS "groupName"
+      SELECT a.*, t."goalId", gl."groupId", g.name AS "groupName"
       FROM "Activities" a
       JOIN "Tasks" t ON a."taskId" = t.id
       JOIN "Goals" gl ON t."goalId" = gl.id
@@ -51,16 +36,7 @@ exports.getActivitiesByTask = async (req, res) => {
       ORDER BY COALESCE(a."rollNo", 999999), a."createdAt" DESC
     `;
     const { rows } = await db.query(q, [taskId, req.user.id]);
-    const out = rows.map(a => {
-      const goalRoll = a.goalRollNo != null ? String(a.goalRollNo) : null;
-      const taskRoll = a.taskRollNo != null ? String(a.taskRollNo) : null;
-      const actRoll = a.rollNo != null ? String(a.rollNo) : null;
-      return {
-        ...a,
-        activityCode: (goalRoll && taskRoll && actRoll) ? `${goalRoll}.${taskRoll}.${actRoll}` : null
-      };
-    });
-    res.json(out);
+    res.json(rows);
   } catch (err) {
     console.error("getActivitiesByTask error:", err);
     res
@@ -80,7 +56,7 @@ exports.createActivity = async (req, res) => {
   try {
     const activity = await db.tx(async (client) => {
       const t = await client.query(
-        'SELECT id, weight, "rollNo", "goalId" FROM "Tasks" WHERE id=$1 FOR UPDATE',
+        'SELECT id, weight FROM "Tasks" WHERE id=$1 FOR UPDATE',
         [taskId]
       );
       if (!t.rows.length) {
@@ -118,25 +94,6 @@ exports.createActivity = async (req, res) => {
         );
         err.status = 400;
         throw err;
-      }
-
-      // rollNo handling: validate provided rollNo (unique within task) if present
-      let desiredRoll = asPositiveInt(rollNo);
-      if (Number.isNaN(desiredRoll)) {
-        const err = new Error("rollNo must be a positive integer");
-        err.status = 400;
-        throw err;
-      }
-      if (desiredRoll !== null) {
-        const chk = await client.query(
-          `SELECT 1 FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2 LIMIT 1`,
-          [taskId, desiredRoll]
-        );
-        if (chk.rowCount > 0) {
-          const err = new Error(`rollNo ${desiredRoll} is already used for this task`);
-          err.status = 409;
-          throw err;
-        }
       }
 
       // rollNo handling (optional)
@@ -210,9 +167,6 @@ exports.createActivity = async (req, res) => {
         console.error("ACTIVITY_CREATED audit failed (in-tx):", e);
       }
 
-      // include goalRoll and taskRoll for response composition
-      newActivity.taskRollNo = t.rows[0].rollNo;
-      newActivity.goalRollNo = t.rows[0].goalId ? (await client.query('SELECT "rollNo" FROM "Goals" WHERE id=$1', [t.rows[0].goalId])).rows[0].rollNo : null;
       return newActivity;
     });
 
@@ -227,15 +181,9 @@ exports.createActivity = async (req, res) => {
       console.error("createActivity: notification failed:", notifErr);
     }
 
-    // Compose activityCode
-    const goalRoll = activity.goalRollNo != null ? String(activity.goalRollNo) : null;
-    const taskRoll = activity.taskRollNo != null ? String(activity.taskRollNo) : null;
-    const actRoll = activity.rollNo != null ? String(activity.rollNo) : null;
-    const outActivity = { ...activity, activityCode: (goalRoll && taskRoll && actRoll) ? `${goalRoll}.${taskRoll}.${actRoll}` : null };
-
     res
       .status(201)
-      .json({ message: "Activity created successfully.", activity: outActivity });
+      .json({ message: "Activity created successfully.", activity });
   } catch (err) {
     console.error("createActivity error:", err);
     if (err && (err.status === 404 || err.status === 409))
@@ -307,7 +255,7 @@ exports.updateActivity = async (req, res) => {
       }
 
       const tRes = await client.query(
-        'SELECT weight, "rollNo", "goalId" FROM "Tasks" WHERE id=$1 FOR UPDATE',
+        'SELECT weight FROM "Tasks" WHERE id=$1 FOR UPDATE',
         [c.rows[0].taskId]
       );
       const taskWeight = parseFloat(tRes.rows[0].weight) || 0;
@@ -324,29 +272,6 @@ exports.updateActivity = async (req, res) => {
         );
         err.status = 400;
         throw err;
-      }
-
-      // rollNo update handling
-      let newRollNo = c.rows[0].rollNo;
-      if (rollNo !== undefined) {
-        const parsed = asPositiveInt(rollNo);
-        if (Number.isNaN(parsed)) {
-          const err = new Error("rollNo must be a positive integer");
-          err.status = 400;
-          throw err;
-        }
-        if (parsed !== null && parsed !== newRollNo) {
-          const rExist = await client.query(
-            `SELECT 1 FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2 AND id <> $3 LIMIT 1`,
-            [c.rows[0].taskId, parsed, activityId]
-          );
-          if (rExist.rowCount > 0) {
-            const err = new Error(`rollNo ${parsed} is already used for this task`);
-            err.status = 409;
-            throw err;
-          }
-          newRollNo = parsed;
-        }
       }
 
       const r = await client.query(
@@ -367,7 +292,6 @@ exports.updateActivity = async (req, res) => {
           newWeight,
           targetMetric ?? null,
           isDone !== undefined ? isDone : null,
-          newRollNo,
           activityId,
         ]
       );
@@ -390,9 +314,6 @@ exports.updateActivity = async (req, res) => {
         console.error("ACTIVITY_UPDATED audit failed (in-tx):", e);
       }
 
-      // include goalRoll and taskRoll for response composition
-      updatedActivity.taskRollNo = tRes.rows[0].rollNo;
-      updatedActivity.goalRollNo = tRes.rows[0].goalId ? (await client.query('SELECT "rollNo" FROM "Goals" WHERE id=$1', [tRes.rows[0].goalId])).rows[0].rollNo : null;
       return updatedActivity;
     });
 
@@ -407,12 +328,7 @@ exports.updateActivity = async (req, res) => {
       console.error("updateActivity: notification failed:", notifErr);
     }
 
-    const goalRoll = activity.goalRollNo != null ? String(activity.goalRollNo) : null;
-    const taskRoll = activity.taskRollNo != null ? String(activity.taskRollNo) : null;
-    const actRoll = activity.rollNo != null ? String(activity.rollNo) : null;
-    const outActivity = { ...activity, activityCode: (goalRoll && taskRoll && actRoll) ? `${goalRoll}.${taskRoll}.${actRoll}` : null };
-
-    res.json({ message: "Activity updated successfully.", activity: outActivity });
+    res.json({ message: "Activity updated successfully.", activity });
   } catch (err) {
     console.error("updateActivity error:", err);
     if (err && (err.status === 404 || err.status === 409))

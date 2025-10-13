@@ -538,6 +538,7 @@
     "searchAria": "Kaayyoowwan barbaacha",
     "unassigned": "Hin ramadamne",
     "none": "— Jijjiiramni hin jiru —",
+    "loadingTasks":"okutaho emirimo",
 
     "actions": {
       "refresh": "Haaromsuu",
@@ -586,12 +587,14 @@
       "targetMetrics": "Safartuu Galma",
       "activity": "Gocha",
       "metrics": "Galma / Safartuu",
-      "attachments": "Dabalata"
+      "attachments": "Dabalata",
+      "rollLabel": "Lakkoofsa roll (dirqama) ."
     },
 
     "placeholders": {
       "metricKey": "Furtuu",
-      "metricValue": "Gatii"
+      "metricValue": "Gatii",
+      "rollNo":"Lakkoofsa Roolii"
     },
 
     "hints": {
@@ -599,7 +602,8 @@
       "goalWeight": "Waliigala galma: {{goalWeight}}. Hojiiwwan birootiin kan fayyadamu: {{used}}. Argama: {{available}}.",
       "systemWeight": "Ulfaatina sirnaa fayyadame: {{used}}, argama: {{available}}",
       "metrics": "Meetirii akka lamaan furtuu/gatii itti dabali.",
-      "attachments": "Faayilota guddaa: daangaa gama sarvarii ni hojjeta."
+      "attachments": "Faayilota guddaa: daangaa gama sarvarii ni hojjeta.",
+      "hint":"Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada."
     },
 
     "empty": {

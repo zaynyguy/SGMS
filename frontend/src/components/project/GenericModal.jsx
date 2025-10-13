@@ -23,6 +23,14 @@ export default function GenericModal({
 
   const firstFieldRef = useRef(null);
 
+  // helper to generate stable ids for client-side rows
+  const generateId = () => {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  };
+
   // keep modal local state in sync when opening
   useEffect(() => {
     if (!modal?.isOpen) return;
@@ -48,11 +56,27 @@ export default function GenericModal({
         rollNo: initRoll(initial.rollNo),
         targetMetrics: (() => {
           try {
-            if (!initial.targetMetric) return [{ key: "", value: "" }];
-            if (typeof initial.targetMetric === "string") return JSON.parse(initial.targetMetric);
-            return Object.keys(initial.targetMetric || {}).map((k) => ({ key: k, value: String(initial.targetMetric[k]) }));
+            if (!initial.targetMetric) return [{ id: generateId(), key: "", value: "" }];
+
+            // if stored as string JSON
+            if (typeof initial.targetMetric === "string") {
+              const parsed = JSON.parse(initial.targetMetric);
+              if (Array.isArray(parsed)) {
+                return parsed.map((m) => ({ id: generateId(), key: m?.key ?? "", value: m?.value ?? "" }));
+              }
+              // if it's an object map { key: value }
+              return Object.keys(parsed || {}).map((k) => ({ id: generateId(), key: k, value: String(parsed[k]) }));
+            }
+
+            // if it's already an array of {key,value}
+            if (Array.isArray(initial.targetMetric)) {
+              return initial.targetMetric.map((m) => ({ id: generateId(), key: m?.key ?? "", value: m?.value ?? "" }));
+            }
+
+            // if it's an object map { key: value }
+            return Object.keys(initial.targetMetric || {}).map((k) => ({ id: generateId(), key: k, value: String(initial.targetMetric[k]) }));
           } catch {
-            return [{ key: "", value: "" }];
+            return [{ id: generateId(), key: "", value: "" }];
           }
         })(),
       });
@@ -117,11 +141,14 @@ export default function GenericModal({
     if (inlineError) setInlineError(null);
   };
 
+  // --- metric helpers: ensure each row has a stable id ---
   const updateMetricRow = (idx, field, value) =>
     setLocal((p) => {
       const next = { ...(p || {}) };
       const arr = Array.isArray(next.targetMetrics) ? [...next.targetMetrics] : [];
-      arr[idx] = { ...(arr[idx] || {}), [field]: value };
+      // preserve id if exists, otherwise create one
+      const existing = arr[idx] || { id: generateId(), key: "", value: "" };
+      arr[idx] = { ...existing, [field]: value };
       next.targetMetrics = arr;
       return next;
     });
@@ -129,16 +156,18 @@ export default function GenericModal({
   const addMetricRow = () =>
     setLocal((p) => {
       const next = { ...(p || {}) };
-      next.targetMetrics = Array.isArray(next.targetMetrics) ? [...next.targetMetrics, { key: "", value: "" }] : [{ key: "", value: "" }];
+      const arr = Array.isArray(next.targetMetrics) ? [...next.targetMetrics] : [];
+      arr.push({ id: generateId(), key: "", value: "" });
+      next.targetMetrics = arr;
       return next;
     });
 
   const removeMetricRow = (idx) =>
     setLocal((p) => {
       const next = { ...(p || {}) };
-      const arr = Array.isArray(next.targetMetrics) ? next.targetMetrics : [];
+      const arr = Array.isArray(next.targetMetrics) ? [...next.targetMetrics] : [];
       const filtered = arr.filter((_, i) => i !== idx);
-      next.targetMetrics = filtered.length ? filtered : [{ key: "", value: "" }];
+      next.targetMetrics = filtered.length ? filtered : [{ id: generateId(), key: "", value: "" }];
       return next;
     });
 
@@ -403,7 +432,7 @@ export default function GenericModal({
 
               {/* Roll number input for activity */}
               <div className="mt-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Roll number (optional)</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.labels.rollLabel")}</label>
                 <input
                   name="rollNo"
                   value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
@@ -414,7 +443,7 @@ export default function GenericModal({
                   placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
                   className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
-                <div className="text-xs text-gray-500 mt-1">Optional. Positive integer. If left blank the system will auto-assign. Uniqueness enforced by backend.</div>
+                <div className="text-xs text-gray-500 mb-1">{t("project.hints.hint")}</div>
               </div>
 
               {modal.data?.taskId && (
@@ -429,8 +458,12 @@ export default function GenericModal({
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.labels.targetMetrics")}</label>
                 <div className="mt-2 space-y-2">
-                  {(Array.isArray(local.targetMetrics) ? local.targetMetrics : [{ key: "", value: "" }]).map((m, idx) => (
-                    <div key={m.id ?? `${m.key}-${m.value}-${idx}`} className="flex gap-2">
+                  {(
+                    Array.isArray(local.targetMetrics)
+                      ? local.targetMetrics
+                      : [{ id: "empty-0", key: "", value: "" }]
+                  ).map((m, idx) => (
+                    <div key={m.id} className="flex gap-2">
                       <input placeholder={t("project.placeholders.metricKey")} value={m?.key || ""} onChange={(e) => updateMetricRow(idx, "key", e.target.value)} className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
                       <input placeholder={t("project.placeholders.metricValue")} value={m?.value || ""} onChange={(e) => updateMetricRow(idx, "value", e.target.value)} className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
                       <button type="button" onClick={() => removeMetricRow(idx)} className="px-2 py-1 bg-red-500 text-white rounded text-xs" aria-label={t("project.actions.remove")}>
@@ -457,7 +490,7 @@ export default function GenericModal({
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.dueDate")}</label>
               <input name="dueDate" value={local.dueDate || ""} onChange={onLocalChange} type="date" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
 
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Roll number (optional)</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.labels.rollLabel")}</label>
               <input
                 name="rollNo"
                 value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
@@ -468,7 +501,7 @@ export default function GenericModal({
                 placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
-              <div className="text-xs text-gray-500 mt-1">Optional. Positive integer. If left blank the system will auto-assign. Uniqueness enforced per-goal on the backend.</div>
+              <div className="text-xs text-gray-500 mb-1">{t("project.hints.hint")}</div>
 
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.weight")}</label>
               <input name="weight" value={local.weight ?? 1} onChange={onLocalChange} type="number" min="0.01" step="any" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
@@ -512,7 +545,7 @@ export default function GenericModal({
                 </div>
               </div>
 
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Roll number (optional)</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.labels.rollLabel")}</label>
               <input
                 name="rollNo"
                 value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
@@ -523,7 +556,7 @@ export default function GenericModal({
                 placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
                 className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
-              <div className="text-xs text-gray-500 mt-1">Optional. Positive integer. If left blank the system will auto-assign. Uniqueness enforced by backend across goals.</div>
+              <div className="text-xs text-gray-500 mb-1">{t("project.hints.hint")}</div>
 
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.weight")}</label>
               <input name="weight" value={local.weight ?? 1} onChange={onLocalChange} type="number" min="0.01" step="any" max="100" className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />

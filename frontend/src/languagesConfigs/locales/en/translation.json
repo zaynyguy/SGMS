@@ -535,6 +535,7 @@
     "searchAria": "Search goals",
     "unassigned": "Unassigned",
     "none": "— No change —",
+    "loadingTasks":"Loading tasks",
 
     "actions": {
       "refresh": "Refresh",
@@ -583,12 +584,14 @@
       "targetMetrics": "Target Metrics",
       "activity": "Activity",
       "metrics": "Target / Metrics",
-      "attachments": "Attachments"
+      "attachments": "Attachments",
+      "rollLabel": "Roll number (optional)"
     },
 
     "placeholders": {
       "metricKey": "Key",
-      "metricValue": "Value"
+      "metricValue": "Value",
+      "rollNo":"Roll Number"
     },
 
     "hints": {
@@ -596,7 +599,8 @@
       "goalWeight": "Goal total: {{goalWeight}}. Used by other tasks: {{used}}. Available: {{available}}.",
       "systemWeight": "System weight used: {{used}}, available: {{available}}",
       "metrics": "Add metrics as key/value pairs.",
-      "attachments": "Max files: server-side limit applies."
+      "attachments": "Max files: server-side limit applies.",
+      "hint":"Optional. Positive integer. If left blank the system will auto-assign."
     },
 
     "empty": {
@@ -683,7 +687,7 @@
   "login": {
     "company_logo_alt": "Company logo",
     "title": "Welcome back",
-    "subtitle": "Urban Development and Construction Berue",
+    "subtitle": "Urban Development and Construction bureau",
     "form_title": "Log in to your account",
     "username_label": "Username",
     "username_placeholder": "Enter your Username",

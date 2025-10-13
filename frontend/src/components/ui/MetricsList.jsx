@@ -1,6 +1,7 @@
 // src/components/ui/MetricsList.jsx
 import React from "react";
 import PropTypes from "prop-types";
+import { useTranslation } from "react-i18next";
 
 /**
  * Renders metrics that may be:
@@ -9,7 +10,10 @@ import PropTypes from "prop-types";
  * - array of { key, value }
  */
 export default function MetricsList({ metrics }) {
-  if (!metrics) return <div className="text-xs text-gray-400">—</div>;
+  const { t } = useTranslation();
+
+  if (!metrics)
+    return <div className="text-xs text-gray-400">{t("project.na")}</div>;
 
   let obj = null;
   try {
@@ -33,12 +37,11 @@ export default function MetricsList({ metrics }) {
     );
   }
 
-  if (!obj || typeof obj !== "object") {
-    return <div className="text-xs text-gray-400">—</div>;
+  if (!obj || typeof obj !== "object" || Object.keys(obj).length === 0) {
+    return <div className="text-xs text-gray-400">{t("project.na")}</div>;
   }
 
   const keys = Object.keys(obj);
-  if (keys.length === 0) return <div className="text-xs text-gray-400">—</div>;
 
   return (
     <div className="space-y-1">
@@ -48,7 +51,9 @@ export default function MetricsList({ metrics }) {
           className="flex items-center justify-between bg-white dark:bg-gray-900 rounded px-2 py-1 border dark:border-gray-700"
         >
           <div className="text-xs text-gray-600 dark:text-gray-300">{k}</div>
-          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 break-words">{String(obj[k])}</div>
+          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 break-words">
+            {String(obj[k])}
+          </div>
         </div>
       ))}
     </div>
@@ -56,5 +61,9 @@ export default function MetricsList({ metrics }) {
 }
 
 MetricsList.propTypes = {
-  metrics: PropTypes.oneOfType([PropTypes.object, PropTypes.string, PropTypes.array]),
+  metrics: PropTypes.oneOfType([
+    PropTypes.object,
+    PropTypes.string,
+    PropTypes.array,
+  ]),
 };

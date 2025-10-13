@@ -1,3 +1,4 @@
+// src/controllers/goalsController.js
 const db = require('../db');
 const { logAudit } = require('../helpers/audit');
 const EPS = 1e-9;
@@ -31,14 +32,11 @@ exports.getGoals = async (req, res) => {
       const { rows } = await db.query(
         `SELECT g.*, grp.name AS "groupName"
          FROM "Goals" g LEFT JOIN "Groups" grp ON g."groupId"=grp.id
-         ORDER BY g."rollNo" ASC, g."createdAt" DESC
+         ORDER BY g."createdAt" DESC
          LIMIT $1 OFFSET $2`,
         [pageSize, offset]
       );
-
-      // add breadcrumb-style code
-      const out = rows.map(r => ({ ...r, goalCode: r.rollNo != null ? String(r.rollNo) : null }));
-      return res.json({ page, pageSize, rows: out });
+      return res.json({ page, pageSize, rows });
     }
 
     const { rows } = await db.query(
@@ -47,13 +45,11 @@ exports.getGoals = async (req, res) => {
        JOIN "Groups" grp ON g."groupId" = grp.id
        JOIN "UserGroups" ug ON ug."groupId" = grp.id
        WHERE ug."userId" = $1
-       ORDER BY g."rollNo" ASC, g."createdAt" DESC
+       ORDER BY g."createdAt" DESC
        LIMIT $2 OFFSET $3`,
       [req.user.id, pageSize, offset]
     );
-
-    const out = rows.map(r => ({ ...r, goalCode: r.rollNo != null ? String(r.rollNo) : null }));
-    res.json({ page, pageSize, rows: out });
+    res.json({ page, pageSize, rows });
   } catch (err) {
     console.error("getGoals error:", err);
     res.status(500).json({ message: "Internal server error.", error: err.message });
@@ -96,24 +92,6 @@ exports.createGoal = async (req, res) => {
         );
         err.status = 400;
         throw err;
-      }
-
-      // rollNo handling: manual preferred, else sequence will assign (DB sequence default)
-      let desiredRoll = asPositiveInt(rollNo);
-      if (Number.isNaN(desiredRoll)) {
-        const err = new Error("rollNo must be a positive integer");
-        err.status = 400;
-        throw err;
-      }
-
-      if (desiredRoll !== null) {
-        // check uniqueness
-        const check = await client.query(`SELECT 1 FROM "Goals" WHERE "rollNo" = $1 LIMIT 1`, [desiredRoll]);
-        if (check.rowCount > 0) {
-          const err = new Error(`rollNo ${desiredRoll} is already used by another goal`);
-          err.status = 409;
-          throw err;
-        }
       }
 
       // rollNo handling (optional)
@@ -172,9 +150,7 @@ exports.createGoal = async (req, res) => {
       return newGoal;
     });
 
-    // attach goalCode before returning
-    const outGoal = { ...goal, goalCode: goal.rollNo != null ? String(goal.rollNo) : null };
-    res.status(201).json({ message: 'Goal created successfully.', goal: outGoal });
+    res.status(201).json({ message: 'Goal created successfully.', goal });
   } catch (err) {
     console.error("createGoal error:", err);
     if (err && (err.status === 400 || err.status === 409)) return res.status(err.status).json({ message: err.message });
@@ -297,8 +273,7 @@ exports.updateGoal = async (req, res) => {
       return updated;
     });
 
-    const outGoal = { ...updatedGoal, goalCode: updatedGoal.rollNo != null ? String(updatedGoal.rollNo) : null };
-    res.json({ message: 'Goal updated successfully.', goal: outGoal });
+    res.json({ message: 'Goal updated successfully.', goal: updatedGoal });
   } catch (err) {
     console.error("updateGoal error:", err);
     if (err && err.status === 404) return res.status(404).json({ message: err.message });
