@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserPlus, Settings, Shield, ChevronDown, CheckCircle, XCircle, Info } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
-import UsersPage from './UsersPage';
+import UsersPage from './UsersManagementPage';
 import RolesManagementPage from './RolesManagementPage';
-import SettingsPage from './SettingsPage';
+import SettingsPage from './SystemSettingsPage';
 import AuditLogTab from './AuditLogTab';
 
 const Admin = () => {

@@ -1,22 +1,39 @@
-const API_URL = import.meta.env.VITE_API_URL;
+// src/api/api.js
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-export const api = async (endpoint, method = 'GET', body = null) => {
-  const config = {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
+export const api = async (url, method = "GET", data = null, options = {}) => {
+  const token = (typeof window !== "undefined" && window.__ACCESS_TOKEN) ? window.__ACCESS_TOKEN : localStorage.getItem("authToken");
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
 
-  if (body) {
-    config.body = JSON.stringify(body);
+  const fetchOptions = {
+    method,
+    headers,
+    credentials: "include", 
+    ...(data && { body: JSON.stringify(data) }),
+  };
+
+
+  const full = url.startsWith("http") ? url : `${API_URL}${url}`;
+
+  const res = await fetch(full, fetchOptions);
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    const err = new Error(error.message || `API Error ${res.status}`);
+    err.status = res.status;
+    err.response = error;
+    throw err;
   }
 
-  const response = await fetch(API_URL + endpoint, config);
-
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
+  const text = await res.text();
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return text || null;
   }
-
-  return response.json();
 };
+
+export default { api, rawFetch, loginUser, refreshToken, logoutUser };

@@ -1,39 +1,58 @@
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+// src/middleware/authMiddleware.js
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
+const db = require("../db");
 
-exports.authenticateJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ message: 'Authorization header is required.' });
+async function authenticateJWT(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Missing or invalid token" });
   }
+  const token = auth.split(" ")[1];
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET, {
+      issuer: process.env.JWT_ISSUER || "my-app",
+    });
 
-  const token = authHeader.split(' ')[1];
-  if (!token) {
-    return res.status(401).json({ message: 'Access token is missing or invalid.' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Session expired. Please log in again.' });
+    if (
+      typeof payload.id !== "undefined" &&
+      typeof payload.tokenVersion !== "undefined"
+    ) {
+      try {
+        const { rows } = await db.query(
+          'SELECT token_version FROM "Users" WHERE id=$1',
+          [payload.id]
+        );
+        const currentVersion = rows[0] ? rows[0].token_version : null;
+        if (
+          currentVersion !== null &&
+          Number(currentVersion) !== Number(payload.tokenVersion)
+        ) {
+          return res.status(401).json({ message: "Token revoked" });
+        }
+      } catch (dbErr) {
+        console.error("DB error in authenticateJWT tokenVersion check", dbErr);
+        return res.status(500).json({ message: "Internal server error" });
       }
-      return res.status(403).json({ message: 'Forbidden: Invalid token.' });
     }
 
-    req.user = user; // Contains { id, username, name, role, permissions }
+    req.user = payload;
     next();
-  });
-};
-
-exports.authorizePermissions = (requiredPermissions) => (req, res, next) => {
-  const userPermissions = req.user?.permissions || [];
-  const isSuperAdmin = userPermissions.includes('manage:all');
-
-  const hasPermission = requiredPermissions.some(perm => userPermissions.includes(perm));
-
-  if (hasPermission || isSuperAdmin) {
-    return next();
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Token expired" });
+    }
+    return res.status(401).json({ message: "Invalid token" });
   }
+}
 
-  res.status(403).json({ message: 'Forbidden: You lack necessary permissions.' });
-};
+function authorizePermissions(required) {
+  return (req, res, next) => {
+    const perms = req.user?.permissions || [];
+    const ok = required.some((r) => perms.includes(r));
+    if (!ok) return res.status(403).json({ message: "Forbidden" });
+    next();
+  };
+}
+
+module.exports = { authenticateJWT, authorizePermissions };

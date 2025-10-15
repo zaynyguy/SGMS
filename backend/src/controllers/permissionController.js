@@ -1,3 +1,5 @@
+// src/controllers/permissionController.js
+
 const db = require('../db');
 
 exports.getAllPermissions = async (req, res) => {

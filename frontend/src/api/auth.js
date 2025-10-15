@@ -1,64 +1,133 @@
-// src/api/auth.js
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-// Use Vite environment variable or fallback to production backend
-const API_URL = import.meta.env.VITE_API_URL || 'https://sgms-production.up.railway.app';
+let _isRefreshing = false;
+let _refreshPromise = null;
 
-/**
- * General API request helper
- * @param {string} endpoint - API path starting with /
- * @param {string} method - HTTP method
- * @param {object|null} body - Request body
- * @returns {Promise<any>}
- */
-export const api = async (endpoint, method = 'GET', body = null) => {
-  const token = localStorage.getItem('authToken');
-  const headers = { 'Content-Type': 'application/json' };
+async function _tryRefresh() {
+  if (_isRefreshing) return _refreshPromise;
+  _isRefreshing = true;
 
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-  const config = { method, headers };
-  if (body) config.body = JSON.stringify(body);
-
-  try {
-    const response = await fetch(`${API_URL}${endpoint}`, config);
-
-    // Try to parse JSON; if not JSON, throw readable error
-    let data;
+  _refreshPromise = (async () => {
     try {
-      data = await response.json();
-    } catch {
-      const text = await response.text();
-      throw new Error(`Non-JSON response: ${text.slice(0, 100)}`);
+      const resp = await fetch(`${API_URL}/api/auth/refresh`, { method: "POST", credentials: "include", headers: { Accept: "application/json" } });
+      if (!resp.ok) {
+        window.__ACCESS_TOKEN = null;
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("user");
+        _isRefreshing = false;
+        return false;
+      }
+      const data = await resp.json().catch(() => null);
+      if (data?.token) {
+        window.__ACCESS_TOKEN = data.token;
+        localStorage.setItem("authToken", data.token);
+      }
+      if (data?.user) localStorage.setItem("user", JSON.stringify(data.user));
+      _isRefreshing = false;
+      return true;
+    } catch (err) {
+      console.error("[api] refresh failed", err);
+      window.__ACCESS_TOKEN = null;
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      _isRefreshing = false;
+      return false;
     }
+  })();
 
-    if (!response.ok) {
-      throw new Error(data?.message || `HTTP ${response.status} error`);
-    }
-
-    return data;
-  } catch (error) {
-    console.error('API call failed:', error);
-    throw error;
+  return _refreshPromise;
+}
+async function _doFetch(fullUrl, fetchOptions) {
+  fetchOptions = { credentials: "include", ...fetchOptions };
+  const token = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
+  if (token) {
+    fetchOptions.headers = { ...(fetchOptions.headers || {}), Authorization: `Bearer ${token}` };
   }
+
+  let res = await fetch(fullUrl, fetchOptions);
+
+  // If not unauthorized, return immediately
+  if (res.status !== 401) return res;
+
+  // Try refresh silently
+  const refreshed = await _tryRefresh();
+  if (!refreshed) return res; // if refresh fails, return original 401
+
+  // Retry with new token
+  const newToken = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
+  if (newToken) {
+    fetchOptions.headers.Authorization = `Bearer ${newToken}`;
+  }
+
+  return fetch(fullUrl, fetchOptions);
+}
+
+export async function api(endpoint, method = "GET", body = null, options = {}) {
+  const url = endpoint.startsWith("http") ? endpoint : `${API_URL}${endpoint}`;
+  const headers = { Accept: "application/json", ...(options.headers || {}) };
+  const init = { method, headers };
+
+  if (body != null) {
+    const isFormData = Boolean(options.isFormData) || (typeof FormData !== "undefined" && body instanceof FormData);
+    if (isFormData) {
+      init.body = body;
+    } else {
+      init.headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(body);
+    }
+  }
+
+  const res = await _doFetch(url, init);
+  const text = await res.text();
+  let data = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text || null; }
+
+  if (!res.ok) {
+    // Only treat it as an auth error if refresh ALSO failed
+    const err = new Error((data?.message || data?.error) || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.response = data;
+    err.isAuthError = res.status === 401;
+
+    if (err.isAuthError) {
+      // Clear auth only when refresh + retry truly failed
+      window.__ACCESS_TOKEN = null;
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+    }
+
+    throw err;
+  }
+
+  return data;
+}
+
+
+
+export async function rawFetch(endpoint, method = "GET", body = null, options = {}) {
+  const url = endpoint.startsWith("http") ? endpoint : `${API_URL}${endpoint}`;
+  const headers = { Accept: "application/json", ...(options.headers || {}) };
+  const init = { method, headers };
+  if (body != null) {
+    const isFormData = Boolean(options.isFormData) || (typeof FormData !== "undefined" && body instanceof FormData);
+    if (isFormData) init.body = body;
+    else {
+      init.headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(body);
+    }
+  }
+  return _doFetch(url, init);
+}
+
+
+
+export const loginUser = (username, password) => api("/api/auth/login", "POST", { username, password });
+export const refreshToken = () => api("/api/auth/refresh", "POST", null);
+export const logoutUser = async () => { 
+  try { await api("/api/auth/logout", "POST", null); } catch (_) {}
+  window.__ACCESS_TOKEN = null;
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("user");
 };
 
-/**
- * Login function
- * @param {string} username
- * @param {string} password
- * @returns {Promise<{token: string, user: object}>}
- */
-export const loginUser = (username, password) => {
-  // Make sure endpoint matches backend; likely /api/auth/login
-  return api('/api/auth/login', 'POST', { username, password });
-};
-
-/**
- * Update role example
- * @param {number} id
- * @param {object} data
- * @returns {Promise<any>}
- */
-export const updateRole = async (id, data) => {
-  return api(`/api/roles/${id}`, 'PUT', data);
-};
+export default { api, rawFetch, loginUser, refreshToken, logoutUser };

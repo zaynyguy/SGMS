@@ -1,262 +1,428 @@
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useRef, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
+import { Upload, X, User, Save, Shield, Palette, UserCircle, Settings } from "lucide-react";
+import LanguageSwitcher from "../components/common/LanguageSwitcher";
+import Toast from "../components/common/Toast";
+import { api } from "../api/auth";
+import TopBar from "../components/layout/TopBar";
+import { useTheme } from "../context/ThemeContext";
 
-const SettingsPage = ({ showToast }) => {
+/* Helpers omitted for brevity — same as previous (formatBytes, initialsFromName, gradientFromString) */
+const formatBytes = (n) => {
+  if (!n) return "0 B";
+  const sizes = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  let num = n;
+  while (num >= 1024 && i < sizes.length - 1) {
+    num /= 1024;
+    i += 1;
+  }
+  return `${Math.round(num * 10) / 10} ${sizes[i]}`;
+};
+const initialsFromName = (name, fallback) => {
+  const n = (name || "").trim();
+  if (!n) {
+    const u = (fallback || "").trim();
+    return (u[0] || "?").toUpperCase();
+  }
+  const parts = n.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+const gradientFromString = (s) => {
+  let hash = 0;
+  for (let i = 0; i < (s || "").length; i += 1) hash = (hash << 5) - hash + s.charCodeAt(i);
+  const a = Math.abs(hash);
+  const h1 = a % 360;
+  const h2 = (180 + h1) % 360;
+  return `linear-gradient(135deg, hsl(${h1} 70% 60%), hsl(${h2} 70% 40%))`;
+};
+
+const SettingsPage = () => {
   const { t } = useTranslation();
-  const [emailTemplate, setEmailTemplate] = useState(
-    t('admin.settings.emailTemplate.default')
-  );
-  const [notifyReportDue, setNotifyReportDue] = useState(false);
-  const [notifyOnSubmission, setNotifyOnSubmission] = useState(true);
-  const [weeklySummaryEmail, setWeeklySummaryEmail] = useState(false);
-  const [monthlyReportDueDate, setMonthlyReportDueDate] = useState('2025-07-15');
-  const [fiscalYearStart, setFiscalYearStart] = useState('2025-01');
-  const [smtpHost, setSmtpHost] = useState('');
-  const [smtpPort, setSmtpPort] = useState('');
-  const [smtpUsername, setSmtpUsername] = useState('');
-  const [smtpPassword, setSmtpPassword] = useState('');
-  const [maxFileSize, setMaxFileSize] = useState('');
-  const [allowedFileTypes, setAllowedFileTypes] = useState('');
+  const { updateUser } = useAuth();
+  const { dark } = useTheme();
 
-  const handleTestConnection = () => {
-    if (!smtpHost || !smtpPort || !smtpUsername || !smtpPassword) {
-      showToast(t('admin.settings.errors.missingEmailDetails'), 'error');
+  const [settings, setSettings] = useState({
+    username: "",
+    name: "",
+    language: "en",
+    profilePicture: null,
+  });
+
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [passwordError, setPasswordError] = useState("");
+  const [oldPasswordError, setOldPasswordError] = useState("");
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
+  const [uploadingPicture, setUploadingPicture] = useState(false);
+
+  const previewObjectUrlRef = useRef(null);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const data = await api("/api/settings", "GET");
+        if (data) {
+          const sanitized = { ...data };
+          if (Object.prototype.hasOwnProperty.call(sanitized, "darkMode")) delete sanitized.darkMode;
+          setSettings((prev) => ({ ...prev, ...sanitized }));
+        }
+      } catch (err) {
+        console.error("Failed to load settings", err);
+        setToast({ message: t("settings.errors.loadError") || "Failed to load settings", type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+    return () => {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current);
+        previewObjectUrlRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const showToast = (message, type = "create") => setToast({ message, type });
+  const handleToastClose = () => setToast(null);
+
+  const handleProfilePictureChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      showToast(t("settings.errors.invalidImage") || "Invalid image file", "error");
       return;
     }
-    
-    showToast(t('admin.settings.connectionTesting'), 'info');
-    setTimeout(() => {
-      const success = Math.random() > 0.5;
-      if (success) {
-        showToast(t('admin.settings.connectionSuccess'), 'success');
-      } else {
-        showToast(t('admin.settings.errors.connectionFailed'), 'error');
-      }
-    }, 1500);
+    if (file.size > 5 * 1024 * 1024) {
+      showToast(t("settings.errors.imageTooLarge") || `Image too large (max ${formatBytes(5 * 1024 * 1024)})`, "error");
+      return;
+    }
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = null;
+    }
+    const url = URL.createObjectURL(file);
+    previewObjectUrlRef.current = url;
+    setProfilePicturePreview(url);
+    setProfilePictureFile(file);
   };
 
-  const handleSaveSettings = () => {
-    const settings = {
-      monthlyReportDueDate,
-      fiscalYearStart,
-      smtpHost,
-      smtpPort,
-      smtpUsername,
-      smtpPassword,
-      maxFileSize,
-      allowedFileTypes,
-      emailTemplate,
-      notifyReportDue,
-      notifyOnSubmission,
-      weeklySummaryEmail,
-    };
-    console.log("Saving settings:", settings);
-    showToast(t('admin.settings.saveSuccess'), 'success');
+  const removeProfilePicturePreview = () => {
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current);
+      previewObjectUrlRef.current = null;
+    }
+    setProfilePictureFile(null);
+    setProfilePicturePreview(null);
   };
+
+  const uploadProfilePicture = async () => {
+    if (!profilePictureFile) return;
+    setUploadingPicture(true);
+    try {
+      const fd = new FormData();
+      fd.append("profilePicture", profilePictureFile);
+
+      const token = typeof window !== "undefined" && window.__ACCESS_TOKEN
+        ? window.__ACCESS_TOKEN
+        : localStorage.getItem("authToken");
+
+      const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/settings/profile-picture`, {
+        method: "PUT",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
+        body: fd,
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => null);
+        let parsed;
+        try { parsed = errText ? JSON.parse(errText) : null; } catch { parsed = errText; }
+        throw new Error(parsed?.message || t("settings.errors.uploadError") || "Upload failed");
+      }
+
+      const data = await resp.json();
+
+      let returnedUser = data.user || {};
+      if (!returnedUser || typeof returnedUser !== "object") returnedUser = {};
+
+      let stored = {};
+      try {
+        stored = JSON.parse(localStorage.getItem("user") || "{}") || {};
+      } catch (e) {
+        stored = {};
+      }
+
+      const merged = {
+        ...stored,
+        ...returnedUser,
+        profilePicture: data.profilePicture || returnedUser.profilePicture || stored.profilePicture || "",
+      };
+
+      if (Object.prototype.hasOwnProperty.call(merged, "darkMode")) delete merged.darkMode;
+
+      updateUser(merged, data.token || undefined);
+
+      setSettings((s) => ({ ...s, profilePicture: merged.profilePicture }));
+      removeProfilePicturePreview();
+      showToast(t("settings.toasts.pictureSuccess") || "Profile picture updated", "update");
+    } catch (err) {
+      console.error("uploadProfilePicture error:", err);
+      showToast(err.message || "Upload failed", "error");
+    } finally {
+      setUploadingPicture(false);
+    }
+  };
+
+  const validatePassword = () => {
+    let isValid = true;
+    if (newPassword && !oldPassword) {
+      setOldPasswordError(t("settings.errors.oldPasswordRequired") || "Old password required");
+      isValid = false;
+    } else setOldPasswordError("");
+    if (newPassword && newPassword.length < 8) {
+      setPasswordError(t("settings.errors.passwordTooShort") || "Password too short");
+      isValid = false;
+    } else setPasswordError("");
+    return isValid;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validatePassword()) return;
+
+    setSaving(true);
+    try {
+      const payload = {
+        name: settings.name,
+        language: settings.language,
+        oldPassword: oldPassword || undefined,
+        newPassword: newPassword || undefined,
+      };
+
+      const data = await api("/api/settings", "PUT", payload);
+
+      if (data?.user) {
+        const returnedUser = data.user || {};
+        let stored = {};
+        try {
+          stored = JSON.parse(localStorage.getItem("user") || "{}") || {};
+        } catch {
+          stored = {};
+        }
+
+        const merged = { ...stored, ...returnedUser };
+        if (Object.prototype.hasOwnProperty.call(merged, "darkMode")) delete merged.darkMode;
+
+        updateUser(merged, data.token || undefined);
+      }
+
+      setSettings((s) => ({ ...s, name: settings.name, language: settings.language }));
+      showToast(t("settings.toasts.updateSuccess") || "Settings updated", "update");
+      setOldPassword("");
+      setNewPassword("");
+    } catch (err) {
+      console.error("update settings error:", err);
+      showToast(err.message || "Update failed", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-200 dark:bg-gray-900 flex items-center justify-center p-6">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-500 mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">{t("settings.loading") || "Loading..."}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const avatarUrl = profilePicturePreview || settings.profilePicture || null;
+  const initials = initialsFromName(settings.name || "", settings.username || "");
+  const gradient = gradientFromString(settings.name || settings.username || "user");
 
   return (
-    <section id="settings" role="tabpanel" aria-labelledby="settings-tab" className="p-4 space-y-6">
-      {/* Reporting Period */}
-      <div>
-        <h2 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
-          {t('admin.settings.reportingPeriod.title')}
-        </h2>
-        <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-sm">
-          <div>
-            <label htmlFor="monthly-report-due-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.reportingPeriod.monthlyDueDate')}
-            </label>
-            <input
-              type="date"
-              id="monthly-report-due-date"
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={monthlyReportDueDate}
-              onChange={(e) => setMonthlyReportDueDate(e.target.value)}
-            />
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200 settings-wrap">
+      <header className="static top-0 z-20 bg-gray-200 dark:bg-gray-900/60 backdrop-blur-sm">
+        <div className="max-w-8xl justify-between mx-auto px-4 py-4 flex sm:flex-row sm:items-center gap-3 sm:gap-6 header-inner">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="flex items-center min-w-0 header-actions">
+              <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
+                <Settings className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-medium sm:font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
+                <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">{t("settings.subtitle")}</p>
+              </div>
+            </div>
           </div>
-          <div>
-            <label htmlFor="fiscal-year-start" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.reportingPeriod.fiscalYearStart')}
-            </label>
-            <input
-              type="month"
-              id="fiscal-year-start"
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={fiscalYearStart}
-              onChange={(e) => setFiscalYearStart(e.target.value)}
-            />
-          </div>
+
+          <TopBar className="flex" />
         </div>
-      </div>
+      </header>
 
-      {/* Email Server */}
-      <div>
-        <h2 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
-          {t('admin.settings.emailServer.title')}
-        </h2>
-        <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-sm">
-          <div>
-            <label htmlFor="smtp-host" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.emailServer.smtpHost')}
-            </label>
-            <input
-              type="text"
-              id="smtp-host"
-              placeholder={t('admin.settings.emailServer.smtpHostPlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={smtpHost}
-              onChange={(e) => setSmtpHost(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="smtp-port" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.emailServer.port')}
-            </label>
-            <input
-              type="number"
-              id="smtp-port"
-              placeholder={t('admin.settings.emailServer.portPlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={smtpPort}
-              onChange={(e) => setSmtpPort(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="smtp-username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.emailServer.username')}
-            </label>
-            <input
-              type="text"
-              id="smtp-username"
-              placeholder={t('admin.settings.emailServer.usernamePlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={smtpUsername}
-              onChange={(e) => setSmtpUsername(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="smtp-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.emailServer.password')}
-            </label>
-            <input
-              type="password"
-              id="smtp-password"
-              placeholder={t('admin.settings.emailServer.passwordPlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={smtpPassword}
-              onChange={(e) => setSmtpPassword(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={handleTestConnection}
-            className="btn-secondary px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 flex items-center gap-2"
-          >
-            {t('admin.settings.emailServer.testConnection')}
-          </button>
+      <main className="max-w-8xl mx-auto px-4 py-6 container">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+          <form onSubmit={handleSubmit} className="space-y-0">
+            {/* Profile Picture */}
+            <section className="p-6 section">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300">
+                  <User size={18} />
+                </div>
+                <h2 className="text-lg font-semibold">{t("settings.profilePicture") || "Profile picture"}</h2>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                <div className="relative responsive-avatar">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm" />
+                  ) : (
+                    <div className="w-28 h-28 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-sm" style={{ background: gradient }} aria-hidden>
+                      {initials}
+                    </div>
+                  )}
+
+                  {profilePicturePreview && (
+                    <button type="button" onClick={removeProfilePicturePreview} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md" aria-label="Remove preview">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                  <div>
+                    <input type="file" id="profile-picture" accept="image/*" onChange={handleProfilePictureChange} className="hidden" />
+                    <label htmlFor="profile-picture" className="inline-flex items-center px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                      <Upload className="w-4 h-4 mr-2" />
+                      {t("settings.chooseImage") || "Choose image"}
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {profilePictureFile ? (
+                      <div className="text-sm text-gray-600 dark:text-gray-300">{profilePictureFile.name} • {formatBytes(profilePictureFile.size)}</div>
+                    ) : (
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{t("settings.pictureHint") || "Square image works best (max 5 MB)"}</div>
+                    )}
+
+                    {profilePictureFile && (
+                      <button type="button" onClick={uploadProfilePicture} disabled={uploadingPicture} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors btn-sm-full">
+                        {uploadingPicture ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                            <span>{t("settings.uploading") || "Uploading..."}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            <span>{t("settings.upload") || "Upload"}</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Personal Info */}
+            <section className="p-6 section">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300">
+                  <UserCircle size={18} />
+                </div>
+                <h2 className="text-lg font-semibold">{t("settings.personalInfo") || "Personal info"}</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 responsive-grid">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.username") || "Username"}</label>
+                  <input type="text" value={settings.username} readOnly className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400" />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.usernameHelp")}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.name") || "Full name"}</label>
+                  <input type="text" value={settings.name} onChange={(e) => setSettings({ ...settings, name: e.target.value })} className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder={t("settings.namePlaceholder") || "Your display name"} />
+                </div>
+              </div>
+            </section>
+
+            {/* Appearance */}
+            <section className="p-6 section">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300">
+                  <Palette size={18} />
+                </div>
+                <h2 className="text-lg font-semibold">{t("settings.appearance") || "Appearance"}</h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.language") || "Language"}</label>
+                  <LanguageSwitcher compact value={settings.language} onChange={(lang) => setSettings({ ...settings, language: lang })} />
+                </div>
+              </div>
+            </section>
+
+            {/* Password */}
+            <section className="p-6 section">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">
+                  <Shield size={18} />
+                </div>
+                <h2 className="text-lg font-semibold">{t("settings.changePassword") || "Change password"}</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 responsive-grid">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.oldPassword") || "Old password"}</label>
+                  <input type="password" value={oldPassword} onChange={(e) => { setOldPassword(e.target.value); if (e.target.value && oldPasswordError) setOldPasswordError(""); }} placeholder={t("settings.passwordPlaceholder") || "••••••••"} className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${oldPasswordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`} />
+                  {oldPasswordError && <p className="mt-1 text-xs text-red-500">{oldPasswordError}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.newPassword") || "New password"}</label>
+                  <input type="password" value={newPassword} onChange={(e) => { setNewPassword(e.target.value); if (e.target.value && e.target.value.length < 8) setPasswordError(t("settings.errors.passwordTooShort") || "Password too short"); else setPasswordError(""); }} placeholder={t("settings.passwordPlaceholder") || "••••••••"} className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${passwordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`} />
+                  {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.passwordRequirements") || "Minimum 8 characters."}</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Submit */}
+            <section className="p-6 bg-gray-50 dark:bg-gray-700/50 flex justify-end section">
+              <button type="submit" disabled={saving || (newPassword && newPassword.length < 8) || (newPassword && !oldPassword)} className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors btn-sm-full">
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <span>{t("settings.saving") || "Saving..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>{t("settings.saveChanges") || "Save changes"}</span>
+                  </>
+                )}
+              </button>
+            </section>
+          </form>
         </div>
-      </div>
+      </main>
 
-      {/* File Upload Settings */}
-      <div>
-        <h2 className="text-lg font-medium mb-2 text-gray-800 dark:text-gray-200">
-          {t('admin.settings.fileUpload.title')}
-        </h2>
-        <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md shadow-sm">
-          <div>
-            <label htmlFor="max-file-size" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.fileUpload.maxFileSize')}
-            </label>
-            <input
-              type="number"
-              id="max-file-size"
-              placeholder={t('admin.settings.fileUpload.maxFileSizePlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={maxFileSize}
-              onChange={(e) => setMaxFileSize(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="allowed-file-types" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('admin.settings.fileUpload.allowedFileTypes')}
-            </label>
-            <input
-              type="text"
-              id="allowed-file-types"
-              placeholder={t('admin.settings.fileUpload.allowedFileTypesPlaceholder')}
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
-              value={allowedFileTypes}
-              onChange={(e) => setAllowedFileTypes(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Notification Settings */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-medium mb-3">
-          {t('admin.settings.notifications.title')}
-        </h2>
-        <div className="space-y-3">
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent"
-              checked={notifyReportDue}
-              onChange={(e) => setNotifyReportDue(e.target.checked)}
-            />
-            <span className="text-gray-700 dark:text-gray-300">
-              {t('admin.settings.notifications.reportDue')}
-            </span>
-          </label>
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent"
-              checked={notifyOnSubmission}
-              onChange={(e) => setNotifyOnSubmission(e.target.checked)}
-            />
-            <span className="text-gray-700 dark:text-gray-300">
-              {t('admin.settings.notifications.onSubmission')}
-            </span>
-          </label>
-          <label className="flex items-center space-x-3 cursor-pointer">
-            <input
-              type="checkbox"
-              className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:checked:bg-blue-600 dark:checked:border-transparent"
-              checked={weeklySummaryEmail}
-              onChange={(e) => setWeeklySummaryEmail(e.target.checked)}
-            />
-            <span className="text-gray-700 dark:text-gray-300">
-              {t('admin.settings.notifications.weeklySummary')}
-            </span>
-          </label>
-        </div>
-      </div>
-
-      {/* Email Templates */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-        <h2 className="text-lg font-medium mb-3">
-          {t('admin.settings.emailTemplates.title')}
-        </h2>
-        <textarea
-          rows="6"
-          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 bg-gray-50 dark:bg-gray-700 dark:text-white resize-y"
-          placeholder={t('admin.settings.emailTemplates.placeholder')}
-          value={emailTemplate}
-          onChange={(e) => setEmailTemplate(e.target.value)}
-        ></textarea>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSaveSettings}
-          className="btn-primary px-6 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-colors duration-200"
-        >
-          {t('admin.settings.saveButton')}
-        </button>
-      </div>
-    </section>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={handleToastClose} />}
+    </div>
   );
 };
 

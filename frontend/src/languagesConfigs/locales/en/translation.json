@@ -1,289 +1,818 @@
 {
-  "accessDenied": {
-    "title": "403",
-    "heading": "Access Denied",
-    "message": "Sorry, you do not have the required permissions to view this page.",
-    "button": "Go to Dashboard"
+  "access": {
+    "title": "Access management",
+    "subtitle": "Control who can access features and data across the organization.",
+    "nav": {
+      "users": "Users",
+      "roles": "Roles",
+      "groups": "Groups"
+    },
+    "mobileNav": {
+      "ariaLabel": "Access navigation"
+    }
   },
-  "dashboard": {
-    "title": "This is a Dashboard"
+  "attachments": {
+    "title": "Attachments",
+    "subtitle": "Manage files, uploads and document attachments for reports and items.",
+    "viewToggleAria": "Toggle attachments view",
+    "view": {
+      "grid": "Grid",
+      "gridTitle": "Grid view",
+      "table": "List",
+      "tableTitle": "List view"
+    },
+    "closePreview": "Close preview",
+    "messages": {
+      "failedLoad": "Failed to load attachments",
+      "noFileReturned": "No file returned from server",
+      "downloadFailed": "Download failed",
+      "deleteFailed": "Failed to delete attachment"
+    },
+    "loading": "Loading attachments…",
+    "noAttachmentsTitle": "No attachments",
+    "noAttachmentsSubtitle": "There are no attachments for this report.",
+    "table": {
+      "file": "File",
+      "type": "Type",
+      "uploaded": "Uploaded",
+      "actions": "Actions"
+    },
+    "idPrefix": "ID:",
+    "uploadedPrefix": "Uploaded:",
+    "empty": "—",
+    "download": "Download",
+    "preview": "Preview",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this attachment?",
+    "searchPlaceholder": "Search attachments by name, id or type…",
+    "searchAria": "Search attachments",
+    "clearSearchAria": "Clear search",
+    "clearSearchTitle": "Clear search"
   },
-  "errorBoundary": {
-    "title": "Something went wrong",
-    "message": "An unexpected error occurred. Please try refreshing the page.",
-    "detailsTitle": "Error Details",
-    "technicalDetails": "Technical Details:",
-    "componentStack": "Component Stack:",
-    "refreshButton": "Refresh Page"
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "View a chronological record of system events, security and user activity.",
+    "loadFailed": "Failed to load audit logs",
+    "exportCsv": "Export CSV",
+    "csv": {
+      "filename": "audit-logs.csv"
+    },
+    "export": {
+      "success": "Export started — your download should begin shortly"
+    },
+    "searchPlaceholder": "Search by user, entity, action or details",
+    "searchAria": "Search audit logs",
+    "results": {
+      "showing": "Showing {{filtered}} of {{total}} log(s)"
+    },
+    "loading": "Loading…",
+    "filters": {
+      "show": "Show filters",
+      "hide": "Hide filters",
+      "title": "Filters",
+      "fromDate": "From date",
+      "toDate": "To date",
+      "apply": "Apply filters",
+      "clear": "Clear filters",
+      "applied": "Filters applied",
+      "cleared": "Filters cleared"
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "entity": "Entity",
+      "action": "Action",
+      "details": "Details"
+    },
+    "noLogs": {
+      "title": "No audit logs found",
+      "none": "There are no audit logs yet.",
+      "tryAdjust": "Try adjusting your search or date filters."
+    },
+    "expanded": {
+      "fullDetails": "Full details",
+      "additionalInfo": "Additional information",
+      "idLabel": "ID:",
+      "entityLabel": "Entity:",
+      "ipLabel": "IP:",
+      "userAgentLabel": "User agent:",
+      "show": "Show details",
+      "hide": "Hide details"
+    },
+    "na": "N/A",
+    "pagination": {
+      "range": "Showing {{from}} to {{to}} of {{total}}",
+      "previous": "Previous",
+      "next": "Next"
+    }
   },
-  "login": {
-    "title": "Welcome Back",
-    "subtitle": "Sign in to your account",
-    "prompt": "Enter your credentials to continue",
-    "username_label": "Username",
-    "username_placeholder": "Enter your username",
-    "password_label": "Password",
-    "password_placeholder": "Enter your password",
-    "password_too_short": "Password must be at least 8 characters",
-    "remember_label": "Remember me",
-    "button_signin": "Sign In",
-    "logging_in": "Signing in...",
-    "error_default": "Login failed. Please try again.",
-    "forgot_password": "Forgot password?",
-    "no_account": "Don't have an account?",
-    "signup_link": "Sign up here"
+  "groups": {
+    "title": "Groups",
+    "subtitle": "Create and manage groups and membership.",
+    "searchPlaceholder": "Search groups by name or description…",
+    "search": {
+      "placeholder": "Search groups by name or description…",
+      "aria": "Search groups"
+    },
+    "newGroup": "New group",
+    "loading": "Loading groups…",
+    "noResults": "No groups found.",
+    "noDescription": "No description provided",
+    "confirmDelete": "Are you sure you want to delete this group?",
+    "messages": {
+      "loadFailed": "Failed to load groups",
+      "created": "Group created",
+      "updated": "Group updated",
+      "deleted": "Group deleted",
+      "saveFailed": "Failed to save group",
+      "deleteFailed": "Failed to delete group"
+    },
+    "table": {
+      "name": "Name",
+      "description": "Description",
+      "members": "Members",
+      "created": "Created",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "createdPrefix": "Created:",
+    "updatedPrefix": "Updated:",
+    "idPrefix": "ID:",
+    "actions": {
+      "edit": "Edit group",
+      "delete": "Delete group",
+      "toggle": "Toggle details"
+    },
+    "form": {
+      "title": {
+        "create": "Create group",
+        "edit": "Edit group"
+      },
+      "close": "Close",
+      "labels": {
+        "name": "Group name",
+        "description": "Description"
+      },
+      "buttons": {
+        "uploadPicture": "Upload picture",
+        "cancel": "Cancel",
+        "create": "Create group",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "remove": "Remove"
+      },
+      "errors": {
+        "nameRequired": "Group name is required",
+        "nameTooLong": "Name must be 50 characters or fewer",
+        "descriptionTooLong": "Description must be 300 characters or fewer",
+        "invalidImage": "Invalid image file",
+        "imageTooLarge": "Image too large (max 5 MB)",
+        "saveFailed": "Saving group failed"
+      }
+    },
+    "members": {
+      "title": {
+        "manage": "Manage members"
+      },
+      "add": {
+        "title": "Add member",
+        "selectUser": "Select a user",
+        "button": "Add member",
+        "adding": "Adding…",
+        "noAvailable": "No available users to add"
+      },
+      "current": {
+        "title": "Current members",
+        "empty": "No members in this group"
+      },
+      "linkText": "{{count}} member(s)",
+      "manage": "Manage members",
+      "label": "members",
+      "remove": {
+        "title": "Remove member"
+      }
+    }
   },
-  "settings": {
-    "title": "User Settings",
-    "loading": "Loading settings...",
-    "personalInfo": "Personal Information",
-    "username": "Username",
-    "name": "Name",
-    "appearance": "Appearance",
-    "language": "Language",
-    "theme": "Theme",
-    "lightMode": "Light Mode",
-    "darkMode": "Dark Mode",
-    "changePassword": "Change Password",
-    "oldPassword": "Old Password",
-    "newPassword": "New Password",
-    "passwordPlaceholder": "Enter your password",
-    "saveChanges": "Save Changes",
-    "saving": "Saving...",
-    "toasts": {
-      "updateSuccess": "Settings updated successfully!"
+  "reports": {
+    "noReports": "No reports available yet. Create a report to see data here.",
+    "header": {
+      "title": "Reports",
+      "subtitle": "Review, manage and export reports"
+    },
+    "tabs": {
+      "review": "Review",
+      "master": "Master"
+    },
+    "search": {
+      "placeholder": "Search reports, users or text…",
+      "button": "Search"
+    },
+    "refresh": "Refresh",
+    "filters": {
+      "all": "All",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "pagination": {
+      "showingPage": "Page {{page}} of {{totalPages}} — {{total}} items",
+      "first": "First",
+      "prev": "Prev",
+      "next": "Next",
+      "last": "Last"
+    },
+    "pageSize": "Page size",
+    "status": {
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Pending": "Pending"
+    },
+    "narrative": "Narrative",
+    "noNarrative": "No narrative provided",
+    "metrics_narrative": "Metrics",
+    "attachments": "Attachments",
+    "attachments_download": {
+      "download": "Download"
+    },
+    "adminComment": "Admin comment",
+    "resubmissionDeadline": "Resubmission deadline",
+    "adminComment_placeholder": {
+      "placeholder": "Add an internal comment (optional)"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject"
+    },
+    "action": {
+      "updatedTo": "Updated to {{status}}",
+      "failed": "Action failed"
+    },
+    "noReports1": "No reports to show",
+    "noReports2": "No reports available",
+    "noReports3": "No reports",
+    "noReports4": "No reports found",
+    "noReports5": "No reports found.",
+    "footer": {
+      "systemName": "SGMS"
+    },
+    "status2": {
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Pending": "Pending"
+    },
+    "review": {
+      "title": "Review reports",
+      "subtitle": "Approve or reject submitted reports"
+    },
+    "master": {
+      "title": "Master report",
+      "subtitle2": "Aggregate and export master reports",
+      "loadButton": "Load report",
+      "loadFirstAlert": "Please load a master report first",
+      "exportPDF": "Export (PDF)",
+      "exportCSV": "Export (CSV)",
+      "groupLabel": "Group",
+      "groupIdLabel": "Group ID",
+      "groupIdPlaceholder": "Enter group id (optional)",
+      "narratives": "Narratives",
+      "narrativesTitle": "Narratives",
+      "noData": "No master report loaded",
+      "noGoals": "No goals available",
+      "noReports": "No reports available for this activity",
+      "targetLabel": "Target",
+      "targetText": "Target",
+      "done": "Done",
+      "open": "Open",
+      "subtitle": "View aggregated goals, tasks and activity data",
+      "generatedAt": "Generated at {{date}}",
+      "granularityLabel": "Granularity",
+      "granularities": {
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "annual": "Annual"
+      },
+      "periodColumns": "{{count}} period(s) — {{granularity}}"
+    },
+    "table": {
+      "title": "Title",
+      "weight": "Weight",
+      "metric": "Metric",
+      "target": "Target",
+      "type": "Type",
+      "goal": "Goal",
+      "task": "Task",
+      "activity": "Activity",
+      "titleFull": "Full data table",
+      "noData": "No data available"
+    },
+    "metrics": {
+      "empty": "—",
+      "invalid": "Invalid metrics"
     },
     "errors": {
-      "loadError": "Failed to load settings",
-      "updateError": "Failed to update settings",
-      "passwordTooShort": "Password must be at least 8 characters long"
+      "loadReports": "Failed to load reports",
+      "attachments": "Failed to load attachments",
+      "downloadFailed": "Download failed"
     }
   },
   "admin": {
-    "title": "Admin Dashboard",
-    "header": "Administration Panel",
-    "mobileMenu": {
-      "toggle": "Toggle menu"
-    },
-    "tabs": {
-      "users": "Users",
-      "roles": "Roles",
-      "settings": "Settings",
-      "auditLog": "Audit Log",
-      "switchTo": "Switch to {tab} tab"
-    },
-    "sidebar": {
-      "appName": "Admin Panel",
-      "logoAlt": "Company Logo",
-      "menu": {
-        "dashboard": "Dashboard",
-        "settings": "Settings",
-        "admin": "Admin"
-      },
-      "logout": "Logout",
-      "closeMenu": "Close menu",
-      "openMenu": "Open menu"
-    },
+    "na": "—",
     "actions": {
+      "tryAgain": "Try again",
+      "saveChanges": "Save changes",
       "cancel": "Cancel",
-      "saveChanges": "Save Changes",
-      "create": "Create",
-      "delete": "Delete",
-      "tryAgain": "Try Again"
-    },
-    "users": {
-      "addUser": "Add User",
-      "edit": "Edit",
-      "delete": "Delete",
-      "editUser": "Edit user {name}",
-      "deleteUser": "Delete user {name}",
-      "editUserTitle": "Edit User",
-      "createUserTitle": "Create User",
-      "noUsers": "No users found",
-      "notAvailable": "N/A",
-      "role": "Role",
-      "changeStatus": "Change status",
-      "statusChanged": "Status for {name} changed to {status}",
-      "status": {
-        "active": "Active",
-        "inactive": "Inactive",
-        "pending": "Pending"
-      },
-      "tableHeaders": {
-        "username": "Username",
-        "name": "Name",
-        "role": "Role",
-        "status": "Status",
-        "actions": "Actions"
-      },
-      "form": {
-        "username": "Username",
-        "usernamePlaceholder": "Enter username",
-        "name": "Full Name",
-        "namePlaceholder": "Enter full name",
-        "password": "Password",
-        "newPassword": "New Password",
-        "passwordPlaceholder": "Enter password",
-        "role": "Role",
-        "selectRole": "Select a role"
-      },
-      "deleteConfirm": {
-        "title": "Confirm Deletion",
-        "message": "Are you sure you want to delete user {name}? This action cannot be undone."
-      },
-      "toasts": {
-        "createSuccess": "User {name} created successfully!",
-        "updateSuccess": "User {name} updated successfully!",
-        "deleteSuccess": "User {name} deleted successfully!"
-      },
-      "errors": {
-        "loadFailed": "Failed to load users: {error}",
-        "saveFailed": "Failed to save user: {error}",
-        "deleteFailed": "Failed to delete user: {error}",
-        "passwordTooShort": "Password must be at least 8 characters long"
-      }
+      "processing": "Processing...",
+      "deleting": "Deleting"
     },
     "roles": {
-      "title": "Roles Management",
+      "title": "Roles & Permissions",
+      "subtitle": "Define roles and granular permissions for users and groups.",
+      "loading": "Loading roles and permissions…",
       "rolesList": "Roles",
-      "permissions": "Permissions",
+      "addRole": "Add role",
+      "roleNamePlaceholder": "Enter role name and press Enter",
+      "roleNameAria": "Role name",
+      "noRoles": "No roles available.",
+      "noPermissions": "No permissions available.",
+      "roleName": "Role name",
+      "createdAt": "Created",
+      "updatedAt": "Updated",
       "permission": "Permission",
-      "roleName": "Role Name",
-      "roleNamePlaceholder": "Enter role name",
-      "description": "Description",
-      "descriptionPlaceholder": "Enter description",
-      "optional": "optional",
-      "noRoles": "No roles available",
-      "noPermissions": "No permissions available",
-      "addRole": "Add Role",
-      "editRoleTitle": "Edit Role",
-      "createRoleTitle": "Create Role",
-      "editRole": "Edit {name}",
-      "deleteRole": "Delete {name}",
+      "permissions": "Permissions",
       "enabled": "enabled",
       "disabled": "disabled",
-      "permissionStatus": "{permission} permission for {role} is {status}",
-      "loading": "Loading roles...",
+      "permissionStatus": "Permission {{permission}} for role {{role}} is {{status}}",
+      "editingRole": "Edit Permissions",
+      "deleteRole": "Delete role",
       "deleteConfirm": {
-        "title": "Delete Role Confirmation",
-        "message": "Are you sure you want to delete the role '{name}'?"
+        "message": "Are you sure you want to delete the role \"{{name}}\"?"
       },
+      "deleteDisabled": "This role cannot be deleted",
       "toasts": {
-        "createSuccess": "Role '{name}' created successfully",
-        "updateSuccess": "Role '{name}' updated successfully",
-        "deleteSuccess": "Role '{name}' deleted successfully"
+        "createSuccess": "Role \"{{name}}\" created",
+        "updateSuccess": "Permissions updated",
+        "deleteSuccess": "Role \"{{name}}\" deleted"
       },
       "errors": {
-        "title": "Error Loading Roles",
-        "loadError": "Failed to load roles data",
-        "saveError": "Failed to save role: {error}",
-        "deleteError": "Failed to delete role: {error}"
+        "loadError": "Failed to load roles or permissions",
+        "title": "Unable to load roles",
+        "saveError": "Failed to save changes{{#if error}}: {{error}}{{/if}}",
+        "deleteError": "Failed to delete role{{#if error}}: {{error}}{{/if}}"
+      },
+      "roleActions": {
+        "add": "Create role",
+        "remove": "Remove role"
+      },
+      "aria": {
+        "permissionToggle": "Toggle permission for role"
+      },
+      "placeholders": {
+        "search": "Search roles..."
       }
     },
-    "settings": {
-      "title": "Settings",
-      "loading": "Loading settings...",
-      "saveButton": "Save Settings",
-      "saveSuccess": "Settings saved successfully",
-      "connectionTesting": "Testing email server connection...",
-      "connectionSuccess": "Email server connection successful",
-      "reportingPeriod": {
-        "title": "Reporting Period Settings",
-        "monthlyDueDate": "Monthly Report Due Date",
-        "fiscalYearStart": "Fiscal Year Start Month"
-      },
-      "emailServer": {
-        "title": "Email Server Configuration",
-        "smtpHost": "SMTP Host",
-        "smtpHostPlaceholder": "e.g., smtp.example.com",
-        "port": "Port",
-        "portPlaceholder": "e.g., 587",
-        "username": "Username",
-        "usernamePlaceholder": "SMTP username",
-        "password": "Password",
-        "passwordPlaceholder": "SMTP password",
-        "testConnection": "Test Connection"
-      },
-      "fileUpload": {
-        "title": "File Upload Settings",
-        "maxFileSize": "Maximum File Size (MB)",
-        "maxFileSizePlaceholder": "e.g., 10",
-        "allowedFileTypes": "Allowed File Types",
-        "allowedFileTypesPlaceholder": "e.g., .pdf,.doc,.docx,.xls,.xlsx"
-      },
-      "notifications": {
-        "title": "Notification Settings",
-        "reportDue": "Notify users when reports are due",
-        "onSubmission": "Notify administrators on report submission",
-        "weeklySummary": "Send weekly summary emails"
-      },
-      "emailTemplates": {
-        "title": "Email Templates",
-        "placeholder": "Enter your email template here...",
-        "default": "Default email template content..."
-      },
-      "errors": {
-        "loadError": "Failed to load settings",
-        "updateError": "Failed to update settings",
-        "missingEmailDetails": "Please fill in all email server details",
-        "connectionFailed": "Failed to connect to email server"
-      },
-      "toasts": {
-        "updateSuccess": "Settings updated successfully"
-      }
+    "actions2": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "close": "Close",
+      "cancel": "Cancel",
+      "processing": "Processing...",
+      "saveChanges": "Save changes",
+      "create": "Create",
+      "deleting": "Deleting..."
     },
-    "auditLog": {
-      "title": "Audit Log",
-      "exportButton": "Export CSV",
-      "searchPlaceholder": "Search logs...",
-      "searchLabel": "Search audit logs",
-      "fromDate": "From:",
-      "toDate": "To:",
-      "applyFilters": "Apply Filters",
-      "noEntries": "No audit log entries found",
-      "tableHeaders": {
-        "timestamp": "Timestamp",
+    "users": {
+      "title": "Users",
+      "subtitle": "Create, edit and manage application users and their roles.",
+      "addUser": "Add user",
+      "noUsers": "No users",
+      "noUsersDescription": "There are no users yet. Create one to get started.",
+      "table": {
         "user": "User",
-        "entity": "Entity",
-        "action": "Action",
-        "details": "Details"
+        "role": "Role",
+        "actions": "Actions"
       },
-      "actions": {
-        "submitted": "Submitted",
-        "created": "Created",
-        "updated": "Updated",
-        "deleted": "Deleted",
-        "approved": "Approved",
-        "rejected": "Rejected"
+      "noRole": "Unassigned",
+      "editUserTitle": "Edit user",
+      "createUserTitle": "Create user",
+      "form": {
+        "picture": "Profile picture",
+        "upload": "Upload",
+        "remove": "Remove",
+        "pictureHint": "You can upload an image or leave blank.",
+        "username": "Username",
+        "usernamePlaceholder": "Enter username",
+        "name": "Full name",
+        "namePlaceholder": "Enter full name",
+        "password": "Password",
+        "newPassword": "New password (leave blank to keep current)",
+        "passwordPlaceholder": "Enter password",
+        "role": "Role",
+        "selectRole": "Select role"
       },
-      "mockUsers": {
-        "alice": "Alice Johnson",
-        "john": "John Smith",
-        "emma": "Emma Davis",
-        "michael": "Michael Brown"
+      "deleteConfirm": {
+        "title": "Delete user",
+        "message": "Are you sure you want to delete {{name}}?"
       },
-      "mockDetails": {
-        "projectSubmitted": "Submitted new project proposal",
-        "reportCreated": "Generated monthly financial report",
-        "userUpdated": "Updated user permissions",
-        "settingsChanged": "Modified system settings"
+      "toasts": {
+        "createSuccess": "User \"{{name}}\" created",
+        "updateSuccess": "User \"{{name}}\" updated",
+        "deleteSuccess": "User \"{{name}}\" deleted"
       },
-      "toast": {
-        "filtersApplied": "Filters applied successfully",
-        "exportSuccess": "Audit log exported successfully"
+      "errors": {
+        "loadFailed": "Failed to load users: {{error}}",
+        "invalidImage": "Selected file is not an image",
+        "imageTooLarge": "Image is too large (max 5 MB)",
+        "usernameRequired": "Username is required",
+        "nameRequired": "Full name is required",
+        "passwordRequired": "Password is required for new users",
+        "passwordTooShort": "Password must be at least 8 characters",
+        "roleRequired": "Please select a role",
+        "formValidation": "Please fix the form errors",
+        "pictureUploadFailed": "Failed to upload profile picture",
+        "saveFailed": "Failed to save user: {{error}}",
+        "deleteFailed": "Failed to delete user: {{error}}"
+      },
+      "placeholders": {
+        "search": "Search users..."
       }
     }
   },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage application-wide preferences, appearance and integrations.",
+    "loading": "Loading settings…",
+    "profilePicture": "Profile picture",
+    "chooseImage": "Choose image",
+    "pictureHint": "Square image works best (max 5 MB)",
+    "uploading": "Uploading...",
+    "upload": "Upload",
+    "personalInfo": "Personal info",
+    "username": "Username",
+    "usernameHelp": "Username is not editable",
+    "name": "Full name",
+    "namePlaceholder": "Your display name",
+    "appearance": "Appearance",
+    "language": "Language",
+    "changePassword": "Change password",
+    "oldPassword": "Old password",
+    "newPassword": "New password",
+    "passwordPlaceholder": "••••••••",
+    "passwordRequirements": "Minimum 8 characters.",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "toasts": {
+      "pictureSuccess": "Profile picture updated",
+      "updateSuccess": "Settings updated"
+    },
+    "errors": {
+      "loadError": "Failed to load settings",
+      "invalidImage": "Invalid image file",
+      "imageTooLarge": "Image is too large (max 5 MB)",
+      "uploadError": "Failed to upload profile picture",
+      "oldPasswordRequired": "Old password is required to change your password",
+      "passwordTooShort": "Password must be at least 8 characters"
+    }
+  },
   "sidebar": {
-    "appName": "Admin Panel",
-    "logoAlt": "Company Logo",
     "menu": {
       "dashboard": "Dashboard",
       "settings": "Settings",
-      "admin": "Admin"
+      "systemSettings": "System Settings",
+      "audit": "Audit Logs",
+      "accessManagement": "Access Management",
+      "reports": "Reports",
+      "projectManagement": "Project Management",
+      "attachments": "Attachments",
+      "notification": "Notifications"
     },
-    "logout": "Logout",
-    "closeMenu": "Close menu",
-    "openMenu": "Open menu"
+    "logoAlt": "Company logo",
+    "appName": "SGMS",
+    "profileAlt": "User profile picture",
+    "logout": "Log out",
+    "openMenu": "Open sidebar menu",
+    "closeMenu": "Close sidebar menu"
+  },
+  "systemSettings": {
+    "title": "System settings",
+    "subtitle": "Configure system behavior, integrations, backups and environment options.",
+    "allowedAttachmentTypes": {
+      "label": "Allowed attachment types",
+      "help": "Specify which MIME types are allowed for file uploads."
+    },
+    "current": "Current value",
+    "auditRetention": {
+      "label": "Audit retention (days)",
+      "help": "Number of days to retain audit logs. Set to 0 to retain indefinitely.",
+      "placeholder": "0"
+    },
+    "maxAttachmentSize": {
+      "label": "Max attachment size (MB)",
+      "help": "Maximum allowed file size for attachments in megabytes. Set to 0 to disable limit.",
+      "placeholder": "0"
+    },
+    "reporting": {
+      "label": "Reporting",
+      "help": "Enable or disable reporting features in the system."
+    },
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "saving": "Saving…",
+    "saveButton": "Save settings",
+    "saveButtonAria": "Save system settings",
+    "messages": {
+      "failedLoad": "Failed to load system settings",
+      "noChanges": "No changes to save",
+      "saved": "Settings saved",
+      "failedSave": "Failed to save settings"
+    },
+    "description": "Configure global system settings such as allowed attachments, audit retention and reporting."
+  },
+  "project": {
+    "title": "Project Manager",
+    "subtitle": "Organize goals, tasks and activities",
+    "na": "—",
+    "searchPlaceholder": "Search goals...",
+    "searchAria": "Search goals",
+    "unassigned": "Unassigned",
+    "none": "— No change —",
+
+    "actions": {
+      "refresh": "Refresh",
+      "addGoal": "Add Goal",
+      "addTask": "Add Task",
+      "addActivity": "Add Activity",
+      "edit": "Edit",
+      "delete": "Delete",
+      "toggleGoal": "Toggle goal",
+      "toggleTask": "Toggle task",
+      "remove": "Remove",
+      "removeShort": "X",
+      "addMetric": "Add Metric",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "submit": "Submit",
+      "mobileMenu": "Open menu",
+      "open": "Open",
+      "close": "Close",
+      "submitReport": "Submit Report"
+    },
+
+    "fields": {
+      "group": "Group",
+      "weight": "Weight",
+      "due": "Due",
+      "dueDate": "Due date",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "title": "Title",
+      "description": "Description",
+      "progress": "Progress",
+      "assignGroup": "Assign to group",
+      "narrative": "Narrative",
+      "newStatus": "New status",
+      "status": "Status"
+    },
+
+    "sections": {
+      "tasks": "Tasks",
+      "activities": "Activities"
+    },
+
+    "labels": {
+      "targetMetrics": "Target Metrics",
+      "activity": "Activity",
+      "metrics": "Target / Metrics",
+      "attachments": "Attachments"
+    },
+
+    "placeholders": {
+      "metricKey": "Key",
+      "metricValue": "Value"
+    },
+
+    "hints": {
+      "taskWeight": "Task total: {{taskWeight}}. Used by other activities: {{used}}. Available: {{available}}.",
+      "goalWeight": "Goal total: {{goalWeight}}. Used by other tasks: {{used}}. Available: {{available}}.",
+      "systemWeight": "System weight used: {{used}}, available: {{available}}",
+      "metrics": "Add metrics as key/value pairs.",
+      "attachments": "Max files: server-side limit applies."
+    },
+
+    "empty": {
+      "noGoals": "No goals found. Create your first goal.",
+      "noMatch": "No goals match your search.",
+      "noTasks": "No tasks for this goal.",
+      "noActivities": "No activities for this task."
+    },
+
+    "errors": {
+      "loadGoals": "Failed to load goals.",
+      "loadTasks": "Failed to load tasks.",
+      "loadActivities": "Failed to load activities.",
+      "createGoal": "Failed to create goal.",
+      "updateGoal": "Failed to update goal.",
+      "deleteGoal": "Failed to delete goal.",
+      "createTask": "Failed to create task.",
+      "updateTask": "Failed to update task.",
+      "deleteTask": "Failed to delete task.",
+      "createActivity": "Failed to create activity.",
+      "updateActivity": "Failed to update activity.",
+      "deleteActivity": "Failed to delete activity.",
+      "submitReport": "Failed to submit report.",
+      "missingGoalId": "Missing goal id.",
+      "weightNonNegative": "Weight must be greater than or equal to 0.",
+      "weightExceeds": "Cannot set weight to {{newWeight}}. Goal total is {{goalWeight}} and {{used}} is already used. Available: {{available}}.",
+      "missingTaskId": "Missing task id.",
+      "weightExceedsTask": "Cannot set weight to {{newWeight}}. Task total is {{taskWeight}} and {{used}} is already used. Available: {{available}}.",
+      "modalSubmit": "Failed to submit modal form.",
+      "metricKeyMissing": "Metric keys cannot be empty when a value is provided."
+    },
+
+    "toasts": {
+      "goalCreated": "Goal created",
+      "goalUpdated": "Goal updated",
+      "goalDeleted": "Goal deleted",
+      "taskCreated": "Task created",
+      "taskUpdated": "Task updated",
+      "taskDeleted": "Task deleted",
+      "activityCreated": "Activity created",
+      "activityUpdated": "Activity updated",
+      "activityDeleted": "Activity deleted",
+      "reportSubmitted": "Report submitted"
+    },
+
+    "modal": {
+      "createGoal": "Create Goal",
+      "editGoal": "Edit Goal",
+      "createTask": "Create Task",
+      "editTask": "Edit Task",
+      "createActivity": "Create Activity",
+      "editActivity": "Edit Activity",
+      "submitReport": "Submit Report"
+    },
+
+    "pagination": {
+      "showing": "Showing {{from}} - {{to}} of {{total}}",
+      "perPage": "{{n}} per page",
+      "prev": "Previous",
+      "next": "Next"
+    },
+
+    "inspector": {
+      "title": "Inspector",
+      "empty": "Select a goal to see details"
+    },
+
+    "status": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "open": "Open"
+    },
+
+    "labelsSmall": {
+      "activity": "Activity"
+    },
+    "confirm": {
+      "deleteGoal": "Are you sure you want to delete this goal? All related tasks will be removed and this action cannot be undone.",
+      "deleteTask": "Are you sure you want to delete the selected tasks? This action cannot be undone.",
+      "deleteActivity": "Are you sure you want to delete this activity? This action cannot be undone."
+    }
+  },
+  "login": {
+    "company_logo_alt": "Company logo",
+    "title": "Welcome back",
+    "subtitle": "Urban Development and Construction Berue",
+    "form_title": "Log in to your account",
+    "username_label": "Username",
+    "username_placeholder": "Enter your Username",
+    "password_label": "Password",
+    "password_placeholder": "Enter your password",
+    "show_password": "Show password",
+    "hide_password": "Hide password",
+    "password_too_short": "Password must be at least 8 characters",
+    "error_default": "Unable to sign in. Please check your credentials and try again.",
+    "logging_in": "Logging in...",
+    "button_signin": "Log in"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of goals, tasks, reports and recent activity.",
+    "aria": {
+      "refresh": "Refresh dashboard",
+      "loading": "Loading dashboard",
+      "loaded": "Dashboard loaded"
+    },
+    "refresh": "Refresh",
+    "failedLoadPrefix": "Failed to load: ",
+    "errors": {
+      "summary": "summary",
+      "groupCharts": "group charts",
+      "taskCharts": "task charts",
+      "reports": "reports distribution",
+      "overdue": "overdue tasks",
+      "notifications": "notifications",
+      "audit": "audit logs"
+    },
+    "cards": {
+      "goals": {
+        "title": "Goals",
+        "aria": "Open goals",
+        "fromLast": "from last period",
+        "noComparison": "Overall Goal progress"
+      },
+      "tasks": {
+        "title": "Tasks",
+        "aria": "Open tasks",
+        "subtitle": "Overall Task progress"
+      },
+      "activities": {
+        "title": "Activities",
+        "aria": "Open activities",
+        "subtitle": "Overall Activity progress"
+      },
+      "pendingReports": {
+        "title": "Pending reports",
+        "aria": "Open pending reports",
+        "subtitle": "Reports awaiting review"
+      }
+    },
+    "groupProgress": "Group progress",
+    "topTasks": "Top tasks",
+    "reportsDistribution1": "Reports distribution",
+    "reportsDistribution": {
+      "aria": "Open reports"
+    },
+    "overdueTitle": "Overdue tasks",
+    "tasks": "tasks",
+    "open": "Open",
+    "noOverdue": "No overdue tasks",
+    "table": {
+      "task": "Task",
+      "due": "Due",
+      "daysOverdue": "Days overdue",
+      "assignee": "Assignee",
+      "goal": "Goal",
+      "group": "Group",
+      "link": "Link"
+    },
+    "noNotifications": "No notifications",
+    "notifications": {
+      "title": "Notifications",
+      "marking": "Marking...",
+      "markAll": "Mark all as read"
+    },
+    "audit": {
+      "title": "Audit log",
+      "noPermission": "You do not have permission to view audit logs.",
+      "noLogs": "No audit logs found"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "View and manage alerts, messages and system notices — mark as read, filter, and take action on important items.",
+    "unreadCount": "{{count}} unread",
+    "markAll": "Mark all as read",
+    "filter": {
+      "label": "Filter:",
+      "all": "All",
+      "unread": "Unread",
+      "read": "Read"
+    },
+    "loading": "Loading notifications…",
+    "noNotifications": "No notifications to display",
+    "markAsRead": "Mark as read",
+    "loadMore": "Load more",
+    "loadingMore": "Loading more…",
+    "errors": {
+      "loadFailed": "Failed to load notifications",
+      "markReadFailed": "Failed to mark notification as read",
+      "markAllFailed": "Failed to mark all notifications as read"
+    },
+    "aria": {
+      "title": "Notifications page",
+      "filter": "Notification filter",
+      "markAll": "Mark all notifications as read",
+      "loadMore": "Load more notifications"
+    },
+    "meta": {
+      "unreadSingular": "{{count}} unread",
+      "unreadPlural": "{{count}} unread"
+    },
+    "timestamps": {
+      "formatted": "{{date}}"
+    }
+  },
+  "notificationsPreview": {
+    "recentAria": "Recent notifications",
+    "title": "Notifications",
+    "label": "Notifications",
+    "unreadCount": "{{count}} unread",
+    "noNotifications": "No notifications",
+    "mark": "Mark",
+    "open": "Open",
+    "viewAll": "View all",
+    "refresh": "Refresh"
   }
 }

@@ -1,0 +1,49 @@
+-- DELETE only Activity snapshots (recommended)
+BEGIN;
+-- make a backup first!
+DELETE FROM "ProgressHistory"
+ WHERE entity_type = 'Activity';
+COMMIT;
+
+
+-- TRUNCATE entire table (LOSES ALL rows and resets sequence)
+BEGIN;
+TRUNCATE TABLE "ProgressHistory" RESTART IDENTITY CASCADE;
+COMMIT;
+
+-- Drop existing objects (dev only)
+DROP TABLE IF EXISTS "Attachments" CASCADE;
+DROP TABLE IF EXISTS "Reports" CASCADE;
+DROP TABLE IF EXISTS "SystemSettings" CASCADE;
+DROP TABLE IF EXISTS "Activities" CASCADE;
+DROP TABLE IF EXISTS "Tasks" CASCADE;
+DROP TABLE IF EXISTS "Goals" CASCADE;
+DROP TABLE IF EXISTS "UserGroups" CASCADE;
+DROP TABLE IF EXISTS "RolePermissions" CASCADE;
+DROP TABLE IF EXISTS "Users" CASCADE;
+DROP TABLE IF EXISTS "Permissions" CASCADE;
+DROP TABLE IF EXISTS "Roles" CASCADE;
+DROP TABLE IF EXISTS "Groups" CASCADE;
+DROP TABLE IF EXISTS "Notifications" CASCADE;
+DROP TABLE IF EXISTS "AuditLogs" CASCADE;
+DROP TABLE IF EXISTS "ProgressHistory" CASCADE;
+DROP TABLE IF EXISTS "RefreshTokens" CASCADE;
+
+DROP SEQUENCE IF EXISTS goals_rollno_seq CASCADE;
+
+DROP TYPE IF EXISTS goal_status CASCADE;
+DROP TYPE IF EXISTS task_status CASCADE;
+DROP TYPE IF EXISTS activity_status CASCADE;
+DROP TYPE IF EXISTS report_status CASCADE;
+
+psql "postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$PGDATABASE?sslmode=require" -v ON_ERROR_STOP=1 <<'SQL'
+BEGIN;
+-- Drop everything in the default public schema
+DROP SCHEMA public CASCADE;
+-- Recreate schema and give privileges back to the connecting user and public
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO PUBLIC;
+-- Optionally set owner to your user (replace your_user if needed)
+ALTER SCHEMA public OWNER TO current_user;
+COMMIT;
+SQL
