@@ -1,4 +1,3 @@
-// src/pages/DashboardPage.jsx
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -59,7 +58,7 @@ const Modal = ({ open, onClose, children, title }) => {
 };
 
 /* Card: now clickable and keyboard accessible */
-const Card = ({ title, children, onClick, className = "", ariaLabel }) => {
+const Card = ({ title, children, onClick, className = "", ariaLabel, headerActions }) => {
   const clickable = Boolean(onClick);
   return (
     <div
@@ -76,7 +75,10 @@ const Card = ({ title, children, onClick, className = "", ariaLabel }) => {
       aria-label={ariaLabel || title}
       className={`text-left p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm transition-transform transform ${clickable ? "hover:shadow-md hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400" : ""} ${className}`}
     >
-      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-2">{title}</div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{title}</div>
+        {headerActions}
+      </div>
       <div>{children}</div>
     </div>
   );
@@ -95,39 +97,108 @@ function formatDate(d) {
    Charts (group, task, pie)
    --------------------------- */
 
-const GroupBarChart = ({ data = [], height = 120, limit = null }) => {
+// Updated GroupBarChart: bars are intentionally thin (configurable) and centered when a single bar
+const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 28, gap = 12 }) => {
   if (!Array.isArray(data) || data.length === 0) {
     return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
   }
+
   const display = limit ? data.slice(0, limit) : data;
   const values = display.map((d) => Number(d.value ?? d.progress ?? 0));
   const max = Math.max(1, ...values);
-  const barWidth = Math.max(28, Math.floor(320 / Math.max(1, display.length)) - 2);
-  const svgWidth = Math.max(display.length * barWidth, 240);
+
+  const itemCount = display.length;
+  const barW = thinWidth;
+  const spacing = barW + gap;
+  const padding = Math.max(8, Math.floor(gap / 2));
+  const svgWidth = Math.max(itemCount * spacing + padding * 2, 240);
+
+  // If there's only one bar, center it horizontally.
+  const singleOffset = itemCount === 1 ? Math.floor((svgWidth - barW) / 2) : padding;
+
   return (
     <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${svgWidth} ${height + 40}`} className="w-full h-[200px]" preserveAspectRatio="xMidYMid meet" role="img">
-        <line x1="0" y1={height} x2={svgWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="1" />
+      <svg 
+        viewBox={`0 0 ${svgWidth} ${height + 50}`} 
+        className="w-full h-[200px]" 
+        preserveAspectRatio="xMidYMid meet" 
+        role="img"
+      >
+        <line 
+          x1="0" 
+          y1={height} 
+          x2={svgWidth} 
+          y2={height} 
+          stroke="#E5E7EB" 
+          className="dark:stroke-gray-700" 
+          strokeWidth="1" 
+        />
         {display.map((d, i) => {
           const val = Number(d.value ?? d.progress ?? 0);
           const barH = Math.max(2, (val / max) * (height - 16));
-          const x = i * barWidth + Math.floor(barWidth * 0.12);
-          const w = Math.floor(barWidth * 0.76);
+          const x = singleOffset + i * spacing;
+          const w = barW;
           const y = height - barH;
           const color = d.color || `hsl(${(i * 45) % 360}, 70%, 50%)`;
           const label = d.name ?? d.label ?? `#${i + 1}`;
+
+          // Calculate available width for text (bar width + gap)
+          const availableTextWidth = barW + gap - 4; // -4 for small margin
+          
+          // Estimate character width (approximate for monospace)
+          const charWidth = 6;
+          const maxChars = Math.floor(availableTextWidth / charWidth);
+          
+          let displayLabel = label;
+          if (label.length > maxChars) {
+            displayLabel = label.slice(0, Math.max(3, maxChars - 1)) + '…';
+          }
+
           return (
             <g key={i} transform={`translate(${x},0)`}>
               <rect x={0} y={y} width={w} height={barH} rx="6" fill={color} />
-              <text x={w / 2} y={height + 14} fontSize="11" textAnchor="middle" fill="#6B7280" className="text-xs dark:fill-gray-400" style={{ whiteSpace: "nowrap" }}>
-                {label.length > 12 ? `${label.slice(0, 11)}…` : label}
+              
+              {/* Label text */}
+              <text 
+                x={w / 2} 
+                y={height + 20} 
+                fontSize="11" 
+                textAnchor="middle" 
+                fill="#6B7280" 
+                className="dark:fill-gray-400"
+                style={{ 
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  fontWeight: 400,
+                  letterSpacing: '0.025em'
+                }}
+              >
+                {displayLabel}
               </text>
+              
+              {/* Optional: Value label above bar */}
+              {val > 0 && (
+                <text 
+                  x={w / 2} 
+                  y={y - 5} 
+                  fontSize="10" 
+                  textAnchor="middle" 
+                  fill={color}
+                  style={{ 
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    fontWeight: 600
+                  }}
+                >
+                  {val}
+                </text>
+              )}
             </g>
           );
         })}
       </svg>
       {limit && data.length > limit && (
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">+{data.length - limit} more</div>
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+          +{data.length - limit} more
+        </div>
       )}
     </div>
   );
@@ -148,7 +219,9 @@ const GroupHorizontalModalView = ({ data = [] }) => {
               <div className="w-12 h-32 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end">
                 <div style={{ height: `${Math.max(6, (pct / 100) * 100)}%`, background: color }} className="w-full transition-all" />
               </div>
-              <div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 truncate max-w-[88px]">{g.name}</div>
+              <div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 break-words max-w-[120px] min-h-[2.5rem] flex items-center justify-center">
+                {g.name}
+              </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{val}%</div>
             </div>
           );
@@ -186,16 +259,87 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
   );
 };
 
+// Paste over your existing PieChart
 const PieChart = ({ slices = [], size = 220 }) => {
-  if (!slices || !slices.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No data</div>;
-  const total = slices.reduce((s, x) => s + Number(x.value ?? x.count ?? 0), 0) || 1;
+  const items = Array.isArray(slices) ? slices : [];
+  const total = items.reduce((s, x) => s + Number(x.value ?? x.count ?? 0), 0);
+
+  // Helper: map label/status -> color
+  const getColorFor = (s, i) => {
+    // allow input to provide its own color first
+    if (s.color) return s.color;
+    const key = (s.label ?? s.status ?? s.name ?? "").toString().toLowerCase().trim();
+
+    // explicit mapping for common report statuses
+    if (key.includes("approve") || key.includes("approved") || key === "approved") return "#10B981"; // green (emerald-500)
+    if (key.includes("reject") || key.includes("rejected") || key === "rejected") return "#EF4444"; // red (red-500)
+    if (key.includes("pending") || key === "pending") return "#F59E0B"; // amber (amber-500)
+
+    // fallback: deterministic HSL so colors are pleasant
+    return `hsl(${(i * 70) % 360}, 70%, 60%)`;
+  };
+
+  // No data -> show "No report"
+  if (total === 0) {
+    return (
+      <div className="flex items-center justify-center h-40">
+        <div className="text-sm text-gray-500 dark:text-gray-400">No report</div>
+      </div>
+    );
+  }
+
+  // non-zero slices
+  const nonZero = items.filter((x) => Number(x.value ?? x.count ?? 0) > 0);
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = Math.min(60, size / 2 - 8);
+  const innerR = Math.max(4, r - 18);
+
+  // single non-zero slice -> full circle using mapped color
+  if (nonZero.length === 1) {
+    const s = nonZero[0];
+    const fill = getColorFor(s, items.indexOf(s));
+    return (
+      <div className="flex md:flex-col flex-row items-center gap-4">
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
+          <circle cx={cx} cy={cy} r={r} fill={fill} stroke="#fff" strokeWidth="1" className="dark:stroke-gray-800" />
+          <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800" />
+          <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold">
+            {total}
+          </text>
+        </svg>
+
+        <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
+            {items.map((it, i) => {
+              const val = Number(it.value ?? it.count ?? 0);
+              const pct = Math.round((val / total) * 100);
+              return (
+                <div key={i} className="flex items-center gap-3 text-sm">
+                  <span style={{ background: getColorFor(it, i) }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="truncate text-gray-700 dark:text-gray-300">{it.label}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 ml-2">({pct}%)</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // multi-slice pie
   let angle = 0;
-  const cx = size / 2, cy = size / 2, r = Math.min(60, size / 2 - 8);
   return (
     <div className="flex md:flex-col flex-row items-center gap-4">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
-        {slices.map((s, i) => {
-          const portion = Number(s.value ?? s.count ?? 0) / total;
+        {items.map((s, i) => {
+          const val = Number(s.value ?? s.count ?? 0);
+          const portion = val / total;
           const startAngle = angle;
           const endAngle = angle + portion * Math.PI * 2;
           angle = endAngle;
@@ -205,25 +349,40 @@ const PieChart = ({ slices = [], size = 220 }) => {
           const x2 = cx + r * Math.cos(endAngle);
           const y2 = cy + r * Math.sin(endAngle);
           const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-          return <path key={i} d={d} fill={s.color || `hsl(${(i * 70) % 360}, 70%, 60%)`} stroke="#fff" className="dark:stroke-gray-800" strokeWidth="1" />;
+          return (
+            <path
+              key={i}
+              d={d}
+              fill={getColorFor(s, i)}
+              stroke="#fff"
+              className="dark:stroke-gray-800"
+              strokeWidth="1"
+            />
+          );
         })}
-        <circle cx={cx} cy={cy} r={r - 18} fill="#fff" className="dark:fill-gray-800" />
-        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold">{total}</text>
+        <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800" />
+        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold">
+          {total}
+        </text>
       </svg>
 
       <div className="flex-1 min-w-0">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
-          {slices.map((s, i) => (
-            <div key={i} className="flex items-center gap-3 text-sm">
-              <span style={{ background: s.color || `hsl(${(i * 70) % 360}, 70%, 60%)` }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <div className="truncate text-gray-700 dark:text-gray-300">{s.label}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 ml-2">({Math.round(((s.value ?? s.count ?? 0) / total) * 100)}%)</div>
+          {items.map((it, i) => {
+            const val = Number(it.value ?? it.count ?? 0);
+            const pct = Math.round((val / total) * 100);
+            return (
+              <div key={i} className="flex items-center gap-3 text-sm">
+                <span style={{ background: getColorFor(it, i) }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <div className="truncate text-gray-700 dark:text-gray-300">{it.label}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 ml-2">({pct}%)</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -542,7 +701,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Top KPI cards (clickable) */}
         <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card title={t("dashboard.cards.goals.title")} onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}>
+          <Card title={t("dashboard.cards.goals.title")} onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}> 
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
@@ -583,7 +742,7 @@ export default function DashboardPage() {
             )}
           </Card>
 
-          <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports} ariaLabel={t("dashboard.cards.pendingReports.aria")}>
+          <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports} ariaLabel={t("dashboard.cards.pendingReports.aria")}> 
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
@@ -599,8 +758,16 @@ export default function DashboardPage() {
 
         {/* Charts: group (click opens modal), top tasks (click opens modal), reports pie (CLICKABLE CARD now navigates to /report) */}
         <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card title={t("dashboard.groupProgress")} onClick={() => setShowGroupModal(true)} className="p-4">
-            {loading ? <LoadingSkeleton className="h-28" /> : <GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} />}
+          {/* IMPORTANT: make the Card a column and push the chart to the bottom */}
+          <Card title={t("dashboard.groupProgress")} onClick={() => setShowGroupModal(true)} className="p-4 flex flex-col justify-between h-full">
+            {loading ? (
+              <LoadingSkeleton className="h-28" />
+            ) : (
+              // put chart in a container that grows and sits at the bottom
+              <div className="mt-3 ">
+                <GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} />
+              </div>
+            )}
           </Card>
 
           <Card title={t("dashboard.topTasks")} onClick={() => setShowTasksModal(true)} className="p-4">

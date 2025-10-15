@@ -95,7 +95,7 @@ function App() {
                 <Route
                   path="/notification"
                   element={
-                    <ProtectedRoute requiredPermission="manage_attachments">
+                    <ProtectedRoute requiredPermission="manage_notifications">
                       <NotificationsPanel />
                     </ProtectedRoute>
                   }
