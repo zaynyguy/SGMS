@@ -1,4 +1,10 @@
 {
+  "accessDenied": {
+    "title": "Access Denied",
+    "heading": "You don't have permission",
+    "message": "You don't have permission to view this page. If you believe this is a mistake, please contact your administrator or sign in with a different account.",
+    "button": "Go to Login Page"
+  },
   "access": {
     "title": "Access management",
     "subtitle": "Control who can access features and data across the organization.",
@@ -535,7 +541,7 @@
     "searchAria": "Search goals",
     "unassigned": "Unassigned",
     "none": "— No change —",
-    "loadingTasks":"Loading tasks",
+    "loadingTasks": "Loading tasks",
 
     "actions": {
       "refresh": "Refresh",
@@ -591,7 +597,7 @@
     "placeholders": {
       "metricKey": "Key",
       "metricValue": "Value",
-      "rollNo":"Roll Number"
+      "rollNo": "Roll Number"
     },
 
     "hints": {
@@ -600,7 +606,7 @@
       "systemWeight": "System weight used: {{used}}, available: {{available}}",
       "metrics": "Add metrics as key/value pairs.",
       "attachments": "Max files: server-side limit applies.",
-      "hint":"Optional. Positive integer. If left blank the system will auto-assign."
+      "hint": "Optional. Positive integer. If left blank the system will auto-assign."
     },
 
     "empty": {

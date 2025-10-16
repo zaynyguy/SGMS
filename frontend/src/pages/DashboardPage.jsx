@@ -98,7 +98,7 @@ function formatDate(d) {
    --------------------------- */
 
 // Updated GroupBarChart: bars are intentionally thin (configurable) and centered when a single bar
-const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 28, gap = 12 }) => {
+const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, gap = 12 }) => {
   if (!Array.isArray(data) || data.length === 0) {
     return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
   }

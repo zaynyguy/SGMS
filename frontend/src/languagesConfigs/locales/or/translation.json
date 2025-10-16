@@ -1,4 +1,10 @@
 {
+  "accessDenied": {
+    "title": "Argachuu Dhorkame",
+    "heading": "Hayyama hin qabdu",
+    "message": "Fuula kana ilaaluuf hayyama hin qabdu. Kun dogoggora ta'uu yoo amantan, maaloo bulchaa keessan qunnamaa ykn akkaawuntii adda ta'een galmaa'aa.",
+    "button": "Gara Fuula Galmee deemaa"
+  },
   "access": {
     "title": "Bulchiinsa qaqqabummaa",
     "subtitle": "Eenyu akka amaloota fi deetaa guutuu dhaabbatichaa keessatti argachuu danda'u to'achuu.",
@@ -538,7 +544,7 @@
     "searchAria": "Kaayyoowwan barbaacha",
     "unassigned": "Hin ramadamne",
     "none": "— Jijjiiramni hin jiru —",
-    "loadingTasks":"okutaho emirimo",
+    "loadingTasks": "okutaho emirimo",
 
     "actions": {
       "refresh": "Haaromsuu",
@@ -594,7 +600,7 @@
     "placeholders": {
       "metricKey": "Furtuu",
       "metricValue": "Gatii",
-      "rollNo":"Lakkoofsa Roolii"
+      "rollNo": "Lakkoofsa Roolii"
     },
 
     "hints": {
@@ -603,7 +609,7 @@
       "systemWeight": "Ulfaatina sirnaa fayyadame: {{used}}, argama: {{available}}",
       "metrics": "Meetirii akka lamaan furtuu/gatii itti dabali.",
       "attachments": "Faayilota guddaa: daangaa gama sarvarii ni hojjeta.",
-      "hint":"Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada."
+      "hint": "Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada."
     },
 
     "empty": {
