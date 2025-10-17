@@ -59,6 +59,13 @@
     "title": "የኦዲት መዝገብ",
     "subtitle": "የስርዓት ክስተቶች፣ ደህንነት እና የተጠቃሚ እንቅስቃሴ የዘመን ቅደም ተከተል መዝገብ ይመልከቱ።",
     "loadFailed": "የኦዲት ምዝግብ ማስታወሻዎችን መጫን አልተሳካም።",
+    "pageInfo": "ገጽ {{page}} የ{{totalPages}}", 
+"prev": "የቀደመው ገጽ", 
+"pageFooter": "{{showing}} ምዝግብ ማስታወሻዎች ላይ — ገጽ {{page}}/{{totalPages}} ({{total}} አጠቃላይ)", 
+"first": "የመጀመሪያ ገጽ", 
+"gotoPage": "ወደ ገጽ ሂድ", 
+"next": "ቀጣይ ገጽ", 
+"last": "የመጨረሻ ገጽ",
     "exportCsv": "CSV ወደ ውጪ ላክ",
     "csv": {
       "filename": "ኦዲት-ምዝግብ ማስታወሻዎች.csv"
@@ -69,7 +76,7 @@
     "searchPlaceholder": "በተጠቃሚ፣ አካል፣ ድርጊት ወይም ዝርዝሮች ይፈልጉ",
     "searchAria": "የኦዲት ምዝግብ ማስታወሻዎችን ይፈልጉ",
     "results": {
-      "showing": "ከ{{total}} ምዝግብ ማስታወሻዎች ውስጥ {{filtered}} በማሳየት ላይ"
+      "showing": "ከ{{total}} ውጤቶች {{start}}–{{end}} በማሳየት ላይ"
     },
     "loading": "በመጫን ላይ…",
     "filters": {

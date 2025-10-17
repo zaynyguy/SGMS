@@ -319,7 +319,7 @@ const AuditLogPage = ({ showToast }) => {
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 {total > 0
-                  ? t("audit.results.range", { start: startIndex, end: endIndex, total })
+                  ? t("audit.results.showing", { start: startIndex, end: endIndex, total })
                   : t("audit.results.none")}
               </p>
             </div>

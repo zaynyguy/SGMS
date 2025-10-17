@@ -59,6 +59,13 @@
     "title": "Galmee odiitii",
     "subtitle": "Galmee tartiiba yeroo taateewwan sirnaa, nageenyaa fi sochii fayyadamaa ilaali.",
     "loadFailed": "Galmeewwan odiitii fe'uu hin dandeenye",
+    "pageInfo": "Fuula {{page}} kan {{totalPages}}", 
+"prev": "Fuula Duraa", 
+"pageFooter": "Galmeewwan {{showing}} agarsiisaa jira — fuula {{page}}/{{totalPages}} ({{total}} waliigala)", 
+"first": "Fuula Tokkoffaa", 
+"gotoPage": "Gara Fuulaatti Deemi", 
+"next": "Fuula Itti Aanu", 
+"last": "Fuula Dhumaa",
     "exportCsv": "CSV erguu",
     "csv": {
       "filename": "odiitii-logs.csv"
@@ -69,7 +76,7 @@
     "searchPlaceholder": "Fayyadamaa, qaama, gocha ykn bal'inaan barbaadi",
     "searchAria": "Galmeewwan odiitii barbaadi",
     "results": {
-      "showing": "Agarsiisaa jira {{filtered}} kan {{total}} jirma(s)"
+      "showing": "{{start}}–{{end}} bu'aa {{total}} agarsiisa"
     },
     "loading": "Fe'amaa jira...",
     "filters": {

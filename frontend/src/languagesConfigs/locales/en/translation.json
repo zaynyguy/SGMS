@@ -59,6 +59,13 @@
     "title": "Audit log",
     "subtitle": "View a chronological record of system events, security and user activity.",
     "loadFailed": "Failed to load audit logs",
+    "pageInfo": "Page {{page}} of {{totalPages}}",
+    "prev": "Previous Page",
+    "pageFooter": "Showing {{showing}} logs — page {{page}}/{{totalPages}} ({{total}} total)",
+    "first": "First Page",
+    "gotoPage": "Go to Page",
+    "next": "Next Page",
+    "last": "Last Page",
     "exportCsv": "Export CSV",
     "csv": {
       "filename": "audit-logs.csv"
@@ -69,7 +76,7 @@
     "searchPlaceholder": "Search by user, entity, action or details",
     "searchAria": "Search audit logs",
     "results": {
-      "showing": "Showing {{filtered}} of {{total}} log(s)"
+      "showing": "Showing {{start}}–{{end}} of {{total}} results"
     },
     "loading": "Loading…",
     "filters": {
@@ -756,7 +763,7 @@
     },
     "overdueTitle": "Overdue tasks",
     "tasks": "tasks",
-    "open": "Open",
+    "openAll": "Open All",
     "noOverdue": "No overdue tasks",
     "table": {
       "task": "Task",

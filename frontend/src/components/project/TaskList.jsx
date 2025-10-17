@@ -135,44 +135,49 @@ export default function TaskList({
               <div className="flex items-center gap-2 whitespace-nowrap justify-between sm:justify-end">
                 <StatusBadge status={task.status} />
 
-                <div className="hidden sm:flex items-center gap-1">
-                  <button
-                    onClick={() => onEditTask && onEditTask(goal.id, task)}
-                    className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                    title={t("project.actions.edit") || "Edit task"}
-                    aria-label={(t("project.actions.edit") || "Edit") + (task.title ? `: ${task.title}` : "")}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
-                    className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                    title={t("project.actions.delete") || "Delete task"}
-                    aria-label={(t("project.actions.delete") || "Delete") + (task.title ? `: ${task.title}` : "")}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                {/* Desktop edit/delete - hidden if canManageGTA is falsy */}
+                {canManageGTA && (
+                  <div className="hidden sm:flex items-center gap-1">
+                    <button
+                      onClick={() => onEditTask && onEditTask(goal.id, task.id)}
+                      className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      title={t("project.actions.edit") || "Edit task"}
+                      aria-label={(t("project.actions.edit") || "Edit") + (task.title ? `: ${task.title}` : "")}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
+                      className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      title={t("project.actions.delete") || "Delete task"}
+                      aria-label={(t("project.actions.delete") || "Delete") + (task.title ? `: ${task.title}` : "")}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
 
-                {/* Mobile actions (compact) */}
-                <div className="inline-flex sm:hidden items-center gap-1">
-                  <button
-                    onClick={() => onEditTask && onEditTask(goal.id, task)}
-                    className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm"
-                    aria-label={t("project.actions.edit") || "Edit task"}
-                    title={t("project.actions.edit") || "Edit task"}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
-                    className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-red-600"
-                    aria-label={t("project.actions.delete") || "Delete task"}
-                    title={t("project.actions.delete") || "Delete task"}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                {/* Mobile actions (compact) - hidden if canManageGTA is falsy */}
+                {canManageGTA && (
+                  <div className="inline-flex sm:hidden items-center gap-1">
+                    <button
+                      onClick={() => onEditTask && onEditTask(goal.id, task)}
+                      className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm"
+                      aria-label={t("project.actions.edit") || "Edit task"}
+                      title={t("project.actions.edit") || "Edit task"}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
+                      className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-red-600"
+                      aria-label={t("project.actions.delete") || "Delete task"}
+                      title={t("project.actions.delete") || "Delete task"}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -200,13 +205,16 @@ export default function TaskList({
                   </h6>
 
                   <div>
-                    <button
-                      onClick={() => onCreateActivity && onCreateActivity(goal.id, task.id)}
-                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded"
-                      title={t("actions.addActivity") || "Add Activity"}
-                    >
-                      <PlusIcon className="inline-block h-3 w-3 mr-1" /> {t("project.actions.addActivity") || "Add Activity"}
-                    </button>
+                    {/* Add Activity button hidden when canManageGTA is falsy */}
+                    {canManageGTA && (
+                      <button
+                        onClick={() => onCreateActivity && onCreateActivity(goal.id, task.id)}
+                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded"
+                        title={t("actions.addActivity") || "Add Activity"}
+                      >
+                        <PlusIcon className="inline-block h-3 w-3 mr-1" /> {t("project.actions.addActivity") || "Add Activity"}
+                      </button>
+                    )}
                   </div>
                 </div>
 
