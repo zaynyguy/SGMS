@@ -763,7 +763,7 @@
     },
     "overdueTitle": "የዘገዩ ተግባራት",
     "tasks": "ተግባራት",
-    "open": "ክፍት",
+    "openAll": "ሁሉንም ክፈት",
     "nooverdue": "የዘገዩ ተግባራት የሉም",
     "table": {
       "task": "ተግባር",

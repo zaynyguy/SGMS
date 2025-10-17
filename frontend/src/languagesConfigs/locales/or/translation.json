@@ -766,7 +766,7 @@
     },
     "overdueTitle": "Hojiiwwan yeroon isaanii darbe",
     "tasks": "hojiiwwan",
-    "open": "Banaa",
+    "openAll": "hunda banaa",
     "noOverdue": "Hojii yeroon darbe hin jiru",
     "table": {
       "task": "Hojii",
