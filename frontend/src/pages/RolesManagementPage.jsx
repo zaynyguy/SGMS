@@ -44,7 +44,7 @@ const RolesManagementPage = () => {
   // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [toast, setToast] = useState({ message: '', type: '', visible: false });
+  const [toast, setToast] = useState(null); // { text, type }
 
   const [isAddingRole, setIsAddingRole] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
@@ -56,9 +56,19 @@ const RolesManagementPage = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState(null);
 
-  // Helpers
-  const showToast = (message, type = 'info') => setToast({ message, type, visible: true });
-  const handleToastClose = () => setToast({ message: '', type: '', visible: false });
+  // Helpers: map semantic toast types to your Toast component types
+  const showToast = (message, semanticType = 'info') => {
+    const map = {
+      success: 'create',
+      info: 'read',
+      update: 'update',
+      delete: 'delete',
+      error: 'error',
+    };
+    const tType = map[semanticType] || semanticType || 'create';
+    setToast({ text: message, type: tType });
+  };
+  const handleToastClose = () => setToast(null);
 
   // Resize listener to detect mobile breakpoint (md ~ 768px)
   useEffect(() => {
@@ -133,7 +143,7 @@ const RolesManagementPage = () => {
     if (!window.confirm(t('admin.roles.deleteConfirm.message', { name: role.name }))) return;
     try {
       await deleteRole(role.id);
-      showToast(t('admin.roles.toasts.deleteSuccess', { name: role.name }), 'success');
+      showToast(t('admin.roles.toasts.deleteSuccess', { name: role.name }), 'delete');
       // if deleted role was selected in mobile, pick another
       if (isMobile && selectedRoleId === role.id) {
         setSelectedRoleId(prev => {
@@ -199,7 +209,7 @@ const RolesManagementPage = () => {
       }
 
       await Promise.all(updatePromises);
-      showToast(t('admin.roles.toasts.updateSuccess'), 'success');
+      showToast(t('admin.roles.toasts.updateSuccess'), 'update');
       await loadData();
     } catch (err) {
       console.error('Failed to save permissions', err);
@@ -264,7 +274,11 @@ const RolesManagementPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 lg:p-8">
       {/* Toast */}
-      {toast.visible && <Toast message={toast.message} type={toast.type} onClose={handleToastClose} />}
+      {toast && (
+        <div className="fixed z-50 right-5 bottom-5">
+          <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />
+        </div>
+      )}
 
       {/* Header */}
       <div className="mb-6">
@@ -570,7 +584,7 @@ const RolesManagementPage = () => {
                               {meta.description && <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{meta.description}</div>}
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex-1 text-right">
                               <input
                                 type="checkbox"
                                 checked={Boolean(checked)}

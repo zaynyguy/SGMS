@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { fetchAttachments, deleteAttachment, downloadAttachment } from "../api/attachments";
 import TopBar from "../components/layout/TopBar";
+import Toast from "../components/common/Toast"; // <-- added
 
 /* Small util: format date nicely */
 const formatDate = (d) => {
@@ -65,6 +66,11 @@ export default function AttachmentsPage({ reportId }) {
   const [preview, setPreview] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Toast state
+  const [toast, setToast] = useState(null);
+  const showToast = (text, type = "read") => setToast({ text, type });
+  const handleToastClose = () => setToast(null);
+
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,8 +85,10 @@ export default function AttachmentsPage({ reportId }) {
       setAttachments(items);
     } catch (err) {
       console.error("Error loading attachments:", err);
-      setError(err?.message || t("attachments.messages.failedLoad"));
+      const msg = err?.message || t("attachments.messages.failedLoad");
+      setError(msg);
       setAttachments([]);
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -94,6 +102,7 @@ export default function AttachmentsPage({ reportId }) {
       if (res.url && !res.blob) {
         const w = window.open(res.url, "_blank");
         if (!w) window.location.href = res.url;
+        showToast(t("attachments.toasts.downloadStarted") || "Download started", "read");
         return;
       }
 
@@ -108,9 +117,11 @@ export default function AttachmentsPage({ reportId }) {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1500);
+      showToast(t("attachments.toasts.downloadStarted") || "Download started", "read");
     } catch (err) {
       console.error("Download error:", err);
-      alert(err?.message || t("attachments.messages.downloadFailed"));
+      const msg = err?.message || t("attachments.messages.downloadFailed");
+      showToast(msg, "error");
     } finally {
       setDownloading(null);
     }
@@ -122,9 +133,11 @@ export default function AttachmentsPage({ reportId }) {
       setDeleting(id);
       await deleteAttachment(id);
       setAttachments((p) => p.filter((x) => x.id !== id));
+      showToast(t("attachments.toasts.deleted") || t("attachments.deleteSuccess") || "Deleted", "delete");
     } catch (err) {
       console.error("Delete error:", err);
-      alert(err?.message || t("attachments.messages.deleteFailed"));
+      const msg = err?.message || t("attachments.messages.deleteFailed");
+      showToast(msg, "error");
     } finally {
       setDeleting(null);
     }
@@ -337,10 +350,10 @@ export default function AttachmentsPage({ reportId }) {
                         <button
                           onClick={() => openPreview(at)}
                           title={t("attachments.preview")}
-                          className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                          className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                         >
                           <Eye className="h-4 w-4" />
-                          <span>{t("attachments.preview")}</span>
+                          <span className="hidden xl:inline ml-2">{t("attachments.preview")}</span>
                         </button>
                       )}
 
@@ -422,6 +435,9 @@ export default function AttachmentsPage({ reportId }) {
 
         <ImagePreviewModal src={preview?.src} name={preview?.name} onClose={() => setPreview(null)} t={t} />
       </div>
+
+      {/* Toast UI */}
+      {toast && <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />}
     </div>
   );
 }

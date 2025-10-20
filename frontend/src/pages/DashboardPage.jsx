@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+// src/pages/DashboardPage.jsx
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
   fetchDashboardSummary,
@@ -12,7 +13,8 @@ import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
 import { useNavigate } from "react-router-dom";
 import { Home } from "lucide-react";
-import { useAuth } from "../context/AuthContext"; 
+import { useAuth } from "../context/AuthContext";
+import useProjectApi from "../hooks/useProjectApi";
 
 /* ---------------------------
    Small UI helpers & modal
@@ -34,11 +36,7 @@ const Modal = ({ open, onClose, children, title }) => {
 
   if (!open) return null;
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-    >
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-auto bg-white dark:bg-gray-900 rounded-lg shadow-2xl p-4 sm:p-6">
         <div className="flex items-start justify-between gap-4 mb-3">
@@ -57,7 +55,7 @@ const Modal = ({ open, onClose, children, title }) => {
   );
 };
 
-/* Card: now clickable and keyboard accessible */
+/* Card: keyboard accessible */
 const Card = ({ title, children, onClick, className = "", ariaLabel, headerActions }) => {
   const clickable = Boolean(onClick);
   return (
@@ -73,7 +71,9 @@ const Card = ({ title, children, onClick, className = "", ariaLabel, headerActio
         }
       }}
       aria-label={ariaLabel || title}
-      className={`text-left p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm transition-transform transform ${clickable ? "hover:shadow-md hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400" : ""} ${className}`}
+      className={`text-left p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm transition-transform transform ${
+        clickable ? "hover:shadow-md hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400" : ""
+      } ${className}`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{title}</div>
@@ -85,7 +85,7 @@ const Card = ({ title, children, onClick, className = "", ariaLabel, headerActio
 };
 
 /* ---------------------------
-   Small format helpers
+   Small format helper
    --------------------------- */
 function formatDate(d) {
   if (!d) return "-";
@@ -94,45 +94,31 @@ function formatDate(d) {
 }
 
 /* ---------------------------
-   Charts (group, task, pie)
-   --------------------------- */
+   Small charts & panels (kept inline)
+   Use the existing implementations you had — trimmed here for clarity.
+   The charts below are identical to previous versions (GroupBarChart, TaskBarChart, PieChart).
+   For brevity they are included but unchanged in behavior.
+*/
 
-// Updated GroupBarChart: bars are intentionally thin (configurable) and centered when a single bar
+/* GroupBarChart */
 const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, gap = 12 }) => {
   if (!Array.isArray(data) || data.length === 0) {
     return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
   }
-
   const display = limit ? data.slice(0, limit) : data;
   const values = display.map((d) => Number(d.value ?? d.progress ?? 0));
   const max = Math.max(1, ...values);
-
   const itemCount = display.length;
   const barW = thinWidth;
   const spacing = barW + gap;
   const padding = Math.max(8, Math.floor(gap / 2));
   const svgWidth = Math.max(itemCount * spacing + padding * 2, 240);
-
-  // If there's only one bar, center it horizontally.
   const singleOffset = itemCount === 1 ? Math.floor((svgWidth - barW) / 2) : padding;
 
   return (
     <div className="w-full overflow-x-auto">
-      <svg 
-        viewBox={`0 0 ${svgWidth} ${height + 50}`} 
-        className="w-full h-[200px]" 
-        preserveAspectRatio="xMidYMid meet" 
-        role="img"
-      >
-        <line 
-          x1="0" 
-          y1={height} 
-          x2={svgWidth} 
-          y2={height} 
-          stroke="#E5E7EB" 
-          className="dark:stroke-gray-700" 
-          strokeWidth="1" 
-        />
+      <svg viewBox={`0 0 ${svgWidth} ${height + 50}`} className="w-full h-[200px]" preserveAspectRatio="xMidYMid meet" role="img">
+        <line x1="0" y1={height} x2={svgWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="1" />
         {display.map((d, i) => {
           const val = Number(d.value ?? d.progress ?? 0);
           const barH = Math.max(2, (val / max) * (height - 16));
@@ -141,52 +127,35 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
           const y = height - barH;
           const color = d.color || `hsl(${(i * 45) % 360}, 70%, 50%)`;
           const label = d.name ?? d.label ?? `#${i + 1}`;
-
-          // Calculate available width for text (bar width + gap)
-          const availableTextWidth = barW + gap - 4; // -4 for small margin
-          
-          // Estimate character width (approximate for monospace)
+          const availableTextWidth = barW + gap - 4;
           const charWidth = 6;
           const maxChars = Math.floor(availableTextWidth / charWidth);
-          
           let displayLabel = label;
           if (label.length > maxChars) {
-            displayLabel = label.slice(0, Math.max(3, maxChars - 1)) + '…';
+            displayLabel = label.slice(0, Math.max(3, maxChars - 1)) + "…";
           }
-
           return (
             <g key={i} transform={`translate(${x},0)`}>
               <rect x={0} y={y} width={w} height={barH} rx="6" fill={color} />
-              
-              {/* Label text */}
-              <text 
-                x={w / 2} 
-                y={height + 20} 
-                fontSize="11" 
-                textAnchor="middle" 
-                fill="#6B7280" 
+              <text
+                x={w / 2}
+                y={height + 20}
+                fontSize="11"
+                textAnchor="middle"
+                fill="#6B7280"
                 className="dark:fill-gray-400"
-                style={{ 
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  fontWeight: 400,
-                  letterSpacing: '0.025em'
-                }}
+                style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 400, letterSpacing: "0.025em" }}
               >
                 {displayLabel}
               </text>
-              
-              {/* Optional: Value label above bar */}
               {val > 0 && (
-                <text 
-                  x={w / 2} 
-                  y={y - 5} 
-                  fontSize="10" 
-                  textAnchor="middle" 
+                <text
+                  x={w / 2}
+                  y={y - 5}
+                  fontSize="10"
+                  textAnchor="middle"
                   fill={color}
-                  style={{ 
-                    fontFamily: 'system-ui, -apple-system, sans-serif',
-                    fontWeight: 600
-                  }}
+                  style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 600 }}
                 >
                   {val}
                 </text>
@@ -195,42 +164,12 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
           );
         })}
       </svg>
-      {limit && data.length > limit && (
-        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-          +{data.length - limit} more
-        </div>
-      )}
+      {limit && data.length > limit && <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">+{data.length - limit} more</div>}
     </div>
   );
 };
 
-const GroupHorizontalModalView = ({ data = [] }) => {
-  if (!data || !data.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No groups</div>;
-  const max = Math.max(1, ...data.map((d) => Number(d.value ?? d.progress ?? 0)));
-  return (
-    <div className="overflow-x-auto">
-      <div className="flex gap-6 items-end pb-4">
-        {data.map((g, idx) => {
-          const val = Number(g.value ?? g.progress ?? 0);
-          const pct = Math.round((val / max) * 100);
-          const color = g.color || `hsl(${(idx * 45) % 360},70%,50%)`;
-          return (
-            <div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[84px]">
-              <div className="w-12 h-32 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end">
-                <div style={{ height: `${Math.max(6, (pct / 100) * 100)}%`, background: color }} className="w-full transition-all" />
-              </div>
-              <div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 break-words max-w-[120px] min-h-[2.5rem] flex items-center justify-center">
-                {g.name}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{val}%</div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
+/* TaskBarChart */
 const TaskBarChart = ({ items = [], maxItems = 8 }) => {
   if (!items || !items.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No tasks</div>;
   const display = items.slice(0, maxItems);
@@ -247,7 +186,14 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
                 <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-2">{value}%</div>
               </div>
 
-              <div className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100} aria-label={`${it.label} progress`}>
+              <div
+                className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden"
+                role="progressbar"
+                aria-valuenow={value}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${it.label} progress`}
+              >
                 <div title={`${it.label}: ${value}%`} style={{ width: `${value}%`, background: color }} className="h-3 rounded-full transition-all" />
               </div>
             </div>
@@ -259,27 +205,20 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
   );
 };
 
-// Paste over your existing PieChart
+/* PieChart */
 const PieChart = ({ slices = [], size = 220 }) => {
   const items = Array.isArray(slices) ? slices : [];
   const total = items.reduce((s, x) => s + Number(x.value ?? x.count ?? 0), 0);
 
-  // Helper: map label/status -> color
   const getColorFor = (s, i) => {
-    // allow input to provide its own color first
     if (s.color) return s.color;
     const key = (s.label ?? s.status ?? s.name ?? "").toString().toLowerCase().trim();
-
-    // explicit mapping for common report statuses
-    if (key.includes("approve") || key.includes("approved") || key === "approved") return "#10B981"; // green (emerald-500)
-    if (key.includes("reject") || key.includes("rejected") || key === "rejected") return "#EF4444"; // red (red-500)
-    if (key.includes("pending") || key === "pending") return "#F59E0B"; // amber (amber-500)
-
-    // fallback: deterministic HSL so colors are pleasant
+    if (key.includes("approve") || key.includes("approved") || key === "approved") return "#10B981";
+    if (key.includes("reject") || key.includes("rejected") || key === "rejected") return "#EF4444";
+    if (key.includes("pending") || key === "pending") return "#F59E0B";
     return `hsl(${(i * 70) % 360}, 70%, 60%)`;
   };
 
-  // No data -> show "No report"
   if (total === 0) {
     return (
       <div className="flex items-center justify-center h-40">
@@ -288,14 +227,12 @@ const PieChart = ({ slices = [], size = 220 }) => {
     );
   }
 
-  // non-zero slices
   const nonZero = items.filter((x) => Number(x.value ?? x.count ?? 0) > 0);
   const cx = size / 2;
   const cy = size / 2;
   const r = Math.min(60, size / 2 - 8);
   const innerR = Math.max(4, r - 18);
 
-  // single non-zero slice -> full circle using mapped color
   if (nonZero.length === 1) {
     const s = nonZero[0];
     const fill = getColorFor(s, items.indexOf(s));
@@ -332,7 +269,6 @@ const PieChart = ({ slices = [], size = 220 }) => {
     );
   }
 
-  // multi-slice pie
   let angle = 0;
   return (
     <div className="flex md:flex-col flex-row items-center gap-4">
@@ -349,16 +285,7 @@ const PieChart = ({ slices = [], size = 220 }) => {
           const x2 = cx + r * Math.cos(endAngle);
           const y2 = cy + r * Math.sin(endAngle);
           const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-          return (
-            <path
-              key={i}
-              d={d}
-              fill={getColorFor(s, i)}
-              stroke="#fff"
-              className="dark:stroke-gray-800"
-              strokeWidth="1"
-            />
-          );
+          return <path key={i} d={d} fill={getColorFor(s, i)} stroke="#fff" className="dark:stroke-gray-800" strokeWidth="1" />;
         })}
         <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800" />
         <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold">
@@ -436,7 +363,10 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
           <span className="text-xs text-white bg-red-500 px-2 py-0.5 rounded-full">{unread}</span>
           {unread > 0 && (
             <button
-              onClick={(e) => { e.stopPropagation(); onMarkAsRead(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMarkAsRead();
+              }}
               disabled={marking}
               className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
             >
@@ -500,7 +430,10 @@ const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
 export default function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth(); // <<-- use auth context
+  const { user } = useAuth();
+
+  // project hook (provides totals + loaders)
+  const project = useProjectApi();
 
   const [dashboardData, setDashboardData] = useState({
     summary: null,
@@ -514,7 +447,7 @@ export default function DashboardPage() {
   });
 
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ group: "", dateFrom: "", dateTo: "", status: "" });
+  const [filters] = useState({ group: "", dateFrom: "", dateTo: "", status: "" });
   const [error, setError] = useState(null);
   const [auditPermDenied, setAuditPermDenied] = useState(false);
   const [marking, setMarking] = useState(false);
@@ -522,11 +455,11 @@ export default function DashboardPage() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showTasksModal, setShowTasksModal] = useState(false);
 
-  // derive permissions from user context
   const permissionArray = Array.isArray(user?.permissions) ? user.permissions : [];
   const hasAuditPerm = permissionArray.includes("view_audit_logs");
-  const hasViewDashboardPerm = permissionArray.includes("view_dashboard");
-  const hasManageDashboardPerm = permissionArray.includes("manage_dashboard");
+
+  // refresh guard
+  const lastRefreshAt = useRef(0);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -534,7 +467,6 @@ export default function DashboardPage() {
     setAuditPermDenied(false);
 
     try {
-      // Build list of promises — only call fetchAuditLogs if user has permission
       const promises = [
         fetchDashboardSummary({ groupId: filters.group, dateFrom: filters.dateFrom, dateTo: filters.dateTo, status: filters.status }),
         fetchDashboardCharts({ type: "group", groupId: filters.group, dateFrom: filters.dateFrom, dateTo: filters.dateTo }),
@@ -547,7 +479,6 @@ export default function DashboardPage() {
       if (hasAuditPerm) {
         promises.push(fetchAuditLogs({ limit: 5 }));
       } else {
-        // stable placeholder so we can destructure reliably below
         promises.push(Promise.resolve([]));
       }
 
@@ -608,15 +539,32 @@ export default function DashboardPage() {
     }
   }, [filters, t, hasAuditPerm]);
 
-  // load data when component mounts and when user or filters change
   useEffect(() => {
-    // The AuthProvider you provided ensures children render only after it finished initial load,
-    // but user may be null for logged-out state — still safe to call loadAll which will behave gracefully.
     loadAll();
-  }, [loadAll, user]); // reload when user changes (permissions might change)
+  }, [loadAll, user]);
 
-  const handleRefresh = () => loadAll();
+  // load project data once on mount — project hook manages concurrency/dedupe internally
+  useEffect(() => {
+    if (project && typeof project.loadGoals === "function") {
+      project.loadGoals().catch((e) => {
+        console.warn("project.loadGoals failed", e);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  const handleRefresh = () => {
+    const now = Date.now();
+    if (now - lastRefreshAt.current < 1200) {
+      console.warn("Refresh suppressed (too frequent)");
+      return;
+    }
+    lastRefreshAt.current = now;
+    loadAll();
+    if (project && typeof project.loadGoals === "function") project.loadGoals().catch(() => {});
+  };
+
+  // mark notifications read (update isRead locally)
   const handleMarkNotificationsRead = async () => {
     setMarking(true);
     try {
@@ -628,7 +576,7 @@ export default function DashboardPage() {
       }
       setDashboardData((prev) => ({
         ...prev,
-        notifications: prev.notifications.map((n) => ({ ...n, read: true })),
+        notifications: prev.notifications.map((n) => ({ ...n, isRead: true })),
         summary: prev.summary ? { ...prev.summary, unread: 0 } : null,
       }));
     } catch (err) {
@@ -638,6 +586,7 @@ export default function DashboardPage() {
     }
   };
 
+  // goal delta (used in the descriptive line for goals)
   const goalDelta = useMemo(() => {
     if (!dashboardData.summary) return null;
     const d = dashboardData.summary.overall_goal_delta ?? null;
@@ -646,7 +595,21 @@ export default function DashboardPage() {
     return `${sign}${d}%`;
   }, [dashboardData.summary]);
 
-  // navigation helpers for KPI cards
+  // Use totals provided by project hook. Hook exports:
+  // totalGoals, finishedGoals, totalTasks, finishedTasks, totalActivities, finishedActivities
+  const goalsTotal = project.totalGoals ?? 0;
+  const goalsFinished = project.finishedGoals ?? 0;
+  const tasksTotal = project.totalTasks ?? 0;
+  const tasksFinished = project.finishedTasks ?? 0;
+  const activitiesTotal = project.totalActivities ?? 0;
+  const activitiesFinished = project.finishedActivities ?? 0;
+
+  // helper: check if percentage is available (allow zero)
+  const hasGoalPercent = dashboardData.summary?.overall_goal_progress != null;
+  const hasTaskPercent = dashboardData.summary?.overall_task_progress != null;
+  const hasActivityPercent = dashboardData.summary?.overall_activity_progress != null;
+
+  // navigation helpers
   const goToGoals = () => navigate("/project?tab=goals");
   const goToTasks = () => navigate("/project?tab=tasks");
   const goToActivities = () => navigate("/project?tab=activities");
@@ -662,7 +625,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-gray-200 dark:bg-gray-900 min-h-screen transition-colors duration-300">
-      {/* Header: title + TopBar on same line even on narrow screens */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex items-center min-w-0 gap-4">
           <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
@@ -699,86 +662,104 @@ export default function DashboardPage() {
 
       {/* BENTO GRID */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Top KPI cards (clickable) */}
+        {/* KPI cards */}
         <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card title={t("dashboard.cards.goals.title")} onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}> 
+          {/* Goals Card */}
+          <Card title={t("dashboard.cards.goals.title")} onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
+                {/* 1) Percent (preferred) */}
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                  {dashboardData.summary?.overall_goal_progress ?? "-"}%
+                  {hasGoalPercent ? `${dashboardData.summary.overall_goal_progress}%` : goalsTotal > 0 ? `${goalsFinished} of ${goalsTotal}` : `${dashboardData.summary?.overall_goal_progress ?? "-"}%`}
+                  <sub className="text-[10px]">out of 100 percent</sub>
                 </div>
+
+                {/* 2) Finished out of total (only when totals exist) */}
+                {goalsTotal > 0 && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${goalsFinished} ${t("dashboard.cards.goals.outOf")} ${goalsTotal} ${t("dashboard.cards.goals.title").toLowerCase()} ${t("dashboard.cards.goals.haveBeenDone")}`}</div>
+                )}
+
+                {/* 3) Descriptive / delta */}
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {goalDelta ? <span className={goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>{goalDelta} {t("dashboard.cards.goals.fromLast")}</span> : t("dashboard.cards.goals.noComparison")}
+                  {goalDelta ? (
+                    <span className={goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                      {goalDelta} {t("dashboard.cards.goals.fromLast")}
+                    </span>
+                  ) : (
+                    t("dashboard.cards.goals.noComparison") || "Overall goal progress"
+                  )}
                 </div>
               </div>
             )}
           </Card>
 
+          {/* Tasks Card */}
           <Card title={t("dashboard.cards.tasks.title")} onClick={goToTasks} ariaLabel={t("dashboard.cards.tasks.aria")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
+                {/* 1) Percent (preferred) */}
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                  {dashboardData.summary?.overall_task_progress ?? "-"}%
+                  {hasTaskPercent ? `${dashboardData.summary.overall_task_progress}%` : tasksTotal > 0 ? `${tasksFinished} of ${tasksTotal}` : `${dashboardData.summary?.overall_task_progress ?? "-"}%`}
+                  <sub className="text-[10px]">out of 100 percent</sub>
                 </div>
+
+                {/* 2) Finished out of total (only when totals exist) */}
+                {tasksTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${tasksFinished} ${t("dashboard.cards.tasks.outOf")} ${tasksTotal} ${t("dashboard.cards.tasks.title").toLowerCase()} ${t("dashboard.cards.tasks.haveBeenDone")}`}</div>}
+
+                {/* 3) Descriptive */}
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.tasks.subtitle")}</div>
               </div>
             )}
           </Card>
 
+          {/* Activities Card */}
           <Card title={t("dashboard.cards.activities.title")} onClick={goToActivities} ariaLabel={t("dashboard.cards.activities.aria")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
+                {/* 1) Percent (preferred) */}
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                  {dashboardData.summary?.overall_activity_progress ?? "-"}%
+                  {hasActivityPercent ? `${dashboardData.summary.overall_activity_progress}%` : activitiesTotal > 0 ? `${activitiesFinished} of ${activitiesTotal}` : `${dashboardData.summary?.overall_activity_progress ?? "-"}%`}
+                  <sub className="text-[10px]">out of 100 percent</sub>
                 </div>
+
+                {/* 2) Finished out of total (only when totals exist) */}
+                {activitiesTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${activitiesFinished} ${t("dashboard.cards.activities.outOf")} ${activitiesTotal} ${t("dashboard.cards.activities.title").toLowerCase()} ${t("dashboard.cards.activities.haveBeenDone")}`}</div>}
+
+                {/* 3) Descriptive */}
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.activities.subtitle")}</div>
               </div>
             )}
           </Card>
 
-          <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports} ariaLabel={t("dashboard.cards.pendingReports.aria")}> 
+          {/* Pending Reports Card (unchanged) */}
+          <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports} ariaLabel={t("dashboard.cards.pendingReports.aria")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                  {dashboardData.summary?.pending_reports ?? 0}
-                </div>
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.pending_reports ?? 0}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.pendingReports.subtitle")}</div>
               </div>
             )}
           </Card>
         </div>
 
-        {/* Charts: group (click opens modal), top tasks (click opens modal), reports pie (CLICKABLE CARD now navigates to /report) */}
+        {/* Charts */}
         <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* IMPORTANT: make the Card a column and push the chart to the bottom */}
           <Card title={t("dashboard.groupProgress")} onClick={() => setShowGroupModal(true)} className="p-4 flex flex-col justify-between h-full">
-            {loading ? (
-              <LoadingSkeleton className="h-28" />
-            ) : (
-              // put chart in a container that grows and sits at the bottom
-              <div className="mt-3 ">
-                <GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} />
-              </div>
-            )}
+            {loading ? (<LoadingSkeleton className="h-28" />) : (<div className="mt-3 "><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} /></div>)}
           </Card>
 
           <Card title={t("dashboard.topTasks")} onClick={() => setShowTasksModal(true)} className="p-4">
-            {loading ? (
-              <LoadingSkeleton className="h-28" />
-            ) : (
-              <TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />
-            )}
+            {loading ? (<LoadingSkeleton className="h-28" />) : (<TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />)}
           </Card>
 
-          {/* reportsDistribution clickable */}
           <Card title={t("dashboard.reportsDistribution1")} onClick={() => navigate("/report")} className="p-4" ariaLabel={t("dashboard.reportsDistribution.aria")}>
             {loading ? <LoadingSkeleton className="h-28" /> : <div className="flex justify-center"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
           </Card>
@@ -790,19 +771,12 @@ export default function DashboardPage() {
             title={
               <div className="flex items-center justify-between h-6 min-w-0">
                 <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{t("dashboard.overdueTitle")}</span>
-                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">
-                  {(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}
-                </span>
+                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">{(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}</span>
               </div>
             }
             headerActions={
               <div className="flex items-center gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); goToTasks(); }}
-                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-                >
-                  {t("dashboard.openAll")}
-                </button>
+                <button onClick={(e) => { e.stopPropagation(); goToTasks(); }} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{t("dashboard.openAll")}</button>
               </div>
             }
           >
@@ -824,35 +798,24 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Audit panel: only render when user has view_audit_logs permission */}
+        {/* Audit panel */}
         {hasAuditPerm ? (
           <div className="lg:col-span-12">
-            <Card title={t("dashboard.audit.title")} onClick={goToAudit}>
-              <AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} />
-            </Card>
+            <Card title={t("dashboard.audit.title")} onClick={goToAudit}><AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} /></Card>
           </div>
         ) : null}
       </div>
 
-      {/* Group Modal */}
+      {/* Modals */}
       <Modal open={showGroupModal} onClose={() => setShowGroupModal(false)} title={t("dashboard.groupProgress")}>
-        {loading ? <LoadingSkeleton className="h-40" /> : <GroupHorizontalModalView data={dashboardData.groups} />}
+        {loading ? <LoadingSkeleton className="h-40" /> : <div className="overflow-x-auto"><div className="flex gap-6 items-end pb-4">{(dashboardData.groups || []).map((g, idx) => (<div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[84px]"><div className="w-12 h-32 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end"><div style={{ height: `${Math.max(6, Math.round((Number(g.value ?? g.progress ?? 0) / Math.max(1, ...((dashboardData.groups || []).map(x=>Number(x.value ?? x.progress ?? 0)))))*100))}%`, background: g.color }} className="w-full transition-all" /></div><div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 break-words max-w-[120px] min-h-[2.5rem] flex items-center justify-center">{g.name}</div><div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{Math.round(Number(g.value ?? g.progress ?? 0))}%</div></div>))}</div></div>}
       </Modal>
 
-      {/* Tasks Modal */}
       <Modal open={showTasksModal} onClose={() => setShowTasksModal(false)} title={t("dashboard.topTasks")}>
-        {loading ? (
-          <LoadingSkeleton className="h-40" />
-        ) : (
-          <div className="space-y-4">
-            <TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={dashboardData.taskBars.length || 1000} />
-          </div>
-        )}
+        {loading ? (<LoadingSkeleton className="h-40" />) : (<div className="space-y-4"><TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={dashboardData.taskBars.length || 1000} /></div>)}
       </Modal>
 
-      <div aria-live="polite" className="sr-only">
-        {loading ? t("dashboard.aria.loading") : t("dashboard.aria.loaded")}
-      </div>
+      <div aria-live="polite" className="sr-only">{loading ? t("dashboard.aria.loading") : t("dashboard.aria.loaded")}</div>
     </div>
   );
 }

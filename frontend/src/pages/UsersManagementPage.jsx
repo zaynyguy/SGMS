@@ -66,18 +66,26 @@ const UsersManagementPage = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState({ message: "", type: "", visible: false });
+  const [toast, setToast] = useState(null); // { text, type }
 
   // For profile picture selection (file or URL)
   const [profilePictureFile, setProfilePictureFile] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null); // objectURL or URL or data:
   const previewRef = useRef(null);
 
-  // Toast helpers
-  const showToast = (message, type = "info") =>
-    setToast({ message, type, visible: true });
-  const handleToastClose = () =>
-    setToast({ message: "", type: "", visible: false });
+  // Toast helpers: map semantic types to Toast component types
+  const showToast = (message, semanticType = "info") => {
+    const map = {
+      success: "create",
+      info: "read",
+      update: "update",
+      delete: "delete",
+      error: "error",
+    };
+    const tType = map[semanticType] || semanticType || "create";
+    setToast({ text: message, type: tType });
+  };
+  const handleToastClose = () => setToast(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -117,8 +125,7 @@ const UsersManagementPage = () => {
     const errors = {};
     if (!formData.username.trim())
       errors.username = t("admin.users.errors.usernameRequired");
-    if (!formData.name.trim())
-      errors.name = t("admin.users.errors.nameRequired");
+    if (!formData.name.trim()) errors.name = t("admin.users.errors.nameRequired");
     if (!userToEdit && !formData.password)
       errors.password = t("admin.users.errors.passwordRequired");
     else if (formData.password && formData.password.length < 8)
@@ -137,9 +144,7 @@ const UsersManagementPage = () => {
         roleId: user.role?.id || user.roleId || "",
       });
       setUserToEdit(user);
-      setProfilePicturePreview(
-        user.profilePicture || user.profilePictureUrl || null
-      );
+      setProfilePicturePreview(user.profilePicture || user.profilePictureUrl || null);
       setProfilePictureFile(null);
     } else {
       setFormData({ username: "", name: "", password: "", roleId: "" });
@@ -296,7 +301,7 @@ const UsersManagementPage = () => {
         userToEdit
           ? t("admin.users.toasts.updateSuccess", { name: formData.name })
           : t("admin.users.toasts.createSuccess", { name: formData.name }),
-        "success"
+        userToEdit ? "update" : "success"
       );
     } catch (error) {
       console.error("save user error:", error);
@@ -322,7 +327,7 @@ const UsersManagementPage = () => {
       setUsers(updatedUsers || []);
       showToast(
         t("admin.users.toasts.deleteSuccess", { name: userToDelete.name }),
-        "success"
+        "delete"
       );
     } catch (error) {
       console.error("delete user error:", error);
@@ -359,6 +364,13 @@ const UsersManagementPage = () => {
 
   return (
     <>
+      {/* Toast (fixed bottom-right) */}
+      {toast && (
+        <div className="fixed z-50 right-5 bottom-5">
+          <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-4 min-w-0">
           <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-900 flex-shrink-0">
@@ -394,16 +406,6 @@ const UsersManagementPage = () => {
         aria-labelledby="users-tab"
         className="space-y-6 p-0 sm:p-0"
       >
-        {toast.visible && (
-          <div className="mb-2">
-            <Toast
-              message={toast.message}
-              type={toast.type}
-              onClose={handleToastClose}
-            />
-          </div>
-        )}
-
         {/* Desktop Table */}
         <div className="hidden md:block overflow-x-auto rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           {users.length > 0 ? (
@@ -751,7 +753,7 @@ const UsersManagementPage = () => {
                     placeholder={t("admin.users.form.usernamePlaceholder")}
                     value={formData.username}
                     onChange={handleFormChange}
-                    disabled={submitting} 
+                    disabled={submitting}
                     aria-invalid={!!formErrors.username}
                   />
                   {formErrors.username && (

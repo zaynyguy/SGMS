@@ -552,6 +552,18 @@
     "unassigned": "Hin ramadamne",
     "none": "— Jijjiiramni hin jiru —",
     "loadingTasks": "okutaho emirimo",
+    "sort": {
+      "label": "Sassaabuu",
+      "title": "Mata duree",
+      "createdAt": "Guyyaa Uumame",
+      "ascending": "Olba'aa",
+      "descending": "Gadi bu'aa",
+      "asc": "A–Z",
+      "desc": "Z–A"
+    },
+    "refresh": "Haaromsuu",
+    "addGoal": "Galma dabaluu",
+    "addGoalLabel": "Galma Dabaluu",
 
     "actions": {
       "refresh": "Haaromsuu",
@@ -597,9 +609,9 @@
     },
 
     "labels": {
-      "targetMetrics": "Safartuu Galma",
+      "targetMetrics": "Safartuuwwan Galma",
       "activity": "Gocha",
-      "metrics": "Galma / Safartuu",
+      "metrics": "Safartuuwwan Ammaa",
       "attachments": "Dabalata",
       "rollLabel": "Lakkoofsa roll (dirqama) ."
     },
@@ -740,17 +752,23 @@
         "title": "Kaayyoowwan",
         "aria": "Galmoota banaa",
         "fromLast": "yeroo darbe irraa",
-        "noComparison": "Guddina Galma Waliigalaa"
+        "noComparison": "Guddina Galma Waliigalaa",
+        "outOf": "keessaa bahee",
+        "haveBeenDone":"raawwatamaniiru"
       },
       "tasks": {
         "title": "Hojiiwwan",
         "aria": "Hojiiwwan banaa",
-        "subtitle": "Adeemsa Hojii Waliigalaa"
+        "subtitle": "Adeemsa Hojii Waliigalaa",
+        "outOf": "keessaa bahee",
+        "haveBeenDone":"raawwatamaniiru"
       },
       "activities": {
         "title": "Gochaalee",
         "aria": "Sochii banaa",
-        "subtitle": "Adeemsa Hojii waliigalaa"
+        "subtitle": "Adeemsa Hojii waliigalaa",
+        "outOf": "keessaa bahee",
+        "haveBeenDone":"raawwatamaniiru"
       },
       "pendingReports": {
         "title": "Gabaasawwan eegamaa jiran",
@@ -794,6 +812,10 @@
     "subtitle": "Akeekkachiisa, ergaawwanii fi beeksisa sirnaa ilaaluu fi bulchuu — akka dubbisaatti mallatteessi, calaluu, fi wantoota barbaachisoo ta'an irratti tarkaanfii fudhadhu.",
     "unreadCount": "{{lakkoofsa}} hin dubbifamne",
     "markAll": "Hunda akka dubbifameetti mallatteessi",
+    "toasts": {
+    "markedRead": "Beeksisni akka milkaa'inaan dubbifameetti mallatteeffameera!",
+    "markAllRead": "Beeksisni hundi akka dubbifameetti mallatteeffame milkaa'inaan!"
+  },
     "filter": {
       "label": "Calkala:",
       "all": "Hunda",
@@ -833,6 +855,10 @@
     "mark": "Mallattoo",
     "open": "Banaa",
     "viewAll": "Hunda ilaali",
-    "refresh": "Haaromsuu"
+    "refresh": "Haaromsuu",
+    "toasts": {
+    "markedRead": "Notification marked as read successfully!",
+    "makeAllRead": "All notifications marked as read successfully!"
+  }
   }
 }

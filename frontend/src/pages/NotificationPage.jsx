@@ -16,6 +16,7 @@ import {
   markAllNotificationsRead,
 } from "../api/notifications";
 import TopBar from "../components/layout/TopBar";
+import Toast from "../components/common/Toast";
 
 export default function NotificationsPage() {
   const { t } = useTranslation();
@@ -29,6 +30,11 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
+
+  // Toast state (uses your existing Toast component)
+  const [toast, setToast] = useState(null);
+  const showToast = (text, type = "read") => setToast({ text, type });
+  const handleToastClose = () => setToast(null);
 
   // Initial load
   useEffect(() => {
@@ -66,6 +72,7 @@ export default function NotificationsPage() {
     } catch (e) {
       console.error("Failed to load notifications", e);
       setError(t("notifications.errors.loadFailed"));
+      showToast(t("notifications.errors.loadFailed"), "error");
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -81,10 +88,10 @@ export default function NotificationsPage() {
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
       setUnread((u) => Math.max(0, u - 1));
+      showToast(t("notifications.toasts.markedRead") || t("notifications.markAsRead"), "read");
     } catch (e) {
       console.error("Failed to mark read", e);
-      // optional: show a localized error - currently just logs
-      // alert(t("notifications.errors.markReadFailed"));
+      showToast(t("notifications.errors.markReadFailed") || "Failed to mark read", "error");
     }
   };
 
@@ -93,10 +100,10 @@ export default function NotificationsPage() {
       await markAllNotificationsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnread(0);
+      showToast(t("notifications.toasts.markAllRead") || t("notifications.markAll"), "read");
     } catch (e) {
       console.error("Failed to mark all read", e);
-      // optional: show localized error
-      // alert(t("notifications.errors.markAllFailed"));
+      showToast(t("notifications.errors.markAllFailed") || "Failed to mark all read", "error");
     }
   };
 
@@ -105,9 +112,7 @@ export default function NotificationsPage() {
       case "success":
         return <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />;
       case "warning":
-        return (
-          <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-        );
+        return <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />;
       case "error":
         return <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />;
       default:
@@ -199,10 +204,9 @@ export default function NotificationsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-200">
           {loading && notifications.length === 0 ? (
             <div className="p-6 flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400 min-h-[100px]">
-  <Loader className="h-5 w-5 animate-spin" />
-  <p className="mt-2">{t("notifications.loading")}</p>
-</div>
-
+              <Loader className="h-5 w-5 animate-spin" />
+              <p className="mt-2">{t("notifications.loading")}</p>
+            </div>
           ) : visible.length === 0 ? (
             <div className="p-6 text-center text-gray-500 dark:text-gray-400">
               {t("notifications.noNotifications")}
@@ -279,6 +283,9 @@ export default function NotificationsPage() {
           )}
         </div>
       </div>
+
+      {/* Toast UI */}
+      {toast && <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />}
     </div>
   );
 }

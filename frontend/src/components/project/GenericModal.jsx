@@ -465,7 +465,7 @@ export default function GenericModal({
                   ).map((m, idx) => (
                     <div key={m.id} className="flex gap-2">
                       <input placeholder={t("project.placeholders.metricKey")} value={m?.key || ""} onChange={(e) => updateMetricRow(idx, "key", e.target.value)} className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
-                      <input placeholder={t("project.placeholders.metricValue")} value={m?.value || ""} onChange={(e) => updateMetricRow(idx, "value", e.target.value)} className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
+                      <input type="number" min={0} placeholder={t("project.placeholders.metricValue")} value={m?.value || ""} onChange={(e) => updateMetricRow(idx, "value", e.target.value)} className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white" />
                       <button type="button" onClick={() => removeMetricRow(idx)} className="px-2 py-1 bg-red-500 text-white rounded text-xs" aria-label={t("project.actions.remove")}>
                         {t("project.actions.removeShort")}
                       </button>

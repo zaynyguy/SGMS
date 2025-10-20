@@ -4,6 +4,7 @@ import { fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
 import { fetchAttachments, downloadAttachment } from "../api/attachments";
 import { useTranslation } from "react-i18next";
 import {fetchGroups} from "../api/groups"
+import Toast from "../components/common/Toast";
 
 /* -------------------------
 REVIEW PAGE
@@ -108,6 +109,15 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
   const [attachmentDownloading, setAttachmentDownloading] = useState({});
   const [attachmentPreviewing, setAttachmentPreviewing] = useState({}); // New state for preview loading
 
+  // Toast state
+  const [toast, setToast] = useState(null); // { text, type }
+  const showToast = (message, semanticType = "info") => {
+    const map = { success: "create", info: "read", update: "update", delete: "delete", error: "error" };
+    const tType = map[semanticType] || semanticType || "create";
+    setToast({ text: message, type: tType });
+  };
+  const handleToastClose = () => setToast(null);
+
   useEffect(() => {
     loadReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,6 +148,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
       console.error("loadReports error:", err);
       setReports([]);
       setTotal(0);
+      showToast(err?.message || t("reports.loadFailed", "Failed to load reports"), "error");
     } finally {
       setLoading(false);
     }
@@ -176,6 +187,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
         }
       } catch (err) {
         console.error("fetchAttachments error for report", expanded, err);
+        showToast(err?.message || t("reports.attachments.fetchFailed", "Failed to load attachments"), "error");
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,16 +211,18 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
           _lastError: null,
         },
       }));
+      showToast(t("reports.action.updatedTo", { status }), "update");
     } catch (err) {
       console.error("review error", err);
       setActionState((s) => ({
         ...s,
         [id]: {
           ...(s[id] || {}),
-          _lastError: err?.message || t("reports.action.failed"),
+          _lastError: err?.message || t("reports.action.failed", "Action failed"),
           _lastResult: null,
         },
       }));
+      showToast(err?.message || t("reports.action.failed", "Action failed"), "error");
     } finally {
       setActionLoading((s) => ({ ...s, [id]: null }));
     }
@@ -238,7 +252,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
       }
     } catch (err) {
       console.error("downloadAttachment error", err);
-      alert(err?.message || "Download failed");
+      showToast(err?.message || t("reports.attachments.downloadFailed", "Download failed"), "error");
     } finally {
       setAttachmentDownloading((s) => ({ ...s, [aid]: false }));
     }
@@ -276,7 +290,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
       }
     } catch (err) {
       console.error("previewAttachment error", err);
-      alert(err?.message || "Preview failed. Please try downloading.");
+      showToast(err?.message || t("reports.attachments.previewFailed", "Preview failed. Please try downloading."), "error");
     } finally {
       setAttachmentPreviewing((s) => ({ ...s, [aid]: false }));
     }
@@ -348,6 +362,13 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
 
   return (
     <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+      {/* Toast */}
+      {toast && (
+        <div className="fixed z-50 right-5 bottom-5">
+          <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />
+        </div>
+      )}
+
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
         <div>
           <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">{readonly ? t("reports.myReports.title", "My Reports") : t("reports.review.title")}</h2>
@@ -555,8 +576,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                                     handleDownloadAttachment(a); // This button can still be the filename
                                   }}
                                   className="text-left text-sky-600 dark:text-sky-400 hover:underline text-sm flex-1 truncate"
-                                  title={a.fileName || a.attachment_name || `attachment-${a.id}`}
-                                >
+                                  title={a.fileName || a.attachment_name || `attachment-${a.id}`}>
                                   {a.fileName || a.attachment_name || `attachment-${a.id}`}
                                 </button>
 
@@ -583,7 +603,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                                       e.preventDefault();
                                       handleDownloadAttachment(a);
                                     }}
-                                    className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs flex items-center gap-1"
+                                    className="px-2 py-1. rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs flex items-center gap-1"
                                     aria-label={`Download ${a.fileName || a.attachment_name || a.id}`}
                                     title={t("reports.attachments.download", "Download")}
                                   >

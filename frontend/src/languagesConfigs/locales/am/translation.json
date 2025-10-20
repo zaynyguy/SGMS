@@ -549,6 +549,18 @@
     "unassigned": "ያልተመደበ",
     "none": "- ምንም ለውጥ የለም -",
     "loadingTasks": "የመጫኛ ተግባራት",
+    "sort": {
+      "label": "መደርደር",
+      "title": "ርዕስ",
+      "createdAt": "የተፈጠረበት ቀን",
+      "ascending": "መወጣጫ",
+      "descending": "መውረድ",
+      "asc": "A–Z",
+      "desc": "Z–A"
+    },
+    "refresh": "አድስ",
+    "addGoal": "ግብ ጨምር",
+    "addGoalLabel": "ግብ አክል",
 
     "actions": {
       "refresh": "አድስ",
@@ -596,7 +608,7 @@
     "labels": {
       "targetMetrics": "የዒላማ መለኪያዎች",
       "activity": "እንቅስቃሴ",
-      "metrics": "ዒላማ / መለኪያዎች",
+      "metrics": "የአሁኑ መለኪያዎች",
       "attachments": "አባሪዎች",
       "rollLabel": "ጥቅል ቁጥር (አማራጭ)"
     },
@@ -737,17 +749,23 @@
         "title": "ግቦች",
         "aria": "ክፍት ግቦች",
         "fromLast": "ከመጨረሻው ጊዜ",
-        "noComparison": "አጠቃላይ የግብ ግስጋሴ"
+        "noComparison": "አጠቃላይ የግብ ግስጋሴ",
+        "outOf": "ከ",
+        "haveBeenDone":"ተደርገዋል።"
       },
       "tasks": {
         "title": "ተግባራት",
         "aria": "ክፍት ተግባራት",
-        "subtitle": "አጠቃላይ የተግባር ሂደት"
+        "subtitle": "አጠቃላይ የተግባር ሂደት",
+        "outOf": "ከ",
+        "haveBeenDone":"ተደርገዋል።"
       },
       "activities": {
         "title": "እንቅስቃሴዎች",
         "aria": "ክፍት እንቅስቃሴዎች",
-        "subtitle": "አጠቃላይ የእንቅስቃሴ ሂደት"
+        "subtitle": "አጠቃላይ የእንቅስቃሴ ሂደት",
+        "outOf": "ከ",
+        "haveBeenDone":"ተደርገዋል።"
       },
       "pendingReports": {
         "title": "በመጠባበቅ ላይ ያሉ ሪፖርቶች",
@@ -791,6 +809,10 @@
     "subtitle": "ማንቂያዎችን፣ መልዕክቶችን እና የስርዓት ማስታወቂያዎችን ይመልከቱ እና ያቀናብሩ - እንደተነበቡ ምልክት ያድርጉ፣ ያጣሩ እና አስፈላጊ በሆኑ ነገሮች ላይ እርምጃ ይውሰዱ።",
     "unreadCount": "{{count}} ያልተነበበ",
     "markAll": "ሁሉንም እንደተነበቡ ምልክት ያድርጉበት",
+    "toasts": {
+    "markedRead": "ማሳወቂያ በተሳካ ሁኔታ እንደተነበበ ምልክት ተደርጎበታል!",
+    "markAllRead": "ሁሉም ማሳወቂያዎች በተሳካ ሁኔታ እንደተነበቡ ምልክት ተደርጎባቸዋል!"
+  },
     "filter": {
       "label": "ማጣሪያ:",
       "all": "ሁሉም",

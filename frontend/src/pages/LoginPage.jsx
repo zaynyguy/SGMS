@@ -183,7 +183,7 @@ const LoginPage = () => {
                     name="name"
                     type="text"
                     inputMode="text"
-                    autoComplete="name"
+                    autoComplete="off"
                     placeholder={t('login.username_placeholder')}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}

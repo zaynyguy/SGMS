@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { fetchAuditLogs } from "../api/audit";
 import TopBar from "../components/layout/TopBar";
+import Toast from "../components/common/Toast"; // <-- adjust path if needed
 
 /**
  * UI tweaks:
@@ -57,7 +58,7 @@ const SkeletonCardMobile = () => (
   </div>
 );
 
-const AuditLogPage = ({ showToast }) => {
+const AuditLogPage = ({ showToast: propShowToast }) => {
   const { t } = useTranslation();
 
   const [logs, setLogs] = useState([]);
@@ -74,6 +75,10 @@ const AuditLogPage = ({ showToast }) => {
   const [pageSize] = useState(DEFAULT_PAGE_SIZE);
   const [total, setTotal] = useState(0);
 
+  // local single-toast state (simple fallback / local toast system)
+  const [toast, setToast] = useState(null);
+
+  // toggle row expand
   const toggleRow = (id) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(id)) newExpanded.delete(id);
@@ -92,6 +97,36 @@ const AuditLogPage = ({ showToast }) => {
       }
     }
     return String(field);
+  };
+
+  // normalize toast types to match your Toast component
+  const normalizeToastType = (type) => {
+    if (!type) return "create"; // default
+    const tLower = String(type).toLowerCase();
+    if (tLower === "success") return "create";
+    if (tLower === "info") return "read";
+    if (tLower === "warning") return "update";
+    if (["create", "read", "update", "delete", "error"].includes(tLower)) return tLower;
+    return "create";
+  };
+
+  const showToastLocal = (message, type = "create") => {
+    const normalized = normalizeToastType(type);
+    setToast({ id: Date.now(), message, type: normalized });
+  };
+
+  // final showToast used inside this component: prefer propShowToast if provided
+  const showToast = (message, type = "create") => {
+    if (typeof propShowToast === "function") {
+      try {
+        propShowToast(message, type);
+      } catch (e) {
+        // fallback to local toast if prop throws
+        showToastLocal(message, type);
+      }
+    } else {
+      showToastLocal(message, type);
+    }
   };
 
   // fetch logs for current page, from/to and page/offset
@@ -676,6 +711,16 @@ const AuditLogPage = ({ showToast }) => {
           </div>
         </div>
       </div>
+
+      {/* Render the toast (single at a time). If a parent passed showToast, it will be used instead. */}
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };

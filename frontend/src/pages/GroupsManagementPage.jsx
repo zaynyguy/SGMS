@@ -8,10 +8,6 @@ import {
   X,
   Search,
   Users,
-  ChevronDown,
-  ChevronUp,
-  UserPlus,
-  UserMinus,
   Layers,
 } from "lucide-react";
 import { fetchGroups, createGroup, updateGroup, deleteGroup } from "../api/groups";
@@ -43,7 +39,6 @@ const gradientFromString = (s) => {
 
 /* -------------------------
    Group form modal
-   - improved spacing & typography
 --------------------------*/
 const GroupFormModal = ({ group, onSave, onClose, t }) => {
   const [name, setName] = useState(group?.name || "");
@@ -248,7 +243,6 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
 
 /* -------------------------
    Group members modal
-   - clearer layout + responsive lists
 --------------------------*/
 const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
   const [members, setMembers] = useState([]);
@@ -344,7 +338,7 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm flex items-center gap-2 disabled:opacity-60"
                 aria-label={t("groups.members.add.button")}
               >
-                <UserPlus className="h-4 w-4" />
+                <Users className="h-4 w-4" />
                 <span className="text-sm">{isAdding ? t("groups.members.add.adding") : t("groups.members.add.button")}</span>
               </button>
             </div>
@@ -376,7 +370,7 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
                         title={t("groups.members.remove.title")}
                         aria-label={t("groups.members.remove.title")}
                       >
-                        {isRemoving === member.id ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" /> : <UserMinus className="h-5 w-5" />}
+                        {isRemoving === member.id ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" /> : <Users className="h-5 w-5" />}
                       </button>
                     </div>
                   </li>
@@ -392,7 +386,6 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
 
 /* -------------------------
    Main GroupsManager
-   - improved header, responsive grid, typography
 --------------------------*/
 function GroupsManager() {
   const { t, i18n } = useTranslation();
@@ -407,8 +400,17 @@ function GroupsManager() {
   const [expandedGroup, setExpandedGroup] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
 
-  const showToast = useCallback((text, type = "success") => {
-    setToast({ text, type });
+  // map semantic types (success/info/...) to Toast component types (create/read/update/delete/error)
+  const showToast = useCallback((text, semanticType = "success") => {
+    const map = {
+      success: "create",
+      info: "read",
+      update: "update",
+      delete: "delete",
+      error: "error",
+    };
+    const tType = map[semanticType] || semanticType || "create";
+    setToast({ text, type: tType });
   }, []);
 
   const loadData = useCallback(async () => {
@@ -483,12 +485,12 @@ function GroupsManager() {
 
           // parse response if needed
           await resp.json().catch(() => null);
-          showToast(currentGroup ? t("groups.messages.updated") : t("groups.messages.created"), "success");
+          showToast(currentGroup ? t("groups.messages.updated") : t("groups.messages.created"), currentGroup ? "update" : "success");
         } else {
           // plain JSON path
           if (currentGroup) {
             await updateGroup(currentGroup.id, groupData);
-            showToast(t("groups.messages.updated"), "success");
+            showToast(t("groups.messages.updated"), "update");
           } else {
             await createGroup(groupData);
             showToast(t("groups.messages.created"), "success");
@@ -516,7 +518,7 @@ function GroupsManager() {
       try {
         await deleteGroup(id);
         await loadData();
-        showToast(t("groups.messages.deleted"), "success");
+        showToast(t("groups.messages.deleted"), "delete");
       } catch (err) {
         console.error("Error deleting group:", err);
         showToast(t("groups.messages.deleteFailed"), "error");
@@ -768,7 +770,7 @@ function GroupsManager() {
                               <Trash2 className="h-5 w-5" />
                             </button>
                             <button onClick={() => toggleGroupExpand(g.id)} className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={t("groups.actions.toggle")}>
-                              
+                              {/* toggle */}
                             </button>
                           </div>
                         </div>
@@ -862,7 +864,12 @@ function GroupsManager() {
             <GroupMembers group={currentGroup} onClose={closeMembersModal} allUsers={allUsers} onUpdateMemberCount={handleUpdateMemberCount} t={t} />
           )}
 
-          {toast && <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />}
+          {/* Toast */}
+          {toast && (
+            <div className="fixed z-50 right-5 bottom-5">
+              <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />
+            </div>
+          )}
         </main>
       </div>
     </>

@@ -1,5 +1,5 @@
 // src/hooks/useProjectApi.js
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { fetchGroups } from "../api/groups";
 import { fetchGoals, createGoal, updateGoal, deleteGoal } from "../api/goals";
 import { fetchTasksByGoal, createTask, updateTask, deleteTask } from "../api/tasks";
@@ -7,17 +7,14 @@ import { fetchActivitiesByTask, createActivity, updateActivity, deleteActivity }
 import { submitReport, fetchReportingStatus } from "../api/reports";
 
 /**
- * Combined hook that manages Goals, Tasks and Activities in one place.
- * - Keeps goals list, tasks keyed by goalId, activities keyed by taskId
- * - Exposes loaders and CRUD handlers for each entity
- *
- * Usage:
- * const project = useProjectApi({ initialPage:1, initialSize:20 });
- * project.loadGoals();
- * project.createTask(goalId, payload);
+ * useProjectApi
+ * - manages groups, goals, tasks, activities
+ * - dedupes in-flight loads (tasks & activities)
+ * - prefetches tasks and a small set of activities with limited concurrency
+ * - exposes derived totals: goals/tasks/activities counts & finished counts
  */
 export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}) {
-  // groups (optional)
+  // groups
   const [groups, setGroups] = useState([]);
 
   // goals
@@ -39,12 +36,36 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
   // reporting
   const [reportingActive, setReportingActive] = useState(null);
 
-  // generic state
+  // generic
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(null);
 
-  /* ---------- INIT / groups / reporting ---------- */
+  // ---- dedupe / concurrency helpers
+  const inFlightTaskLoads = useRef(new Map()); // goalId -> Promise
+  const inFlightActivityLoads = useRef(new Map()); // taskId -> Promise
+
+  // small concurrency pool: limits number of concurrent iterator() executions
+  async function asyncPool(items, iterator, concurrency = 3) {
+    const results = [];
+    const executing = new Set();
+    for (const item of items) {
+      const p = Promise.resolve().then(() => iterator(item));
+      results.push(p);
+
+      executing.add(p);
+      const onFinally = () => executing.delete(p);
+      p.then(onFinally).catch(onFinally);
+
+      if (executing.size >= concurrency) {
+        // wait for at least one to settle
+        await Promise.race(executing);
+      }
+    }
+    return Promise.allSettled(results);
+  }
+
+  /* ---------- INIT: groups + reporting ---------- */
   useEffect(() => {
     (async () => {
       try {
@@ -68,7 +89,6 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
   }, []);
 
   useEffect(() => {
-    // attempt to fetch reporting status once (component mount)
     loadReportingStatus();
   }, [loadReportingStatus]);
 
@@ -104,6 +124,84 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
   };
 
   /* ---------- LOADERS ---------- */
+
+  // loadTasks: dedupe concurrent loads for the same goalId
+  const loadTasks = useCallback(
+    async (goalId, opts = {}) => {
+      if (!goalId) return [];
+      if (!opts.silent) setTasksLoading((prev) => ({ ...prev, [goalId]: true }));
+
+      const existing = inFlightTaskLoads.current.get(goalId);
+      if (existing) {
+        try {
+          return await existing;
+        } catch (err) {
+          // previous in-flight failed -> continue to new attempt
+        }
+      }
+
+      const promise = (async () => {
+        try {
+          const resp = await fetchTasksByGoal(goalId);
+          const list = Array.isArray(resp) ? resp : resp?.rows ?? [];
+          setTasks((prev) => ({ ...prev, [goalId]: list }));
+          return list;
+        } catch (err) {
+          console.error("loadTasks error:", err);
+          setTasks((prev) => ({ ...prev, [goalId]: [] }));
+          setError(err?.message || "Failed to load tasks");
+          throw err;
+        } finally {
+          if (!opts.silent) setTasksLoading((prev) => ({ ...prev, [goalId]: false }));
+        }
+      })();
+
+      inFlightTaskLoads.current.set(goalId, promise);
+      promise.finally(() => inFlightTaskLoads.current.delete(goalId));
+      return promise;
+    },
+    []
+  );
+
+  // loadActivities: dedupe concurrent loads for the same taskId
+  const loadActivities = useCallback(
+    async (taskId, opts = {}) => {
+      if (!taskId) return [];
+      if (!opts.silent) setActivitiesLoading((prev) => ({ ...prev, [taskId]: true }));
+
+      const existing = inFlightActivityLoads.current.get(taskId);
+      if (existing) {
+        try {
+          return await existing;
+        } catch (err) {
+          // prior in-flight failed, continue to new attempt
+        }
+      }
+
+      const promise = (async () => {
+        try {
+          const resp = await fetchActivitiesByTask(taskId);
+          const list = Array.isArray(resp) ? resp : resp?.rows ?? [];
+          setActivities((prev) => ({ ...prev, [taskId]: list }));
+          return list;
+        } catch (err) {
+          console.error("loadActivities error:", err);
+          setActivities((prev) => ({ ...prev, [taskId]: [] }));
+          setError(err?.message || "Failed to load activities");
+          throw err;
+        } finally {
+          if (!opts.silent) setActivitiesLoading((prev) => ({ ...prev, [taskId]: false }));
+        }
+      })();
+
+      inFlightActivityLoads.current.set(taskId, promise);
+      promise.finally(() => inFlightActivityLoads.current.delete(taskId));
+      return promise;
+    },
+    []
+  );
+
+  // loadGoals: fetch goals and prefetch tasks + a limited set of activities
   const loadGoals = useCallback(
     async (opts = {}) => {
       setIsLoadingGoals(true);
@@ -115,9 +213,63 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
         const rows = resp?.rows ?? resp ?? [];
         setGoals(rows);
 
-        // optional: prefetch tasks for first N goals (keep it small)
-        const firstFew = rows.slice(0, 2).map((g) => g.id).filter(Boolean);
-        await Promise.all(firstFew.map((gId) => loadTasks(gId, { silent: true })));
+        // Prefetch tasks for the first few goals with concurrency limit
+        const goalIdsToPrefetch = rows.slice(0, 6).map((g) => g.id).filter(Boolean); // up to 6 goals
+        const goalConcurrency = 3;
+        let prefetchedTaskLists = [];
+
+        if (goalIdsToPrefetch.length) {
+          const settled = await asyncPool(
+            goalIdsToPrefetch,
+            async (gId) => {
+              try {
+                return await loadTasks(gId, { silent: true });
+              } catch (err) {
+                console.warn(`prefetch tasks for goal ${gId} failed`, err);
+                return null;
+              }
+            },
+            goalConcurrency
+          );
+
+          // collect fulfilled task lists
+          prefetchedTaskLists = settled
+            .filter((r) => r.status === "fulfilled" && Array.isArray(r.value))
+            .map((r) => r.value)
+            .flat();
+        }
+
+        // From prefetched tasks, collect up to N task IDs to prefetch activities for
+        const maxTasksToPrefetchActivities = 12;
+        const collectedTaskIds = (prefetchedTaskLists || [])
+          .slice(0, maxTasksToPrefetchActivities)
+          .map((t) => t.id)
+          .filter(Boolean);
+
+        // If no prefetched tasks (e.g. the API returned empty arrays), try a conservative fallback:
+        // attempt to use already-present tasks state (maybe from earlier loads)
+        if (!collectedTaskIds.length) {
+          const tasksSnapshot = Object.values(tasks).flat();
+          collectedTaskIds.push(...tasksSnapshot.slice(0, maxTasksToPrefetchActivities).map((t) => t.id).filter(Boolean));
+        }
+
+        // Prefetch activities for selected tasks with limited concurrency
+        const activityConcurrency = 3;
+        if (collectedTaskIds.length) {
+          await asyncPool(
+            collectedTaskIds.slice(0, maxTasksToPrefetchActivities),
+            async (taskId) => {
+              try {
+                return await loadActivities(taskId, { silent: true });
+              } catch (err) {
+                console.warn(`prefetch activities for task ${taskId} failed`, err);
+                return null;
+              }
+            },
+            activityConcurrency
+          );
+        }
+
         return rows;
       } catch (err) {
         console.error("loadGoals error:", err);
@@ -128,217 +280,195 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
         setIsLoadingGoals(false);
       }
     },
-    [currentPage, pageSize] // eslint-disable-line
+    [currentPage, pageSize, loadTasks, loadActivities, tasks]
   );
 
-  const loadTasks = useCallback(
-    async (goalId, opts = {}) => {
-      if (!goalId) return;
-      if (!opts.silent) setTasksLoading((prev) => ({ ...prev, [goalId]: true }));
+  /* ---------- CRUD handlers (unchanged behavior) ---------- */
+
+  const createGoalItem = useCallback(
+    async (payload) => {
+      setIsSubmitting(true);
+      setError(null);
       try {
-        const resp = await fetchTasksByGoal(goalId);
-        const list = Array.isArray(resp) ? resp : resp?.rows ?? [];
-        setTasks((prev) => ({ ...prev, [goalId]: list }));
-        return list;
+        await createGoal(payload);
+        setSuccess("Goal created");
+        await loadGoals({ page: 1 });
       } catch (err) {
-        console.error("loadTasks error:", err);
-        setTasks((prev) => ({ ...prev, [goalId]: [] }));
-        setError(err?.message || "Failed to load tasks");
+        console.error("createGoal error:", err);
+        setError(err?.message || "Failed to create goal");
         throw err;
       } finally {
-        if (!opts.silent) setTasksLoading((prev) => ({ ...prev, [goalId]: false }));
+        setIsSubmitting(false);
+        setTimeout(() => setSuccess(null), 2000);
       }
     },
-    []
+    [loadGoals]
   );
 
-  const loadActivities = useCallback(
-    async (taskId, opts = {}) => {
-      if (!taskId) return;
-      if (!opts.silent) setActivitiesLoading((prev) => ({ ...prev, [taskId]: true }));
+  const updateGoalItem = useCallback(
+    async (goalId, payload) => {
+      setIsSubmitting(true);
+      setError(null);
       try {
-        const resp = await fetchActivitiesByTask(taskId);
-        const list = Array.isArray(resp) ? resp : resp?.rows ?? [];
-        setActivities((prev) => ({ ...prev, [taskId]: list }));
-        return list;
+        await updateGoal(goalId, payload);
+        setSuccess("Goal updated");
+        await loadGoals();
       } catch (err) {
-        console.error("loadActivities error:", err);
-        setActivities((prev) => ({ ...prev, [taskId]: [] }));
-        setError(err?.message || "Failed to load activities");
+        console.error("updateGoal error:", err);
+        setError(err?.message || "Failed to update goal");
         throw err;
       } finally {
-        if (!opts.silent) setActivitiesLoading((prev) => ({ ...prev, [taskId]: false }));
+        setIsSubmitting(false);
+        setTimeout(() => setSuccess(null), 2000);
       }
     },
-    []
+    [loadGoals]
   );
 
-  /* ---------- CRUD handlers ---------- */
+  const deleteGoalItem = useCallback(
+    async (goalId) => {
+      setError(null);
+      try {
+        await deleteGoal(goalId);
+        setSuccess("Goal deleted");
+        await loadGoals();
+      } catch (err) {
+        console.error("deleteGoal error:", err);
+        setError(err?.message || "Failed to delete goal");
+        throw err;
+      } finally {
+        setTimeout(() => setSuccess(null), 2000);
+      }
+    },
+    [loadGoals]
+  );
 
-  // Goals
-  const createGoalItem = useCallback(async (payload) => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await createGoal(payload);
-      setSuccess("Goal created");
-      await loadGoals({ page: 1 });
-    } catch (err) {
-      console.error("createGoal error:", err);
-      setError(err?.message || "Failed to create goal");
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadGoals]);
+  const createTaskItem = useCallback(
+    async (goalId, payload) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await createTask(goalId, payload);
+        setSuccess("Task created");
+        await loadTasks(goalId);
+        await loadGoals();
+      } catch (err) {
+        console.error("createTask error:", err);
+        setError(err?.message || "Failed to create task");
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+        setTimeout(() => setSuccess(null), 2000);
+      }
+    },
+    [loadTasks, loadGoals]
+  );
 
-  const updateGoalItem = useCallback(async (goalId, payload) => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await updateGoal(goalId, payload);
-      setSuccess("Goal updated");
-      await loadGoals();
-    } catch (err) {
-      console.error("updateGoal error:", err);
-      setError(err?.message || "Failed to update goal");
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadGoals]);
+  const updateTaskItem = useCallback(
+    async (goalId, taskId, payload) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await updateTask(goalId, taskId, payload);
+        setSuccess("Task updated");
+        await loadTasks(goalId);
+        await loadGoals();
+      } catch (err) {
+        console.error("updateTask error:", err);
+        setError(err?.message || "Failed to update task");
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+        setTimeout(() => setSuccess(null), 2000);
+      }
+    },
+    [loadTasks, loadGoals]
+  );
 
-  const deleteGoalItem = useCallback(async (goalId) => {
-    setError(null);
-    try {
-      await deleteGoal(goalId);
-      setSuccess("Goal deleted");
-      await loadGoals();
-    } catch (err) {
-      console.error("deleteGoal error:", err);
-      setError(err?.message || "Failed to delete goal");
-      throw err;
-    } finally {
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadGoals]);
+  const deleteTaskItem = useCallback(
+    async (goalId, taskId) => {
+      setError(null);
+      try {
+        await deleteTask(goalId, taskId);
+        setSuccess("Task deleted");
+        await loadTasks(goalId);
+        await loadGoals();
+      } catch (err) {
+        console.error("deleteTask error:", err);
+        setError(err?.message || "Failed to delete task");
+        throw err;
+      } finally {
+        setTimeout(() => setSuccess(null), 2000);
+      }
+    },
+    [loadTasks, loadGoals]
+  );
 
-  // Tasks
-  const createTaskItem = useCallback(async (goalId, payload) => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await createTask(goalId, payload);
-      setSuccess("Task created");
-      await loadTasks(goalId);
-      await loadGoals();
-    } catch (err) {
-      console.error("createTask error:", err);
-      setError(err?.message || "Failed to create task");
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadTasks, loadGoals]);
+  const createActivityItem = useCallback(
+    async (taskId, payload) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await createActivity(taskId, payload);
+        setSuccess("Activity created");
+        await loadActivities(taskId);
+      } catch (err) {
+        console.error("createActivity error:", err);
+        setError(err?.message || "Failed to create activity");
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+        setTimeout(() => setSuccess(null), 2000);
+      }
+    },
+    [loadActivities]
+  );
 
-  const updateTaskItem = useCallback(async (goalId, taskId, payload) => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await updateTask(goalId, taskId, payload);
-      setSuccess("Task updated");
-      await loadTasks(goalId);
-      await loadGoals();
-    } catch (err) {
-      console.error("updateTask error:", err);
-      setError(err?.message || "Failed to update task");
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadTasks, loadGoals]);
+  const updateActivityItem = useCallback(
+    async (taskId, activityId, payload) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await updateActivity(taskId, activityId, payload);
+        setSuccess("Activity updated");
+        await loadActivities(taskId);
+      } catch (err) {
+        console.error("updateActivity error:", err);
+        setError(err?.message || "Failed to update activity");
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+        setTimeout(() => setSuccess(null), 2000);
+      }
+    },
+    [loadActivities]
+  );
 
-  const deleteTaskItem = useCallback(async (goalId, taskId) => {
-    setError(null);
-    try {
-      await deleteTask(goalId, taskId);
-      setSuccess("Task deleted");
-      await loadTasks(goalId);
-      await loadGoals();
-    } catch (err) {
-      console.error("deleteTask error:", err);
-      setError(err?.message || "Failed to delete task");
-      throw err;
-    } finally {
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadTasks, loadGoals]);
+  const deleteActivityItem = useCallback(
+    async (taskId, activityId) => {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        await deleteActivity(taskId, activityId);
+        setActivities((prev) => ({
+          ...prev,
+          [taskId]: (prev[taskId] || []).filter((a) => a.id !== activityId),
+        }));
+        setSuccess("Activity deleted");
+        await loadActivities(taskId);
+      } catch (err) {
+        console.error("deleteActivity error:", err);
+        setError(err?.message || "Failed to delete activity");
+        throw err;
+      } finally {
+        setIsSubmitting(false);
+        setTimeout(() => setSuccess(null), 2000);
+      }
+    },
+    [loadActivities]
+  );
 
-  // Activities
-  const createActivityItem = useCallback(async (taskId, payload) => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      // API: createActivity(taskId, payload)
-      await createActivity(taskId, payload);
-      setSuccess("Activity created");
-      await loadActivities(taskId);
-      // optionally refresh parent task/goals if you need
-    } catch (err) {
-      console.error("createActivity error:", err);
-      setError(err?.message || "Failed to create activity");
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadActivities]);
-
-  const updateActivityItem = useCallback(async (taskId, activityId, payload) => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await updateActivity(taskId, activityId, payload);
-      setSuccess("Activity updated");
-      await loadActivities(taskId);
-    } catch (err) {
-      console.error("updateActivity error:", err);
-      setError(err?.message || "Failed to update activity");
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadActivities]);
-
-  const deleteActivityItem = useCallback(async (taskId, activityId) => {
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      await deleteActivity(taskId, activityId);
-      // optimistic removal from local state:
-      setActivities((prev) => ({
-        ...prev,
-        [taskId]: (prev[taskId] || []).filter((a) => a.id !== activityId),
-      }));
-      setSuccess("Activity deleted");
-      // refresh list
-      await loadActivities(taskId);
-    } catch (err) {
-      console.error("deleteActivity error:", err);
-      setError(err?.message || "Failed to delete activity");
-      throw err;
-    } finally {
-      setIsSubmitting(false);
-      setTimeout(() => setSuccess(null), 2000);
-    }
-  }, [loadActivities]);
-
-  /* ---------- Reporting (submit report wrapper) ---------- */
+  /* ---------- Reporting (submit wrapper) ---------- */
   const submitReportForActivity = useCallback(
     async (activityId, formData) => {
       setIsSubmitting(true);
@@ -359,6 +489,63 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
     []
   );
 
+  /* ---------- Derived totals (exposed) ---------- */
+  const totals = useMemo(() => {
+    // helper to determine completion robustly
+    const isCompletedItem = (item) => {
+      if (!item) return false;
+      if (item.completed === true || item.isCompleted === true) return true;
+      const st = (item.status || item.state || "").toString().toLowerCase();
+      if (["completed", "done", "finished"].includes(st)) return true;
+      const prog = Number(item.progress ?? item.progress_percent ?? item.percent ?? item.value ?? -1);
+      if (!Number.isNaN(prog) && prog >= 100) return true;
+      return false;
+    };
+
+    const goalsArr = Array.isArray(goals) ? goals : [];
+    const goalsTotal = goalsArr.length;
+    const goalsFinished = goalsArr.reduce((s, g) => s + (isCompletedItem(g) ? 1 : 0), 0);
+
+    const tasksLists = Object.values(tasks || {});
+    const tasksTotal = tasksLists.reduce((s, list) => s + (Array.isArray(list) ? list.length : 0), 0);
+    const tasksFinished = tasksLists.reduce((s, list) => s + (Array.isArray(list) ? list.reduce((ss, it) => ss + (isCompletedItem(it) ? 1 : 0), 0) : 0), 0);
+
+    const actsLists = Object.values(activities || {});
+    let activitiesTotal = actsLists.reduce((s, list) => s + (Array.isArray(list) ? list.length : 0), 0);
+    let activitiesFinished = actsLists.reduce((s, list) => s + (Array.isArray(list) ? list.reduce((ss, it) => ss + (isCompletedItem(it) ? 1 : 0), 0) : 0), 0);
+
+    // If activities are not present, attempt to infer from task-level counts (best-effort)
+    if (activitiesTotal === 0) {
+      const allTasks = Object.values(tasks).flat();
+      const inferredTotal = allTasks.reduce((s, t) => {
+        return s + (Number(t.activities_count ?? t.activity_count ?? t.activitiesTotal ?? t.activityTotal ?? 0) || 0);
+      }, 0);
+
+      if (inferredTotal > 0) {
+        activitiesTotal = inferredTotal;
+        activitiesFinished = allTasks.reduce((s, t) => {
+          const completed = Number(t.completed_activities ?? t.finished_activities ?? t.completedActivities ?? 0) || 0;
+          if (completed > 0) return s + completed;
+          const actCount = Number(t.activities_count ?? t.activity_count ?? 0) || 0;
+          const prog = Number(t.progress ?? t.progress_percent ?? t.percent ?? -1);
+          if (actCount > 0 && !Number.isNaN(prog) && prog >= 0 && prog <= 100) {
+            return s + Math.round((prog / 100) * actCount);
+          }
+          return s;
+        }, 0);
+      }
+    }
+
+    return {
+      goalsTotal,
+      goalsFinished,
+      tasksTotal,
+      tasksFinished,
+      activitiesTotal,
+      activitiesFinished,
+    };
+  }, [goals, tasks, activities]);
+
   /* ---------- Exports ---------- */
   return {
     // state
@@ -376,7 +563,15 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
     success,
     isSubmitting,
 
-    // paging mutators
+    // totals + finished
+    totalGoals: totals.goalsTotal,
+    finishedGoals: totals.goalsFinished,
+    totalTasks: totals.tasksTotal,
+    finishedTasks: totals.tasksFinished,
+    totalActivities: totals.activitiesTotal,
+    finishedActivities: totals.activitiesFinished,
+
+    // paging
     setCurrentPage,
     setPageSize,
 
@@ -386,23 +581,22 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
     loadActivities,
     loadReportingStatus,
 
-    // CRUD - Goals
+    // CRUD
     createGoalItem,
     updateGoalItem,
     deleteGoalItem,
 
-    // CRUD - Tasks
     createTaskItem,
     updateTaskItem,
     deleteTaskItem,
 
-    // CRUD - Activities
     createActivityItem,
     updateActivityItem,
     deleteActivityItem,
 
-    // Reporting
+    // reporting
     submitReportForActivity,
+    
 
     // helpers
     computeGoalWeightAvailable,

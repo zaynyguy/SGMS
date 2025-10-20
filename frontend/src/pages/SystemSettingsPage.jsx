@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 import { fetchSystemSettings, updateSystemSettings } from "../api/systemSettings";
 import AllowedTypesInput from "../components/AllowedTypesInput";
 import TopBar from "../components/layout/TopBar";
-import {Settings2Icon} from "lucide-react"
+import Toast from "../components/common/Toast"; // <-- adjust path if needed
+import { Settings2Icon } from "lucide-react";
 
 /**
  * Helpers
@@ -92,6 +93,30 @@ export default function SystemSettingsPage() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const lastSavedRef = useRef(null);
 
+  // Toast state (single toast at a time)
+  const [toast, setToast] = useState(null);
+
+  // normalize message types to your Toast component types
+  const normalizeToastType = (type) => {
+    if (!type) return "create";
+    const tLower = String(type).toLowerCase();
+    if (tLower === "success") return "create";
+    if (tLower === "info") return "read";
+    if (tLower === "error") return "error";
+    if (["create", "read", "update", "delete"].includes(tLower)) return tLower;
+    return "create";
+  };
+
+  const showToastLocal = (messageText, type = "create") => {
+    const normalized = normalizeToastType(type);
+    setToast({ id: Date.now(), message: messageText, type: normalized });
+  };
+
+  // use this to show a toast from this page
+  const showToast = (messageText, type = "create") => {
+    showToastLocal(messageText, type);
+  };
+
   useEffect(() => {
     // load settings and convert shape
     async function loadSettings() {
@@ -106,7 +131,9 @@ export default function SystemSettingsPage() {
         lastSavedRef.current = merged;
       } catch (err) {
         console.error("fetchSystemSettings failed:", err);
-        setMessage({ text: t("systemSettings.messages.failedLoad") || "Failed to load system settings", type: "error" });
+        const text = t("systemSettings.messages.failedLoad") || "Failed to load system settings";
+        setMessage({ text, type: "error" });
+        showToast(text, "error");
         // keep defaults in UI so the page remains usable
         lastSavedRef.current = { ...defaults };
       } finally {
@@ -139,7 +166,9 @@ export default function SystemSettingsPage() {
     const original = lastSavedRef.current || {};
     const diffs = diffObjects(original, settings);
     if (Object.keys(diffs).length === 0) {
-      setMessage({ text: t("systemSettings.messages.noChanges") || "No changes to save", type: "info" });
+      const text = t("systemSettings.messages.noChanges") || "No changes to save";
+      setMessage({ text, type: "info" });
+      showToast(text, "info");
       setTimeout(() => setMessage({ text: "", type: "" }), 2500);
       return;
     }
@@ -159,12 +188,16 @@ export default function SystemSettingsPage() {
       // update lastSavedRef and UI to reflect saved data
       const newSaved = { ...original, ...diffs };
       lastSavedRef.current = newSaved;
-      setMessage({ text: t("systemSettings.messages.saved") || "Settings saved", type: "success" });
+      const savedText = t("systemSettings.messages.saved") || "Settings saved";
+      setMessage({ text: savedText, type: "success" });
+      showToast(savedText, "success");
       // keep UI state consistent
       setSettings((prev) => ({ ...prev, ...diffs }));
     } catch (err) {
       console.error("updateSystemSettings failed:", err);
-      setMessage({ text: t("systemSettings.messages.failedSave") || "Failed to save settings", type: "error" });
+      const errText = t("systemSettings.messages.failedSave") || "Failed to save settings";
+      setMessage({ text: errText, type: "error" });
+      showToast(errText, "error");
     } finally {
       setSaving(false);
       setTimeout(() => setMessage({ text: "", type: "" }), 4000);
@@ -211,11 +244,11 @@ export default function SystemSettingsPage() {
         <div className="flex items-center justify-between mb-6 gap-4">
           <div className="flex min-w-0 gap-4 items-center">
             <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-                        <Settings2Icon className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                      </div>
+              <Settings2Icon className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+            </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white truncate">{t("systemSettings.title")}</h1>
-            <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+              <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
                 {t("systemSettings.subtitle")}
               </p>
             </div>
@@ -314,8 +347,8 @@ export default function SystemSettingsPage() {
                     onChange={(e) => handleChange("reporting_active", e.target.checked)}
                     className="sr-only"
                   />
-                  <label 
-                    htmlFor="reporting-toggle" 
+                  <label
+                    htmlFor="reporting-toggle"
                     className={`block overflow-hidden h-7 rounded-full cursor-pointer transition-colors duration-200 ${settings.reporting_active ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
                   >
                     <span className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${settings.reporting_active ? "transform translate-x-7" : ""}`} />
@@ -371,6 +404,16 @@ export default function SystemSettingsPage() {
           <p>{t("systemSettings.description")}</p>
         </div>
       </div>
+
+      {/* Toast render (single toast) */}
+      {toast && (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

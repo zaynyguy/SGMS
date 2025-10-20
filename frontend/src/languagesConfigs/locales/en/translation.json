@@ -549,6 +549,18 @@
     "unassigned": "Unassigned",
     "none": "— No change —",
     "loadingTasks": "Loading tasks",
+    "sort": {
+      "label": "Sort",
+      "title": "Title",
+      "createdAt": "Created Date",
+      "ascending": "Ascending",
+      "descending": "Descending",
+      "asc": "A–Z",
+      "desc": "Z–A"
+    },
+    "refresh": "Refresh",
+    "addGoal": "Add goal",
+    "addGoalLabel": "Add Goal",
 
     "actions": {
       "refresh": "Refresh",
@@ -596,7 +608,7 @@
     "labels": {
       "targetMetrics": "Target Metrics",
       "activity": "Activity",
-      "metrics": "Target / Metrics",
+      "metrics": "Current Metrics",
       "attachments": "Attachments",
       "rollLabel": "Roll number (optional)"
     },
@@ -737,17 +749,23 @@
         "title": "Goals",
         "aria": "Open goals",
         "fromLast": "from last period",
-        "noComparison": "Overall Goal progress"
+        "noComparison": "Overall Goal progress",
+        "outOf": "out of",
+        "haveBeenDone": "have been done"
       },
       "tasks": {
         "title": "Tasks",
         "aria": "Open tasks",
-        "subtitle": "Overall Task progress"
+        "subtitle": "Overall Task progress",
+        "outOf": "out of",
+        "haveBeenDone": "have been done"
       },
       "activities": {
         "title": "Activities",
         "aria": "Open activities",
-        "subtitle": "Overall Activity progress"
+        "subtitle": "Overall Activity progress",
+        "outOf": "out of",
+        "haveBeenDone": "have been done"
       },
       "pendingReports": {
         "title": "Pending reports",
@@ -791,6 +809,10 @@
     "subtitle": "View and manage alerts, messages and system notices — mark as read, filter, and take action on important items.",
     "unreadCount": "{{count}} unread",
     "markAll": "Mark all as read",
+    "toasts": {
+      "markedRead": "Notification marked as read successfully!",
+      "markAllRead": "All notifications marked as read successfully!"
+    },
     "filter": {
       "label": "Filter:",
       "all": "All",

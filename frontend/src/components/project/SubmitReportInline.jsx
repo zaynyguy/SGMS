@@ -120,9 +120,12 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
                   className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
                 />
                 <input
+                  type="number"
+                  min={0}
                   placeholder={t("project.placeholders.metricValue")}
                   value={m.value}
                   onChange={(e) => updateMetricRow(idx, "value", e.target.value)}
+                  required
                   className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
                 />
                 <button
