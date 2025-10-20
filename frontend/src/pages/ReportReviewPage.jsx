@@ -1,21 +1,15 @@
-import React, { useState, useEffect, useMemo } from "react";
-
-import { Loader, FileText, ChevronRight, User } from "lucide-react";
-
+import React, { useState, useEffect } from "react";
+import { Loader, ChevronRight, User, CheckCircle, Eye } from "lucide-react"; // Added Eye icon
 import { fetchReports, reviewReport, fetchMasterReport } from "../api/reports";
-
 import { fetchAttachments, downloadAttachment } from "../api/attachments";
-
 import { useTranslation } from "react-i18next";
-
-
+import {fetchGroups} from "../api/groups"
 
 /* -------------------------
 REVIEW PAGE
 ------------------------- */
 
 function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title }) {
-  // Renders a compact breadcrumb with collapse/expand behavior to handle long titles.
   const segments = [
     { label: group_name || null, key: "group" },
     { label: goal_title || null, key: "goal" },
@@ -24,11 +18,9 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
   ].filter((s) => s.label);
 
   const [expanded, setExpanded] = useState(false);
-
   if (segments.length === 0) return null;
 
   if (segments.length <= 3) {
-    // short path: show all truncated with tooltips
     return (
       <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 min-w-0 flex-wrap">
         {segments.map((s, i) => (
@@ -43,7 +35,6 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
     );
   }
 
-  // long path: show first, ellipsis toggle, last; expanded view reveals all
   const first = segments[0];
   const last = segments[segments.length - 1];
   return (
@@ -94,7 +85,7 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
   );
 }
 
- export default function ReviewReportsPage({ permissions, readonly = false }) {
+export default function ReviewReportsPage({ permissions, readonly = false }) {
   const { t } = useTranslation();
 
   const [reports, setReports] = useState([]);
@@ -108,14 +99,19 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
 
+  // groups for filtering
+  const [groups, setGroups] = useState([]);
+  const [groupFilter, setGroupFilter] = useState("All");
+
   // attachments cache per reportId
-  const [attachmentsMap, setAttachmentsMap] = useState({}); // { [reportId]: [attachments] }
-  const [attachmentDownloading, setAttachmentDownloading] = useState({}); // { [attachmentId]: bool }
+  const [attachmentsMap, setAttachmentsMap] = useState({});
+  const [attachmentDownloading, setAttachmentDownloading] = useState({});
+  const [attachmentPreviewing, setAttachmentPreviewing] = useState({}); // New state for preview loading
 
   useEffect(() => {
     loadReports();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, statusFilter]);
+  }, [page, pageSize, statusFilter, groupFilter]);
 
   async function loadReports(opts = {}) {
     setLoading(true);
@@ -124,11 +120,20 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
       const useSize = opts.pageSize || pageSize;
       const status = statusFilter === "All" ? undefined : statusFilter;
       const q = opts.q !== undefined ? opts.q : search ? search : undefined;
+
+      // call backend (expected signature fetchReports(page, pageSize, status, q))
       const data = await fetchReports(usePage, useSize, status, q);
-      setReports(Array.isArray(data.rows) ? data.rows : []);
+
+      // Ensure rows array
+      const rows = Array.isArray(data.rows) ? data.rows : Array.isArray(data) ? data : [];
+
+      // If groupFilter is set, apply client-side filtering (robust if backend doesn't accept group param)
+      const filteredRows = groupFilter && groupFilter !== "All" ? rows.filter((r) => String(r.group_id) === String(groupFilter) || String(r.group_name) === String(groupFilter)) : rows;
+
+      setReports(filteredRows);
       setPage(data.page || usePage);
       setPageSize(data.pageSize || useSize);
-      setTotal(data.total || 0);
+      setTotal(data.total || filteredRows.length || 0);
     } catch (err) {
       console.error("loadReports error:", err);
       setReports([]);
@@ -162,21 +167,17 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
       },
     }));
 
-    // FETCH ATTACHMENTS if not already cached
     (async () => {
       try {
         if (!attachmentsMap[expanded]) {
           const fetched = await fetchAttachments(expanded);
-          // fetched may be array or object; ensure array
           const arr = Array.isArray(fetched) ? fetched : fetched.rows || [];
           setAttachmentsMap((m) => ({ ...m, [expanded]: arr }));
         }
       } catch (err) {
         console.error("fetchAttachments error for report", expanded, err);
-        // keep silent; attachments not critical
       }
     })();
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expanded]);
 
@@ -188,6 +189,7 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
     try {
       setActionLoading((s) => ({ ...s, [id]: actionKey }));
       await reviewReport(id, { status, adminComment, resubmissionDeadline });
+      // reload current page after action
       await loadReports();
       setActionState((s) => ({
         ...s,
@@ -219,7 +221,6 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
       setAttachmentDownloading((s) => ({ ...s, [aid]: true }));
       const res = await downloadAttachment(aid);
       if (res && res.url) {
-        // open signed url in new tab
         window.open(res.url, "_blank");
       } else if (res && res.blob) {
         const blob = res.blob;
@@ -233,7 +234,6 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
         a.remove();
         URL.revokeObjectURL(url);
       } else {
-        // fallback: open direct endpoint (browser will attempt download)
         window.open(`/api/reports/attachments/${encodeURIComponent(aid)}/download`, "_blank");
       }
     } catch (err) {
@@ -241,6 +241,44 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
       alert(err?.message || "Download failed");
     } finally {
       setAttachmentDownloading((s) => ({ ...s, [aid]: false }));
+    }
+  }
+
+  // New function for handling previews
+  async function handlePreviewAttachment(attachment) {
+    if (!attachment || !attachment.id) return;
+    const aid = attachment.id;
+    try {
+      setAttachmentPreviewing((s) => ({ ...s, [aid]: true }));
+      const res = await downloadAttachment(aid); // Re-use the same download API
+
+      if (res && res.url) {
+        // If API provides a direct URL, open it
+        window.open(res.url, "_blank");
+      } else if (res && res.blob) {
+        // If API provides a blob, check if it's a type the browser can preview
+        const blob = res.blob;
+        const mimeType = blob.type || attachment.mimeType;
+        const previewableTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf", "text/plain", "image/svg+xml"];
+
+        if (previewableTypes.includes(mimeType)) {
+          const url = URL.createObjectURL(blob);
+          window.open(url, "_blank");
+          // Note: This URL is not revoked, which is a minor memory leak,
+          // but required to keep the blob alive for the new tab.
+        } else {
+          // If not previewable (e.g., .zip, .docx), just trigger the original download
+          handleDownloadAttachment(attachment);
+        }
+      } else {
+        // Fallback to the generic download endpoint, attempting to open in new tab
+        window.open(`/api/reports/attachments/${encodeURIComponent(aid)}/download`, "_blank");
+      }
+    } catch (err) {
+      console.error("previewAttachment error", err);
+      alert(err?.message || "Preview failed. Please try downloading.");
+    } finally {
+      setAttachmentPreviewing((s) => ({ ...s, [aid]: false }));
     }
   }
 
@@ -264,18 +302,56 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
     { id: "Rejected", key: "reports.filters.rejected" },
   ];
 
-  // Header text: use different title when readonly for users
-  const headerTitle = readonly ? t("reports.myReports.title", "My Reports") : t("reports.review.title");
-  const headerSubtitle = readonly
-    ? t("reports.myReports.subtitle", "Your submitted reports and their review status.")
-    : t("reports.review.subtitle");
+  // Load group options for the group filter. Try master API, fall back to deriving from loaded reports.
+  useEffect(() => {
+    async function loadGroups() {
+      // FIX: Don't re-derive group list if it's already populated.
+      // This prevents the list from disappearing when a filter is applied.
+      if (groups.length > 1) {
+        return;
+      }
+
+      try {
+        const res = await fetchMasterReport();
+        let items = [];
+        if (res) {
+          if (Array.isArray(res.groups)) items = res.groups;
+          else if (Array.isArray(res.rows)) items = res.rows;
+          else if (Array.isArray(res)) items = res;
+        }
+
+        const normalized = items
+          .map((g) => (g && (g.id || g.group_id) ? { id: g.id || g.group_id, name: g.name || g.group_name || g.group || String(g.id || g.group_id) } : null))
+          .filter(Boolean);
+
+        if (normalized.length) {
+          setGroups([{ id: "All", name: t("reports.filters.groupAll", "All Groups") }, ...normalized]);
+          return;
+        }
+      } catch (err) {
+        // ignore API failure and derive from reports
+      }
+
+      // fallback: derive unique groups from current reports
+      const derived = Array.from(
+        new Map(
+          reports
+            .map((r) => [r.group_id || r.groupId || r.group, { id: r.group_id || r.groupId || r.group, name: r.group_name || r.group || String(r.group_id || r.groupId || r.group) }])
+            .filter(([k]) => k !== undefined && k !== null)
+        ).values()
+      );
+      setGroups([{ id: "All", name: t("reports.filters.groupAll", "All Groups") }, ...derived]);
+    }
+    loadGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reports]); // Dependency on 'reports' is kept for the initial fallback logic
 
   return (
     <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
         <div>
-          <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">{headerTitle}</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">{headerSubtitle}</p>
+          <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100">{readonly ? t("reports.myReports.title", "My Reports") : t("reports.review.title")}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">{readonly ? t("reports.myReports.subtitle", "Your submitted reports and their review status.") : t("reports.review.subtitle")}</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full lg:w-auto">
@@ -312,7 +388,7 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           {statusOptions.map((s) => (
             <button
               key={s.id}
@@ -327,6 +403,26 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
               {t(s.key)}
             </button>
           ))}
+
+          {/* STYLED Group Filter Select */}
+          <select
+            value={groupFilter}
+            onChange={(e) => {
+              setPage(1);
+              setGroupFilter(e.target.value);
+            }}
+            className="ml-2 px-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            aria-label={t("reports.filters.groupLabel", "Group")}
+          >
+            {groups && groups.length > 0
+              ? groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))
+              : <option value="All">{t("reports.filters.groupAll", "All Groups")}</option>
+            }
+          </select>
         </div>
         <div className="ml-auto text-xs text-gray-500 dark:text-gray-400">{t("reports.pagination.showingPage", { page, totalPages, total })}</div>
       </div>
@@ -359,8 +455,15 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
               const isLoading = !!actionLoading[r.id];
               const approving = actionLoading[r.id] === "approving";
               const rejecting = actionLoading[r.id] === "rejecting";
+
+              const isDone = String(r.new_status || "").toLowerCase() === "done";
+
               return (
-                <div key={r.id} className="border rounded-lg overflow-hidden transition-all">
+                <div key={r.id} className="border rounded-lg overflow-hidden transition-all relative">
+                  {isDone && (
+                    <div className="absolute top-3 left-0 -translate-x-4 -rotate-12 bg-green-600 text-white text-xs font-bold px-3 py-0.5 rounded shadow" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized)")}>DONE</div>
+                  )}
+
                   <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2 md:gap-4">
@@ -392,7 +495,6 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
                             </>
                           )}
 
-                          {/* final activity title shown as bold (if not inside BreadcrumbsCompact) */}
                           {!r.group_name && (
                             <span className="text-gray-800 dark:text-gray-100 font-semibold truncate" title={r.activity_title || "Activity"}>
                               {r.activity_title || "Activity"}
@@ -403,6 +505,13 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
                         <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full whitespace-nowrap self-start sm:self-center">
                           <User className="h-3.5 w-3.5" />
                           <span>{r.user_name || "Unknown User"}</span>
+
+                          {isDone && (
+                            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized). Approving this runs progress calculations across the system.")}>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span className="font-semibold">{t("reports.done", "Done")}</span>
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -443,7 +552,7 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
                                 <button
                                   onClick={(e) => {
                                     e.preventDefault();
-                                    handleDownloadAttachment(a);
+                                    handleDownloadAttachment(a); // This button can still be the filename
                                   }}
                                   className="text-left text-sky-600 dark:text-sky-400 hover:underline text-sm flex-1 truncate"
                                   title={a.fileName || a.attachment_name || `attachment-${a.id}`}
@@ -454,13 +563,29 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
                                 <div className="flex items-center gap-2">
                                   {a.size && <div className="text-xs text-gray-400 hidden sm:inline">{(a.size / 1024).toFixed(1)} KB</div>}
                                   {a.mimeType && <div className="text-xs text-gray-400 hidden sm:inline">{a.mimeType}</div>}
+                                  
+                                  {/* NEW PREVIEW BUTTON */}
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      handlePreviewAttachment(a);
+                                    }}
+                                    className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs text-gray-700 dark:text-gray-300"
+                                    aria-label={`Preview ${a.fileName || a.attachment_name || a.id}`}
+                                    title={t("reports.attachments.preview", "Preview")}
+                                  >
+                                    {attachmentPreviewing[a.id] ? <Loader className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                                  </button>
+
+                                  {/* UPDATED DOWNLOAD BUTTON */}
                                   <button
                                     onClick={(e) => {
                                       e.preventDefault();
                                       handleDownloadAttachment(a);
                                     }}
-                                    className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs"
+                                    className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs flex items-center gap-1"
                                     aria-label={`Download ${a.fileName || a.attachment_name || a.id}`}
+                                    title={t("reports.attachments.download", "Download")}
                                   >
                                     {attachmentDownloading[a.id] ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.attachments.download", "Download")}
                                   </button>
@@ -550,6 +675,7 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
                 </div>
               );
             })}
+
             {reports.length === 0 && !loading && <div className="text-center text-gray-500 dark:text-gray-400 py-6">{t("reports.noReports")}</div>}
           </>
         )}
@@ -570,8 +696,9 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
           <button
             disabled={page <= 1}
             onClick={() => {
-              setPage((p) => Math.max(1, p - 1));
-              loadReports({ page: Math.max(1, page - 1) });
+              const next = Math.max(1, page - 1);
+              setPage(next);
+              loadReports({ page: next });
             }}
             className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -583,8 +710,9 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
           <button
             disabled={page >= totalPages}
             onClick={() => {
-              setPage((p) => Math.min(totalPages, p + 1));
-              loadReports({ page: Math.min(totalPages, page + 1) });
+              const next = Math.min(totalPages, page + 1);
+              setPage(next);
+              loadReports({ page: next });
             }}
             className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
