@@ -555,7 +555,8 @@
     "sort": {
       "label": "Sassaabuu",
       "title": "Mata duree",
-      "createdAt": "Guyyaa Uumame",
+      "created": "Guyyaa Uumame",
+      "rollNo":"Lakkoofsa Galmee",
       "ascending": "Olba'aa",
       "descending": "Gadi bu'aa",
       "asc": "A–Z",

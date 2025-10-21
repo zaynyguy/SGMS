@@ -560,7 +560,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                       </div>
 
                       <div>
-                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("reports.metrics.title", "Current Metrics")}</div>
+                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("project.labels.metrics")}</div>
                         <div className="mt-2">{renderMetricsList(r.metrics_data)}</div>
                       </div>
 

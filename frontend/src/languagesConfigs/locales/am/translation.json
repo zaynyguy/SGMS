@@ -167,7 +167,7 @@
         "description": "መግለጫ"
       },
       "buttons": {
-        "uploadPicture": "ስዕል ስቀል",
+        "uploadPicture": "ምስል ይስቀሉ",
         "cancel": "ሰርዝ",
         "create": "ቡድን ይፍጠሩ",
         "save": "ለውጦችን ያስቀምጡ",
@@ -552,7 +552,8 @@
     "sort": {
       "label": "መደርደር",
       "title": "ርዕስ",
-      "createdAt": "የተፈጠረበት ቀን",
+      "created": "የተፈጠረበት ቀን",
+      "rollNo":"ጥቅል ቁጥር",
       "ascending": "መወጣጫ",
       "descending": "መውረድ",
       "asc": "A–Z",

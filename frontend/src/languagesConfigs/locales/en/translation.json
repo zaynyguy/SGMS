@@ -552,7 +552,8 @@
     "sort": {
       "label": "Sort",
       "title": "Title",
-      "createdAt": "Created Date",
+      "created": "Created Date",
+      "rollNo":"Roll Number",
       "ascending": "Ascending",
       "descending": "Descending",
       "asc": "A–Z",
