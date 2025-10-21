@@ -16,10 +16,7 @@ import { Home } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import useProjectApi from "../hooks/useProjectApi";
 
-/* ---------------------------
-   Small UI helpers & modal
-   --------------------------- */
-
+/* small helpers */
 const LoadingSkeleton = ({ className = "h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" }) => (
   <div className={className} aria-hidden />
 );
@@ -55,7 +52,6 @@ const Modal = ({ open, onClose, children, title }) => {
   );
 };
 
-/* Card: keyboard accessible */
 const Card = ({ title, children, onClick, className = "", ariaLabel, headerActions }) => {
   const clickable = Boolean(onClick);
   return (
@@ -84,27 +80,16 @@ const Card = ({ title, children, onClick, className = "", ariaLabel, headerActio
   );
 };
 
-/* ---------------------------
-   Small format helper
-   --------------------------- */
 function formatDate(d) {
   if (!d) return "-";
   const dt = new Date(d);
   return dt.toLocaleDateString();
 }
 
-/* ---------------------------
-   Small charts & panels (kept inline)
-   Use the existing implementations you had — trimmed here for clarity.
-   The charts below are identical to previous versions (GroupBarChart, TaskBarChart, PieChart).
-   For brevity they are included but unchanged in behavior.
-*/
-
+/* --- Charts (kept identical / unchanged) --- */
 /* GroupBarChart */
 const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, gap = 12 }) => {
-  if (!Array.isArray(data) || data.length === 0) {
-    return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
-  }
+  if (!Array.isArray(data) || data.length === 0) return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
   const display = limit ? data.slice(0, limit) : data;
   const values = display.map((d) => Number(d.value ?? d.progress ?? 0));
   const max = Math.max(1, ...values);
@@ -316,10 +301,7 @@ const PieChart = ({ slices = [], size = 220 }) => {
   );
 };
 
-/* ---------------------------
-   Overdue / Notifications / Audit
-   --------------------------- */
-
+/* Overdue / Notifications / Audit panels (unchanged) */
 const OverdueTable = ({ rows = [], loading, t }) => {
   if (loading) return <LoadingSkeleton className="h-48 w-full" />;
   if (!rows.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.noOverdue")}</div>;
@@ -337,11 +319,11 @@ const OverdueTable = ({ rows = [], loading, t }) => {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <tr key={r.id || r.taskId} className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
               <td className="p-2 dark:text-gray-300">{r.taskTitle}</td>
               <td className="p-2 dark:text-gray-300">{formatDate(r.dueDate)}</td>
               <td className="p-2">
-                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs">{r.daysOverdue}</span>
+                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs">{r.days_overdue ?? r.daysOverdue ?? 0}</span>
               </td>
               <td className="p-2 dark:text-gray-300">{r.goalTitle}</td>
               <td className="p-2 dark:text-gray-300">{r.groupName}</td>
@@ -423,16 +405,11 @@ const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
   );
 };
 
-/* ---------------------------
-   Main Dashboard Component
-   --------------------------- */
-
+/* Main dashboard */
 export default function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  // project hook (provides totals + loaders)
   const project = useProjectApi();
 
   const [dashboardData, setDashboardData] = useState({
@@ -458,7 +435,6 @@ export default function DashboardPage() {
   const permissionArray = Array.isArray(user?.permissions) ? user.permissions : [];
   const hasAuditPerm = permissionArray.includes("view_audit_logs");
 
-  // refresh guard
   const lastRefreshAt = useRef(0);
 
   const loadAll = useCallback(async () => {
@@ -485,8 +461,12 @@ export default function DashboardPage() {
       const results = await Promise.allSettled(promises);
       const [summaryRes, groupRes, taskRes, reportsRes, overdueRes, notifsRes, auditRes] = results;
 
+      // Accept summary either as { ... } or { data: { ... } }
+      const raw = summaryRes.status === "fulfilled" ? summaryRes.value : null;
+      const summaryObj = raw && typeof raw === "object" && raw.data ? raw.data : raw;
+
       const newData = {
-        summary: summaryRes.status === "fulfilled" ? summaryRes.value : null,
+        summary: summaryObj,
         groupBars: groupRes.status === "fulfilled" ? (Array.isArray(groupRes.value) ? groupRes.value : []) : [],
         taskBars: taskRes.status === "fulfilled" ? (Array.isArray(taskRes.value) ? taskRes.value : []) : [],
         reportsPie:
@@ -500,7 +480,9 @@ export default function DashboardPage() {
         auditLogs: [],
       };
 
-      newData.groups = Array.isArray(newData.groupBars) ? newData.groupBars.map((g) => ({ groupId: g.groupId ?? g.id, name: g.name, value: g.progress ?? g.value ?? 0, color: g.color })) : [];
+      newData.groups = Array.isArray(newData.groupBars)
+        ? newData.groupBars.map((g) => ({ groupId: g.groupId ?? g.id, name: g.name, value: g.progress ?? g.value ?? 0, color: g.color }))
+        : [];
 
       if (hasAuditPerm) {
         if (auditRes.status === "fulfilled") {
@@ -543,7 +525,6 @@ export default function DashboardPage() {
     loadAll();
   }, [loadAll, user]);
 
-  // load project data once on mount — project hook manages concurrency/dedupe internally
   useEffect(() => {
     if (project && typeof project.loadGoals === "function") {
       project.loadGoals().catch((e) => {
@@ -564,7 +545,6 @@ export default function DashboardPage() {
     if (project && typeof project.loadGoals === "function") project.loadGoals().catch(() => {});
   };
 
-  // mark notifications read (update isRead locally)
   const handleMarkNotificationsRead = async () => {
     setMarking(true);
     try {
@@ -577,7 +557,7 @@ export default function DashboardPage() {
       setDashboardData((prev) => ({
         ...prev,
         notifications: prev.notifications.map((n) => ({ ...n, isRead: true })),
-        summary: prev.summary ? { ...prev.summary, unread: 0 } : null,
+        summary: prev.summary ? { ...prev.summary, unread: 0, unread_notifications: 0 } : null,
       }));
     } catch (err) {
       console.error("❌ Failed to mark notifications read:", err);
@@ -586,7 +566,40 @@ export default function DashboardPage() {
     }
   };
 
-  // goal delta (used in the descriptive line for goals)
+  // parse numeric-like values (backend often returns strings)
+  const parseNum = (v, fallback = null) => {
+    if (v === null || v === undefined) return fallback;
+    if (typeof v === "number") return v;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  // take summary either directly or from { data: ... }
+  const rawSummary = dashboardData.summary ?? {};
+  const summary = rawSummary && typeof rawSummary === "object" ? rawSummary : {};
+
+  // PERCENTAGES (you said these already work)
+  const overall_goal_progress = parseNum(summary.overall_goal_progress, null);
+  const overall_task_progress = parseNum(summary.overall_task_progress, null);
+  const overall_activity_progress = parseNum(summary.overall_activity_progress, null);
+
+  // pending reports
+  const pending_reports = parseNum(summary.pending_reports, 0);
+
+  // --- EXACT COUNTS from your JSON ---
+  const goals_count = parseNum(summary.goals_count, 0);
+  const tasks_count = parseNum(summary.tasks_count, 0);
+  const activities_count = parseNum(summary.activities_count, 0);
+
+  const goals_finished_count = parseNum(summary.goals_finished_count, 0);
+  const tasks_finished_count = parseNum(summary.tasks_finished_count, 0);
+  const activities_finished_count = parseNum(summary.activities_finished_count, 0);
+
+  // unread notifications
+  const unread_notifications = parseNum(summary.unread_notifications, 0);
+  const unread = parseNum(summary.unread, unread_notifications ?? 0) ?? 0;
+
+  // goal delta (optional)
   const goalDelta = useMemo(() => {
     if (!dashboardData.summary) return null;
     const d = dashboardData.summary.overall_goal_delta ?? null;
@@ -595,21 +608,20 @@ export default function DashboardPage() {
     return `${sign}${d}%`;
   }, [dashboardData.summary]);
 
-  // Use totals provided by project hook. Hook exports:
-  // totalGoals, finishedGoals, totalTasks, finishedTasks, totalActivities, finishedActivities
-  const goalsTotal = project.totalGoals ?? 0;
-  const goalsFinished = project.finishedGoals ?? 0;
-  const tasksTotal = project.totalTasks ?? 0;
-  const tasksFinished = project.finishedTasks ?? 0;
-  const activitiesTotal = project.totalActivities ?? 0;
-  const activitiesFinished = project.finishedActivities ?? 0;
+  // totals / finished
+  const goalsTotal = goals_count ?? 0;
+  const goalsFinished = goals_finished_count ?? 0;
 
-  // helper: check if percentage is available (allow zero)
-  const hasGoalPercent = dashboardData.summary?.overall_goal_progress != null;
-  const hasTaskPercent = dashboardData.summary?.overall_task_progress != null;
-  const hasActivityPercent = dashboardData.summary?.overall_activity_progress != null;
+  const tasksTotal = tasks_count ?? 0;
+  const tasksFinished = tasks_finished_count ?? 0;
 
-  // navigation helpers
+  const activitiesTotal = activities_count ?? 0;
+  const activitiesFinished = activities_finished_count ?? 0;
+
+  const hasGoalPercent = overall_goal_progress !== null && overall_goal_progress !== undefined;
+  const hasTaskPercent = overall_task_progress !== null && overall_task_progress !== undefined;
+  const hasActivityPercent = overall_activity_progress !== null && overall_activity_progress !== undefined;
+
   const goToGoals = () => navigate("/project?tab=goals");
   const goToTasks = () => navigate("/project?tab=tasks");
   const goToActivities = () => navigate("/project?tab=activities");
@@ -670,18 +682,15 @@ export default function DashboardPage() {
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                {/* 1) Percent (preferred) */}
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                  {hasGoalPercent ? `${dashboardData.summary.overall_goal_progress}%` : goalsTotal > 0 ? `${goalsFinished} of ${goalsTotal}` : `${dashboardData.summary?.overall_goal_progress ?? "-"}%`}
+                  {hasGoalPercent ? `${overall_goal_progress.toFixed(2)}%` : goalsTotal > 0 ? `${goalsFinished} of ${goalsTotal}` : "-"}
                   <sub className="text-[10px]">out of 100 percent</sub>
                 </div>
 
-                {/* 2) Finished out of total (only when totals exist) */}
                 {goalsTotal > 0 && (
                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${goalsFinished} ${t("dashboard.cards.goals.outOf")} ${goalsTotal} ${t("dashboard.cards.goals.title").toLowerCase()} ${t("dashboard.cards.goals.haveBeenDone")}`}</div>
                 )}
 
-                {/* 3) Descriptive / delta */}
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {goalDelta ? (
                     <span className={goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
@@ -701,16 +710,13 @@ export default function DashboardPage() {
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                {/* 1) Percent (preferred) */}
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                  {hasTaskPercent ? `${dashboardData.summary.overall_task_progress}%` : tasksTotal > 0 ? `${tasksFinished} of ${tasksTotal}` : `${dashboardData.summary?.overall_task_progress ?? "-"}%`}
+                  {hasTaskPercent ? `${overall_task_progress.toFixed(2)}%` : tasksTotal > 0 ? `${tasksFinished} of ${tasksTotal}` : "-"}
                   <sub className="text-[10px]">out of 100 percent</sub>
                 </div>
 
-                {/* 2) Finished out of total (only when totals exist) */}
                 {tasksTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${tasksFinished} ${t("dashboard.cards.tasks.outOf")} ${tasksTotal} ${t("dashboard.cards.tasks.title").toLowerCase()} ${t("dashboard.cards.tasks.haveBeenDone")}`}</div>}
 
-                {/* 3) Descriptive */}
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.tasks.subtitle")}</div>
               </div>
             )}
@@ -722,28 +728,25 @@ export default function DashboardPage() {
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                {/* 1) Percent (preferred) */}
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
-                  {hasActivityPercent ? `${dashboardData.summary.overall_activity_progress}%` : activitiesTotal > 0 ? `${activitiesFinished} of ${activitiesTotal}` : `${dashboardData.summary?.overall_activity_progress ?? "-"}%`}
+                  {hasActivityPercent ? `${overall_activity_progress.toFixed(2)}%` : activitiesTotal > 0 ? `${activitiesFinished} of ${activitiesTotal}` : "-"}
                   <sub className="text-[10px]">out of 100 percent</sub>
                 </div>
 
-                {/* 2) Finished out of total (only when totals exist) */}
                 {activitiesTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${activitiesFinished} ${t("dashboard.cards.activities.outOf")} ${activitiesTotal} ${t("dashboard.cards.activities.title").toLowerCase()} ${t("dashboard.cards.activities.haveBeenDone")}`}</div>}
 
-                {/* 3) Descriptive */}
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.activities.subtitle")}</div>
               </div>
             )}
           </Card>
 
-          {/* Pending Reports Card (unchanged) */}
+          {/* Pending Reports Card */}
           <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports} ariaLabel={t("dashboard.cards.pendingReports.aria")}>
             {loading ? (
               <LoadingSkeleton className="h-8 w-24" />
             ) : (
               <div>
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{dashboardData.summary?.pending_reports ?? 0}</div>
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{pending_reports ?? 0}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.pendingReports.subtitle")}</div>
               </div>
             )}
@@ -764,6 +767,12 @@ export default function DashboardPage() {
             {loading ? <LoadingSkeleton className="h-28" /> : <div className="flex justify-center"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
           </Card>
         </div>
+
+        {hasAuditPerm ? (
+          <div className="lg:col-span-12">
+            <Card title={t("dashboard.audit.title")} onClick={goToAudit}><AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} /></Card>
+          </div>
+        ) : null}
 
         {/* Overdue + Notifications */}
         <div className="lg:col-span-8">
@@ -788,7 +797,7 @@ export default function DashboardPage() {
           <Card title={t("dashboard.notifications.title")} onClick={goToNotifications}>
             <NotificationsPanel
               notifications={dashboardData.notifications}
-              unread={dashboardData.summary?.unread || 0}
+              unread={unread}
               loading={loading}
               onMarkAsRead={handleMarkNotificationsRead}
               marking={marking}
@@ -798,12 +807,6 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Audit panel */}
-        {hasAuditPerm ? (
-          <div className="lg:col-span-12">
-            <Card title={t("dashboard.audit.title")} onClick={goToAudit}><AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} /></Card>
-          </div>
-        ) : null}
       </div>
 
       {/* Modals */}

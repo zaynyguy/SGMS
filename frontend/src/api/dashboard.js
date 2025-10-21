@@ -39,16 +39,48 @@ export const fetchDashboardSummary = async ({
 } = {}) => {
   const qs = buildQs({ groupId, dateFrom, dateTo, status });
   const res = await api(`/api/dashboard/summary${qs}`, "GET");
+
+  // res may already be the summary object (or wrapped), so pass through raw into _raw
+  // and map the exact keys your backend returns (and support common variants).
   return {
-    overall_goal_progress: asString(res.overall_goal_progress ?? "0"),
-    overall_goal_delta: res.overall_goal_delta ?? null,
-    overall_task_progress: asString(res.overall_task_progress ?? "0"),
-    overall_activity_progress: asString(res.overall_activity_progress ?? "0"),
-    pending_reports: asString(res.pending_reports ?? "0"),
-    goals_count: asString(res.goals_count ?? "0"),
-    tasks_count: asString(res.tasks_count ?? "0"),
-    activities_count: asString(res.activities_count ?? "0"),
+    overall_goal_progress: asString(res.overall_goal_progress ?? res.overallGoalProgress ?? "0"),
+    overall_goal_delta: res.overall_goal_delta ?? res.overallGoalDelta ?? null,
+    overall_task_progress: asString(res.overall_task_progress ?? res.overallTaskProgress ?? "0"),
+    overall_activity_progress: asString(res.overall_activity_progress ?? res.overallActivityProgress ?? "0"),
+    pending_reports: asString(res.pending_reports ?? res.pendingReports ?? "0"),
+
+    // totals (exact keys from your JSON)
+    goals_count: asString(res.goals_count ?? res.goalsCount ?? res.goals_total ?? "0"),
+    tasks_count: asString(res.tasks_count ?? res.tasksCount ?? res.tasks_total ?? "0"),
+    activities_count: asString(res.activities_count ?? res.activitiesCount ?? res.activities_total ?? "0"),
+
+    // finished counts (these were missing before)
+    goals_finished_count: asString(
+      res.goals_finished_count ??
+        res.goals_finished ??
+        res.goalsFinished ??
+        res.goalsFinishedCount ??
+        "0"
+    ),
+    tasks_finished_count: asString(
+      res.tasks_finished_count ??
+        res.tasks_finished ??
+        res.tasksFinished ??
+        res.tasksFinishedCount ??
+        "0"
+    ),
+    activities_finished_count: asString(
+      res.activities_finished_count ??
+        res.activities_finished ??
+        res.activitiesFinished ??
+        res.activitiesFinishedCount ??
+        "0"
+    ),
+
+    // unread (common variants)
     unread: res.unread_notifications ?? res.unread ?? 0,
+
+    // keep raw response for debugging
     _raw: res,
   };
 };

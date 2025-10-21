@@ -8,18 +8,7 @@ import { fetchTasksByGoal } from '../api/tasks';
 import { submitReport } from '../api/reports';
 import AuthContext from '../context/AuthContext';
 
-/**
- * ActivitiesPage
- *
- * - Displays tasks selector, activity cards
- * - Shows Submit button on each activity card (opens report modal)
- * - Edit/Delete remain for managers (manage_activities)
- * - Status badge now supports Completed, In Progress, Overdue, Todo
- *
- * Assumptions:
- * - fetchActivitiesByTask(taskId) returns activities already scoped to the current user (server-side filtering by group)
- * - currentUser.permissions is an array of permission keys (e.g. ['view_reports', 'manage_activities'])
- */
+
 
 export default function ActivitiesPage({ goalId }) {
   const { currentUser } = useContext(AuthContext);

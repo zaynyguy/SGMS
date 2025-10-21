@@ -47,13 +47,13 @@ export default function ProjectManagement() {
   }, []);
 
   // Sorting preferences (persisted)
-  // sortKey: 'title' | 'created_at' (falls back gracefully)
-  // sortOrder: 'asc' | 'desc'
+  // sortKey: 'rollNo' | 'title' | 'created_at' (falls back gracefully)
+  // default to rollNo because the DB uses "rollNo" for Goals (see schema)
   const [sortKey, setSortKey] = useState(() => {
     try {
-      return localStorage.getItem("projects.sortKey") || "title";
+      return localStorage.getItem("projects.sortKey") || "rollNo";
     } catch {
-      return "title";
+      return "rollNo";
     }
   });
   const [sortOrder, setSortOrder] = useState(() => {
@@ -405,13 +405,23 @@ export default function ProjectManagement() {
     const order = sortOrder === "asc" ? 1 : -1;
 
     const getVal = (g) => {
-      if (sortKey === "created_at") {
+      if (sortKey === "created_at" || sortKey === "createdAt") {
         // attempt to coerce to Date for comparison; fallback to 0
         const v = g.created_at ?? g.createdAt ?? g.created ?? null;
         if (!v) return 0;
         const d = Date.parse(v);
         return Number.isNaN(d) ? 0 : d;
       }
+
+      if (sortKey === "rollNo") {
+        // Database uses "rollNo" on Goals (see schema). Accept numbers or numeric strings.
+        const raw = g.rollNo ?? g.roll_no ?? g.roll ?? null;
+        if (raw === null || raw === undefined || String(raw).trim() === "") return Number.MAX_SAFE_INTEGER;
+        // coerce to number if possible
+        const n = Number(String(raw).replace(/[^0-9.-]/g, ""));
+        return Number.isNaN(n) ? String(raw).toLowerCase() : n;
+      }
+
       // default: title (string)
       return String(g.title || "").toLowerCase();
     };
@@ -510,20 +520,30 @@ export default function ProjectManagement() {
 
               {/* Right-side controls */}
               <div className="flex justify-end items-center gap-2">
-                {/* Sort: select + toggle */}
+                {/* Sort: select + toggle (improved styling) */}
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600 dark:text-gray-300 ">
-                    {t("project.sort.label") || "Sort"}
-                  </label>
+                  <label className="text-sm text-gray-600 dark:text-gray-300">{t("project.sort.label") || "Sort"}</label>
+
+                  <select
+                    aria-label="Sort by"
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value)}
+                    className="ml-1 rounded-md border bg-white dark:bg-gray-800 px-2 py-1 text-sm shadow-sm focus:outline-none"
+                    title="Choose sort key"
+                  >
+                    <option value="rollNo">{t("project.sort.rollNo") || "Roll No"}</option>
+                    <option value="title">{t("project.sort.title") || "Title"}</option>
+                    <option value="created_at">{t("project.sort.created") || "Created"}</option>
+                  </select>
 
                   <button
                     onClick={() => setSortOrder((s) => (s === "asc" ? "desc" : "asc"))}
-                    className="ml-1 px-2 py-1 rounded border text-sm bg-white dark:bg-gray-800 flex items-center"
+                    className="ml-2 px-2 py-1 rounded border text-sm bg-white dark:bg-gray-800 flex items-center gap-2 hover:shadow-sm transition-shadow"
                     title={sortOrder === "asc" ? (t("project.sort.ascending") || "Ascending") : (t("project.sort.descending") || "Descending")}
                     aria-label="Toggle sort order"
                   >
-                    <span className="mr-1 text-xs">{sortOrder === "asc" ? (t("project.sort.asc") || "A–Z ↑") : (t("project.sort.desc") || "Z–A ↓")}</span>
-                    <ArrowUpDown className="h-4 w-4" />
+                    <span className="text-xs">{sortOrder === "asc" ? "Asc" : "Desc"}</span>
+                    <ArrowUpDown className={`h-4 w-4 transform ${sortOrder === "desc" ? "rotate-180" : ""}`} />
                   </button>
                 </div>
 
