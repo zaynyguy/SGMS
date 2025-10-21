@@ -810,7 +810,7 @@
   "notifications": {
     "title": "Beeksisa",
     "subtitle": "Akeekkachiisa, ergaawwanii fi beeksisa sirnaa ilaaluu fi bulchuu — akka dubbisaatti mallatteessi, calaluu, fi wantoota barbaachisoo ta'an irratti tarkaanfii fudhadhu.",
-    "unreadCount": "{{lakkoofsa}} hin dubbifamne",
+    "unreadCount": "{{count}} hin dubbifamne",
     "markAll": "Hunda akka dubbifameetti mallatteessi",
     "toasts": {
     "markedRead": "Beeksisni akka milkaa'inaan dubbifameetti mallatteeffameera!",
@@ -855,10 +855,6 @@
     "mark": "Mallattoo",
     "open": "Banaa",
     "viewAll": "Hunda ilaali",
-    "refresh": "Haaromsuu",
-    "toasts": {
-    "markedRead": "Notification marked as read successfully!",
-    "makeAllRead": "All notifications marked as read successfully!"
-  }
+    "refresh": "Haaromsuu"
   }
 }

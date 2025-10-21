@@ -87,7 +87,7 @@ const TopBar = () => {
 
             {/* desktop labeled */}
             <div className="hidden sm:block">
-              <LanguageCycler onChange={handleLangChange} variant="default" className="text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full" />
+              <LanguageCycler onChange={handleLangChange} variant="default" className="text-sm hover:bg-gray-100 dark:hover:bg-gray-700 hover:rounded-full" />
             </div>
           </div>
 
@@ -126,7 +126,7 @@ const TopBar = () => {
             </div>
 
             {/* desktop/horizontal */}
-            <div className="hidden sm:flex">
+            <div className="hidden rounded-md sm:flex">
               <NotificationPreview
                 item={{ to: "/notification", label: "Notifications" }}
                 showExpanded={false}

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 
 const LANG_ORDER = ["en", "am", "or", "hr"];
 const LABELS = { en: "EN", am: "AM", or: "OR", hr: "HR" };
-const ABBR = { en: "EN", am: "አም", or: "OR", hr: "HR" };
+const ABBR = { en: "EN", am: "AM", or: "OR", hr: "HR" };
 const STORAGE_KEY = "i18nextLng";
 
 const safeReadStorage = () => {
