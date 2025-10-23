@@ -217,7 +217,7 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
           {/* FIXED: Status dropdown for Activities */}
           <div>
             <label htmlFor="newStatus" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t("project.fields.newStatus")} {t("project.labels.optional", "(Optional)")}
+              {t("project.fields.newStatus")} {t("project.labels.optional")}
             </label>
             <select
               id="newStatus"
@@ -225,7 +225,7 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
               onChange={(e) => setNewStatus(e.target.value)}
               className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
             >
-              <option value="">{t("project.noChange") || "(No Change)"}</option>
+              <option value="">{t("project.status.noChange") || "(No Change)"}</option>
               <option value="To Do">{t("project.status.toDo") || "To Do"}</option>
               <option value="In Progress">{t("project.status.inProgress") || "In Progress"}</option>
               <option value="Done">{t("project.status.completed") || "Done"}</option>

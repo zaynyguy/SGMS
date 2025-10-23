@@ -21,6 +21,13 @@
     "title": "Dabalata",
     "subtitle": "Faayilota, olkaa'uu fi dabalataa galmee gabaasaa fi wantootaaf bulchuu.",
     "viewToggleAria": "Mul'ata dabalataa jijjiiri",
+    "deleteConfirmTitle": "Dabalata Haquu",
+    "deleteConfirmMessage": "Dabalata kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{name}}\"",
+    "cancel": "turee",
+    "toasts": {
+      "downloadStarted": "Buubuun jalqabame",
+      "deleted": "Dabalataan haqame"
+    },
     "view": {
       "grid": "Sarara walqaqaxxaamuru",
       "gridTitle": "Mul'ata giiridii",
@@ -123,6 +130,8 @@
     "title": "Gareewwan",
     "subtitle": "Garee fi miseensummaa uumuu fi bulchuu.",
     "searchPlaceholder": "Garee maqaa ykn ibsaan barbaadi...",
+    "confirmDeleteTitle": "Garee Haquu",
+    "confirmDeleteMessage": "Garee kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{name}}\"",
     "search": {
       "placeholder": "Garee maqaa ykn ibsaan barbaadi...",
       "aria": "Gareewwan barbaadi"
@@ -169,7 +178,7 @@
       },
       "buttons": {
         "uploadPicture": "Suuraa olkaa'aa",
-        "cancel": "Haquu",
+        "cancel": "turee",
         "create": "Garee uumuu",
         "save": "Jijjiiramoota qusadhu",
         "saving": "Qusachuu...",
@@ -334,7 +343,7 @@
     "actions": {
       "tryAgain": "Ammas yaalaa",
       "saveChanges": "Jijjiiramoota qusadhu",
-      "cancel": "Haquu",
+      "cancel": "turee",
       "processing": "Adeemsa hojii...",
       "deleting": "Haquudhaan"
     },
@@ -578,14 +587,15 @@
       "remove": "Buqqisuu",
       "removeShort": "X",
       "addMetric": "Metrikii Dabaluu",
-      "cancel": "Haquu",
+      "cancel": "turee",
       "save": "Qusachuu",
       "create": "Uumi",
       "submit": "Dhiyeessi",
       "mobileMenu": "Meenuu banaa",
       "open": "Banaa",
       "close": "Cufi",
-      "submitReport": "Gabaasa Galchuu"
+      "submitReport": "Gabaasa Galchuu",
+      "uploadFiles": "Faayilota olkaa'uuf cuqaasaa"
     },
 
     "fields": {
@@ -614,13 +624,15 @@
       "activity": "Gocha",
       "metrics": "Safartuuwwan Ammaa",
       "attachments": "Dabalata",
-      "rollLabel": "Lakkoofsa roll (dirqama) ."
+      "rollLabel": "Lakkoofsa roll (dirqama)",
+      "optional": "(dirqama)"
     },
 
     "placeholders": {
       "metricKey": "Furtuu",
       "metricValue": "Gatii",
-      "rollNo": "Lakkoofsa Roolii"
+      "rollNo": "Lakkoofsa Roolii",
+      "metricValueReport": "Gatii Gabaasuudhaaf"
     },
 
     "hints": {
@@ -629,9 +641,9 @@
       "systemWeight": "Ulfaatina sirnaa fayyadame: {{used}}, argama: {{available}}",
       "metrics": "Meetirii akka lamaan furtuu/gatii itti dabali.",
       "attachments": "Faayilota guddaa: daangaa gama sarvarii ni hojjeta.",
-      "hint": "Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada."
+      "hint": "Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada.",
+      "metricRemaining": "Amma: {{current}} / {{target}} (Hafe: {{remaining}})"
     },
-
     "empty": {
       "noGoals": "Kaayyoon hin argamne. Galma kee isa jalqabaa uumi.",
       "noMatch": "Gooliin barbaacha kee wajjin walsimu hin jiru.",
@@ -701,16 +713,23 @@
       "notStarted": "Hin Jalqabne",
       "inProgress": "Adeemsa irra jira",
       "completed": "Xumurame",
-      "open": "Banaa"
+      "open": "Banaa",
+      "onHold": "turtii irratti",
+      "toDo": "hojjechuuf",
+      "blocked": "uggurame",
+      "noChange": "jijjiiramni hin jiru"
     },
 
     "labelsSmall": {
       "activity": "Gocha"
     },
     "confirm": {
-      "deleteGoal": "Galma kana haquu akka barbaaddu mirkaneeffatteettaa? Hojiiwwan walqabatan hundi ni haqamu, tarkaanfiin kun immoo deebi'uu hin danda'u.",
-      "deleteTask": "Hojiiwwan filataman haquu akka barbaaddu mirkaneeffatteettaa? Tarkaanfiin kun deebi'uu hin danda'u.",
-      "deleteActivity": "Gocha kana haquu akka barbaaddu mirkaneeffatteettaa? Tarkaanfiin kun deebi'uu hin danda'u."
+      "deleteGoalTitle": "Kaayyoo Haquu",
+      "deleteGoalMessage": "Galma kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{title}}\"",
+      "deleteTaskTitle": "Hojii Haquu",
+      "deleteTaskMessage": "Hojii kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{title}}\"",
+      "deleteActivityTitle": "Gocha Haquu",
+      "deleteActivityMessage": "Gocha kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{title}}\""
     }
   },
   "login": {
@@ -732,6 +751,7 @@
   "dashboard": {
     "title": "Daashboordii",
     "subtitle": "Ilaalcha waliigalaa galmoota, hojiiwwan, gabaasaa fi sochii dhiheenya kanaa.",
+    "percentage": "dhibbeentaa 100 keessaa",
     "aria": {
       "refresh": "Daashboordii haaromsi",
       "loading": "Daashboordii fe'aa jira",

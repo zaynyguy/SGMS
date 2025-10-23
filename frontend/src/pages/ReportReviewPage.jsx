@@ -701,7 +701,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
         )}
       </div>
 
-      <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-gray-900 dark:text-gray-300">
         <div className="flex flex-wrap items-center gap-2">
           <button
             disabled={page <= 1}

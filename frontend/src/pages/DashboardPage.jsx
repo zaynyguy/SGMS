@@ -684,7 +684,7 @@ export default function DashboardPage() {
               <div>
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                   {hasGoalPercent ? `${overall_goal_progress.toFixed(2)}%` : goalsTotal > 0 ? `${goalsFinished} of ${goalsTotal}` : "-"}
-                  <sub className="text-[10px]">out of 100 percent</sub>
+                  <sub className="text-[10px]">{t("dashboard.percentage")}</sub>
                 </div>
 
                 {goalsTotal > 0 && (
@@ -712,7 +712,7 @@ export default function DashboardPage() {
               <div>
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                   {hasTaskPercent ? `${overall_task_progress.toFixed(2)}%` : tasksTotal > 0 ? `${tasksFinished} of ${tasksTotal}` : "-"}
-                  <sub className="text-[10px]">out of 100 percent</sub>
+                  <sub className="text-[10px]">{t("dashboard.percentage")}</sub>
                 </div>
 
                 {tasksTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${tasksFinished} ${t("dashboard.cards.tasks.outOf")} ${tasksTotal} ${t("dashboard.cards.tasks.title").toLowerCase()} ${t("dashboard.cards.tasks.haveBeenDone")}`}</div>}
@@ -730,7 +730,7 @@ export default function DashboardPage() {
               <div>
                 <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                   {hasActivityPercent ? `${overall_activity_progress.toFixed(2)}%` : activitiesTotal > 0 ? `${activitiesFinished} of ${activitiesTotal}` : "-"}
-                  <sub className="text-[10px]">out of 100 percent</sub>
+                  <sub className="text-[10px]">{t("dashboard.percentage")}</sub>
                 </div>
 
                 {activitiesTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${activitiesFinished} ${t("dashboard.cards.activities.outOf")} ${activitiesTotal} ${t("dashboard.cards.activities.title").toLowerCase()} ${t("dashboard.cards.activities.haveBeenDone")}`}</div>}

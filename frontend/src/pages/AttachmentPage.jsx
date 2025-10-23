@@ -1,9 +1,8 @@
-// src/pages/AttachmentsPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Loader2,
-  Trash,
+  Trash2,
   Download,
   File,
   FileText,
@@ -53,6 +52,63 @@ function ImagePreviewModal({ src, name, onClose, t }) {
   );
 }
 
+/* Reusable ConfirmModal (in-file) */
+function ConfirmModal({ open, title, message, onCancel, onConfirm, loading, confirmLabel = "Delete", cancelLabel = "Cancel" }) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-modal-title"
+      aria-describedby="confirm-modal-desc"
+    >
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md">
+        <div className="text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-3">
+            <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400"/>
+          </div>
+
+          <h3 id="confirm-modal-title" className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">
+            {title}
+          </h3>
+
+          <p id="confirm-modal-desc" className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            {message}
+          </p>
+        </div>
+
+        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            {cancelLabel}
+          </button>
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="flex-1 px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-colors disabled:opacity-60 flex items-center justify-center"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <span>{confirmLabel}</span>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AttachmentsPage({ reportId }) {
   const { t } = useTranslation();
 
@@ -70,6 +126,10 @@ export default function AttachmentsPage({ reportId }) {
   const [toast, setToast] = useState(null);
   const showToast = (text, type = "read") => setToast({ text, type });
   const handleToastClose = () => setToast(null);
+
+  // Confirm modal state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [toDelete, setToDelete] = useState(null); // object { id, fileName }
 
   useEffect(() => {
     loadData();
@@ -127,8 +187,20 @@ export default function AttachmentsPage({ reportId }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm(t("attachments.confirmDelete"))) return;
+  // Request delete (open confirm modal)
+  const requestDelete = (id) => {
+    const at = attachments.find((a) => a.id === id) || { id, fileName: "" };
+    setToDelete(at);
+    setConfirmOpen(true);
+  };
+
+  // Perform delete after confirmation
+  const performDelete = async () => {
+    if (!toDelete) {
+      setConfirmOpen(false);
+      return;
+    }
+    const id = toDelete.id;
     try {
       setDeleting(id);
       await deleteAttachment(id);
@@ -140,6 +212,8 @@ export default function AttachmentsPage({ reportId }) {
       showToast(msg, "error");
     } finally {
       setDeleting(null);
+      setConfirmOpen(false);
+      setToDelete(null);
     }
   };
 
@@ -300,13 +374,13 @@ export default function AttachmentsPage({ reportId }) {
                             )}
 
                             <button
-                              onClick={() => handleDelete(at.id)}
+                              onClick={() => requestDelete(at.id)}
                               disabled={deleting === at.id}
                               title={t("attachments.delete")}
                               aria-label={t("attachments.delete")}
                               className="inline-flex items-center px-2.5 py-1.5 rounded-md text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/50 disabled:opacity-50 transition-colors"
                             >
-                              {deleting === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash className="h-4 w-4" />}
+                              {deleting === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
                               <span className="hidden xl:inline ml-2">{t("attachments.delete")}</span>
                             </button>
                           </div>
@@ -353,17 +427,17 @@ export default function AttachmentsPage({ reportId }) {
                           className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                         >
                           <Eye className="h-4 w-4" />
-                          <span className="hidden xl:inline ml-2">{t("attachments.preview")}</span>
+                          <span className="xl:inline ml-2">{t("attachments.preview")}</span>
                         </button>
                       )}
 
                       <button
-                        onClick={() => handleDelete(at.id)}
+                        onClick={() => requestDelete(at.id)}
                         disabled={deleting === at.id}
                         title={t("attachments.delete")}
                         className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/50 disabled:opacity-60"
                       >
-                        {deleting === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash className="h-4 w-4" />}
+                        {deleting === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
                         <span>{t("attachments.delete")}</span>
                       </button>
                     </div>
@@ -416,13 +490,13 @@ export default function AttachmentsPage({ reportId }) {
                       )}
 
                       <button
-                        onClick={() => handleDelete(at.id)}
+                        onClick={() => requestDelete(at.id)}
                         disabled={deleting === at.id}
                         className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/50 disabled:opacity-60"
                         aria-label={t("attachments.delete")}
                         title={t("attachments.delete")}
                       >
-                        {deleting === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash className="h-4 w-4" />}
+                        {deleting === at.id ? <Loader2 className="animate-spin h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
                         <span>{t("attachments.delete")}</span>
                       </button>
                     </div>
@@ -436,8 +510,27 @@ export default function AttachmentsPage({ reportId }) {
         <ImagePreviewModal src={preview?.src} name={preview?.name} onClose={() => setPreview(null)} t={t} />
       </div>
 
+      {/* Confirm Modal for delete */}
+      <ConfirmModal
+        open={confirmOpen}
+        title={t("attachments.deleteConfirmTitle") || "Delete attachment"}
+        message={
+          toDelete
+            ? (t("attachments.deleteConfirmMessage", { name: toDelete.fileName }) || `Are you sure you want to delete "${toDelete.fileName}"?`)
+            : (t("attachments.deleteConfirmMessageGeneric") || "Are you sure you want to delete this attachment?")
+        }
+        onCancel={() => {
+          setConfirmOpen(false);
+          setToDelete(null);
+        }}
+        onConfirm={performDelete}
+        loading={Boolean(deleting)}
+        confirmLabel={t("attachments.delete") || "Delete"}
+        cancelLabel={t("attachments.cancel") || "Cancel"}
+      />
+
       {/* Toast UI */}
-      {toast && <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />}
+      {toast && <div className="fixed z-50 right-5 bottom-5"><Toast message={toast.text} type={toast.type} onClose={handleToastClose} /></div>}
     </div>
   );
 }

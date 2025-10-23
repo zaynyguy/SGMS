@@ -400,6 +400,11 @@ function GroupsManager() {
   const [expandedGroup, setExpandedGroup] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
 
+  // New deletion modal state
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [groupToDelete, setGroupToDelete] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
   // map semantic types (success/info/...) to Toast component types (create/read/update/delete/error)
   const showToast = useCallback((text, semanticType = "success") => {
     const map = {
@@ -512,20 +517,33 @@ function GroupsManager() {
     setGroups((prevGroups) => prevGroups.map((g) => (g.id === groupId ? { ...g, memberCount: newCount } : g)));
   }, []);
 
-  const handleDeleteGroup = useCallback(
-    async (id) => {
-      if (!window.confirm(t("groups.confirmDelete"))) return;
-      try {
-        await deleteGroup(id);
-        await loadData();
-        showToast(t("groups.messages.deleted"), "delete");
-      } catch (err) {
-        console.error("Error deleting group:", err);
-        showToast(t("groups.messages.deleteFailed"), "error");
-      }
-    },
-    [loadData, showToast, t]
-  );
+  // Replace window.confirm flow with modal opener
+  const handleDeleteClick = useCallback((group) => {
+    setGroupToDelete(group);
+    setShowDeleteConfirmModal(true);
+  }, []);
+
+  const cancelDelete = useCallback(() => {
+    setShowDeleteConfirmModal(false);
+    setGroupToDelete(null);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!groupToDelete) return;
+    try {
+      setSubmitting(true);
+      await deleteGroup(groupToDelete.id);
+      await loadData();
+      showToast(t("groups.messages.deleted"), "delete");
+    } catch (err) {
+      console.error("Error deleting group:", err);
+      showToast(t("groups.messages.deleteFailed"), "error");
+    } finally {
+      setSubmitting(false);
+      setShowDeleteConfirmModal(false);
+      setGroupToDelete(null);
+    }
+  }, [groupToDelete, loadData, showToast, t]);
 
   const requestSort = useCallback(
     (key) => {
@@ -717,7 +735,12 @@ function GroupsManager() {
                               <button onClick={() => openEditModal(g)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 p-2 rounded-md" aria-label={t("groups.actions.edit")}>
                                 <Edit className="h-5 w-5" />
                               </button>
-                              <button onClick={() => handleDeleteGroup(g.id)} className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-md" aria-label={t("groups.actions.delete")}>
+                              <button
+                                onClick={() => handleDeleteClick(g)}
+                                disabled={submitting}
+                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-md disabled:opacity-60"
+                                aria-label={t("groups.actions.delete")}
+                              >
                                 <Trash2 className="h-5 w-5" />
                               </button>
                             </td>
@@ -766,7 +789,7 @@ function GroupsManager() {
                             <button onClick={() => openEditModal(g)} className="p-2 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30" aria-label={t("groups.actions.edit")}>
                               <Edit className="h-5 w-5" />
                             </button>
-                            <button onClick={() => handleDeleteGroup(g.id)} className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" aria-label={t("groups.actions.delete")}>
+                            <button onClick={() => handleDeleteClick(g)} disabled={submitting} className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-60" aria-label={t("groups.actions.delete")}>
                               <Trash2 className="h-5 w-5" />
                             </button>
                             <button onClick={() => toggleGroupExpand(g.id)} className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={t("groups.actions.toggle")}>
@@ -823,7 +846,7 @@ function GroupsManager() {
                             <button onClick={() => openEditModal(g)} className="p-2 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30" aria-label={t("groups.actions.edit")}>
                               <Edit className="h-5 w-5" />
                             </button>
-                            <button onClick={() => handleDeleteGroup(g.id)} className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" aria-label={t("groups.actions.delete")}>
+                            <button onClick={() => handleDeleteClick(g)} disabled={submitting} className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-60" aria-label={t("groups.actions.delete")}>
                               <Trash2 className="h-5 w-5" />
                             </button>
                           </div>
@@ -872,6 +895,63 @@ function GroupsManager() {
           )}
         </main>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirmModal && groupToDelete && (
+        <div
+          className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-title"
+          aria-describedby="delete-desc"
+        >
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
+                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3
+                id="delete-title"
+                className="mt-4 text-lg font-semibold text-gray-900 dark:text-white"
+              >
+                {t("groups.confirmDeleteTitle") || t("groups.confirmDelete")}
+              </h3>
+              <p
+                id="delete-desc"
+                className="mt-2 text-gray-600 dark:text-gray-400"
+              >
+                {t("groups.confirmDeleteMessage", { name: groupToDelete.name }) || t("groups.confirmDelete")}
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={cancelDelete}
+                className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                disabled={submitting}
+              >
+                {t("admin.actions.cancel") || t("groups.actions.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-colors disabled:opacity-60"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <span>{t("admin.actions.deleting") || t("groups.actions.deleting")}</span>
+                  </div>
+                ) : (
+                  t("admin.actions2.delete") || t("groups.actions.delete")
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

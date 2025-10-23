@@ -21,6 +21,13 @@
     "title": "አባሪዎች",
     "subtitle": "ፋይሎችን፣ ሰቀላዎችን እና ሰነዶችን ለሪፖርቶች እና ዕቃዎች አስተዳድር።",
     "viewToggleAria": "የአባሪዎችን እይታ ቀያይር",
+    "deleteConfirmTitle": "አባሪን ሰርዝ",
+    "deleteConfirmMessage": "እርግጠኛ ነዎት ይህን አባሪ መሰረዝ ይፈልጋሉ? \"{{name}}\"",
+    "cancel": "መሰረዝ",
+    "toasts": {
+      "downloadStarted": "ማውረድ ተጀምሯል",
+      "deleted": "አባሪ ተሰርዟል"
+    },
     "view": {
       "grid": "ፍርግርግ",
       "gridTitle": "የፍርግርግ እይታ",
@@ -123,6 +130,8 @@
     "title": "ቡድኖች",
     "subtitle": "ቡድኖችን እና አባልነትን ይፍጠሩ እና ያስተዳድሩ።",
     "searchPlaceholder": "ቡድኖችን በስም ወይም በመግለጫ ፈልግ…",
+    "confirmDeleteTitle": "ቡድን ሰርዝ",
+    "confirmDeleteMessage": "እርግጠኛ ነዎት ይህን ቡድን መሰረዝ ይፈልጋሉ? \"{{name}}\"",
     "search": {
       "placeholder": "ቡድኖችን በስም ወይም በመግለጫ ፈልግ…",
       "aria": "ቡድኖችን ፈልግ"
@@ -168,7 +177,7 @@
       },
       "buttons": {
         "uploadPicture": "ምስል ይስቀሉ",
-        "cancel": "ሰርዝ",
+        "cancel": "መሰረዝ",
         "create": "ቡድን ይፍጠሩ",
         "save": "ለውጦችን ያስቀምጡ",
         "saving": "በማስቀመጥ ላይ…",
@@ -250,7 +259,7 @@
     "adminComment": "የአስተዳዳሪ አስተያየት",
     "resubmissionDeadline": "የዳግም ማስረከቢያ የመጨረሻ ቀን",
     "adminComment_placeholder": {
-      "placeholder": "የውስጥ አስተያየት ያክሉ (አማራጭ)"
+      "placeholder": "የውስጥ አስተያየት ያክሉ (ከተፈለገ)"
     },
     "actions": {
       "approve": "አጽድቅ",
@@ -286,7 +295,7 @@
       "exportCSV": "ወደ ውጪ ላክ (CSV)",
       "groupLabel": "ቡድን",
       "groupIdLabel": "የቡድን መታወቂያ",
-      "groupIdPlaceholder": "የቡድን መታወቂያ አስገባ (አማራጭ)",
+      "groupIdPlaceholder": "የቡድን መታወቂያ አስገባ (ከተፈለገ)",
       "narratives": "ትረካዎች",
       "narrativesTitle": "ትረካዎች",
       "noData": "ምንም ዋና ዘገባ አልተጫነም።",
@@ -333,7 +342,7 @@
     "actions": {
       "tryAgain": "እንደገና ይሞክሩ",
       "saveChanges": "ለውጦችን ያስቀምጡ",
-      "cancel": "ሰርዝ",
+      "cancel": "መሰረዝ",
       "processing": "በማስሄድ ላይ...",
       "deleting": "በመሰረዝ ላይ"
     },
@@ -575,14 +584,15 @@
       "remove": "አስወግድ",
       "removeShort": "X",
       "addMetric": "መለኪያ አክል",
-      "cancel": "ሰርዝ",
+      "cancel": "መሰረዝ",
       "save": "አስቀምጥ",
       "create": "ፍጠር",
       "submit": "አስገባ",
       "mobileMenu": "ምናሌ ክፈት",
       "open": "ክፈት",
       "close": "ገጠመ",
-      "submitReport": "ሪፖርት አስገባ"
+      "submitReport": "ሪፖርት አስገባ",
+      "uploadFiles": "ፋይሎችን ለመጫን ጠቅ ያድርጉ"
     },
 
     "fields": {
@@ -611,13 +621,15 @@
       "activity": "እንቅስቃሴ",
       "metrics": "የአሁኑ መለኪያዎች",
       "attachments": "አባሪዎች",
-      "rollLabel": "ጥቅል ቁጥር (አማራጭ)"
+      "rollLabel": "ጥቅል ቁጥር (ከተፈለገ)",
+      "optional": "(ከተፈለገ)"
     },
 
     "placeholders": {
       "metricKey": "ቁልፍ",
       "metricValue": "ዋጋ",
-      "rollNo": "ጥቅል ቁጥር"
+      "rollNo": "ጥቅል ቁጥር",
+      "metricValueReport": "ሪፖርት ለማድረግ የሚያስችል ዋጋ"
     },
 
     "hints": {
@@ -626,7 +638,8 @@
       "systemWeight": "ጥቅም ላይ የዋለው የሥርዓት ክብደት፡ {{used}}፣ ይገኛል፡ {{available}}",
       "metrics": "መለኪያዎችን እንደ ቁልፍ/እሴት ጥንዶች ያክሉ።",
       "attachments": "ከፍተኛ ፋይሎች፡ የአገልጋይ-ጎን ገደብ ተፈጻሚ ነው።",
-      "hint": "አማራጭ። አዎንታዊ ኢንቲጀር. ባዶ ከሆነ ስርዓቱ በራስ-ሰር ይመድባል።"
+      "hint": "ከተፈለገ አዎንታዊ ኢንቲጀር. ባዶ ከሆነ ስርዓቱ በራስ-ሰር ይመድባል።",
+      "metricRemaining": "አሁን: {{current}} / {{target}} (ቀሪው: {{remaining}})"
     },
 
     "empty": {
@@ -698,16 +711,23 @@
       "notStarted": "አልተጀመረም",
       "inProgress": "በሂደት ላይ",
       "completed": "የተጠናቀቀ",
-      "open": "ክፍት"
+      "open": "ክፍት",
+      "onHold": "በቆይታ ላይ",
+      "toDo": "ማድረግ",
+      "blocked": "ታግዷል",
+      "noChange": "ምንም ለውጥ የለም"
     },
 
     "labelsSmall": {
       "activity": "እንቅስቃሴ"
     },
     "confirm": {
-      "deleteGoal": "እርግጠኛ ነዎት ይህን ግብ መሰረዝ ይፈልጋሉ? ሁሉም ተዛማጅ ተግባራት ይወገዳሉ እና ይህ እርምጃ ሊቀለበስ አይችልም።",
-      "deleteTask": "እርግጠኛ ነዎት የተመረጡትን ተግባራት መሰረዝ ይፈልጋሉ? ይህ እርምጃ ሊቀለበስ አይችልም።",
-      "deleteActivity": "እርግጠኛ ነዎት ይህን እንቅስቃሴ መሰረዝ ይፈልጋሉ? ይህ እርምጃ ሊቀለበስ አይችልም።"
+      "deleteGoalTitle": "ግብ ሰርዝ",
+      "deleteGoalMessage": "እርግጠኛ ነዎት ይህን ግብ መሰረዝ ይፈልጋሉ? \"{{title}}\"",
+      "deleteTaskTitle": "ተግባር ሰርዝ",
+      "deleteTaskMessage": "እርግጠኛ ነዎት ይህን ተግባር መሰረዝ ይፈልጋሉ? \"{{title}}\"",
+      "deleteActivityTitle": "እንቅስቃሴ ሰርዝ",
+      "deleteActivityMessage": "እርግጠኛ ነዎት ይህን እንቅስቃሴ መሰረዝ ይፈልጋሉ? \"{{title}}\""
     }
   },
   "login": {
@@ -729,6 +749,7 @@
   "dashboard": {
     "title": "ዳሽቦርድ",
     "subtitle": "የግቦች፣ ተግባራት፣ ሪፖርቶች እና የቅርብ ጊዜ እንቅስቃሴዎች አጠቃላይ እይታ",
+    "percentage": "ከ100 በመቶ",
     "aria": {
       "refresh": "ዳሽቦርድ አድስ",
       "loading": "ዳሽቦርድ በመጫን ላይ",

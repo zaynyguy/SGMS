@@ -189,7 +189,7 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
   }, [addRaw]); // re-register if addRaw identity changes
 
   return (
-    <div ref={containerRef} className="w-full relative">
+    <div ref={containerRef} className="w-full relative text-gray-900 dark:text-gray-300">
       <div
         className="min-h-[56px] border rounded-lg px-2 py-1 bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-600"
         onClick={() => inputRef.current?.focus()}

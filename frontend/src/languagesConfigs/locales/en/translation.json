@@ -21,6 +21,13 @@
     "title": "Attachments",
     "subtitle": "Manage files, uploads and document attachments for reports and items.",
     "viewToggleAria": "Toggle attachments view",
+    "deleteConfirmTitle": "Delete Attachment",
+    "deleteConfirmMessage": "Are you sure you want to delete this attachment? \"{{name}}\"",
+    "cancel": "Cancel",
+    "toasts": {
+      "downloadStarted": "Download started",
+      "deleted": "Attachment deleted"
+    },
     "view": {
       "grid": "Grid",
       "gridTitle": "Grid view",
@@ -123,6 +130,8 @@
     "title": "Groups",
     "subtitle": "Create and manage groups and membership.",
     "searchPlaceholder": "Search groups by name or description…",
+    "confirmDeleteTitle": "Delete Group",
+    "confirmDeleteMessage": "Are you sure you want to delete this group? \"{{name}}\"",
     "search": {
       "placeholder": "Search groups by name or description…",
       "aria": "Search groups"
@@ -582,7 +591,8 @@
       "mobileMenu": "Open menu",
       "open": "Open",
       "close": "Close",
-      "submitReport": "Submit Report"
+      "submitReport": "Submit Report",
+      "uploadFiles": "Click to upload files"
     },
 
     "fields": {
@@ -611,13 +621,15 @@
       "activity": "Activity",
       "metrics": "Current Metrics",
       "attachments": "Attachments",
-      "rollLabel": "Roll number (optional)"
+      "rollLabel": "Roll number (optional)",
+      "optional": "(optional)"
     },
 
     "placeholders": {
       "metricKey": "Key",
       "metricValue": "Value",
-      "rollNo": "Roll Number"
+      "rollNo": "Roll Number",
+      "metricValueReport": "Value to Report"
     },
 
     "hints": {
@@ -626,7 +638,8 @@
       "systemWeight": "System weight used: {{used}}, available: {{available}}",
       "metrics": "Add metrics as key/value pairs.",
       "attachments": "Max files: server-side limit applies.",
-      "hint": "Optional. Positive integer. If left blank the system will auto-assign."
+      "hint": "Optional. Positive integer. If left blank the system will auto-assign.",
+      "metricRemaining": "Current: {{current}} / {{target}} (Remaining: {{remaining}})"
     },
 
     "empty": {
@@ -698,16 +711,23 @@
       "notStarted": "Not Started",
       "inProgress": "In Progress",
       "completed": "Completed",
-      "open": "Open"
+      "open": "Open",
+      "onHold": "On Hold",
+      "toDo": "To Do",
+      "blocked": "Blocked",
+      "noChange": "No Change"
     },
 
     "labelsSmall": {
       "activity": "Activity"
     },
     "confirm": {
-      "deleteGoal": "Are you sure you want to delete this goal? All related tasks will be removed and this action cannot be undone.",
-      "deleteTask": "Are you sure you want to delete the selected tasks? This action cannot be undone.",
-      "deleteActivity": "Are you sure you want to delete this activity? This action cannot be undone."
+      "deleteGoalTitle": "Delete Goal",
+      "deleteGoalMessage": "Are you sure you want to delete this goal? \"{{title}}\"",
+      "deleteTaskTitle": "Delete Task",
+      "deleteTaskMessage": "Are you sure you want to delete this task? \"{{title}}\"",
+      "deleteActivityTitle": "Delete Activity",
+      "deleteActivityMessage": "Are you sure you want to delete this activity? \"{{title}}\""
     }
   },
   "login": {
@@ -729,6 +749,7 @@
   "dashboard": {
     "title": "Dashboard",
     "subtitle": "Overview of goals, tasks, reports and recent activity.",
+    "percentage": "out of 100 percent",
     "aria": {
       "refresh": "Refresh dashboard",
       "loading": "Loading dashboard",

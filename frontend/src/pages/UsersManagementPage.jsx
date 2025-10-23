@@ -1,7 +1,7 @@
 // src/pages/UsersManagementPage.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Edit, Trash, UserPlus, Users, X } from "lucide-react";
+import { Edit, Trash2, UserPlus, Users, X } from "lucide-react";
 import {
   fetchUsers,
   createUser,
@@ -500,7 +500,7 @@ const UsersManagementPage = () => {
                             disabled={submitting}
                             aria-label={t("admin.actions.delete")}
                           >
-                            <Trash size={18} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </td>
@@ -604,7 +604,7 @@ const UsersManagementPage = () => {
                         aria-label={t("admin.actions.delete")}
                         title={t("admin.actions.delete")}
                       >
-                        <Trash size={18} />
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </div>
@@ -901,7 +901,7 @@ const UsersManagementPage = () => {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md">
               <div className="text-center">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
-                  <Trash className="h-6 w-6 text-red-600 dark:text-red-400" />
+                  <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
                 </div>
                 <h3
                   id="delete-title"

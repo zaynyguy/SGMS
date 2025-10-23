@@ -1,8 +1,7 @@
-// src/pages/RolesManagementPage.jsx
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Shield, Settings, Trash, AlertTriangle, X, FileText, Eye,
+  Plus, Shield, Settings, Trash2, AlertTriangle, X, FileText, Eye,
 } from 'lucide-react';
 import {
   fetchRoles,
@@ -55,6 +54,11 @@ const RolesManagementPage = () => {
   // Mobile-specific state
   const [isMobile, setIsMobile] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState(null);
+
+  // Deletion modal state
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Helpers: map semantic toast types to your Toast component types
   const showToast = (message, semanticType = 'info') => {
@@ -138,23 +142,40 @@ const RolesManagementPage = () => {
     }
   };
 
-  /* Remove role */
-  const handleDeleteClick = async (role) => {
-    if (!window.confirm(t('admin.roles.deleteConfirm.message', { name: role.name }))) return;
+  /* Remove role - opens modal now instead of window.confirm */
+  const handleDeleteClick = (role) => {
+    setRoleToDelete(role);
+    setShowDeleteConfirmModal(true);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirmModal(false);
+    setRoleToDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!roleToDelete) return;
     try {
-      await deleteRole(role.id);
-      showToast(t('admin.roles.toasts.deleteSuccess', { name: role.name }), 'delete');
+      setSubmitting(true);
+      await deleteRole(roleToDelete.id);
+      showToast(t('admin.roles.toasts.deleteSuccess', { name: roleToDelete.name }), 'delete');
+
       // if deleted role was selected in mobile, pick another
-      if (isMobile && selectedRoleId === role.id) {
+      if (isMobile && selectedRoleId === roleToDelete.id) {
         setSelectedRoleId(prev => {
-          const remaining = roles.filter(r => r.id !== role.id);
+          const remaining = roles.filter(r => r.id !== roleToDelete.id);
           return remaining.length ? remaining[0].id : null;
         });
       }
+
       await loadData();
     } catch (err) {
       console.error('deleteRole failed', err);
       showToast(t('admin.roles.errors.deleteError', { error: err?.message || '' }), 'error');
+    } finally {
+      setSubmitting(false);
+      setShowDeleteConfirmModal(false);
+      setRoleToDelete(null);
     }
   };
 
@@ -255,7 +276,7 @@ const RolesManagementPage = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg text-center border border-red-200 dark:border-red-700 max-w-xl">
-          <AlertTriangle className="mx-auto h-12 w-12 text-red-500" />
+          <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
           <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-gray-100">
             {t('admin.roles.errors.title')}
           </h3>
@@ -338,11 +359,11 @@ const RolesManagementPage = () => {
                         <div className="flex items-center gap-2 ml-2">
                           <button
                             onClick={() => handleDeleteClick(role)}
-                            disabled={role.name === 'Admin'}
+                            disabled={role.name === 'Admin' || submitting}
                             aria-label={t('admin.roles.deleteRole', { name: role.name })}
                             className={`${role.name === 'Admin' ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50'} p-2 rounded`}
                           >
-                            <Trash size={16} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </li>
@@ -610,7 +631,7 @@ const RolesManagementPage = () => {
                     <div className="mt-4 flex gap-2">
                       <button
                         onClick={() => handleDeleteClick(selectedRole)}
-                        disabled={selectedRole.name === 'Admin'}
+                        disabled={selectedRole.name === 'Admin' || submitting}
                         className="flex-1 px-4 py-2 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md"
                         aria-label={t('admin.roles.deleteRole', { name: selectedRole.name })}
                       >
@@ -634,6 +655,64 @@ const RolesManagementPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Delete Confirmation Modal (replaces window.confirm) */}
+      {showDeleteConfirmModal && roleToDelete && (
+        <div
+          className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-title"
+          aria-describedby="delete-desc"
+        >
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
+                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3
+                id="delete-title"
+                className="mt-4 text-lg font-semibold text-gray-900 dark:text-white"
+              >
+                {t('admin.roles.deleteRole') || t('admin.roles.deleteConfirm.heading') || t('admin.roles.deleteConfirm')}
+              </h3>
+              <p
+                id="delete-desc"
+                className="mt-2 text-gray-600 dark:text-gray-400"
+              >
+                {t('admin.roles.deleteConfirm.message', { name: roleToDelete.name })}
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={cancelDelete}
+                className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                disabled={submitting}
+              >
+                {t('admin.actions.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-colors disabled:opacity-60"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <span>{t('admin.actions.deleting')}</span>
+                  </div>
+                ) : (
+                  t('admin.actions2.delete')
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
