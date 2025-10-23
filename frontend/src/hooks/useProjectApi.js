@@ -1,17 +1,25 @@
-// src/hooks/useProjectApi.js
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
-import { fetchGroups } from "../api/groups";
+// We need to assume these API files exist and are correct.
+// I've created stubs for them based on your document.
+// Make sure the paths are correct for your project.
+import { fetchGroups } from "../api/groups"; // Assuming 'api/groups.js'
+import { fetchReportingStatus, submitReport } from "../api/reports"; // Assuming 'api/reports.js'
 import { fetchGoals, createGoal, updateGoal, deleteGoal } from "../api/goals";
 import { fetchTasksByGoal, createTask, updateTask, deleteTask } from "../api/tasks";
 import { fetchActivitiesByTask, createActivity, updateActivity, deleteActivity } from "../api/activities";
-import { submitReport, fetchReportingStatus } from "../api/reports";
 
 /**
  * useProjectApi
- * - manages groups, goals, tasks, activities
- * - dedupes in-flight loads (tasks & activities)
- * - prefetches tasks and a small set of activities with limited concurrency
- * - exposes derived totals: goals/tasks/activities counts & finished counts
+ *
+ * REFACTORED: This is the single, consolidated hook for managing
+ * all project data (Groups, Goals, Tasks, Activities).
+ * The redundant `useGoals`, `useTasks`, and `useActivities` hooks
+ * are no longer needed, as this hook does everything.
+ *
+ * - Manages groups, goals, tasks, activities
+ * - Dedupes in-flight loads (tasks & activities)
+ * - Prefetches tasks and a small set of activities with limited concurrency
+ * - Exposes derived totals: goals/tasks/activities counts & finished counts
  */
 export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}) {
   // groups
@@ -93,7 +101,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
   }, [loadReportingStatus]);
 
   /* -------------------------
-     HELPERS
+  HELPERS
   ------------------------- */
   const parseNum = (v, fallback = 0) => {
     const n = parseFloat(String(v));
@@ -283,7 +291,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
     [currentPage, pageSize, loadTasks, loadActivities, tasks]
   );
 
-  /* ---------- CRUD handlers (unchanged behavior) ---------- */
+  /* ---------- CRUD handlers (Note the function signatures) ---------- */
 
   const createGoalItem = useCallback(
     async (payload) => {
@@ -343,6 +351,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
     [loadGoals]
   );
 
+  // --- Task Handlers ---
   const createTaskItem = useCallback(
     async (goalId, payload) => {
       setIsSubmitting(true);
@@ -350,8 +359,8 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
       try {
         await createTask(goalId, payload);
         setSuccess("Task created");
-        await loadTasks(goalId);
-        await loadGoals();
+        await loadTasks(goalId); // Reload tasks for this goal
+        await loadGoals(); // Reload goals for progress %
       } catch (err) {
         console.error("createTask error:", err);
         setError(err?.message || "Failed to create task");
@@ -371,8 +380,8 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
       try {
         await updateTask(goalId, taskId, payload);
         setSuccess("Task updated");
-        await loadTasks(goalId);
-        await loadGoals();
+        await loadTasks(goalId); // Reload tasks
+        await loadGoals(); // Reload goals
       } catch (err) {
         console.error("updateTask error:", err);
         setError(err?.message || "Failed to update task");
@@ -391,8 +400,8 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
       try {
         await deleteTask(goalId, taskId);
         setSuccess("Task deleted");
-        await loadTasks(goalId);
-        await loadGoals();
+        await loadTasks(goalId); // Reload tasks
+        await loadGoals(); // Reload goals
       } catch (err) {
         console.error("deleteTask error:", err);
         setError(err?.message || "Failed to delete task");
@@ -403,7 +412,9 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
     },
     [loadTasks, loadGoals]
   );
-
+  
+  // --- Activity Handlers ---
+  // Note: These are simpler, they only need `taskId`
   const createActivityItem = useCallback(
     async (taskId, payload) => {
       setIsSubmitting(true);
@@ -411,7 +422,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
       try {
         await createActivity(taskId, payload);
         setSuccess("Activity created");
-        await loadActivities(taskId);
+        await loadActivities(taskId); // Reload activities for this task
       } catch (err) {
         console.error("createActivity error:", err);
         setError(err?.message || "Failed to create activity");
@@ -431,7 +442,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
       try {
         await updateActivity(taskId, activityId, payload);
         setSuccess("Activity updated");
-        await loadActivities(taskId);
+        await loadActivities(taskId); // Reload activities
       } catch (err) {
         console.error("updateActivity error:", err);
         setError(err?.message || "Failed to update activity");
@@ -450,15 +461,18 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
       setError(null);
       try {
         await deleteActivity(taskId, activityId);
+        // Optimistic update
         setActivities((prev) => ({
           ...prev,
           [taskId]: (prev[taskId] || []).filter((a) => a.id !== activityId),
         }));
         setSuccess("Activity deleted");
-        await loadActivities(taskId);
+        await loadActivities(taskId); // Reload to confirm
       } catch (err) {
         console.error("deleteActivity error:", err);
         setError(err?.message || "Failed to delete activity");
+        // Rollback optimistic update on error is complex, just reload
+        await loadActivities(taskId);
         throw err;
       } finally {
         setIsSubmitting(false);
@@ -565,7 +579,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
 
     // totals + finished
     totalGoals: totals.goalsTotal,
-    finishedGoals: totals.goalsFinished,
+    finishedGoals: totals.finishedGoals,
     totalTasks: totals.tasksTotal,
     finishedTasks: totals.tasksFinished,
     totalActivities: totals.activitiesTotal,
@@ -596,7 +610,6 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
 
     // reporting
     submitReportForActivity,
-    
 
     // helpers
     computeGoalWeightAvailable,

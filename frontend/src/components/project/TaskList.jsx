@@ -1,29 +1,21 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, ChevronDown, Edit, Trash2, Calendar, List, Plus as PlusIcon } from "lucide-react";
+// Assuming 'ui' components are in 'src/components/ui'
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
-import ActivityList from "./ActivityList";
-// FIXED import path (was "../../uites/...") — adjust if your project uses a different folder
+// Assuming 'utils' are in 'src/utils'
 import { formatDate } from "../../uites/projectUtils";
+// ActivityList is now imported explicitly
+import ActivityList from "./ActivityList"; 
 
 /**
- * Props expected:
- * - goal: object (required to build composite roll)
- * - tasks: object keyed by goalId -> task array OR a plain array (we will support both)
- * - tasksLoading: boolean | object keyed by goalId
- * - toggleTask: function(goal, task)
- * - expandedTask: id of currently expanded task
+ * Renders a list of Task cards for a specific Goal.
  *
- * - onEditTask(goalId, task)
- * - onDeleteTask(goalId, taskId)
- * - onCreateActivity(goalId, taskId)
- * - onEditActivity(goalId, taskId, activity)
- * - onDeleteActivity(goalId, taskId, activityId)
- * - openSubmitModal(goalId, taskId, activityId)
- *
- * - activities: object keyed by taskId -> activity array
- * - activitiesLoading: object keyed by taskId -> boolean
+ * **FIX APPLIED:** The desktop "Edit" button (`onEditTask`) now passes the
+ * full `task` object instead of just `task.id`. This makes it
+ * consistent with the mobile button and ensures the Edit Modal
+ * receives the full data, fixing the "data not loading" bug.
  */
 export default function TaskList({
   goal,
@@ -39,7 +31,6 @@ export default function TaskList({
   // activity-level handlers (forwarded to ActivityList)
   activities = {},
   activitiesLoading = {},
-
   onCreateActivity,
   onEditActivity,
   onDeleteActivity,
@@ -47,8 +38,7 @@ export default function TaskList({
 
   canSubmitReport,
   reportingActive,
-  // <-- accept canManageGTA from parent
-  canManageGTA,
+  canManageGTA, // Permission prop
 }) {
   const { t } = useTranslation();
 
@@ -89,12 +79,12 @@ export default function TaskList({
             : null;
 
         return (
-          <div key={task.id} className="p-3 bg-gray-200 dark:bg-gray-900 rounded-md border border-gray-400 dark:border-gray-700">
+          <div key={task.id} className="p-3 bg-gray-100 dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
               <div className="flex items-start gap-3 min-w-0 flex-1">
                 <button
                   onClick={() => toggleTask(goal, task)}
-                  className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hidden sm:block"
+                  className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hidden sm:block"
                   aria-label={t("project.actions.toggleTask") || "Toggle task"}
                 >
                   {taskIsExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
@@ -120,15 +110,6 @@ export default function TaskList({
                   </div>
 
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">{task.description || t("project.na") || "—"}</div>
-
-                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex flex-wrap gap-3">
-                    <div>
-                      {t("project.fields.due") || t("project.fields.dueDate") || "Due"}: {formatDate(task.dueDate)}
-                    </div>
-                    <div>
-                      {t("project.fields.weight") || "Weight"}: <strong>{task.weight ?? "-"}</strong>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -138,9 +119,16 @@ export default function TaskList({
                 {/* Desktop edit/delete - hidden if canManageGTA is falsy */}
                 {canManageGTA && (
                   <div className="hidden sm:flex items-center gap-1">
+                    {/*
+                      *
+                      * FIX: Changed from `onEditTask(goal.id, task.id)` to `onEditTask(goal.id, task)`
+                      * This passes the full task object to the parent handler,
+                      * which allows the modal to be pre-populated with data.
+                      *
+                      */}
                     <button
-                      onClick={() => onEditTask && onEditTask(goal.id, task.id)}
-                      className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      onClick={() => onEditTask && onEditTask(goal.id, task)}
+                      className="p-2 text-blue-600 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md"
                       title={t("project.actions.edit") || "Edit task"}
                       aria-label={(t("project.actions.edit") || "Edit") + (task.title ? `: ${task.title}` : "")}
                     >
@@ -148,7 +136,7 @@ export default function TaskList({
                     </button>
                     <button
                       onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
-                      className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                      className="p-2 text-red-600 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md"
                       title={t("project.actions.delete") || "Delete task"}
                       aria-label={(t("project.actions.delete") || "Delete") + (task.title ? `: ${task.title}` : "")}
                     >
@@ -156,35 +144,36 @@ export default function TaskList({
                     </button>
                   </div>
                 )}
-
-                {/* Mobile actions (compact) - hidden if canManageGTA is falsy */}
-                {canManageGTA && (
-                  <div className="inline-flex sm:hidden items-center gap-1">
-                    <button
-                      onClick={() => onEditTask && onEditTask(goal.id, task)}
-                      className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm"
-                      aria-label={t("project.actions.edit") || "Edit task"}
-                      title={t("project.actions.edit") || "Edit task"}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
-                      className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-200 dark:border-gray-700 rounded-md text-sm text-red-600"
-                      aria-label={t("project.actions.delete") || "Delete task"}
-                      title={t("project.actions.delete") || "Delete task"}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
+            
+            {/* Mobile actions (compact) - hidden if canManageGTA is falsy */}
+            {canManageGTA && (
+                <div className="inline-flex sm:hidden items-center gap-1 mt-2">
+                    <button
+                        onClick={() => onEditTask && onEditTask(goal.id, task)}
+                        className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-sm"
+                        aria-label={t("project.actions.edit") || "Edit task"}
+                        title={t("project.actions.edit") || "Edit task"}
+                    >
+                        <Edit className="h-4 w-4" />
+                    </button>
+                    <button
+                        onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
+                        className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-sm text-red-600"
+                        aria-label={t("project.actions.delete") || "Delete task"}
+                        title={t("project.actions.delete") || "Delete task"}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
 
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300 pl-0 sm:pl-6">
+
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300 pl-0 sm:pl-9">
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">{formatDate(task.dueDate)}</span>
+                <span className="truncate">{t("project.fields.due") || "Due"}: {formatDate(task.dueDate)}</span>
               </div>
               <div>
                 {t("project.fields.weight") || "Weight"}: <strong>{task.weight ?? "-"}</strong>
@@ -198,7 +187,7 @@ export default function TaskList({
 
             {/* Expanded: activities + add activity button */}
             {taskIsExpanded && (
-              <div className="mt-4 pl-0 sm:pl-6">
+              <div className="mt-4 pl-0 sm:pl-9">
                 <div className="flex items-center justify-between mb-2">
                   <h6 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <List className="h-4 w-4 text-sky-600" /> {t("project.sections.activities") || "Activities"}
@@ -223,13 +212,13 @@ export default function TaskList({
                   task={task}
                   activities={activities[task.id] || []}
                   activitiesLoading={activitiesLoading ? activitiesLoading[task.id] : false}
-                  onEditActivity={(gId, tId, activity) => onEditActivity && onEditActivity(gId, tId, activity)}
-                  onDeleteActivity={(gId, tId, activityId) => onDeleteActivity && onDeleteActivity(gId, tId, activityId)}
-                  openSubmitModal={(gId, tId, activityId) => openSubmitModal && openSubmitModal(gId, tId, activityId)}
+                  // Pass handlers down, ensuring to include goal.id and task.id
+                  onEditActivity={(activity) => onEditActivity && onEditActivity(goal.id, task.id, activity)}
+                  onDeleteActivity={(activityId) => onDeleteActivity && onDeleteActivity(goal.id, task.id, activityId)}
+                  openSubmitModal={(activityId) => openSubmitModal && openSubmitModal(goal.id, task.id, activityId)}
                   canSubmitReport={canSubmitReport}
                   reportingActive={reportingActive}
-                  // <-- pass canManageGTA down so ActivityList can show edit/delete
-                  canManageGTA={canManageGTA}
+                  canManageGTA={canManageGTA} // Pass permission down
                 />
               </div>
             )}

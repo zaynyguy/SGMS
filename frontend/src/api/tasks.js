@@ -1,5 +1,14 @@
-// src/api/tasks.js
-import { api } from "./auth"; // your generic fetch wrapper
+// This file assumes you have a generic `api` helper function
+// in a file like './auth.js' or './apiClient.js'
+import { api } from "./auth"; // Adjust this import path
+
+/**
+ * API functions for Tasks.
+ *
+ * REFACTORED: Removed Activity-related functions.
+ * Those now live in `api/activities.js` and use the `/api/tasks/{taskId}/...` route,
+ * which matches the `useProjectApi` hook.
+ */
 
 // Get all tasks under a goal
 export const fetchTasksByGoal = (goalId) =>
@@ -16,11 +25,3 @@ export const updateTask = (goalId, taskId, taskData) =>
 // Delete a task
 export const deleteTask = (goalId, taskId) =>
   api(`/api/goals/${goalId}/tasks/${taskId}`, "DELETE");
-
-// Fetch activities for a task
-export const fetchActivitiesByTask = (goalId, taskId) =>
-  api(`/api/goals/${goalId}/tasks/${taskId}/activities`, "GET");
-
-// Create an activity under a task
-export const createActivity = (goalId, taskId, activityData) =>
-  api(`/api/goals/${goalId}/tasks/${taskId}/activities`, "POST", activityData);

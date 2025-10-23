@@ -1,11 +1,14 @@
-// src/api/goals.js
-import { api } from "./auth"; // your existing API helper
+// This file assumes you have a generic `api` helper function
+// in a file like './auth.js' or './apiClient.js'
+import { api } from "./auth"; // Adjust this import path
+
+/**
+ * API functions for Goals.
+ */
 
 // List goals (with pagination)
-// src/api/goals.js
 export const fetchGoals = (page = 1, pageSize = 20) =>
   api(`/api/goals?page=${page}&pageSize=${pageSize}`, "GET");
-
 
 // Create a goal
 export const createGoal = (goalData) =>
@@ -20,9 +23,7 @@ export const deleteGoal = (goalId) =>
   api(`/api/goals/${goalId}`, "DELETE");
 
 // List tasks for a goal
-export const fetchGoalTasks = (goalId, page = 1, pageSize = 20) =>
-  api(`/api/goals/${goalId}/tasks?page=${page}&pageSize=${pageSize}`, "GET");
-
-// Create a task under a goal
-export const createGoalTask = (goalId, taskData) =>
-  api(`/api/goals/${goalId}/tasks`, "POST", taskData);
+// This is defined here but `useProjectApi` imports it from `tasks.js`
+// We'll keep the one in `tasks.js` as the primary one.
+// export const fetchGoalTasks = (goalId, page = 1, pageSize = 20) =>
+//   api(`/api/goals/${goalId}/tasks?page=${page}&pageSize=${pageSize}`, "GET");

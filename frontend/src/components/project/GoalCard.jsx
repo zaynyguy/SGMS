@@ -1,12 +1,18 @@
 import React, { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, ChevronDown, Edit, Trash2, Calendar, CheckSquare, Plus as PlusIcon } from "lucide-react";
+// Assuming 'ui' components are in 'src/components/ui'
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
 import TaskList from "./TaskList";
-// FIXED import path (was "../../uites/...") — adjust if your project uses a different folder
+// Assuming 'utils' are in 'src/utils'
 import { formatDate } from "../../uites/projectUtils";
 
+/**
+ * Renders a single Goal card.
+ * Manages its own expanded state to show/hide the TaskList.
+ * Delegates all actions (edit/delete goal, create/edit/delete task) to props.
+ */
 function GoalCard({
   goal,
   expandedGoal,
@@ -15,7 +21,7 @@ function GoalCard({
   canManageGTA,
   handleDeleteGoal,
 
-  // props forwarded from parent (expect the parent to accept goalId first, taskId second)
+  // props forwarded from parent
   onEditGoal,
   onCreateTask,
   onEditTask,
@@ -104,7 +110,10 @@ function GoalCard({
                 {canManageGTA && (
                   <>
                     <button
-                      onClick={() => onEditGoal && onEditGoal(goal)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        onEditGoal && onEditGoal(goal);
+                      }}
                       className="p-2 text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md sm:block"
                       title={t("project.actions.edit") || "Edit"}
                       aria-label={(t("project.actions.edit") || "Edit") + (goal.title ? `: ${goal.title}` : "")}
@@ -113,7 +122,10 @@ function GoalCard({
                     </button>
 
                     <button
-                      onClick={() => handleDeleteGoal && handleDeleteGoal(goal.id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click
+                        handleDeleteGoal && handleDeleteGoal(goal.id);
+                      }}
                       className="p-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md sm:block"
                       title={t("project.actions.delete") || "Delete"}
                       aria-label={(t("project.actions.delete") || "Delete") + (goal.title ? `: ${goal.title}` : "")}
@@ -153,7 +165,10 @@ function GoalCard({
               <div>
                 {canManageGTA && (
                   <button
-                    onClick={() => onCreateTask && onCreateTask(goal.id)}
+                    onClick={(e) => {
+                       e.stopPropagation();
+                       onCreateTask && onCreateTask(goal.id);
+                    }}
                     className="px-2 py-1 bg-blue-500 text-white rounded text-xs flex items-center gap-1"
                     title={t("project.actions.addTask") || "Add Task"}
                   >
@@ -169,7 +184,7 @@ function GoalCard({
               tasksLoading={tasksLoading}
               toggleTask={toggleTask}
               expandedTask={expandedTask}
-              // forward parent handlers directly (signatures expected: (goalId, taskId, ...) )
+              // forward parent handlers directly
               onEditTask={onEditTask}
               onDeleteTask={onDeleteTask}
               onCreateActivity={onCreateActivity}
@@ -180,8 +195,7 @@ function GoalCard({
               reportingActive={reportingActive}
               activities={activities}
               activitiesLoading={activitiesLoading}
-              // <-- pass canManageGTA down
-              canManageGTA={canManageGTA}
+              canManageGTA={canManageGTA} // Pass permission down
             />
           </div>
         )}

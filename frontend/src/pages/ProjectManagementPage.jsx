@@ -47,8 +47,6 @@ export default function ProjectManagement() {
   }, []);
 
   // Sorting preferences (persisted)
-  // sortKey: 'rollNo' | 'title' | 'created_at' (falls back gracefully)
-  // default to rollNo because the DB uses "rollNo" for Goals (see schema)
   const [sortKey, setSortKey] = useState(() => {
     try {
       return localStorage.getItem("projects.sortKey") || "rollNo";
@@ -333,8 +331,20 @@ export default function ProjectManagement() {
 
   /* ----------------- Submit report ----------------- */
   const openSubmitModal = useCallback((goalId, taskId, activityId) => {
-    setSubmitModal({ isOpen: true, data: { goalId, taskId, activityId } });
-  }, []);
+    // Find the activity from the API state to pre-populate metrics
+    const taskActivities = api.activities[taskId] || [];
+    const activity = taskActivities.find(a => String(a.id) === String(activityId));
+
+    const data = {
+      goalId,
+      taskId,
+      activityId,
+      // Pass the metrics to the modal
+      targetMetric: activity?.targetMetric || {},
+      currentMetric: activity?.currentMetric || {}
+    };
+    setSubmitModal({ isOpen: true, data: data });
+  }, [api.activities]); // Dependency added
 
   const closeSubmitModal = useCallback(() => {
     setSubmitModal({ isOpen: false, data: null });
