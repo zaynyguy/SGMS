@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { Edit, Trash2, Calendar, FileText, Check } from "lucide-react";
-// Assuming 'utils' are in 'src/utils'
+// Assuming 'utils' are in 'src/utils' (kept your path)
 import { formatDate } from "../../uites/projectUtils";
 
 export default function ActivityList({
@@ -43,6 +43,52 @@ export default function ActivityList({
       return t("project.status.completed");
     if (status === "In Progress") return t("project.status.inProgress");
     return t("project.status.notStarted");
+  };
+
+  // Safely parse metric value (object, JSON string, or raw)
+  const normalizeMetric = (m) => {
+    if (m === null || m === undefined) return null;
+    if (typeof m === "object") return m;
+    if (typeof m === "string") {
+      const s = m.trim();
+      if (s === "") return null;
+      try {
+        const parsed = JSON.parse(s);
+        return typeof parsed === "object" ? parsed : { value: parsed };
+      } catch {
+        // not JSON — return as single value under key 'value'
+        return { value: s };
+      }
+    }
+    return { value: String(m) };
+  };
+
+  // Render metric object into compact string; limit length to avoid layout break
+  const renderMetricSummary = (rawMetric) => {
+    const m = normalizeMetric(rawMetric);
+    if (!m || (typeof m === "object" && Object.keys(m).length === 0)) return "—";
+
+    // create key:value list (max 3 pairs)
+    try {
+      const pairs = Object.entries(m)
+        .slice(0, 3)
+        .map(([k, v]) => `${k}: ${String(v)}`);
+
+      let summary = pairs.join(", ");
+      // if there are more keys, indicate
+      if (Object.keys(m).length > 3) summary += ` …(+${Object.keys(m).length - 3})`;
+
+      // cap length
+      const MAX_LEN = 80;
+      if (summary.length > MAX_LEN) {
+        return summary.slice(0, MAX_LEN - 1) + "…";
+      }
+      return summary;
+    } catch {
+      // fallback
+      const s = JSON.stringify(m);
+      return s.length > 80 ? s.slice(0, 77) + "…" : s;
+    }
   };
 
   return (
@@ -117,15 +163,33 @@ export default function ActivityList({
             </div>
 
             <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 min-w-0">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {formatDate(activity.dueDate) || t("project.na")}
                 </span>
-                <span>
+
+                <span className="whitespace-nowrap">
                   {t("project.fields.weight") || "Weight"}:{" "}
                   <strong>{activity.weight ?? "-"}</strong>
                 </span>
+
+                {/* Metrics: keep compact and truncate to avoid breaking layout */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                    <span className="font-semibold mr-1">Target:</span>
+                    <span className="truncate" style={{ maxWidth: 220 }}>
+                      {renderMetricSummary(activity.targetMetric)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                    <span className="font-semibold mr-1">Current:</span>
+                    <span className="truncate" style={{ maxWidth: 220 }}>
+                      {renderMetricSummary(activity.currentMetric)}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {reportingActive && (

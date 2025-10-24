@@ -119,13 +119,7 @@ export default function TaskList({
                 {/* Desktop edit/delete - hidden if canManageGTA is falsy */}
                 {canManageGTA && (
                   <div className="hidden sm:flex items-center gap-1">
-                    {/*
-                      *
-                      * FIX: Changed from `onEditTask(goal.id, task.id)` to `onEditTask(goal.id, task)`
-                      * This passes the full task object to the parent handler,
-                      * which allows the modal to be pre-populated with data.
-                      *
-                      */}
+                  
                     <button
                       onClick={() => onEditTask && onEditTask(goal.id, task)}
                       className="p-2 text-blue-600 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md"
@@ -149,6 +143,7 @@ export default function TaskList({
             
             {/* Mobile actions (compact) - hidden if canManageGTA is falsy */}
             {canManageGTA && (
+              
                 <div className="inline-flex sm:hidden items-center gap-1 mt-2">
                     <button
                         onClick={() => onEditTask && onEditTask(goal.id, task)}
@@ -156,7 +151,7 @@ export default function TaskList({
                         aria-label={t("project.actions.edit") || "Edit task"}
                         title={t("project.actions.edit") || "Edit task"}
                     >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-4 w-4 dark:text-blue-400" />
                     </button>
                     <button
                         onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
