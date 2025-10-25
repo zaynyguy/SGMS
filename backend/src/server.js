@@ -11,14 +11,12 @@ const { UPLOAD_DIR } = require("./middleware/uploadMiddleware");
 const app = express();
 const server = http.createServer(app);
 
-// Middleware
 app.use(cors({ origin: process.env.FRONTEND_ORIGIN, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
 scheduleMonthlySnapshots({ schedule: '0 9 1 * *' });
 
-// --- API Routes ---
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/usersRoutes"));
 app.use("/api/roles", require("./routes/roleRoutes"));
@@ -36,25 +34,22 @@ app.use("/api/notifications", require("./routes/notificationsRoutes"));
 app.use("/api/audit", require("./routes/auditRoutes"));
 
 app.get("/", (req, res) => {
-  res.send("The API server is running...");
+res.send("The API server is running...");
 });
 
-// Serve uploaded files statically
-app.use("/uploads", express.static(UPLOAD_DIR));
+// REMOVED: app.use("/uploads", express.static(UPLOAD_DIR));
+// This line has been removed to close the security vulnerability.
+// Files are now served via secure controllers.
 
-// --- Start Server ---
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, async () => {
-  console.log(`Server running on port ${PORT}`);
-
-  // init socket
-  initSocket(server);
-
-  try {
-    db.query("Select now()")
-    console.log("Database connection established successfully.");
-  } catch (error) {
-    console.error("Unable to connect to the database:", error);
-  }
+console.log(`Server running on port ${PORT}`);
+initSocket(server);
+try {
+db.query("Select now()")
+console.log("Database connection established successfully.");
+} catch (error) {
+console.error("Unable to connect to the database:", error);
+}
 });

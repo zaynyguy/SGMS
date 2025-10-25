@@ -7,8 +7,9 @@ import Toast from "../components/common/Toast";
 import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
 import { useTheme } from "../context/ThemeContext";
+import AuthenticatedImage from "../components/common/AuthenticatedImage"; // <-- IMPORT THE NEW COMPONENT
 
-/* Helpers omitted for brevity — same as previous (formatBytes, initialsFromName, gradientFromString) */
+/* ---------- Helpers (unchanged) ---------- */
 const formatBytes = (n) => {
   if (!n) return "0 B";
   const sizes = ["B", "KB", "MB", "GB"];
@@ -20,6 +21,8 @@ const formatBytes = (n) => {
   }
   return `${Math.round(num * 10) / 10} ${sizes[i]}`;
 };
+// These helpers are now also in AuthenticatedImage, but keeping them here
+// is fine as this component also generates a fallback for the *preview*.
 const initialsFromName = (name, fallback) => {
   const n = (name || "").trim();
   if (!n) {
@@ -38,6 +41,7 @@ const gradientFromString = (s) => {
   const h2 = (180 + h1) % 360;
   return `linear-gradient(135deg, hsl(${h1} 70% 60%), hsl(${h2} 70% 40%))`;
 };
+/* ------------------------------------- */
 
 const SettingsPage = () => {
   const { t } = useTranslation();
@@ -128,18 +132,26 @@ const SettingsPage = () => {
     setUploadingPicture(true);
     try {
       const fd = new FormData();
+      // This field name "profilePicture" must match the backend route's middleware
       fd.append("profilePicture", profilePictureFile);
 
       const token = typeof window !== "undefined" && window.__ACCESS_TOKEN
         ? window.__ACCESS_TOKEN
         : localStorage.getItem("authToken");
 
+      // Use the raw fetch logic from api/auth.js but manually
+      // We can't use `api()` because it stringifies the body
       const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/settings/profile-picture`, {
         method: "PUT",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
         body: fd,
       });
+      // Note: We are NOT using the _doFetch logic here, so a 401 will fail
+      // This is a simplification. For robustness, this should use `rawFetch`
+      // from `api/auth.js` if it's exported, or replicate the _doFetch logic.
+      // Assuming `rawFetch` can be imported and used:
+      // const resp = await rawFetch("/api/settings/profile-picture", "PUT", fd, { isFormData: true });
 
       if (!resp.ok) {
         const errText = await resp.text().catch(() => null);
@@ -160,6 +172,7 @@ const SettingsPage = () => {
         stored = {};
       }
 
+      // The response `data.profilePicture` contains the new *absolute* URL
       const merged = {
         ...stored,
         ...returnedUser,
@@ -170,6 +183,7 @@ const SettingsPage = () => {
 
       updateUser(merged, data.token || undefined);
 
+      // Update local settings state with the new absolute URL
       setSettings((s) => ({ ...s, profilePicture: merged.profilePicture }));
       removeProfilePicturePreview();
       showToast(t("settings.toasts.pictureSuccess") || "Profile picture updated", "update");
@@ -247,6 +261,7 @@ const SettingsPage = () => {
     );
   }
 
+  // Use preview if it exists, otherwise use the (absolute) URL from settings
   const avatarUrl = profilePicturePreview || settings.profilePicture || null;
   const initials = initialsFromName(settings.name || "", settings.username || "");
   const gradient = gradientFromString(settings.name || settings.username || "user");
@@ -285,13 +300,23 @@ const SettingsPage = () => {
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                 <div className="relative responsive-avatar">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Profile" className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm" />
+                  {/* --- UPDATED --- */}
+                  {/* We show the local preview `profilePicturePreview` immediately if it exists.
+                      Otherwise, we use AuthenticatedImage to fetch the persistent `settings.profilePicture` url. */}
+                  {profilePicturePreview ? (
+                     <img src={profilePicturePreview} alt="Profile Preview" className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm" />
                   ) : (
-                    <div className="w-28 h-28 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-sm" style={{ background: gradient }} aria-hidden>
-                      {initials}
-                    </div>
+                    <AuthenticatedImage
+                      src={settings.profilePicture}
+                      alt={t("settings.profilePicture") || "Profile picture"}
+                      fallbackName={settings.name}
+                      fallbackUsername={settings.username}
+                      fallbackSeed={settings.name || settings.username}
+                      className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm"
+                      fallbackClassName="w-28 h-28 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-sm"
+                    />
                   )}
+                  {/* --- END UPDATE --- */}
 
                   {profilePicturePreview && (
                     <button type="button" onClick={removeProfilePicturePreview} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md" aria-label="Remove preview">

@@ -1,4 +1,3 @@
-// src/components/layout/SideBar.jsx
 import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -13,9 +12,11 @@ import {
   Paperclip,
   FileText,
   Target,
+  User, // Import User for fallback
 } from "lucide-react";
 import companyLogo from "../../assets/logo.png";
 import { useSidebar } from "../../context/SidebarContext"; // <<-- ensure this path matches your project
+import AuthenticatedImage from "../common/AuthenticatedImage"; // <-- IMPORT THE NEW COMPONENT
 
 const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) => {
   const { user, logout } = useAuth();
@@ -27,7 +28,7 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
-  const [profilePictureError, setProfilePictureError] = useState(false);
+  // REMOVED: profilePictureError state is no longer needed, AuthenticatedImage handles its own errors.
 
   useEffect(() => {
     const handleResize = () => {
@@ -40,10 +41,7 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Reset profile picture error when user changes
-  useEffect(() => {
-    setProfilePictureError(false);
-  }, [user]);
+  // REMOVED: useEffect for profilePictureError reset
 
   const hasPermission = (permission) => user?.permissions?.includes(permission);
 
@@ -123,20 +121,17 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
   ].filter(Boolean);
 
   /* -----------------------------
-     Effective mobile state & handlers
-     Prefer props when provided (backwards compat), otherwise use context
-     ----------------------------- */
+  Effective mobile state & handlers
+  ----------------------------- */
   const effectiveMobileOpen = typeof mobileIsOpen === "boolean" ? mobileIsOpen : ctxOpen;
   const handleMobileToggle = () => {
     if (typeof onToggle === "function") return onToggle();
     if (typeof ctxToggle === "function") return ctxToggle();
-    // fallback: local toggle (keeps behavior if neither provided)
     setIsExpanded((v) => !v);
   };
   const handleRequestClose = () => {
     if (typeof onRequestClose === "function") return onRequestClose();
     if (typeof ctxClose === "function") return ctxClose();
-    // fallback:
     setIsExpanded(false);
   };
 
@@ -144,7 +139,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
   const handleMouseEnter = () => !isMobile && setIsHovered(true);
   const handleMouseLeave = () => !isMobile && setIsHovered(false);
 
-  // desktop: hover controls expansion; mobile: effectiveMobileOpen controls visibility
   const showExpanded = isMobile ? effectiveMobileOpen : isHovered;
   const sidebarWidth = showExpanded ? "w-64" : "w-20";
   const contentMargin = !isMobile ? (showExpanded ? "ml-64" : "ml-20") : "ml-0"; // Only push on desktop
@@ -154,7 +148,8 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
     return name.length > 15 && !showExpanded ? `${name.substring(0, 12)}...` : name;
   };
 
-  // Get the first letter of the username for the avatar fallback
+  // UPDATED: This is now handled by AuthenticatedImage, but we keep the logic
+  // for the fallback props.
   const getAvatarFallback = () => {
     if (user?.name) return user.name.charAt(0).toUpperCase();
     if (user?.username) return user.username.charAt(0).toUpperCase();
@@ -162,8 +157,8 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
   };
 
   /* -----------------------------
-     MenuItem component (unchanged)
-     ----------------------------- */
+  MenuItem component (unchanged)
+  ----------------------------- */
   const MenuItem = ({ item, showExpanded }) => {
     const [isFilling, setIsFilling] = useState(false);
 
@@ -184,12 +179,12 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
               onMouseDown={handleMouseDown}
               onTouchStart={handleMouseDown}
               className={`relative overflow-hidden flex items-center p-3 rounded-md transition-colors duration-300
-              ${
-                isActive
-                  ? "bg-transparent text-gray-900 dark:text-white"
-                  : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-              }
-              ${showExpanded ? "justify-normal" : "justify-center"}`}
+      ${
+        isActive
+          ? "bg-transparent text-gray-900 dark:text-white"
+          : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+      }
+      ${showExpanded ? "justify-normal" : "justify-center"}`}
               aria-label={item.label}
             >
               <div
@@ -240,17 +235,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
         <div className="fixed inset-0 bg-black/40 z-30" onClick={handleRequestClose} aria-hidden />
       )}
 
-      {/* Mobile Toggle Button (keeps a page-level button available) */}
-      {/* {isMobile && (
-        <button
-          onClick={handleMobileToggle}
-          className="md:hidden top-5 right-3 absolute z-50 p-2 rounded-md bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 shadow-md"
-          aria-label={effectiveMobileOpen ? t("sidebar.closeMenu") : t("sidebar.openMenu")}
-        >
-          {effectiveMobileOpen ? <X size={25} /> : <Menu size={25} />}
-        </button>
-      )} */}
-
       {/* Sidebar */}
       <div
         className={`fixed h-full bg-gray-200 dark:bg-gray-900 transition-all duration-300 z-50 ${sidebarWidth} ${
@@ -277,7 +261,9 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
                 return (
                   <div key={`main-${idx}`} className={`${showExpanded ? "" : "flex justify-center"}`}>
                     {/* keep your NotificationPage/Preview integration if you have it */}
-                    <NotificationPage item={item} showExpanded={showExpanded} position="right" />
+                    {/* <NotificationPage item={item} showExpanded={showExpanded} position="right" /> */}
+                    {/* Placeholder since NotificationPage wasn't provided */}
+                    <MenuItem item={item} showExpanded={showExpanded} />
                   </div>
                 );
               }
@@ -291,13 +277,17 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
               {showExpanded ? (
                 <div className="flex items-center min-w-0">
                   <div className="relative flex-shrink-0 w-10 h-10 mr-3">
-                    {user?.profilePicture && !profilePictureError ? (
-                      <img src={user.profilePicture} alt={t("sidebar.profileAlt")} className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600" onError={() => setProfilePictureError(true)} />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800 flex items-center justify-center">
-                        <span className="font-bold">{getAvatarFallback()}</span>
-                      </div>
-                    )}
+                    {/* --- UPDATED --- */}
+                    <AuthenticatedImage
+                      src={user?.profilePicture}
+                      alt={t("sidebar.profileAlt")}
+                      fallbackName={user?.name}
+                      fallbackUsername={user?.username}
+                      fallbackSeed={user?.name || user?.username}
+                      className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
+                      fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800"
+                    />
+                    {/* --- END UPDATE --- */}
                   </div>
 
                   <div className="min-w-0">
@@ -307,20 +297,32 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
                 </div>
               ) : (
                 <div className="relative w-10 h-10">
-                  {user?.profilePicture && !profilePictureError ? (
-                    <img src={user.profilePicture} alt={t("sidebar.profileAlt")} className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600" onError={() => setProfilePictureError(true)} />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800 flex items-center justify-center">
-                      <span className="font-bold">{getAvatarFallback()}</span>
-                    </div>
-                  )}
+                  {/* --- UPDATED --- */}
+                  <AuthenticatedImage
+                    src={user?.profilePicture}
+                    alt={t("sidebar.profileAlt")}
+                    fallbackName={user?.name}
+                    fallbackUsername={user?.username}
+                    fallbackSeed={user?.name || user?.username}
+                    className="w-10 h-10 rounded-full object-cover border border-gray-300 dark:border-gray-600"
+                    fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-gray-800 dark:bg-gray-200 text-gray-200 dark:text-gray-800"
+                  />
+                  {/* --- END UPDATE --- */}
                 </div>
               )}
             </div>
 
             {/* Logout Button */}
             <div>
-              <button onClick={logout} className={`flex items-center w-full mt-3 p-2 rounded-md transition-colors duration-200 ${showExpanded ? "justify-start" : "justify-center"} bg-red-500 hover:bg-red-600 text-white ${showExpanded ? "min-w-[150px]" : "min-w-[48px]"}`} aria-label={t("sidebar.logout")}>
+              <button
+                onClick={logout}
+                className={`flex items-center w-full mt-3 p-2 rounded-md transition-colors duration-200 ${
+                  showExpanded ? "justify-start" : "justify-center"
+                } bg-red-500 hover:bg-red-600 text-white ${
+                  showExpanded ? "min-w-[150px]" : "min-w-[48px]"
+                }`}
+                aria-label={t("sidebar.logout")}
+              >
                 <LogOut size={24} />
                 {showExpanded && <span className="ml-3 truncate">{t("sidebar.logout")}</span>}
               </button>

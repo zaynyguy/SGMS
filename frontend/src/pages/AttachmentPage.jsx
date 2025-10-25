@@ -11,10 +11,12 @@ import {
   X,
   Search,
   Paperclip,
+  AlertTriangle, // For fallback
 } from "lucide-react";
 import { fetchAttachments, deleteAttachment, downloadAttachment } from "../api/attachments";
 import TopBar from "../components/layout/TopBar";
-import Toast from "../components/common/Toast"; // <-- added
+import Toast from "../components/common/Toast";
+import AuthenticatedImage from "../components/common/AuthenticatedImage"; // <-- IMPORT THE NEW COMPONENT
 
 /* Small util: format date nicely */
 const formatDate = (d) => {
@@ -45,7 +47,22 @@ function ImagePreviewModal({ src, name, onClose, t }) {
           </button>
         </div>
         <div className="p-4 flex items-center justify-center">
-          <img src={src} alt={name} className="max-w-full max-h-[80vh] object-contain rounded" />
+          {/* --- UPDATED --- */}
+          <AuthenticatedImage
+            src={src}
+            alt={name}
+            className="max-w-full max-h-[80vh] object-contain rounded"
+            fallbackSeed={name}
+            fallbackClassName="max-w-full max-h-[80vh] w-[80vw] min-h-[50vh] flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded"
+          >
+            {/* Custom child for fallback state */}
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+                <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4" />
+                <p className="font-semibold">{t("attachments.previewErrorTitle", "Cannot load preview")}</p>
+                <p className="text-sm mt-1">{t("attachments.previewErrorSubtitle", "The file may be corrupt or inaccessible.")}</p>
+            </div>
+          </AuthenticatedImage>
+          {/* --- END UPDATE --- */}
         </div>
       </div>
     </div>
@@ -66,7 +83,7 @@ function ConfirmModal({ open, title, message, onCancel, onConfirm, loading, conf
       <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md">
         <div className="text-center">
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-3">
-            <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400"/>
+            <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
           </div>
 
           <h3 id="confirm-modal-title" className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">
@@ -119,7 +136,7 @@ export default function AttachmentsPage({ reportId }) {
   const [error, setError] = useState(null);
 
   // UI state
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview] = useState(null); // { src, name }
   const [searchTerm, setSearchTerm] = useState("");
 
   // Toast state
@@ -217,11 +234,36 @@ export default function AttachmentsPage({ reportId }) {
     }
   };
 
+  // --- UPDATED ---
+  // We no longer need to fetch. Just set the secure URL.
+  // The AuthenticatedImage component inside the modal will handle fetching.
   const openPreview = (at) => {
-    let src = at.filePath || at.url || at.url;
-    if (src && src.startsWith("/")) src = `${window.location.origin}${src}`;
+    // We need the *absolute secure URL* for the attachment.
+    // The `at.filePath` from the backend *is* this URL.
+    let src = at.filePath; // e.g., "http://localhost:5000/api/reports/attachments/123/download"
+    
+    // This logic might be from an old version, but we'll keep it just in case
+    // some attachments are still relative paths (which they shouldn't be).
+    if (src && src.startsWith("/")) {
+       src = `${window.location.origin}${src}`;
+    }
+    
+    // If filePath is not a full URL (e.g., old "local" provider filename),
+    // we must construct the full download path.
+    // The backend `listAttachments` doesn't seem to provide the full path,
+    // only the `filePath` (which might be a filename or a Cloudinary URL).
+    // The `downloadAttachment` *API* call in `api/attachments.js`
+    // points to `/api/reports/attachments/${id}/download`. This is the secure path.
+    // Let's assume `at.filePath` is *not* the path, but `at.id` is what we need.
+    
+    // Let's correct this. The secure URL is the one we use for downloading.
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    src = `${API_URL}/api/reports/attachments/${encodeURIComponent(at.id)}/download`;
+    
+    console.log("Setting preview src to:", src);
     setPreview({ src, name: at.fileName });
   };
+  // --- END UPDATE ---
 
   const filtered = useMemo(() => {
     const q = String(searchTerm || "").trim().toLowerCase();

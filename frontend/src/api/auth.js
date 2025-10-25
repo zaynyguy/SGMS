@@ -1,3 +1,7 @@
+// This file is unchanged from what you provided, but it's
+// included here because its `rawFetch` function is essential
+// for the new `AuthenticatedImage` component to work.
+
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 let _isRefreshing = false;
@@ -102,8 +106,6 @@ export async function api(endpoint, method = "GET", body = null, options = {}) {
   return data;
 }
 
-
-
 export async function rawFetch(endpoint, method = "GET", body = null, options = {}) {
   const url = endpoint.startsWith("http") ? endpoint : `${API_URL}${endpoint}`;
   const headers = { Accept: "application/json", ...(options.headers || {}) };
@@ -118,8 +120,6 @@ export async function rawFetch(endpoint, method = "GET", body = null, options = 
   }
   return _doFetch(url, init);
 }
-
-
 
 export const loginUser = (username, password) => api("/api/auth/login", "POST", { username, password });
 export const refreshToken = () => api("/api/auth/refresh", "POST", null);

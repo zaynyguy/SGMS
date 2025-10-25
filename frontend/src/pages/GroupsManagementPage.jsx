@@ -1,4 +1,3 @@
-// src/pages/GroupsManager.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,7 +13,8 @@ import { fetchGroups, createGroup, updateGroup, deleteGroup } from "../api/group
 import { addUserToGroup, removeUserFromGroup, fetchGroupUsers } from "../api/userGroups";
 import { fetchUsers } from "../api/admin";
 import Toast from "../components/common/Toast";
-import { rawFetch } from "../api/auth"; // used for FormData upload similar to settings
+import { rawFetch } from "../api/auth"; // used for FormData upload
+import AuthenticatedImage from "../components/common/AuthenticatedImage"; // <-- IMPORT THE NEW COMPONENT
 
 /* Helpers for avatar fallback */
 const initialsFromName = (name, fallback) => {
@@ -38,22 +38,25 @@ const gradientFromString = (s) => {
 };
 
 /* -------------------------
-   Group form modal
+Group form modal
 --------------------------*/
 const GroupFormModal = ({ group, onSave, onClose, t }) => {
   const [name, setName] = useState(group?.name || "");
   const [description, setDescription] = useState(group?.description || "");
   const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null); // This holds local object: URLs
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const previewRef = useRef(null);
+
+  // Store the original group picture URL to show if the local preview is removed
+  const originalPictureUrl = group?.profilePicture || null;
 
   useEffect(() => {
     setName(group?.name || "");
     setDescription(group?.description || "");
     setProfilePictureFile(null);
-    setProfilePicturePreview(null);
+    setProfilePicturePreview(null); // Clear local preview
     setErrors({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group?.id]);
@@ -75,7 +78,7 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
     }
     const url = URL.createObjectURL(f);
     previewRef.current = url;
-    setProfilePicturePreview(url);
+    setProfilePicturePreview(url); // This is an object: URL
     setProfilePictureFile(f);
     setErrors({});
   };
@@ -100,22 +103,26 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
     try {
       setIsLoading(true);
 
-      // If a file is provided, build FormData and pass it to parent
+      const fd = new FormData();
+      fd.append("name", name.trim());
+      fd.append("description", description.trim() || "");
+
+      // If a new file was selected, add it
       if (profilePictureFile) {
-        const fd = new FormData();
         fd.append("profilePicture", profilePictureFile);
-        fd.append("name", name.trim());
-        fd.append("description", description.trim() || "");
-        // Parent will detect FormData and call correct endpoint (POST/PUT) with multipart
-        await onSave(fd);
-      } else {
-        // No file: use plain JSON payload (backwards-compatible)
-        const payload = {
-          name: name.trim(),
-          description: description.trim() || null,
-        };
-        await onSave(payload);
+      } 
+      // If no file was selected AND there's no preview (meaning user removed it)
+      // send an empty string to tell the backend to set it to null.
+      else if (!profilePicturePreview && !originalPictureUrl) {
+         fd.append("profilePicture", ""); // Signal to remove
       }
+      // If the original picture is still there and no new file,
+      // we just don't append the `profilePicture` field, and the backend
+      // will keep the old one.
+
+      // We now *always* send FormData
+      await onSave(fd);
+
     } catch (err) {
       console.error("Failed to save group:", err);
       setErrors({ submit: err.message || t("groups.form.errors.saveFailed") || "Save failed" });
@@ -133,6 +140,14 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
     setProfilePictureFile(null);
     setProfilePicturePreview(null);
   };
+
+  // --- UPDATED ---
+  // Determine what to show:
+  // 1. Local preview (object: URL) if it exists
+  // 2. Original group picture (http: URL) if no local preview
+  // 3. Fallback initials
+  const displayUrl = profilePicturePreview || originalPictureUrl;
+  const showFallback = !displayUrl;
 
   return (
     <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4">
@@ -153,26 +168,27 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
             <div className="col-span-1 flex flex-col items-center">
+              
+              {/* --- UPDATED --- */}
               {profilePicturePreview ? (
+                // 1. Show local object: URL preview
                 <img
                   src={profilePicturePreview}
                   alt="preview"
                   className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
                 />
-              ) : group?.profilePicture ? (
-                <img
-                  src={group.profilePicture}
-                  alt={group.name}
-                  className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
-                />
               ) : (
-                <div
-                  className="w-28 h-28 rounded-full flex items-center justify-center text-white font-semibold text-xl"
-                  style={{ background: gradientFromString(name || group?.name || "group") }}
-                >
-                  {initialsFromName(name || group?.name || "", "")}
-                </div>
+                // 2. Show persistent URL (or fallback)
+                <AuthenticatedImage
+                  src={originalPictureUrl}
+                  alt={name || group?.name || ""}
+                  fallbackName={name || group?.name}
+                  fallbackSeed={name || group?.name || "group"}
+                  className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
+                  fallbackClassName="w-28 h-28 rounded-full flex items-center justify-center text-white font-semibold text-xl mb-3"
+                />
               )}
+              {/* --- END UPDATE --- */}
 
               <div className="mt-3 flex items-center gap-3">
                 <input id="group-picture-input" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
@@ -182,7 +198,7 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
                 >
                   {t("groups.form.buttons.uploadPicture") || "Upload picture"}
                 </label>
-                {profilePicturePreview && (
+                {(profilePicturePreview || originalPictureUrl) && ( // Show remove if *any* picture is showing
                   <button type="button" onClick={removePreview} className="text-sm text-red-600 dark:text-red-400">
                     {t("groups.form.buttons.remove")}
                   </button>
@@ -242,7 +258,7 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
 };
 
 /* -------------------------
-   Group members modal
+Group members modal
 --------------------------*/
 const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
   const [members, setMembers] = useState([]);
@@ -358,9 +374,22 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
               <ul className="divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
                 {members.map((member) => (
                   <li key={member.id} className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{member.username}</p>
+                    <div className="flex items-center gap-3">
+                        {/* --- ADDED --- */}
+                        <AuthenticatedImage
+                           src={member.profilePicture}
+                           alt={member.name}
+                           fallbackName={member.name}
+                           fallbackUsername={member.username}
+                           fallbackSeed={member.name || member.username}
+                           className="w-8 h-8 rounded-full object-cover"
+                           fallbackClassName="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-xs"
+                        />
+                        {/* --- END ADD --- */}
+                        <div>
+                            <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{member.username}</p>
+                        </div>
                     </div>
                     <div>
                       <button
@@ -385,7 +414,7 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
 };
 
 /* -------------------------
-   Main GroupsManager
+Main GroupsManager
 --------------------------*/
 function GroupsManager() {
   const { t, i18n } = useTranslation();
@@ -467,47 +496,41 @@ function GroupsManager() {
 
   const handleSaveGroup = useCallback(
     async (groupData) => {
+      // This function now *always* expects FormData
+      if (!(groupData instanceof FormData)) {
+         console.error("handleSaveGroup expected FormData");
+         showToast(t("groups.messages.saveFailed"), "error");
+         return;
+      }
+      
       try {
-        // If caller passed FormData (file upload), use rawFetch directly and send multipart
-        if (groupData instanceof FormData) {
-          let resp;
-          if (currentGroup) {
-            resp = await rawFetch(`/api/groups/${currentGroup.id}`, "PUT", groupData, { isFormData: true });
-          } else {
-            resp = await rawFetch("/api/groups/", "POST", groupData, { isFormData: true });
-          }
-
-          if (!resp.ok) {
-            const txt = await resp.text().catch(() => null);
-            let parsed;
-            try {
-              parsed = txt ? JSON.parse(txt) : null;
-            } catch {
-              parsed = txt;
-            }
-            throw new Error(parsed?.message || t("groups.messages.saveFailed"));
-          }
-
-          // parse response if needed
-          await resp.json().catch(() => null);
-          showToast(currentGroup ? t("groups.messages.updated") : t("groups.messages.created"), currentGroup ? "update" : "success");
+        let resp;
+        if (currentGroup) {
+          resp = await rawFetch(`/api/groups/${currentGroup.id}`, "PUT", groupData, { isFormData: true });
         } else {
-          // plain JSON path
-          if (currentGroup) {
-            await updateGroup(currentGroup.id, groupData);
-            showToast(t("groups.messages.updated"), "update");
-          } else {
-            await createGroup(groupData);
-            showToast(t("groups.messages.created"), "success");
-          }
+          resp = await rawFetch("/api/groups/", "POST", groupData, { isFormData: true });
         }
 
-        await loadData();
+        if (!resp.ok) {
+          const txt = await resp.text().catch(() => null);
+          let parsed;
+          try {
+            parsed = txt ? JSON.parse(txt) : null;
+          } catch {
+            parsed = txt;
+          }
+          throw new Error(parsed?.message || t("groups.messages.saveFailed"));
+        }
+
+        await resp.json().catch(() => null);
+        showToast(currentGroup ? t("groups.messages.updated") : t("groups.messages.created"), currentGroup ? "update" : "success");
+        
+        await loadData(); // Reload all data
         closeModal();
       } catch (err) {
         console.error("Error saving group:", err);
         showToast(t("groups.messages.saveFailed"), "error");
-        throw err;
+        throw err; // Re-throw to be caught by the modal
       }
     },
     [currentGroup, closeModal, loadData, showToast, t]
@@ -605,27 +628,27 @@ function GroupsManager() {
         <header className="pt-6 pb-4">
           <div className="">
             <div className="flex items-center justify-between">
-                <div className="flex items-center min-w-0 gap-4">
-                  <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-900">
-                        <Layers className="h-6 w-6 text-sky-600 dark:text-sky-300" />
-                      </div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight truncate">
-                {t("groups.title")}
-              </h1>
-              <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
-                {t("groups.subtitle")}
-              </p>
-              </div>
+              <div className="flex items-center min-w-0 gap-4">
+                <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-900">
+                  <Layers className="h-6 w-6 text-sky-600 dark:text-sky-300" />
                 </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight truncate">
+                    {t("groups.title")}
+                  </h1>
+                  <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                    {t("groups.subtitle")}
+                  </p>
+                </div>
+              </div>
               <div>
                 <button
-                onClick={openCreateModal}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base shadow-sm transition"
-              >
-                <Plus className="h-4 w-4" />
-                <span>{t("groups.newGroup")}</span>
-              </button>
+                  onClick={openCreateModal}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base shadow-sm transition"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{t("groups.newGroup")}</span>
+                </button>
               </div>
             </div>
 
@@ -710,13 +733,16 @@ function GroupsManager() {
                         filteredGroups.map((g) => (
                           <tr key={g.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                             <td className="px-4 py-4 font-medium text-gray-900 dark:text-white flex items-center gap-3">
-                              {g.profilePicture ? (
-                                <img src={g.profilePicture} alt={g.name} className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700" />
-                              ) : (
-                                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: gradientFromString(g.name || "group") }}>
-                                  {initialsFromName(g.name || "", "")}
-                                </div>
-                              )}
+                              {/* --- UPDATED --- */}
+                              <AuthenticatedImage
+                                src={g.profilePicture}
+                                alt={g.name}
+                                fallbackName={g.name}
+                                fallbackSeed={g.name || "group"}
+                                className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700"
+                                fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                              />
+                              {/* --- END UPDATE --- */}
                               <span className="truncate max-w-xs">{g.name}</span>
                             </td>
 
@@ -764,14 +790,16 @@ function GroupsManager() {
                       <div key={g.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-4 flex-1 min-w-0">
-                            {g.profilePicture ? (
-                              <img src={g.profilePicture} alt={g.name} className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700" />
-                            ) : (
-                              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: gradientFromString(g.name || "group") }}>
-                                {initialsFromName(g.name || "", "")}
-                              </div>
-                            )}
-
+                            {/* --- UPDATED --- */}
+                            <AuthenticatedImage
+                                src={g.profilePicture}
+                                alt={g.name}
+                                fallbackName={g.name}
+                                fallbackSeed={g.name || "group"}
+                                className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700"
+                                fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
+                            />
+                            {/* --- END UPDATE --- */}
                             <div className="min-w-0">
                               <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">{g.name}</h3>
                               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{g.description || t("groups.noDescription")}</p>
@@ -798,16 +826,16 @@ function GroupsManager() {
                           </div>
                         </div>
 
-                          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <span className="font-medium text-gray-700 dark:text-gray-300">{t("groups.createdPrefix")}</span> <span className="ml-1">{formatDate(g.createdAt)}</span>
-                              </div>
-                              <div>
-                                <span className="font-medium text-gray-700 dark:text-gray-300">{t("groups.updatedPrefix")}</span> <span className="ml-1">{formatDate(g.updatedAt)}</span>
-                              </div>
+                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">{t("groups.createdPrefix")}</span> <span className="ml-1">{formatDate(g.createdAt)}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-700 dark:text-gray-300">{t("groups.updatedPrefix")}</span> <span className="ml-1">{formatDate(g.updatedAt)}</span>
                             </div>
                           </div>
+                        </div>
                       </div>
                     ))
                   ) : (
@@ -828,14 +856,16 @@ function GroupsManager() {
                       <div key={g.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            {g.profilePicture ? (
-                              <img src={g.profilePicture} alt={g.name} className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700" />
-                            ) : (
-                              <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold" style={{ background: gradientFromString(g.name || "group") }}>
-                                {initialsFromName(g.name || "", "")}
-                              </div>
-                            )}
-
+                            {/* --- UPDATED --- */}
+                            <AuthenticatedImage
+                                src={g.profilePicture}
+                                alt={g.name}
+                                fallbackName={g.name}
+                                fallbackSeed={g.name || "group"}
+                                className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700"
+                                fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
+                            />
+                            {/* --- END UPDATE --- */}
                             <div className="min-w-0">
                               <h3 className="font-medium text-gray-900 dark:text-white truncate">{g.name}</h3>
                               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{g.description || t("groups.noDescription")}</p>
@@ -863,7 +893,7 @@ function GroupsManager() {
 
                         <div className="flex gap-11">
                           <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.createdPrefix")} {formatDate(g.createdAt)}</div>
-                        <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.updatedPrefix")} {formatDate(g.updatedAt)}</div>
+                          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.updatedPrefix")} {formatDate(g.updatedAt)}</div>
                         </div>
                       </div>
                     ))

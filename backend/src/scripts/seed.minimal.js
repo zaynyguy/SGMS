@@ -4,9 +4,7 @@ const fs = require("fs");
 const db = require("../db");
 const bcrypt = require("bcrypt");
 
-function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+
 
 async function findSchema() {
   const candidates = [
@@ -20,12 +18,7 @@ async function findSchema() {
 }
 
 
-function snapshotMonthFrom(date) {
-  const d = new Date(date);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${year}-${month}-01`;
-}
+
 
 async function ensureRow(client, table, uniqueCol, values) {
   const cols = Object.keys(values);

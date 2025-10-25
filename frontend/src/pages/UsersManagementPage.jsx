@@ -1,4 +1,3 @@
-// src/pages/UsersManagementPage.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Edit, Trash2, UserPlus, Users, X } from "lucide-react";
@@ -11,6 +10,7 @@ import {
 } from "../api/admin";
 import { api as apiAuth } from "../api/auth"; // used for multipart upload to new backend route
 import Toast from "../components/common/Toast";
+import AuthenticatedImage from "../components/common/AuthenticatedImage"; // <-- IMPORT THE NEW COMPONENT
 
 /* ---------- Helpers ---------- */
 const initialsFromName = (name, fallback) => {
@@ -144,7 +144,9 @@ const UsersManagementPage = () => {
         roleId: user.role?.id || user.roleId || "",
       });
       setUserToEdit(user);
-      setProfilePicturePreview(user.profilePicture || user.profilePictureUrl || null);
+      // We set the *secure URL* to the preview state.
+      // The local file preview will override this if a new file is chosen.
+      setProfilePicturePreview(user.profilePicture || null);
       setProfilePictureFile(null);
     } else {
       setFormData({ username: "", name: "", password: "", roleId: "" });
@@ -163,6 +165,7 @@ const UsersManagementPage = () => {
       previewRef.current = null;
     }
     setProfilePictureFile(null);
+    setProfilePicturePreview(null); // Clear preview on close
   };
 
   const handleFormChange = (e) => {
@@ -195,7 +198,7 @@ const UsersManagementPage = () => {
     }
     const url = URL.createObjectURL(file);
     previewRef.current = url;
-    setProfilePicturePreview(url);
+    setProfilePicturePreview(url); // This preview is an object URL
     setProfilePictureFile(file);
   };
 
@@ -206,11 +209,16 @@ const UsersManagementPage = () => {
     }
     setProfilePicturePreview(null);
     setProfilePictureFile(null);
+    
+    // If we were editing, restore the original picture to the preview
+    if (userToEdit) {
+      setProfilePicturePreview(userToEdit.profilePicture || null);
+    }
   };
 
   /**
    * Upload file for given userId using new admin route:
-   * PUT /api/users/:id/profile-picture  (field name: 'file')
+   * PUT /api/users/:id/profile-picture (field name: 'file')
    * Uses apiAuth helper so cookies/auth are handled.
    */
   const uploadProfileFileForUser = async (userId, file) => {
@@ -243,14 +251,16 @@ const UsersManagementPage = () => {
         ...(formData.password ? { password: formData.password } : {}),
       };
 
-      const isPreviewUrl =
-        profilePicturePreview &&
-        (profilePicturePreview.startsWith("http") ||
-          profilePicturePreview.startsWith("/") ||
-          profilePicturePreview.startsWith("https"));
-      if (!profilePictureFile && isPreviewUrl) {
-        payload.profilePicture = profilePicturePreview;
+      // --- UPDATED LOGIC ---
+      // Only set profilePicture in the *initial* payload if:
+      // 1. There is no new file upload.
+      // 2. The preview is null (user clicked "remove" on an existing pic).
+      // We no longer send http URLs in the payload. The file upload
+      // after creation/update handles the image.
+      if (!profilePictureFile && !profilePicturePreview) {
+          payload.profilePicture = null; // Explicitly set to null
       }
+      // --- END UPDATE ---
 
       let savedUser = null;
       if (userToEdit) {
@@ -259,6 +269,9 @@ const UsersManagementPage = () => {
         savedUser = await createUser(payload);
       }
 
+      // --- UPDATED LOGIC ---
+      // Always run file upload logic *after* user is created/updated
+      // if a file is present.
       if (profilePictureFile) {
         try {
           const idForUpload = savedUser?.id;
@@ -272,7 +285,9 @@ const UsersManagementPage = () => {
             "error"
           );
         }
-      } else if (
+      }
+      // This logic for data: URLs is fine
+      else if (
         profilePicturePreview &&
         profilePicturePreview.startsWith("data:") &&
         savedUser?.id
@@ -292,6 +307,7 @@ const UsersManagementPage = () => {
           );
         }
       }
+      // --- END UPDATE ---
 
       const updatedUsers = await fetchUsers();
       setUsers(updatedUsers || []);
@@ -426,8 +442,6 @@ const UsersManagementPage = () => {
 
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {users.map((u) => {
-                  const avatar =
-                    u.profilePicture || u.profilePictureUrl || null;
                   const roleLabel =
                     (u.role && (u.role.name || u.role)) ||
                     u.roleId ||
@@ -439,26 +453,17 @@ const UsersManagementPage = () => {
                     >
                       <td className="px-4 py-3 whitespace-nowrap align-top">
                         <div className="flex items-center gap-3 min-w-0">
-                          {avatar ? (
-                            <img
-                              src={avatar}
-                              alt={u.name || u.username}
-                              className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0"
-                            />
-                          ) : (
-                            <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
-                              style={{
-                                background: gradientFromString(
-                                  u.name || u.username || "user"
-                                ),
-                              }}
-                              aria-hidden
-                            >
-                              {initialsFromName(u.name || "", u.username || "")}
-                            </div>
-                          )}
-
+                          {/* --- UPDATED --- */}
+                          <AuthenticatedImage
+                            src={u.profilePicture}
+                            alt={u.name || u.username}
+                            fallbackName={u.name}
+                            fallbackUsername={u.username}
+                            fallbackSeed={u.name || u.username}
+                            className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0"
+                            fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
+                          />
+                          {/* --- END UPDATE --- */}
                           <div className="min-w-0">
                             <div
                               className="font-medium text-gray-900 dark:text-white truncate"
@@ -537,7 +542,6 @@ const UsersManagementPage = () => {
         <div className="md:hidden space-y-4">
           {users.length > 0 ? (
             users.map((u) => {
-              const avatar = u.profilePicture || u.profilePictureUrl || null;
               const roleLabel =
                 (u.role && (u.role.name || u.role)) ||
                 u.roleId ||
@@ -549,26 +553,17 @@ const UsersManagementPage = () => {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      {avatar ? (
-                        <img
-                          src={avatar}
-                          alt={u.name || u.username}
-                          className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0"
-                        />
-                      ) : (
-                        <div
-                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
-                          style={{
-                            background: gradientFromString(
-                              u.name || u.username || "user"
-                            ),
-                          }}
-                          aria-hidden
-                        >
-                          {initialsFromName(u.name || "", u.username || "")}
-                        </div>
-                      )}
-
+                      {/* --- UPDATED --- */}
+                      <AuthenticatedImage
+                        src={u.profilePicture}
+                        alt={u.name || u.username}
+                        fallbackName={u.name}
+                        fallbackUsername={u.username}
+                        fallbackSeed={u.name || u.username}
+                        className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0"
+                        fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
+                      />
+                      {/* --- END UPDATE --- */}
                       <div className="min-w-0">
                         <div className="font-semibold text-gray-900 dark:text-white truncate">
                           {u.name || u.username}
@@ -670,34 +665,27 @@ const UsersManagementPage = () => {
               <form onSubmit={handleSaveUser} className="space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="flex-shrink-0">
-                    {profilePicturePreview ? (
+                    {/* --- UPDATED --- */}
+                    {/* Show local objectURL preview if it exists */}
+                    {profilePicturePreview && profilePicturePreview.startsWith("blob:") ? (
                       <img
                         src={profilePicturePreview}
                         alt="preview"
                         className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700"
                       />
-                    ) : userToEdit?.profilePicture ? (
-                      <img
-                        src={userToEdit.profilePicture}
-                        alt={userToEdit.name}
-                        className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700"
-                      />
                     ) : (
-                      <div
-                        className="w-24 h-24 rounded-full flex items-center justify-center text-white font-semibold"
-                        style={{
-                          background: gradientFromString(
-                            formData.name || formData.username || "user"
-                          ),
-                        }}
-                        aria-hidden
-                      >
-                        {initialsFromName(
-                          formData.name || "",
-                          formData.username || ""
-                        )}
-                      </div>
+                      // Otherwise, use AuthenticatedImage to show the persistent URL or fallback
+                      <AuthenticatedImage
+                        src={profilePicturePreview} // This will be the secure URL or null
+                        alt={t("admin.users.form.picture")}
+                        fallbackName={formData.name}
+                        fallbackUsername={formData.username}
+                        fallbackSeed={formData.name || formData.username}
+                        className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700"
+                        fallbackClassName="w-24 h-24 rounded-full flex items-center justify-center text-white font-semibold"
+                      />
                     )}
+                    {/* --- END UPDATE --- */}
                   </div>
 
                   <div className="flex-1 w-full">
@@ -718,7 +706,7 @@ const UsersManagementPage = () => {
                       >
                         {t("admin.users.form.upload")}
                       </label>
-                      {profilePicturePreview && (
+                      {(profilePicturePreview || profilePictureFile) && (
                         <button
                           type="button"
                           onClick={removeProfilePreview}
