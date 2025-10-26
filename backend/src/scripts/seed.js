@@ -18,12 +18,15 @@ async function findSchema() {
     if (fs.existsSync(p)) return fs.readFileSync(p, "utf8");
   throw new Error("schema.sql not found.");
 }
-
-function snapshotMonthFrom(date) {
-  const d = new Date(date);
-  const year = d.getUTCFullYear();
-  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
-  return `${year}-${month}-01`;
+async function findData() {
+  const candidates = [
+    path.join(__dirname, "..", "db", "data.sql"),
+    path.join(__dirname, "..", "data.sql"),
+    path.join(__dirname, "data.sql"),
+  ];
+  for (const p of candidates)
+    if (fs.existsSync(p)) return fs.readFileSync(p, "utf8");
+  throw new Error("schema.sql not found.");
 }
 
 async function run() {
@@ -47,10 +50,18 @@ async function run() {
 
     // --- Permissions ---
     const perms = [
-      "manage_gta", "view_gta", "submit_reports", "view_reports",
-      "manage_reports", "manage_settings", "view_audit_logs",
-      "manage_notifications", "manage_dashboard", "view_dashboard",
-      "manage_attachments", "manage_access"
+      "manage_gta",
+      "view_gta",
+      "submit_reports",
+      "view_reports",
+      "manage_reports",
+      "manage_settings",
+      "view_audit_logs",
+      "manage_notifications",
+      "manage_dashboard",
+      "view_dashboard",
+      "manage_attachments",
+      "manage_access",
     ];
     const permIds = {};
     for (const p of perms) {
@@ -75,8 +86,14 @@ async function run() {
     }
 
     await grant("Admin", perms);
-    await grant("Manager", ["manage_gta","view_gta","manage_reports","view_reports","view_dashboard"]);
-    await grant("User", ["view_reports","view_gta","view_dashboard"]);
+    await grant("Manager", [
+      "manage_gta",
+      "view_gta",
+      "manage_reports",
+      "view_reports",
+      "view_dashboard",
+    ]);
+    await grant("User", ["view_reports", "view_gta", "view_dashboard"]);
 
     // --- Admin user ---
     const adminUser = process.env.ADMIN_USERNAME || "admin";
@@ -85,9 +102,14 @@ async function run() {
     const { rows: arows } = await client.query(
       `INSERT INTO "Users"(username, name, password, "roleId", "profilePicture")
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [adminUser, "System Admin", adminHash, roleIds["Admin"], "/uploads/admin.png"]
+      [
+        adminUser,
+        "System Admin",
+        adminHash,
+        roleIds["Admin"],
+        "/uploads/admin.png",
+      ]
     );
-    const adminId = arows[0].id;
 
     // --- Groups ---
     const groupDefs = [
@@ -104,19 +126,34 @@ async function run() {
       groupIds.push(rows[0].id);
     }
 
- 
-
     // --- System settings ---
     const settings = [
-      { key: "max_attachment_size_mb", value: 10, description: "Max attachment upload size (MB)" },
-      { key: "allowed_attachment_types", value: ["application/pdf","image/png","image/jpeg","text/plain"], description: "Allowed MIME types" },
-      { key: "reporting_active", value: true, description: "Enable report submissions" },
-      { key: "audit_retention_days", value: 365, description: "Days to retain audit logs" },
+      {
+        key: "max_attachment_size_mb",
+        value: 10,
+        description: "Max attachment upload size (MB)",
+      },
+      {
+        key: "allowed_attachment_types",
+        value: ["application/pdf", "image/png", "image/jpeg", "text/plain"],
+        description: "Allowed MIME types",
+      },
+      {
+        key: "reporting_active",
+        value: true,
+        description: "Enable report submissions",
+      },
+      {
+        key: "audit_retention_days",
+        value: 365,
+        description: "Days to retain audit logs",
+      },
     ];
+
     for (const s of settings) {
       await client.query(
         `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)
-         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description`,
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description`,
         [s.key, JSON.stringify(s.value), s.description]
       );
     }

@@ -1,4 +1,3 @@
-// SubmitReportInline.jsx
 import React, { useEffect, useState } from "react";
 import { Loader, UploadCloud, Paperclip, X } from "lucide-react";
 
@@ -15,7 +14,7 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
   const [narrative, setNarrative] = useState("");
   const [metricsArray, setMetricsArray] = useState([]); // Start empty, populate in useEffect
   const [newStatus, setNewStatus] = useState("");
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState([]); // [{ id, file }]
   const [localErr, setLocalErr] = useState(null);
 
   // Helper to generate a unique ID for React keys
@@ -59,7 +58,31 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
     }
   }, [activityId, targetMetric, currentMetric]); // Depend on metrics
 
-  const onFileChange = (e) => setFiles(Array.from(e.target.files || []));
+  const onFileChange = (e) => {
+    setLocalErr(null);
+    const incoming = Array.from(e.target.files || []).map((f) => ({ id: generateId(), file: f }));
+    if (incoming.length === 0) return;
+
+    // avoid exact duplicates (name+size+lastModified)
+    const existingKeys = new Set(files.map((f) => `${f.file.name}-${f.file.size}-${f.file.lastModified}`));
+    const uniqueIncoming = incoming.filter((i) => !existingKeys.has(`${i.file.name}-${i.file.size}-${i.file.lastModified}`));
+
+    const combined = [...files, ...uniqueIncoming];
+    if (combined.length > 5) {
+      // Trim to the first 5 and notify user
+      setFiles(combined.slice(0, 5));
+      setLocalErr(t("project.errors.maxAttachments", { max: 5 }) || "Maximum 5 attachments allowed. Extra files were ignored.");
+    } else {
+      setFiles(combined);
+    }
+
+    // Clear the input so the same file can be re-selected if needed
+    try {
+      e.target.value = null;
+    } catch (e2) {}
+  };
+
+  const removeFile = (id) => setFiles((p) => p.filter((f) => f.id !== id));
 
   const updateMetricRow = (idx, field, value) =>
     setMetricsArray((prev) => {
@@ -92,16 +115,45 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
       return;
     }
 
+    // Validate: do not allow reports that push current beyond target
+    const exceeded = metricsArray
+      .filter((m) => m && m.target !== null)
+      .map((m) => {
+        const attemptedTotal = parseNum(m.current, 0) + parseNum(m.value, 0);
+        return { m, attemptedTotal };
+      })
+      .filter((x) => x.attemptedTotal > x.m.target);
+
+    if (exceeded.length > 0) {
+      const msgs = exceeded.map((x) => {
+        const keyLabel = x.m.key || "(metric)";
+        const attempted = x.attemptedTotal;
+        const target = x.m.target;
+        const excess = attempted - target;
+        return `${keyLabel}: attempt would be ${attempted} (target ${target}) — exceed by ${excess}`;
+      });
+      setLocalErr(
+        (t("project.errors.metricExceed") || "Some metric values would exceed their target:") + " " + msgs.join("; ")
+      );
+      return;
+    }
+
+    // Prepare files as File[] for onSubmit
+    const rawFiles = files.map((f) => f.file);
+
     await onSubmit({
       activityId,
       narrative,
       metricsArray, // Send the full array
       newStatus: newStatus || null,
-      files,
+      files: rawFiles,
       goalId,
       taskId,
     });
   };
+
+  // Derived: whether any metric row would exceed target now (used to disable submit)
+  const anyMetricWouldExceed = metricsArray.some((m) => m && m.target !== null && parseNum(m.current, 0) + parseNum(m.value, 0) > m.target);
 
   // --- RENDER ---
   return (
@@ -165,8 +217,10 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
             <div className="mt-2 space-y-3">
               {metricsArray.map((m, idx) => {
                 const remaining = m.target !== null ? m.target - m.current : null;
+                const attemptedTotal = parseNum(m.current, 0) + parseNum(m.value, 0);
+                const willExceed = m.target !== null && attemptedTotal > m.target;
                 return (
-                <div key={m.id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-md space-y-2">
+                <div key={m.id} className={`p-3 border ${willExceed ? 'border-red-300 dark:border-red-600' : 'border-gray-200 dark:border-gray-700'} rounded-md space-y-2`}>
                   <div className="flex gap-2 items-center">
                     <input
                       placeholder={t("project.placeholders.metricKey") || "Metric Key"}
@@ -197,6 +251,13 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
                   {m.isPredefined && m.target !== null && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 pl-1">
                       {t("project.hints.metricRemaining", { current: m.current, target: m.target, remaining: remaining }) || `Current: ${m.current} / ${m.target} (Remaining: ${remaining})`}
+                    </div>
+                  )}
+
+                  {/* Inline exceed warning */}
+                  {willExceed && (
+                    <div className="text-xs text-red-600 dark:text-red-400 pl-1">
+                      {t("project.errors.metricWouldExceed", { key: m.key || "(metric)", attempted: attemptedTotal, target: m.target }) || `Reporting this value would make total ${attemptedTotal}, exceeding target ${m.target}.`}
                     </div>
                   )}
                 </div>
@@ -243,25 +304,30 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
             >
               <UploadCloud className="h-6 w-6 text-gray-500 dark:text-gray-400" />
               <span className="text-sm text-gray-600 dark:text-gray-300">
-                {t("project.actions.uploadFiles") || "Click to upload files"}
+                {t("project.actions.uploadFiles") || "Click to upload files (max 5)"}
               </span>
             </label>
             <input id="file-upload" type="file" multiple onChange={onFileChange} className="hidden" />
 
             {files.length > 0 && (
               <div className="mt-3 space-y-1">
-                <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400">Selected files:</h4>
+                <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400">{t("project.labels.selectedFiles") || 'Selected files:'}</h4>
                 <ul className="text-xs text-gray-700 dark:text-gray-200 space-y-1">
                   {files.map((f) => (
-                    <li key={`${f.name}-${f.size}`} className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-md">
+                    <li key={f.id} className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-md">
                       <Paperclip className="h-3 w-3 flex-shrink-0" />
-                      <span className="flex-1 truncate">{f.name}</span>
-                      <span className="text-gray-500 dark:text-gray-400">({Math.round(f.size / 1024)} KB)</span>
+                      <span className="flex-1 truncate">{f.file.name}</span>
+                      <span className="text-gray-500 dark:text-gray-400">({Math.round(f.file.size / 1024)} KB)</span>
+                      <button type="button" onClick={() => removeFile(f.id)} className="ml-2 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600">
+                        <X className="h-4 w-4" />
+                      </button>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
+
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">{t("project.hints.maxAttachments", { max: 5 }) || 'Max 5 attachments.'}</div>
           </div>
         </div>
 
@@ -276,7 +342,7 @@ export default function SubmitReportInline({ data, onClose, onSubmit, loading, t
           </button>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || anyMetricWouldExceed}
             className="px-4 py-2 rounded-md border border-transparent shadow-sm bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 flex items-center justify-center"
           >
             {loading ? <Loader className="h-4 w-4 animate-spin mr-2" /> : null}

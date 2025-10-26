@@ -1,27 +1,9 @@
 -- Drop existing objects (dev only)
-DROP TABLE IF EXISTS "Attachments" CASCADE;
-DROP TABLE IF EXISTS "Reports" CASCADE;
-DROP TABLE IF EXISTS "SystemSettings" CASCADE;
-DROP TABLE IF EXISTS "Activities" CASCADE;
-DROP TABLE IF EXISTS "Tasks" CASCADE;
-DROP TABLE IF EXISTS "Goals" CASCADE;
-DROP TABLE IF EXISTS "UserGroups" CASCADE;
-DROP TABLE IF EXISTS "RolePermissions" CASCADE;
-DROP TABLE IF EXISTS "Users" CASCADE;
-DROP TABLE IF EXISTS "Permissions" CASCADE;
-DROP TABLE IF EXISTS "Roles" CASCADE;
-DROP TABLE IF EXISTS "Groups" CASCADE;
-DROP TABLE IF EXISTS "Notifications" CASCADE;
-DROP TABLE IF EXISTS "AuditLogs" CASCADE;
-DROP TABLE IF EXISTS "ProgressHistory" CASCADE;
-DROP TABLE IF EXISTS "RefreshTokens" CASCADE;
-
-DROP SEQUENCE IF EXISTS goals_rollno_seq CASCADE;
-
-DROP TYPE IF EXISTS goal_status CASCADE;
-DROP TYPE IF EXISTS task_status CASCADE;
-DROP TYPE IF EXISTS activity_status CASCADE;
-DROP TYPE IF EXISTS report_status CASCADE;
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO public;
+SET search_path = public;
 
 -- ENUMS
 CREATE TYPE goal_status AS ENUM ('Not Started', 'In Progress', 'Completed', 'On Hold');
@@ -138,6 +120,7 @@ CREATE TABLE "Activities" (
   "description" TEXT,
   "status" activity_status NOT NULL DEFAULT 'To Do',
   "dueDate" DATE,
+  "previousMetric" JSONB DEFAULT '{}'::jsonb,
   "targetMetric" JSONB DEFAULT '{}'::jsonb,
   "currentMetric" JSONB DEFAULT '{}'::jsonb,
   "progress" INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
@@ -317,49 +300,43 @@ EXECUTE FUNCTION trg_assign_activity_rollno();
 -- Recalc task progress from activities
 CREATE OR REPLACE FUNCTION trg_recalc_task_progress() RETURNS TRIGGER AS $$
 DECLARE
-v_task_id INT;
-t_weight NUMERIC;
-sum_done_weight NUMERIC;
-sum_activity_weights NUMERIC;
-computed_progress INT;
+  v_task_id INT;
+  sum_done_weight NUMERIC;
+  sum_activity_weights NUMERIC;
+  computed_progress INT;
 BEGIN
-IF TG_OP = 'DELETE' THEN
-v_task_id := OLD."taskId";
-ELSE
-v_task_id := NEW."taskId";
-END IF;
+  IF TG_OP = 'DELETE' THEN
+    v_task_id := OLD."taskId";
+  ELSE
+    v_task_id := NEW."taskId";
+  END IF;
 
-SELECT COALESCE(SUM(a.weight),0) INTO sum_activity_weights FROM "Activities" a WHERE a."taskId" = v_task_id;
--- MODIFIED: Use activity.progress * weight, not just isDone. This links metric progress to task progress.
-SELECT COALESCE(SUM(CASE WHEN a.progress >= 100 THEN a.weight ELSE a.progress * a.weight / 100 END),0)
-INTO sum_done_weight FROM "Activities" a WHERE a."taskId" = v_task_id;
+  -- Sum of all activity weights under the task
+  SELECT COALESCE(SUM(a.weight),0) INTO sum_activity_weights FROM "Activities" a WHERE a."taskId" = v_task_id;
 
-SELECT t."weight" INTO t_weight FROM "Tasks" t WHERE t.id = v_task_id;
+  -- Sum of weights only for activities that are fully completed (isDone = true)
+  SELECT COALESCE(SUM(CASE WHEN a."isDone" = true THEN a.weight ELSE 0 END),0)
+    INTO sum_done_weight FROM "Activities" a WHERE a."taskId" = v_task_id;
 
-IF t_weight IS NULL OR t_weight = 0 THEN
--- Fallback if task has no weight: average of activity progress
-IF sum_activity_weights > 0 THEN
-computed_progress := LEAST(100, ROUND(sum_done_weight / sum_activity_weights * 100));
-ELSE
--- Fallback if no activities have weight: simple average
-SELECT COALESCE(AVG(a.progress)::int,0)
-INTO computed_progress FROM "Activities" a WHERE a."taskId" = v_task_id;
-END IF;
-ELSE
--- Standard case: progress is % of total task weight
-computed_progress := LEAST(100, ROUND(sum_done_weight / NULLIF(t_weight,0) * 100));
-END IF;
+  -- PRIMARY BEHAVIOR: Task progress is (completed activities weight) / (total activity weight) * 100
+  IF sum_activity_weights > 0 THEN
+    computed_progress := LEAST(100, ROUND(sum_done_weight / NULLIF(sum_activity_weights,0) * 100));
+  ELSE
+    -- Fallback: if no activity weights defined, use the ratio of done activities to total activities
+    SELECT COALESCE(ROUND(AVG(CASE WHEN a."isDone" = true THEN 100 ELSE 0 END))::int, 0)
+      INTO computed_progress FROM "Activities" a WHERE a."taskId" = v_task_id;
+  END IF;
 
--- MODIFIED: Also update status to 'Done' if progress hits 100
-UPDATE "Tasks"
-SET progress = COALESCE(computed_progress,0),
-    status = CASE
-                 WHEN COALESCE(computed_progress,0) >= 100 THEN 'Done'::task_status
-                 ELSE status -- Keep existing status (e.g., 'Blocked') if not 100%
-             END
-WHERE id = v_task_id;
+  -- Update task progress (ONLY depends on completed activity weights) and mark task Done if 100%
+  UPDATE "Tasks"
+  SET progress = COALESCE(computed_progress,0),
+      status = CASE
+        WHEN COALESCE(computed_progress,0) >= 100 THEN 'Done'::task_status
+        ELSE status
+      END
+  WHERE id = v_task_id;
 
-IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+  IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
 END;
 $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS after_activities_change ON "Activities";
@@ -368,51 +345,63 @@ AFTER INSERT OR UPDATE OR DELETE ON "Activities"
 FOR EACH ROW EXECUTE FUNCTION trg_recalc_task_progress();
 
 -- Recalc goal progress from tasks
+-- MODIFIED: Goals now only *reflect completion* (weight contribution) from tasks that are fully Done.
+-- Partial task progress still updates the task.progress field (so it "counts as progress"),
+-- but the goal.weight-based completion percentage only advances when tasks reach Done status.
 CREATE OR REPLACE FUNCTION trg_recalc_goal_progress() RETURNS TRIGGER AS $$
 DECLARE
-v_goal_id INT;
-g_weight NUMERIC;
-sum_done_task_weight NUMERIC;
-sum_task_weights NUMERIC;
-computed_goal_progress INT;
+  v_goal_id INT;
+  g_weight NUMERIC;
+  sum_done_task_weight NUMERIC;
+  sum_task_weights NUMERIC;
+  computed_goal_progress INT;
+  total_tasks INT;
+  done_tasks INT;
 BEGIN
-IF TG_OP = 'DELETE' THEN
-v_goal_id := OLD."goalId";
-ELSE
-v_goal_id := NEW."goalId";
-END IF;
+  IF TG_OP = 'DELETE' THEN
+    v_goal_id := OLD."goalId";
+  ELSE
+    v_goal_id := NEW."goalId";
+  END IF;
 
--- Get sum of all task weights under this goal
-SELECT COALESCE(SUM(t.weight),0) INTO sum_task_weights FROM "Tasks" t WHERE t."goalId" = v_goal_id;
--- Get weighted sum of task progress
-SELECT COALESCE(SUM(CASE WHEN t.progress >= 100 THEN t.weight ELSE t.progress * t.weight / 100 END),0)
-INTO sum_done_task_weight FROM "Tasks" t WHERE t."goalId" = v_goal_id;
+  -- Get sum of all task weights under this goal
+  SELECT COALESCE(SUM(t.weight),0) INTO sum_task_weights FROM "Tasks" t WHERE t."goalId" = v_goal_id;
 
-SELECT g."weight" INTO g_weight FROM "Goals" g WHERE g.id = v_goal_id;
+  -- Get sum of weights only for tasks that are fully Done
+  SELECT COALESCE(SUM(t.weight),0) INTO sum_done_task_weight FROM "Tasks" t WHERE t."goalId" = v_goal_id AND t.status = 'Done';
 
-IF g_weight IS NULL OR g_weight = 0 THEN
--- Fallback if goal has no weight: average of task progress
-IF sum_task_weights > 0 THEN
-computed_goal_progress := LEAST(100, ROUND(sum_done_task_weight / sum_task_weights * 100));
-ELSE
--- Fallback if no tasks have weight: simple average
-SELECT COALESCE(AVG(t.progress)::int,0) INTO computed_goal_progress FROM "Tasks" t WHERE t."goalId" = v_goal_id;
-END IF;
-ELSE
--- Standard case: progress is % of total goal weight
-computed_goal_progress := LEAST(100, ROUND(sum_done_task_weight / NULLIF(g_weight,0) * 100));
-END IF;
+  SELECT g."weight" INTO g_weight FROM "Goals" g WHERE g.id = v_goal_id;
 
--- MODIFIED: Also update status to 'Completed' if progress hits 100
-UPDATE "Goals"
-SET progress = COALESCE(computed_goal_progress,0),
-    status = CASE
-                 WHEN COALESCE(computed_goal_progress,0) >= 100 THEN 'Completed'::goal_status
-                 ELSE status -- Keep existing status (e.g., 'On Hold') if not 100%
-             END
-WHERE id = v_goal_id;
+  -- If the Goal has no explicit weight configured, or sum_task_weights is zero, fall back to counts/averages
+  IF g_weight IS NULL OR g_weight = 0 THEN
+    IF sum_task_weights > 0 THEN
+      -- Compute based on completed weight over total task weights (BUT only fully Done tasks count towards completed weight)
+      computed_goal_progress := LEAST(100, ROUND(sum_done_task_weight / NULLIF(sum_task_weights,0) * 100));
+    ELSE
+      -- No task weights available; use the ratio of done tasks to total tasks as the progress indicator
+      SELECT COUNT(*) INTO total_tasks FROM "Tasks" t WHERE t."goalId" = v_goal_id;
+      SELECT COUNT(*) INTO done_tasks FROM "Tasks" t WHERE t."goalId" = v_goal_id AND t.status = 'Done';
+      IF total_tasks > 0 THEN
+        computed_goal_progress := LEAST(100, ROUND(done_tasks::numeric / total_tasks::numeric * 100));
+      ELSE
+        computed_goal_progress := 0;
+      END IF;
+    END IF;
+  ELSE
+    -- Standard case: progress is % of total goal weight, but only tasks with status 'Done' contribute their full weight.
+    computed_goal_progress := LEAST(100, ROUND(sum_done_task_weight / NULLIF(g_weight,0) * 100));
+  END IF;
 
-IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+  -- Also update status to 'Completed' if progress hits 100
+  UPDATE "Goals"
+  SET progress = COALESCE(computed_goal_progress,0),
+      status = CASE
+        WHEN COALESCE(computed_goal_progress,0) >= 100 THEN 'Completed'::goal_status
+        ELSE status -- Keep existing status (e.g., 'On Hold') if not 100%
+      END
+  WHERE id = v_goal_id;
+
+  IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
 END;
 $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS after_tasks_change ON "Tasks";
@@ -420,180 +409,184 @@ CREATE TRIGGER after_tasks_change
 AFTER INSERT OR UPDATE OR DELETE ON "Tasks"
 FOR EACH ROW EXECUTE FUNCTION trg_recalc_goal_progress();
 
--- ... (existing schema code) ...
-
 -- accumulate_metrics: add incoming metrics to activity.currentMetric and clamp by targetMetric.
 -- Also compute activity.progress as sum(current)/sum(target) * 100 (if target sums > 0),
 -- and write a monthly snapshot into ProgressHistory. Returns the updated currentMetric JSONB.
+-- IMPORTANT CHANGE: This function NO LONGER auto-marks an activity as done when progress reaches 100.
+-- It ONLY updates currentMetric and progress. Marking an activity as done must be an explicit action
+-- (e.g., a separate API endpoint that sets activity.status = 'Done' or activity.isDone = true).
 CREATE OR REPLACE FUNCTION accumulate_metrics(
-p_activity_id INT,
-p_metrics JSONB,
-p_actor_user_id INT DEFAULT NULL
+  p_activity_id INT,
+  p_metrics JSONB,
+  p_actor_user_id INT DEFAULT NULL
 ) RETURNS JSONB LANGUAGE plpgsql AS $$
 DECLARE
-v_act RECORD;
-v_target JSONB;
-v_current JSONB;
-v_keys TEXT[];
-k TEXT;
-incoming_val NUMERIC;
-cur_val NUMERIC;
-tgt_val NUMERIC;
-new_val NUMERIC;
-updated_json JSONB := '{}'::jsonb;
-snap_month DATE := date_trunc('month', now())::date;
-sum_current NUMERIC := 0;
-sum_target NUMERIC := 0;
-key_val NUMERIC;
-v_new_progress INT; -- MODIFIED: Declare variables
-v_is_done BOOLEAN;
+  v_act RECORD;
+  v_target JSONB;
+  v_current JSONB;
+  v_keys TEXT[];
+  k TEXT;
+  incoming_val NUMERIC;
+  cur_val NUMERIC;
+  tgt_val NUMERIC;
+  new_val NUMERIC;
+  updated_json JSONB := '{}'::jsonb;
+  snap_month DATE := date_trunc('month', now())::date;
+  sum_current NUMERIC := 0;
+  sum_target NUMERIC := 0;
+  key_val NUMERIC;
+  v_new_progress INT;
+  v_is_done BOOLEAN;
+  v_new_status activity_status;
 BEGIN
-IF p_activity_id IS NULL THEN
-RAISE EXCEPTION 'activity id required';
-END IF;
+  IF p_activity_id IS NULL THEN
+    RAISE EXCEPTION 'activity id required';
+  END IF;
 
--- Lock the activity row for update
-SELECT * INTO v_act FROM "Activities" WHERE id = p_activity_id FOR UPDATE;
-IF NOT FOUND THEN
-RAISE EXCEPTION 'Activity % not found', p_activity_id;
-END IF;
+  -- Lock the activity row for update
+  SELECT * INTO v_act FROM "Activities" WHERE id = p_activity_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Activity % not found', p_activity_id;
+  END IF;
 
-v_target := COALESCE(v_act."targetMetric", '{}'::jsonb);
-v_current := COALESCE(v_act."currentMetric", '{}'::jsonb);
-v_is_done := v_act."isDone"; -- Default to existing value
-v_new_progress := v_act.progress; -- Default to existing value
+  v_target := COALESCE(v_act."targetMetric", '{}'::jsonb);
+  v_current := COALESCE(v_act."currentMetric", '{}'::jsonb);
+  -- Preserve existing isDone/status. This function WILL NOT flip isDone/status automatically.
+  v_is_done := v_act."isDone";
+  v_new_progress := v_act.progress;
+  v_new_status := v_act.status;
 
-IF p_metrics IS NULL OR p_metrics = '{}'::jsonb THEN
-RETURN v_current; -- Nothing to apply
-END IF;
+  IF p_metrics IS NULL OR p_metrics = '{}'::jsonb THEN
+    RETURN v_current; -- Nothing to apply
+  END IF;
 
--- Get all keys from target, current, and incoming metrics
-SELECT array_agg(DISTINCT key) FROM (
-SELECT jsonb_object_keys(p_metrics) as key
-UNION
-SELECT jsonb_object_keys(v_current) as key
-UNION
-SELECT jsonb_object_keys(v_target) as key
-) s INTO v_keys;
+  -- Get all keys from target, current, and incoming metrics
+  SELECT array_agg(DISTINCT key) FROM (
+    SELECT jsonb_object_keys(p_metrics) as key
+    UNION
+    SELECT jsonb_object_keys(v_current) as key
+    UNION
+    SELECT jsonb_object_keys(v_target) as key
+  ) s INTO v_keys;
 
-IF v_keys IS NULL THEN
-v_keys := ARRAY[]::text[];
-END IF;
+  IF v_keys IS NULL THEN
+    v_keys := ARRAY[]::text[];
+  END IF;
 
--- Loop each key to calculate new current value
-FOREACH k IN ARRAY v_keys LOOP
--- Get incoming value, default null
-IF p_metrics ? k THEN
-BEGIN
-incoming_val := (p_metrics ->> k)::numeric;
-EXCEPTION WHEN others THEN
-incoming_val := NULL;
-END;
-ELSE
-incoming_val := NULL;
-END IF;
+  -- Loop each key to calculate new current value
+  FOREACH k IN ARRAY v_keys LOOP
+    -- Get incoming value, default null
+    IF p_metrics ? k THEN
+      BEGIN
+        incoming_val := (p_metrics ->> k)::numeric;
+      EXCEPTION WHEN others THEN
+        incoming_val := NULL;
+      END;
+    ELSE
+      incoming_val := NULL;
+    END IF;
 
--- Get current value, default null
-IF v_current ? k THEN
-BEGIN
-cur_val := (v_current ->> k)::numeric;
-EXCEPTION WHEN others THEN
-cur_val := NULL;
-END;
-ELSE
-cur_val := NULL;
-END IF;
+    -- Get current value, default null
+    IF v_current ? k THEN
+      BEGIN
+        cur_val := (v_current ->> k)::numeric;
+      EXCEPTION WHEN others THEN
+        cur_val := NULL;
+      END;
+    ELSE
+      cur_val := NULL;
+    END IF;
 
--- Get target value, default null
-IF v_target ? k THEN
-BEGIN
-tgt_val := (v_target ->> k)::numeric;
-EXCEPTION WHEN others THEN
-tgt_val := NULL;
-END;
-ELSE
-tgt_val := NULL;
-END IF;
+    -- Get target value, default null
+    IF v_target ? k THEN
+      BEGIN
+        tgt_val := (v_target ->> k)::numeric;
+      EXCEPTION WHEN others THEN
+        tgt_val := NULL;
+      END;
+    ELSE
+      tgt_val := NULL;
+    END IF;
 
--- Calculate new value by adding incoming to current
-IF incoming_val IS NULL THEN
-new_val := COALESCE(cur_val, 0);
-ELSE
-new_val := COALESCE(cur_val, 0) + incoming_val;
-END IF;
+    -- Calculate new value by adding incoming to current
+    IF incoming_val IS NULL THEN
+      new_val := COALESCE(cur_val, 0);
+    ELSE
+      new_val := COALESCE(cur_val, 0) + incoming_val;
+    END IF;
 
--- Clamp new value between 0 and target (if target exists)
-IF tgt_val IS NOT NULL THEN
-IF new_val > tgt_val THEN
-new_val := tgt_val;
-END IF;
-IF new_val < 0 THEN
-new_val := 0;
-END IF;
-ELSE
-IF new_val < 0 THEN
-new_val := 0;
-END IF;
-END IF;
+    -- Clamp new value between 0 and target (if target exists)
+    IF tgt_val IS NOT NULL THEN
+      IF new_val > tgt_val THEN
+        new_val := tgt_val;
+      END IF;
+      IF new_val < 0 THEN
+        new_val := 0;
+      END IF;
+    ELSE
+      IF new_val < 0 THEN
+        new_val := 0;
+      END IF;
+    END IF;
 
-updated_json := jsonb_set(updated_json, ARRAY[k], to_jsonb(new_val), true);
-END LOOP;
+    updated_json := jsonb_set(updated_json, ARRAY[k], to_jsonb(new_val), true);
+  END LOOP;
 
--- Merge the updated values into the current metric JSON
-v_current := (v_current || updated_json);
+  -- Merge the updated values into the current metric JSON
+  v_current := (v_current || updated_json);
 
--- compute sums for progress (only numeric keys)
-sum_current := 0;
-sum_target := 0;
-FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-BEGIN
-key_val := (v_current ->> k)::numeric;
-IF key_val IS NOT NULL THEN sum_current := sum_current + key_val; END IF;
-EXCEPTION WHEN others THEN -- ignore non-numeric
-END;
-END LOOP;
-FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-BEGIN
-key_val := (v_target ->> k)::numeric;
-IF key_val IS NOT NULL THEN sum_target := sum_target + key_val; END IF;
-EXCEPTION WHEN others THEN -- ignore non-numeric
-END;
-END LOOP;
+  -- compute sums for progress (only numeric keys)
+  sum_current := 0;
+  sum_target := 0;
+  FOR k IN SELECT jsonb_object_keys(v_current) LOOP
+    BEGIN
+      key_val := (v_current ->> k)::numeric;
+      IF key_val IS NOT NULL THEN sum_current := sum_current + key_val; END IF;
+    EXCEPTION WHEN others THEN -- ignore non-numeric
+    END;
+  END LOOP;
+  FOR k IN SELECT jsonb_object_keys(v_target) LOOP
+    BEGIN
+      key_val := (v_target ->> k)::numeric;
+      IF key_val IS NOT NULL THEN sum_target := sum_target + key_val; END IF;
+    EXCEPTION WHEN others THEN -- ignore non-numeric
+    END;
+  END LOOP;
 
--- MODIFIED: Update progress AND isDone flag
-IF sum_target IS NOT NULL AND sum_target > 0 THEN
-v_new_progress := LEAST(100, ROUND((sum_current / sum_target) * 100));
-IF v_new_progress >= 100 THEN
-v_is_done := true;
-END IF;
+  -- Update progress but DO NOT flip isDone/status automatically. Marking Done must be explicit.
+  IF sum_target IS NOT NULL AND sum_target > 0 THEN
+    v_new_progress := LEAST(100, ROUND((sum_current / sum_target) * 100));
 
-UPDATE "Activities"
-SET "currentMetric" = v_current,
-"progress" = v_new_progress,
-"isDone" = v_is_done,
-"updatedAt" = NOW()
-WHERE id = p_activity_id;
-ELSE
--- Only update metrics, don't change progress if target is 0
-UPDATE "Activities"
-SET "currentMetric" = v_current,
-"updatedAt" = NOW()
-WHERE id = p_activity_id;
-END IF;
+    -- Persist currentMetric and progress, but keep isDone/status unchanged.
+    UPDATE "Activities"
+    SET "currentMetric" = v_current,
+        "progress" = v_new_progress,
+        "updatedAt" = NOW()
+    WHERE id = p_activity_id;
+  ELSE
+    -- Only update metrics, don't change progress if target is 0
+    UPDATE "Activities"
+    SET "currentMetric" = v_current,
+        "updatedAt" = NOW()
+    WHERE id = p_activity_id;
+  END IF;
 
--- Write to progress history table for snapshots
-INSERT INTO "ProgressHistory"
-(entity_type, entity_id, group_id, progress, metrics, recorded_at, snapshot_month)
-VALUES
-('activity', p_activity_id,
-(SELECT gl."groupId" FROM "Activities" a JOIN "Tasks" t ON a."taskId" = t.id JOIN "Goals" gl ON t."goalId" = gl.id WHERE a.id = p_activity_id),
-COALESCE(v_new_progress, 0), -- MODIFIED: Use new progress value
-v_current, NOW(), snap_month)
-ON CONFLICT (entity_type, entity_id, snapshot_month)
-DO UPDATE SET metrics = EXCLUDED.metrics, progress = EXCLUDED.progress, recorded_at = NOW();
+  -- Write to progress history table for snapshots
+  INSERT INTO "ProgressHistory"
+    (entity_type, entity_id, group_id, progress, metrics, recorded_at, snapshot_month)
+  VALUES
+    ('activity', p_activity_id,
+     (SELECT gl."groupId" FROM "Activities" a JOIN "Tasks" t ON a."taskId" = t.id JOIN "Goals" gl ON t."goalId" = gl.id WHERE a.id = p_activity_id),
+     COALESCE(v_new_progress, 0), -- Use new progress value
+     v_current, NOW(), snap_month)
+  ON CONFLICT (entity_type, entity_id, snapshot_month)
+  DO UPDATE SET metrics = EXCLUDED.metrics, progress = EXCLUDED.progress, recorded_at = NOW();
 
-RETURN v_current;
+  RETURN v_current;
 END;
 $$;
 
--- Done
+-- End of schema
+
+
+-- End of schema

@@ -176,27 +176,44 @@ client.release();
 }
 };
 
+
 exports.listAttachments = async (req, res) => {
-const { reportId } = req.query;
-try {
-const params = reportId ? [reportId] : [];
-const where = reportId ? 'WHERE at."reportId" = $1' : "";
-const { rows } = await db.query(
-`
-SELECT at.*, r."activityId", r."userId" as reportUserId
-FROM "Attachments" at
-JOIN "Reports" r ON r.id = at."reportId"
-${where}
-ORDER BY at."createdAt" DESC
-`,
-params
-);
-res.json(rows);
-} catch (err) {
-console.error("Error listing attachments:", err);
-res.status(500).json({ error: err.message });
-}
+  const { reportId } = req.query;
+  try {
+    const params = reportId ? [reportId] : [];
+    const where = reportId ? 'WHERE at."reportId" = $1' : "";
+
+    const { rows } = await db.query(
+      `
+      SELECT
+        at.*,
+        r."activityId",
+        r."userId" as "reportUserId",
+        -- Use 'title' for Activities/Tasks/Goals per schema
+        COALESCE(a.title, '') as "activityTitle",
+        COALESCE(t.title, '') as "taskTitle",
+        COALESCE(g.title, '') as "goalTitle",
+        -- Groups use 'name' in your schema
+        COALESCE(gr.name, '') as "groupName"
+      FROM "Attachments" at
+      JOIN "Reports" r ON r.id = at."reportId"
+      JOIN "Activities" a ON a.id = r."activityId"
+      JOIN "Tasks" t ON t.id = a."taskId"
+      JOIN "Goals" g ON g.id = t."goalId"
+      LEFT JOIN "Groups" gr ON gr.id = g."groupId"
+      ${where}
+      ORDER BY at."createdAt" DESC
+      `,
+      params
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("Error listing attachments:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
+
 
 exports.uploadAttachment = async (req, res) => {
 try {
