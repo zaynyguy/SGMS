@@ -111,20 +111,7 @@ async function run() {
       ]
     );
 
-    // --- Groups ---
-    const groupDefs = [
-      { name: "Development", desc: "Dev team" },
-      { name: "QA", desc: "Quality Assurance" },
-      { name: "Operations", desc: "Ops & Infra" },
-    ];
-    const groupIds = [];
-    for (const g of groupDefs) {
-      const { rows } = await client.query(
-        `INSERT INTO "Groups"(name, description) VALUES ($1, $2) RETURNING id`,
-        [g.name, g.desc]
-      );
-      groupIds.push(rows[0].id);
-    }
+
 
     // --- System settings ---
     const settings = [
