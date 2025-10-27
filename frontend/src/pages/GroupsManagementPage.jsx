@@ -14,9 +14,9 @@ import { addUserToGroup, removeUserFromGroup, fetchGroupUsers } from "../api/use
 import { fetchUsers } from "../api/admin";
 import Toast from "../components/common/Toast";
 import { rawFetch } from "../api/auth"; // used for FormData upload
-import AuthenticatedImage from "../components/common/AuthenticatedImage"; // <-- IMPORT THE NEW COMPONENT
+import AuthenticatedImage from "../components/common/AuthenticatedImage"; 
 
-/* Helpers for avatar fallback */
+/* Helpers for avatar fallback (Unchanged) */
 const initialsFromName = (name, fallback) => {
   const n = (name || "").trim();
   if (!n) {
@@ -38,27 +38,74 @@ const gradientFromString = (s) => {
 };
 
 /* -------------------------
-Group form modal
+### 1. Modal Transition Wrapper (Unchanged)
+Handles the fade and scale transition for any modal content.
+--------------------------*/
+const ModalTransitionWrapper = ({ children, onClose }) => {
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animationDurationMs = 300; 
+
+  useEffect(() => {
+    setShouldRender(true);
+    const timer = setTimeout(() => setIsAnimating(true), 10); 
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setIsAnimating(false);
+    setTimeout(onClose, animationDurationMs); 
+  }, [onClose]);
+
+  if (!shouldRender) return null;
+
+  const childWithClose = React.cloneElement(children, {
+    onClose: handleClose,
+  });
+
+  return (
+    <div 
+      className={`fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
+        isAnimating ? "opacity-100" : "opacity-0"
+      }`}
+      onClick={handleClose} 
+    >
+      <div 
+        className={`w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-auto max-h-[92vh] transition-all duration-300 ${
+          isAnimating 
+            ? "opacity-100 scale-100 translate-y-0" 
+            : "opacity-0 scale-95 translate-y-4"
+        }`}
+        onClick={e => e.stopPropagation()} 
+      >
+        {childWithClose}
+      </div>
+    </div>
+  );
+};
+
+
+/* -------------------------
+### 2. Group Form Modal (Refactored)
+Component logic remains inside, but is now clearly separated.
 --------------------------*/
 const GroupFormModal = ({ group, onSave, onClose, t }) => {
   const [name, setName] = useState(group?.name || "");
   const [description, setDescription] = useState(group?.description || "");
   const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null); // This holds local object: URLs
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const previewRef = useRef(null);
 
-  // Store the original group picture URL to show if the local preview is removed
   const originalPictureUrl = group?.profilePicture || null;
 
   useEffect(() => {
     setName(group?.name || "");
     setDescription(group?.description || "");
     setProfilePictureFile(null);
-    setProfilePicturePreview(null); // Clear local preview
+    setProfilePicturePreview(null); 
     setErrors({});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group?.id]);
 
   const handleFileChange = (e) => {
@@ -78,7 +125,7 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
     }
     const url = URL.createObjectURL(f);
     previewRef.current = url;
-    setProfilePicturePreview(url); // This is an object: URL
+    setProfilePicturePreview(url); 
     setProfilePictureFile(f);
     setErrors({});
   };
@@ -107,20 +154,13 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
       fd.append("name", name.trim());
       fd.append("description", description.trim() || "");
 
-      // If a new file was selected, add it
       if (profilePictureFile) {
         fd.append("profilePicture", profilePictureFile);
       } 
-      // If no file was selected AND there's no preview (meaning user removed it)
-      // send an empty string to tell the backend to set it to null.
       else if (!profilePicturePreview && !originalPictureUrl) {
-         fd.append("profilePicture", ""); // Signal to remove
+          fd.append("profilePicture", ""); 
       }
-      // If the original picture is still there and no new file,
-      // we just don't append the `profilePicture` field, and the backend
-      // will keep the old one.
 
-      // We now *always* send FormData
       await onSave(fd);
 
     } catch (err) {
@@ -141,124 +181,126 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
     setProfilePicturePreview(null);
   };
 
-  // --- UPDATED ---
-  // Determine what to show:
-  // 1. Local preview (object: URL) if it exists
-  // 2. Original group picture (http: URL) if no local preview
-  // 3. Fallback initials
   const displayUrl = profilePicturePreview || originalPictureUrl;
-  const showFallback = !displayUrl;
 
   return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-auto max-h-[92vh]">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-            {group ? t("groups.form.title.edit") : t("groups.form.title.create")}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-            aria-label={t("groups.form.close")}
-          >
-            <X className="h-5 w-5" />
-          </button>
+    <>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+          {group ? t("groups.form.title.edit") : t("groups.form.title.create")}
+        </h2>
+        <button
+          onClick={onClose}
+          className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-transform duration-300 hover:rotate-90"
+          aria-label={t("groups.form.close")}
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
+          <div className="col-span-1 flex flex-col items-center">
+            
+            {profilePicturePreview ? (
+              <img
+                src={profilePicturePreview}
+                alt="preview"
+                className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
+              />
+            ) : (
+              <AuthenticatedImage
+                src={originalPictureUrl}
+                alt={name || group?.name || ""}
+                fallbackName={name || group?.name}
+                fallbackSeed={name || group?.name || "group"}
+                className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
+                fallbackClassName="w-28 h-28 rounded-full flex items-center justify-center text-white font-semibold text-xl mb-3"
+              />
+            )}
+
+            <div className="mt-3 flex items-center gap-3">
+              <input id="group-picture-input" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+              <label
+                htmlFor="group-picture-input"
+                className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-sm transition-transform duration-200 hover:scale-[1.02]"
+              >
+                {t("groups.form.buttons.uploadPicture") || "Upload picture"}
+              </label>
+              {(profilePicturePreview || originalPictureUrl) && (
+                <button 
+                  type="button" 
+                  onClick={removePreview} 
+                  className="text-sm text-red-600 dark:text-red-400 transition-colors hover:text-red-700 dark:hover:text-red-300"
+                >
+                  {t("groups.form.buttons.remove")}
+                </button>
+              )}
+            </div>
+
+            {errors.file && <p className="text-xs text-red-500 mt-2">{errors.file}</p>}
+          </div>
+
+          <div className="col-span-2 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("groups.form.labels.name")}</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 transition-shadow ${
+                  errors.name ? "border-red-500" : "border-gray-300"
+                }`}
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? "name-error" : undefined}
+              />
+              {errors.name && <p id="name-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("groups.form.labels.description")}</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows="4"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 transition-shadow ${
+                  errors.description ? "border-red-500" : "border-gray-300"
+                }`}
+                aria-invalid={!!errors.description}
+                aria-describedby={errors.description ? "description-error" : undefined}
+              />
+              {errors.description && <p id="description-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description}</p>}
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
-            <div className="col-span-1 flex flex-col items-center">
-              
-              {/* --- UPDATED --- */}
-              {profilePicturePreview ? (
-                // 1. Show local object: URL preview
-                <img
-                  src={profilePicturePreview}
-                  alt="preview"
-                  className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
-                />
-              ) : (
-                // 2. Show persistent URL (or fallback)
-                <AuthenticatedImage
-                  src={originalPictureUrl}
-                  alt={name || group?.name || ""}
-                  fallbackName={name || group?.name}
-                  fallbackSeed={name || group?.name || "group"}
-                  className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
-                  fallbackClassName="w-28 h-28 rounded-full flex items-center justify-center text-white font-semibold text-xl mb-3"
-                />
-              )}
-              {/* --- END UPDATE --- */}
+        {errors.submit && <p className="text-sm text-red-600">{errors.submit}</p>}
 
-              <div className="mt-3 flex items-center gap-3">
-                <input id="group-picture-input" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                <label
-                  htmlFor="group-picture-input"
-                  className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-sm"
-                >
-                  {t("groups.form.buttons.uploadPicture") || "Upload picture"}
-                </label>
-                {(profilePicturePreview || originalPictureUrl) && ( // Show remove if *any* picture is showing
-                  <button type="button" onClick={removePreview} className="text-sm text-red-600 dark:text-red-400">
-                    {t("groups.form.buttons.remove")}
-                  </button>
-                )}
-              </div>
-
-              {errors.file && <p className="text-xs text-red-500 mt-2">{errors.file}</p>}
-            </div>
-
-            <div className="col-span-2 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("groups.form.labels.name")}</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
-                    errors.name ? "border-red-500" : "border-gray-300"
-                  }`}
-                  aria-invalid={!!errors.name}
-                  aria-describedby={errors.name ? "name-error" : undefined}
-                />
-                {errors.name && <p id="name-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("groups.form.labels.description")}</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows="4"
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
-                    errors.description ? "border-red-500" : "border-gray-300"
-                  }`}
-                  aria-invalid={!!errors.description}
-                  aria-describedby={errors.description ? "description-error" : undefined}
-                />
-                {errors.description && <p id="description-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description}</p>}
-              </div>
-            </div>
-          </div>
-
-          {errors.submit && <p className="text-sm text-red-600">{errors.submit}</p>}
-
-          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-              {t("groups.form.buttons.cancel")}
-            </button>
-            <button type="submit" disabled={isLoading} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm disabled:opacity-60">
-              {isLoading ? t("groups.form.buttons.saving") : group ? t("groups.form.buttons.save") : t("groups.form.buttons.create")}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+          <button 
+            type="button" 
+            onClick={onClose} 
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hover:shadow-sm"
+          >
+            {t("groups.form.buttons.cancel")}
+          </button>
+          <button 
+            type="submit" 
+            disabled={isLoading} 
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm disabled:opacity-60 transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
+          >
+            {isLoading ? t("groups.form.buttons.saving") : group ? t("groups.form.buttons.save") : t("groups.form.buttons.create")}
+          </button>
+        </div>
+      </form>
+    </>
   );
 };
 
+
 /* -------------------------
-Group members modal
+### 3. Group Members Modal (Refactored)
+Component logic remains inside, but is now clearly separated.
 --------------------------*/
 const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
   const [members, setMembers] = useState([]);
@@ -320,101 +362,140 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-auto max-h-[92vh]">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-            {t("groups.members.title.manage")} — <span className="font-medium text-gray-700 dark:text-gray-300 ml-2">{group.name}</span>
-          </h2>
-          <button onClick={onClose} className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={t("groups.form.close")}>
-            <X className="h-5 w-5" />
-          </button>
+    <>
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+          {t("groups.members.title.manage")} — <span className="font-medium text-gray-700 dark:text-gray-300 ml-2">{group.name}</span>
+        </h2>
+        <button 
+          onClick={onClose} 
+          className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-transform duration-300 hover:rotate-90" 
+          aria-label={t("groups.form.close")}
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="p-6 space-y-6">
+        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t("groups.members.add.title")}</h3>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <select
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
+              className="flex-1 px-3 py-2 border rounded-lg bg-white dark:bg-gray-600 dark:text-white border-gray-300 dark:border-gray-600 transition-shadow focus:shadow-md"
+              disabled={availableUsers.length === 0}
+            >
+              <option value="">{t("groups.members.add.selectUser")}</option>
+              {availableUsers.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.username})
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAddMember}
+              disabled={!selectedUser || isAdding}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm flex items-center gap-2 disabled:opacity-60 transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
+              aria-label={t("groups.members.add.button")}
+            >
+              <Users className="h-4 w-4" />
+              <span className="text-sm">{isAdding ? t("groups.members.add.adding") : t("groups.members.add.button")}</span>
+            </button>
+          </div>
+          {availableUsers.length === 0 && <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.members.add.noAvailable")}</p>}
         </div>
 
-        <div className="p-6 space-y-6">
-          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-            <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t("groups.members.add.title")}</h3>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <select
-                value={selectedUser}
-                onChange={(e) => setSelectedUser(e.target.value)}
-                className="flex-1 px-3 py-2 border rounded-lg bg-white dark:bg-gray-600 dark:text-white border-gray-300 dark:border-gray-600"
-                disabled={availableUsers.length === 0}
-              >
-                <option value="">{t("groups.members.add.selectUser")}</option>
-                {availableUsers.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.username})
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handleAddMember}
-                disabled={!selectedUser || isAdding}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm flex items-center gap-2 disabled:opacity-60"
-                aria-label={t("groups.members.add.button")}
-              >
-                <Users className="h-4 w-4" />
-                <span className="text-sm">{isAdding ? t("groups.members.add.adding") : t("groups.members.add.button")}</span>
-              </button>
+        <div>
+          <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t("groups.members.current.title", { count: members.length })}</h3>
+
+          {isLoading ? (
+            <div className="flex justify-center py-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
-            {availableUsers.length === 0 && <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.members.add.noAvailable")}</p>}
-          </div>
-
-          <div>
-            <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t("groups.members.current.title", { count: members.length })}</h3>
-
-            {isLoading ? (
-              <div className="flex justify-center py-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-              </div>
-            ) : members.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-4">{t("groups.members.current.empty")}</p>
-            ) : (
-              <ul className="divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
-                {members.map((member) => (
-                  <li key={member.id} className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <div className="flex items-center gap-3">
-                        {/* --- ADDED --- */}
-                        <AuthenticatedImage
-                           src={member.profilePicture}
-                           alt={member.name}
-                           fallbackName={member.name}
-                           fallbackUsername={member.username}
-                           fallbackSeed={member.name || member.username}
-                           className="w-8 h-8 rounded-full object-cover"
-                           fallbackClassName="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-xs"
-                        />
-                        {/* --- END ADD --- */}
-                        <div>
-                            <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{member.username}</p>
-                        </div>
-                    </div>
+          ) : members.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-4">{t("groups.members.current.empty")}</p>
+          ) : (
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
+              {members.map((member) => (
+                <li 
+                  key={member.id} 
+                  className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm hover:translate-x-0.5"
+                >
+                  <div className="flex items-center gap-3">
+                    <AuthenticatedImage
+                      src={member.profilePicture}
+                      alt={member.name}
+                      fallbackName={member.name}
+                      fallbackUsername={member.username}
+                      fallbackSeed={member.name || member.username}
+                      className="w-8 h-8 rounded-full object-cover"
+                      fallbackClassName="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-xs"
+                    />
                     <div>
-                      <button
-                        onClick={() => handleRemoveMember(member.id)}
-                        disabled={isRemoving === member.id}
-                        className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-60"
-                        title={t("groups.members.remove.title")}
-                        aria-label={t("groups.members.remove.title")}
-                      >
-                        {isRemoving === member.id ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" /> : <Users className="h-5 w-5" />}
-                      </button>
+                      <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{member.username}</p>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+                  </div>
+                  <div>
+                    <button
+                      onClick={() => handleRemoveMember(member.id)}
+                      disabled={isRemoving === member.id}
+                      className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-60 transition-transform duration-200 hover:scale-110"
+                      title={t("groups.members.remove.title")}
+                      aria-label={t("groups.members.remove.title")}
+                    >
+                      {isRemoving === member.id ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" /> : <Users className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
+
 /* -------------------------
-Main GroupsManager
+### 4. Delete Confirmation Modal (Refactored)
+A simple component to pass to the ModalTransitionWrapper.
+--------------------------*/
+const DeleteConfirmModal = ({ group, onConfirm, onClose, submitting, t }) => (
+    <div className="p-6 space-y-4 ">
+<div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
+                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>        <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center">{t("groups.confirmDeleteTitle")}</h3>
+        <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
+          {t("groups.confirmDeleteMessage", { groupName: group?.name })}
+        </p>
+        <div className="flex justify-center gap-3 w-full">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors w-full"
+          >
+            {t("admin.actions.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={submitting}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm disabled:opacity-60 flex items-center gap-2 transition-transform duration-200 hover:scale-[1.02] w-full justify-center"
+          >
+            {submitting ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Trash2 className="h-4 w-4" />}
+            <span>{t("admin.actions2.delete")}</span>
+          </button>
+        </div>
+    </div>
+);
+
+
+/* -------------------------
+### 5. Main GroupsManager (Refactored)
+All modal rendering logic is replaced with the extracted components and wrapper.
 --------------------------*/
 function GroupsManager() {
   const { t, i18n } = useTranslation();
@@ -424,17 +505,15 @@ function GroupsManager() {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [currentGroup, setCurrentGroup] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState(null); // Unchanged
   const [sortConfig, setSortConfig] = useState({ key: "createdAt", direction: "desc" });
   const [expandedGroup, setExpandedGroup] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
-
-  // New deletion modal state
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // map semantic types (success/info/...) to Toast component types (create/read/update/delete/error)
+  // Unchanged Toast logic
   const showToast = useCallback((text, semanticType = "success") => {
     const map = {
       success: "create",
@@ -469,6 +548,8 @@ function GroupsManager() {
     setToast(null);
   }, []);
 
+  // --- Modal Handlers ---
+
   const openCreateModal = useCallback(() => {
     setCurrentGroup(null);
     setIsModalOpen(true);
@@ -494,13 +575,22 @@ function GroupsManager() {
     setCurrentGroup(null);
   }, []);
 
+  const handleDeleteClick = useCallback((group) => {
+    setGroupToDelete(group);
+    setShowDeleteConfirmModal(true);
+  }, []);
+
+  const cancelDelete = useCallback(() => {
+    setShowDeleteConfirmModal(false);
+    setGroupToDelete(null);
+  }, []);
+
   const handleSaveGroup = useCallback(
     async (groupData) => {
-      // This function now *always* expects FormData
       if (!(groupData instanceof FormData)) {
-         console.error("handleSaveGroup expected FormData");
-         showToast(t("groups.messages.saveFailed"), "error");
-         return;
+          console.error("handleSaveGroup expected FormData");
+          showToast(t("groups.messages.saveFailed"), "error");
+          return;
       }
       
       try {
@@ -525,31 +615,16 @@ function GroupsManager() {
         await resp.json().catch(() => null);
         showToast(currentGroup ? t("groups.messages.updated") : t("groups.messages.created"), currentGroup ? "update" : "success");
         
-        await loadData(); // Reload all data
+        await loadData();
         closeModal();
       } catch (err) {
         console.error("Error saving group:", err);
         showToast(t("groups.messages.saveFailed"), "error");
-        throw err; // Re-throw to be caught by the modal
+        throw err;
       }
     },
     [currentGroup, closeModal, loadData, showToast, t]
   );
-
-  const handleUpdateMemberCount = useCallback((groupId, newCount) => {
-    setGroups((prevGroups) => prevGroups.map((g) => (g.id === groupId ? { ...g, memberCount: newCount } : g)));
-  }, []);
-
-  // Replace window.confirm flow with modal opener
-  const handleDeleteClick = useCallback((group) => {
-    setGroupToDelete(group);
-    setShowDeleteConfirmModal(true);
-  }, []);
-
-  const cancelDelete = useCallback(() => {
-    setShowDeleteConfirmModal(false);
-    setGroupToDelete(null);
-  }, []);
 
   const confirmDelete = useCallback(async () => {
     if (!groupToDelete) return;
@@ -563,11 +638,16 @@ function GroupsManager() {
       showToast(t("groups.messages.deleteFailed"), "error");
     } finally {
       setSubmitting(false);
-      setShowDeleteConfirmModal(false);
-      setGroupToDelete(null);
+      cancelDelete();
     }
-  }, [groupToDelete, loadData, showToast, t]);
+  }, [groupToDelete, loadData, showToast, t, cancelDelete]);
 
+
+  const handleUpdateMemberCount = useCallback((groupId, newCount) => {
+    setGroups((prevGroups) => prevGroups.map((g) => (g.id === groupId ? { ...g, memberCount: newCount } : g)));
+  }, []);
+
+  // --- Filtering/Sorting Logic (Unchanged) ---
   const requestSort = useCallback(
     (key) => {
       let direction = "asc";
@@ -622,6 +702,8 @@ function GroupsManager() {
     return result;
   }, [groups, searchTerm, sortConfig]);
 
+  // --- Main Render ---
+
   return (
     <>
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -644,23 +726,15 @@ function GroupsManager() {
               <div>
                 <button
                   onClick={openCreateModal}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base shadow-sm transition"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base shadow-sm transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
                 >
                   <Plus className="h-4 w-4" />
                   <span>{t("groups.newGroup")}</span>
                 </button>
               </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-3">
-                <div className="text-sm text-gray-500 dark:text-gray-400"> {/* placeholder for possible switch / filters */}</div>
-              </div>
-
-            </div>
           </div>
 
-          {/* search row - placed separately so on very small screens it wraps under title */}
           <div className="mt-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="relative w-full sm:max-w-md">
@@ -672,13 +746,9 @@ function GroupsManager() {
                   placeholder={t("groups.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-shadow focus:shadow-md"
                   aria-label={t("groups.searchAria")}
                 />
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Small quick actions could be added here */}
               </div>
             </div>
           </div>
@@ -698,42 +768,20 @@ function GroupsManager() {
                   <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th
-                          onClick={() => requestSort("name")}
-                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-                        >
-                          {t("groups.table.name")}
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          {t("groups.table.description")}
-                        </th>
-                        <th
-                          onClick={() => requestSort("memberCount")}
-                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-                        >
-                          {t("groups.table.members")}
-                        </th>
-                        <th
-                          onClick={() => requestSort("createdAt")}
-                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
-                        >
-                          {t("groups.table.created")}
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          {t("groups.table.updated")}
-                        </th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          {t("groups.table.actions")}
-                        </th>
+                        <th onClick={() => requestSort("name")} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.name")}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.description")}</th>
+                        <th onClick={() => requestSort("memberCount")} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.members")}</th>
+                        <th onClick={() => requestSort("createdAt")} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.created")}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.updated")}</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.actions")}</th>
                       </tr>
                     </thead>
 
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {filteredGroups.length > 0 ? (
                         filteredGroups.map((g) => (
-                          <tr key={g.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <tr key={g.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 group"> 
                             <td className="px-4 py-4 font-medium text-gray-900 dark:text-white flex items-center gap-3">
-                              {/* --- UPDATED --- */}
                               <AuthenticatedImage
                                 src={g.profilePicture}
                                 alt={g.name}
@@ -742,39 +790,44 @@ function GroupsManager() {
                                 className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700"
                                 fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
                               />
-                              {/* --- END UPDATE --- */}
                               <span className="truncate max-w-xs">{g.name}</span>
                             </td>
 
                             <td className="px-4 py-4 text-gray-500 dark:text-gray-400 max-w-sm truncate">{g.description || t("groups.noDescription")}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{g.memberCount || 0}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(g.createdAt)}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(g.updatedAt)}</td>
 
-                            <td className="px-4 py-4 text-gray-500 dark:text-gray-400">
-                              <button onClick={() => openMembersModal(g)} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline text-sm">
-                                {t("groups.members.linkText", { count: g.memberCount || 0 })}
-                              </button>
-                            </td>
-
-                            <td className="px-4 py-4 text-gray-500 dark:text-gray-400">{formatDate(g.createdAt)}</td>
-                            <td className="px-4 py-4 text-gray-500 dark:text-gray-400">{formatDate(g.updatedAt)}</td>
-
-                            <td className="px-4 py-4 text-right space-x-2">
-                              <button onClick={() => openEditModal(g)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 p-2 rounded-md" aria-label={t("groups.actions.edit")}>
-                                <Edit className="h-5 w-5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteClick(g)}
-                                disabled={submitting}
-                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-2 rounded-md disabled:opacity-60"
-                                aria-label={t("groups.actions.delete")}
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </button>
+                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => openMembersModal(g)}
+                                  className="p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-transform duration-200 hover:scale-110"
+                                  title={t("groups.actions.members")}
+                                >
+                                  <Users className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={() => openEditModal(g)}
+                                  className="p-2 rounded-full text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-transform duration-200 hover:scale-110"
+                                  title={t("groups.actions.edit")}
+                                >
+                                  <Edit className="h-5 w-5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteClick(g)}
+                                  className="p-2 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-transform duration-200 hover:scale-110"
+                                  title={t("groups.actions.delete")}
+                                >
+                                  <Trash2 className="h-5 w-5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="6" className="px-4 py-12 text-center text-gray-500 dark:text-gray-400">
+                          <td colSpan="6" className="px-4 py-10 text-center text-gray-500 dark:text-gray-400">
                             {t("groups.noResults")}
                           </td>
                         </tr>
@@ -783,205 +836,113 @@ function GroupsManager() {
                   </table>
                 </div>
 
-                {/* Tablet / small-desktop list (md..lg) */}
-                <div className="hidden md:block lg:hidden space-y-4">
+                {/* Mobile/Tablet Card View (lg-) */}
+                <div className="lg:hidden space-y-4">
                   {filteredGroups.length > 0 ? (
                     filteredGroups.map((g) => (
-                      <div key={g.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-4 flex-1 min-w-0">
-                            {/* --- UPDATED --- */}
-                            <AuthenticatedImage
-                                src={g.profilePicture}
-                                alt={g.name}
-                                fallbackName={g.name}
-                                fallbackSeed={g.name || "group"}
-                                className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700"
-                                fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
-                            />
-                            {/* --- END UPDATE --- */}
-                            <div className="min-w-0">
-                              <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">{g.name}</h3>
-                              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{g.description || t("groups.noDescription")}</p>
-
-                              <div className="mt-3 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                                <Users className="h-4 w-4" />
-                                <button onClick={() => openMembersModal(g)} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">
-                                  {t("groups.members.linkText", { count: g.memberCount || 0 })}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-2">
-                            <button onClick={() => openEditModal(g)} className="p-2 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30" aria-label={t("groups.actions.edit")}>
-                              <Edit className="h-5 w-5" />
-                            </button>
-                            <button onClick={() => handleDeleteClick(g)} disabled={submitting} className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-60" aria-label={t("groups.actions.delete")}>
-                              <Trash2 className="h-5 w-5" />
-                            </button>
-                            <button onClick={() => toggleGroupExpand(g.id)} className="p-2 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" aria-label={t("groups.actions.toggle")}>
-                              {/* toggle */}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{t("groups.createdPrefix")}</span> <span className="ml-1">{formatDate(g.createdAt)}</span>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{t("groups.updatedPrefix")}</span> <span className="ml-1">{formatDate(g.updatedAt)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">{t("groups.noResults")}</p>
-                      <button onClick={openCreateModal} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
-                        <Plus className="h-4 w-4" />
-                        <span>{t("groups.newGroup")}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Mobile cards */}
-                <div className="md:hidden space-y-4">
-                  {filteredGroups.length > 0 ? (
-                    filteredGroups.map((g) => (
-                      <div key={g.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                        <div className="flex items-start justify-between gap-3">
+                      <div 
+                        key={g.id} 
+                        className="bg-white dark:bg-gray-800 rounded-lg shadow transition-all duration-200 hover:shadow-lg hover:translate-y-[-2px] overflow-hidden" 
+                      >
+                        <div
+                          className="p-4 flex justify-between items-start cursor-pointer"
+                          onClick={() => toggleGroupExpand(g.id)}
+                        >
                           <div className="flex items-center gap-3 min-w-0">
-                            {/* --- UPDATED --- */}
                             <AuthenticatedImage
-                                src={g.profilePicture}
-                                alt={g.name}
-                                fallbackName={g.name}
-                                fallbackSeed={g.name || "group"}
-                                className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700"
-                                fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold"
+                              src={g.profilePicture}
+                              alt={g.name}
+                              fallbackName={g.name}
+                              fallbackSeed={g.name || "group"}
+                              className="w-12 h-12 rounded-full object-cover"
+                              fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg"
                             />
-                            {/* --- END UPDATE --- */}
-                            <div className="min-w-0">
-                              <h3 className="font-medium text-gray-900 dark:text-white truncate">{g.name}</h3>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{g.description || t("groups.noDescription")}</p>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-gray-900 dark:text-white truncate">{g.name}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {g.memberCount || 0} {t("groups.membersCount")}
+                              </p>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => openEditModal(g)} className="p-2 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30" aria-label={t("groups.actions.edit")}>
-                              <Edit className="h-5 w-5" />
-                            </button>
-                            <button onClick={() => handleDeleteClick(g)} disabled={submitting} className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-60" aria-label={t("groups.actions.delete")}>
-                              <Trash2 className="h-5 w-5" />
-                            </button>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {expandedGroup === g.id ? t("groups.actions.collapse") : t("groups.actions.expand")}
                           </div>
                         </div>
 
-                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                          <span>
-                            <span className="font-medium">{g.memberCount || 0}</span> {t("groups.members.label")}
-                          </span>
-                          <button onClick={() => openMembersModal(g)} className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
-                            {t("groups.members.manage")}
-                          </button>
-                        </div>
-
-                        <div className="flex gap-11">
-                          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.createdPrefix")} {formatDate(g.createdAt)}</div>
-                          <div className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.updatedPrefix")} {formatDate(g.updatedAt)}</div>
+                        <div 
+                            className={`px-4 pb-4 pt-0 transition-[max-height] ease-in-out duration-300 overflow-hidden ${
+                                expandedGroup === g.id ? "max-h-[1000px]" : "max-h-0"
+                            }`}
+                        >
+                            <p className="text-sm text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3">
+                              <span className="font-medium">{t("groups.table.description")}:</span> {g.description || t("groups.noDescription")}
+                            </p>
+                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700 mt-3">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openMembersModal(g); }}
+                                className="p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-transform duration-200 hover:scale-110"
+                                title={t("groups.actions.members")}
+                              >
+                                <Users className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openEditModal(g); }}
+                                className="p-2 rounded-full text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-transform duration-200 hover:scale-110"
+                                title={t("groups.actions.edit")}
+                              >
+                                <Edit className="h-5 w-5" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(g); }}
+                                className="p-2 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-transform duration-200 hover:scale-110"
+                                title={t("groups.actions.delete")}
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </button>
+                            </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">{t("groups.noResults")}</p>
-                      <button onClick={openCreateModal} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg">
-                        <Plus className="h-4 w-4" />
-                        <span>{t("groups.newGroup")}</span>
-                      </button>
+                    <div className="py-10 text-center text-gray-500 dark:text-gray-400">
+                      {t("groups.noResults")}
                     </div>
                   )}
                 </div>
               </>
             )}
           </div>
-
-          {isModalOpen && <GroupFormModal group={currentGroup} onSave={handleSaveGroup} onClose={closeModal} t={t} />}
-
-          {isMembersModalOpen && currentGroup && (
-            <GroupMembers group={currentGroup} onClose={closeMembersModal} allUsers={allUsers} onUpdateMemberCount={handleUpdateMemberCount} t={t} />
-          )}
-
-          {/* Toast */}
-          {toast && (
-            <div className="fixed z-50 right-5 bottom-5">
-              <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />
-            </div>
-          )}
         </main>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirmModal && groupToDelete && (
-        <div
-          className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="delete-title"
-          aria-describedby="delete-desc"
-        >
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
-                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <h3
-                id="delete-title"
-                className="mt-4 text-lg font-semibold text-gray-900 dark:text-white"
-              >
-                {t("groups.confirmDeleteTitle") || t("groups.confirmDelete")}
-              </h3>
-              <p
-                id="delete-desc"
-                className="mt-2 text-gray-600 dark:text-gray-400"
-              >
-                {t("groups.confirmDeleteMessage", { name: groupToDelete.name }) || t("groups.confirmDelete")}
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
-                onClick={cancelDelete}
-                className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                disabled={submitting}
-              >
-                {t("admin.actions.cancel") || t("groups.actions.cancel")}
-              </button>
-              <button
-                type="button"
-                onClick={confirmDelete}
-                className="flex-1 px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-colors disabled:opacity-60"
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    <span>{t("admin.actions.deleting") || t("groups.actions.deleting")}</span>
-                  </div>
-                ) : (
-                  t("admin.actions2.delete") || t("groups.actions.delete")
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* --- Modals --- */}
+      
+      {isModalOpen && (
+        <ModalTransitionWrapper onClose={closeModal}>
+          <GroupFormModal group={currentGroup} onSave={handleSaveGroup} onClose={closeModal} t={t} />
+        </ModalTransitionWrapper>
       )}
+
+      {isMembersModalOpen && currentGroup && (
+        <ModalTransitionWrapper onClose={closeMembersModal}>
+          <GroupMembers group={currentGroup} onClose={closeMembersModal} allUsers={allUsers} onUpdateMemberCount={handleUpdateMemberCount} t={t} />
+        </ModalTransitionWrapper>
+      )}
+      
+      {showDeleteConfirmModal && groupToDelete && (
+        <ModalTransitionWrapper onClose={cancelDelete}>
+          <DeleteConfirmModal 
+            group={groupToDelete} 
+            onConfirm={confirmDelete} 
+            onClose={cancelDelete} 
+            submitting={submitting} 
+            t={t} 
+          />
+        </ModalTransitionWrapper>
+      )}
+
+      {/* --- Toast (Unchanged) --- */}
+      {toast && <Toast text={toast.text} type={toast.type} onClose={handleToastClose} />}
     </>
   );
 }

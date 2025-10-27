@@ -27,6 +27,8 @@ export default function NotificationPreview({
   const bellRef = useRef(null);
   const hideTimer = useRef(null);
   const toastTimer = useRef(null);
+  const popoverRef = useRef(null);
+  const toastRef = useRef(null);
 
   const [open, setOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -36,6 +38,7 @@ export default function NotificationPreview({
 
   const [latestNew, setLatestNew] = useState(null);
   const [showToast, setShowToast] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const lastKnownIdRef = useRef(null);
   const shownToastIdsRef = useRef(new Set());
@@ -67,13 +70,13 @@ export default function NotificationPreview({
   const iconFor = (level) => {
     switch (level) {
       case "success":
-        return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />;
+        return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 transition-colors duration-200" />;
       case "warning":
-        return <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />;
+        return <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 transition-colors duration-200" />;
       case "error":
-        return <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />;
+        return <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 transition-colors duration-200" />;
       default:
-        return <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
+        return <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 transition-colors duration-200" />;
     }
   };
 
@@ -260,10 +263,14 @@ export default function NotificationPreview({
     const c = computeCoords(rect, scrollY, position);
     setCoords(c);
     setOpen(true);
+    setIsAnimating(true);
     loadPreview();
   };
 
-  const closePreview = () => setOpen(false);
+  const closePreview = () => {
+    setIsAnimating(true);
+    setOpen(false);
+  };
 
   const handleMouseEnter = () => {
     if (!canHover) return;
@@ -314,6 +321,7 @@ export default function NotificationPreview({
     open && bellRef.current
       ? createPortal(
           <div
+            ref={popoverRef}
             role="dialog"
             aria-label={t("notificationsPreview.recentAria")}
             tabIndex={-1}
@@ -330,34 +338,46 @@ export default function NotificationPreview({
               left: coords.left,
               transform: coords.transform,
               zIndex: 9999,
-              transition: "opacity 160ms ease, transform 160ms ease",
             }}
+            className="notification-popover"
           >
-            <div className="w-80 max-h-[420px] bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{t("notificationsPreview.title")}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{t("notificationsPreview.unreadCount", { count: unread })}</div>
+            <div className="w-80 max-h-[420px] bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transform transition-all duration-300 ease-out origin-top">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
+                <div className="text-sm font-medium text-gray-900 dark:text-white transition-colors duration-200">
+                  {t("notificationsPreview.title")}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-200">
+                  {t("notificationsPreview.unreadCount", { count: unread })}
+                </div>
               </div>
 
-              <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto max-h-[340px]">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto max-h-[340px] transition-colors duration-200">
                 {buildDisplayList(notifications).length === 0 && (
-                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("notificationsPreview.noNotifications")}</div>
+                  <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
+                    {t("notificationsPreview.noNotifications")}
+                  </div>
                 )}
-                {buildDisplayList(notifications).map((n) => (
-                  <div key={n.id} className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                    n.isRead ? "bg-white dark:bg-gray-900" : "bg-blue-50 dark:bg-blue-900/20"
-                  }`}>
-                    <div className="flex-shrink-0 mt-0.5">{iconFor(n.level)}</div>
+                {buildDisplayList(notifications).map((n, index) => (
+                  <div 
+                    key={n.id} 
+                    className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 transform hover:scale-[1.02] ${
+                      n.isRead ? "bg-white dark:bg-gray-900" : "bg-blue-50 dark:bg-blue-900/20"
+                    }`}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="flex-shrink-0 mt-0.5 transition-transform duration-200 hover:scale-110">
+                      {iconFor(n.level)}
+                    </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className={`text-sm truncate ${
+                      <div className={`text-sm truncate transition-all duration-200 ${
                         n.isRead 
                           ? "text-gray-600 dark:text-gray-300" 
                           : "font-medium text-gray-900 dark:text-white"
                       }`}>
                         {n.message}
                       </div>
-                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 transition-colors duration-200">
                         {new Date(n.createdAt).toLocaleString()}
                       </div>
                     </div>
@@ -366,7 +386,7 @@ export default function NotificationPreview({
                       {!n.isRead && (
                         <button
                           onClick={() => handleMarkRead(n.id)}
-                          className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                          className="text-xs px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
                         >
                           {t("notificationsPreview.mark")}
                         </button>
@@ -376,7 +396,7 @@ export default function NotificationPreview({
                           navigate(item?.to || "/notification");
                           closePreview();
                         }}
-                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-200"
                       >
                         {t("notificationsPreview.open")}
                       </button>
@@ -385,16 +405,16 @@ export default function NotificationPreview({
                 ))}
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
                 <button 
                   onClick={() => navigate(item?.to || "/notification")} 
-                  className="text-sm px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
                 >
                   {t("notificationsPreview.viewAll")}
                 </button>
                 <button 
                   onClick={loadPreview} 
-                  className="text-sm px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
                 >
                   {t("notificationsPreview.refresh")}
                 </button>
@@ -409,6 +429,7 @@ export default function NotificationPreview({
     showToast && latestNew && bellRef.current
       ? createPortal(
           <div
+            ref={toastRef}
             role="status"
             aria-live="polite"
             onClick={navigateAndClearToast}
@@ -428,21 +449,25 @@ export default function NotificationPreview({
                 return Math.min(Math.max(rawLeft, minLeft), maxLeft);
               })(),
               transform: "translate(0,0)",
-              transition: "opacity 240ms ease, transform 240ms ease",
             }}
+            className="notification-toast"
           >
-            <div className="w-80 bg-white dark:bg-gray-900 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:shadow-xl transition-shadow">
+            <div className="w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] group">
               <div className="p-3 flex items-start gap-3">
-                <div className="flex-shrink-0 mt-0.5">{iconFor(latestNew.level)}</div>
+                <div className="flex-shrink-0 mt-0.5 transition-transform duration-200 group-hover:scale-110">
+                  {iconFor(latestNew.level)}
+                </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate text-gray-900 dark:text-white">
+                  <div className="text-sm font-medium truncate text-gray-900 dark:text-white transition-colors duration-200">
                     {latestNew.message}
                   </div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 transition-colors duration-200">
                     {new Date(latestNew.createdAt).toLocaleString()}
                   </div>
                 </div>
+                <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               </div>
+              <div className="w-full h-1 bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"></div>
             </div>
           </div>,
           document.body
@@ -458,6 +483,80 @@ export default function NotificationPreview({
 
   return (
     <>
+      <style>{`
+        @keyframes slideInDown {
+          from {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes slideOutUp {
+          to {
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+          }
+        }
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes slideOutDown {
+          to {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+        @keyframes bounce {
+          0%, 20%, 53%, 80%, 100% {
+            transform: translate3d(0,0,0);
+          }
+          40%, 43% {
+            transform: translate3d(0, -8px, 0);
+          }
+          70% {
+            transform: translate3d(0, -4px, 0);
+          }
+          90% {
+            transform: translate3d(0, -2px, 0);
+          }
+        }
+        .notification-popover {
+          animation: slideInDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .notification-popover.closing {
+          animation: slideOutUp 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .notification-toast {
+          animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .notification-toast.closing {
+          animation: slideOutDown 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .bell-pulse {
+          animation: pulse 2s infinite;
+        }
+        .badge-bounce {
+          animation: bounce 1s ease-in-out;
+        }
+        .notification-item {
+          animation: slideInDown 0.3s ease-out;
+        }
+      `}</style>
+      
       <div ref={bellRef} className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
         <div
           role="button"
@@ -465,19 +564,27 @@ export default function NotificationPreview({
           onClick={handleBellClick}
           onKeyDown={handleBellKeyDown}
           aria-label={item?.label || t("notificationsPreview.label")}
-          className={`flex items-center p-2 rounded-full transition-colors duration-200 ${
+          className={`flex items-center p-2 rounded-full transition-all duration-300 ${
             showExpanded ? "justify-normal" : "justify-center"
-          } cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800`}
+          } cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transform hover:scale-110 active:scale-95 group/bell`}
         >
-          <div className="relative flex items-center justify-center w-6 text-gray-700 dark:text-gray-300">
-            <Bell size={24} />
+          <div className="relative flex items-center justify-center w-6 text-gray-700 dark:text-gray-300 transition-colors duration-200 group-hover/bell:text-blue-600 dark:group-hover/bell:text-blue-400">
+            <Bell size={24} className="transition-transform duration-300 group-hover/bell:rotate-12" />
             {unread > 0 && (
-              <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem]">
+              <span 
+                className={`absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem] transition-all duration-300 transform ${
+                  unread > 9 ? 'badge-bounce' : 'bell-pulse'
+                }`}
+              >
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
           </div>
-          {showExpanded && <span className="ml-3 truncate text-gray-700 dark:text-gray-300">{item?.label || t("notificationsPreview.label")}</span>}
+          {showExpanded && (
+            <span className="ml-3 truncate text-gray-700 dark:text-gray-300 transition-colors duration-200 group-hover/bell:text-blue-600 dark:group-hover/bell:text-blue-400">
+              {item?.label || t("notificationsPreview.label")}
+            </span>
+          )}
         </div>
       </div>
 
@@ -486,25 +593,39 @@ export default function NotificationPreview({
 
       <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)}>
         <div className="p-4 bg-white dark:bg-gray-900">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-lg font-semibold text-gray-900 dark:text-white">{t("notificationsPreview.title")}</div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">{t("notificationsPreview.unreadCount", { count: unread })}</div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200">
+              {t("notificationsPreview.title")}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 transition-colors duration-200">
+              {t("notificationsPreview.unreadCount", { count: unread })}
+            </div>
           </div>
 
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-200">
             {buildDisplayList(notifications).length === 0 && (
-              <div className="p-3 text-sm text-gray-600 dark:text-gray-400">{t("notificationsPreview.noNotifications")}</div>
+              <div className="p-3 text-sm text-gray-600 dark:text-gray-400 transition-colors duration-200">
+                {t("notificationsPreview.noNotifications")}
+              </div>
             )}
-            {buildDisplayList(notifications).map((n) => (
-              <div key={n.id} className={`p-3 flex items-start gap-3 ${
-                n.isRead 
-                  ? "text-gray-600 dark:text-gray-300" 
-                  : "text-gray-900 dark:text-white font-medium"
-              }`}>
-                <div className="flex-shrink-0 mt-0.5">{iconFor(n.level)}</div>
+            {buildDisplayList(notifications).map((n, index) => (
+              <div 
+                key={n.id} 
+                className={`p-3 flex items-start gap-3 transition-all duration-200 transform hover:scale-[1.02] notification-item ${
+                  n.isRead 
+                    ? "text-gray-600 dark:text-gray-300" 
+                    : "text-gray-900 dark:text-white font-medium"
+                }`}
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                <div className="flex-shrink-0 mt-0.5 transition-transform duration-200 hover:scale-110">
+                  {iconFor(n.level)}
+                </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm truncate">{n.message}</div>
-                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  <div className="text-sm truncate transition-colors duration-200">
+                    {n.message}
+                  </div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 transition-colors duration-200">
                     {new Date(n.createdAt).toLocaleString()}
                   </div>
                 </div>
@@ -512,7 +633,7 @@ export default function NotificationPreview({
                   {!n.isRead && (
                     <button 
                       onClick={() => handleMarkRead(n.id)} 
-                      className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      className="text-xs px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
                     >
                       {t("notificationsPreview.mark")}
                     </button>
@@ -522,19 +643,19 @@ export default function NotificationPreview({
             ))}
           </div>
 
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-4 flex items-center justify-between">
             <button
               onClick={() => {
                 setSheetOpen(false);
                 navigate(item?.to || "/notification");
               }}
-              className="text-sm px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              className="text-sm px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
             >
               {t("notificationsPreview.viewAll")}
             </button>
             <button 
               onClick={loadPreview} 
-              className="text-sm px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+              className="text-sm px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
             >
               {t("notificationsPreview.refresh")}
             </button>

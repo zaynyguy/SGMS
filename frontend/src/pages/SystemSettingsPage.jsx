@@ -219,8 +219,8 @@ export default function SystemSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-200 dark:bg-gray-900 transition-colors duration-200">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 dark:border-blue-400" />
+      <div className="flex justify-center items-center h-screen bg-gray-200 dark:bg-gray-900 transition-all duration-500">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 dark:border-blue-400 transition-colors duration-300" />
       </div>
     );
   }
@@ -238,40 +238,46 @@ export default function SystemSettingsPage() {
       : "text-green-700 dark:text-green-400";
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 py-4 px-3 transition-colors duration-200">
-      <div className="max-w-8xl mx-auto">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 py-4 px-3 transition-all duration-500 ease-in-out">
+      <div className="max-w-8xl mx-auto animate-fade-in-up">
         {/* Header: title (single line) + TopBar */}
-        <div className="flex items-center justify-between mb-6 gap-4">
+        <div className="flex items-center justify-between mb-6 gap-4  transition-all duration-300">
           <div className="flex min-w-0 gap-4 items-center">
-            <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-              <Settings2Icon className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+            <div className="p-3 rounded-lg bg-white dark:bg-gray-800 shadow-sm transition-all duration-300 hover:shadow-md hover:scale-105">
+              <Settings2Icon className="h-6 w-6 text-sky-600 dark:text-sky-300 transition-colors duration-300" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white truncate">{t("systemSettings.title")}</h1>
-              <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white truncate transition-colors duration-300">
+                {t("systemSettings.title")}
+              </h1>
+              <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl transition-colors duration-300">
                 {t("systemSettings.subtitle")}
               </p>
             </div>
           </div>
-          <div className="flex-shrink-0 w-auto">
+          <div className="flex-shrink-0 w-auto transition-transform duration-300 hover:scale-105">
             <TopBar />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 transition-colors duration-200">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 transition-all duration-300 ease-in-out transform hover:shadow-lg">
           <div className="space-y-5">
             {/* Allowed attachment types */}
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 transition-colors duration-200">
-              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">{t("systemSettings.allowedAttachmentTypes.label")}</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">{t("systemSettings.allowedAttachmentTypes.help")}</p>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 transition-all duration-300 ease-in-out transform hover:scale-[1.009] hover:shadow-sm">
+              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">
+                {t("systemSettings.allowedAttachmentTypes.label")}
+              </label>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 transition-colors duration-300">
+                {t("systemSettings.allowedAttachmentTypes.help")}
+              </p>
               <AllowedTypesInput
                 value={allowedTypesArray}
                 onChange={handleAllowedTypesChange}
               />
 
-              <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-3 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                 <div className="mb-1">{t("systemSettings.current")}</div>
-                <code className="text-xs break-all bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md block overflow-x-auto">
+                <code className="text-xs break-all bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md block transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500">
                   {JSON.stringify(lastSavedRef.current?.allowed_attachment_types ?? settings.allowed_attachment_types)}
                 </code>
               </div>
@@ -279,51 +285,50 @@ export default function SystemSettingsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Audit retention days */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 transition-colors duration-200">
-                <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 transition-all duration-300 ease-in-out transform hover:scale-[1.009] hover:shadow-sm">
+                <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">
                   {t("systemSettings.auditRetention.label")}
                 </label>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 transition-colors duration-300">
                   {t("systemSettings.auditRetention.help")}
                 </p>
                 <input
                   type="number"
                   min="0"
                   inputMode="numeric"
-                  className="w-full text-base border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                  className="w-full text-base border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400 focus:scale-[1.02]"
                   value={settings.audit_retention_days ?? ""}
                   onChange={(e) => handleChange("audit_retention_days", e.target.value === "" ? "" : Number(e.target.value))}
                   placeholder={t("systemSettings.auditRetention.placeholder")}
                 />
-                <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                <div className="mt-3 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                   <div className="mb-1">{t("systemSettings.current")}</div>
-                  <code className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md">
+                  <code className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500">
                     {JSON.stringify(lastSavedRef.current?.audit_retention_days ?? settings.audit_retention_days)}
                   </code>
                 </div>
-
               </div>
 
               {/* Max attachment size */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 transition-colors duration-200">
-                <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 transition-all duration-300 ease-in-out transform hover:scale-[1.009] hover:shadow-sm">
+                <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">
                   {t("systemSettings.maxAttachmentSize.label")}
                 </label>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 transition-colors duration-300">
                   {t("systemSettings.maxAttachmentSize.help")}
                 </p>
                 <input
                   type="number"
                   min="0"
                   inputMode="numeric"
-                  className="w-full text-base border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                  className="w-full text-base border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400 focus:scale-[1.02]"
                   value={settings.max_attachment_size_mb ?? ""}
                   onChange={(e) => handleChange("max_attachment_size_mb", e.target.value === "" ? "" : Number(e.target.value))}
                   placeholder={t("systemSettings.maxAttachmentSize.placeholder")}
                 />
-                <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+                <div className="mt-3 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                   <div className="mb-1">{t("systemSettings.current")}</div>
-                  <code className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md">
+                  <code className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500">
                     {JSON.stringify(lastSavedRef.current?.max_attachment_size_mb ?? settings.max_attachment_size_mb)}
                   </code>
                 </div>
@@ -331,15 +336,15 @@ export default function SystemSettingsPage() {
             </div>
 
             {/* Reporting */}
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 transition-colors duration-200">
-              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-4 transition-all duration-300 ease-in-out transform hover:scale-[1.009] hover:shadow-sm">
+              <label className="block text-base font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">
                 {t("systemSettings.reporting.label")}
               </label>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 transition-colors duration-300">
                 {t("systemSettings.reporting.help")}
               </p>
               <div className="flex items-center">
-                <div className="relative inline-block w-14 h-7 mr-3 align-middle select-none">
+                <div className="relative inline-block w-14 h-7 mr-3 align-middle select-none transition-transform duration-300 hover:scale-110">
                   <input
                     type="checkbox"
                     id="reporting-toggle"
@@ -349,34 +354,34 @@ export default function SystemSettingsPage() {
                   />
                   <label
                     htmlFor="reporting-toggle"
-                    className={`block overflow-hidden h-7 rounded-full cursor-pointer transition-colors duration-200 ${settings.reporting_active ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                    className={`block overflow-hidden h-7 rounded-full cursor-pointer transition-all duration-500 ease-in-out ${settings.reporting_active ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"} hover:shadow-md`}
                   >
-                    <span className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform duration-200 ${settings.reporting_active ? "transform translate-x-7" : ""}`} />
+                    <span className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-all duration-500 ease-in-out ${settings.reporting_active ? "transform translate-x-7 bg-blue-100" : ""} hover:shadow-sm`} />
                   </label>
                 </div>
-                <span className="text-gray-700 dark:text-gray-300 text-base">
+                <span className="text-gray-700 dark:text-gray-300 text-base transition-colors duration-300">
                   {settings.reporting_active ? t("systemSettings.enabled") : t("systemSettings.disabled")}
                 </span>
               </div>
-              <div className="mt-3 text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-3 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                 <div className="mb-1">{t("systemSettings.current")}</div>
-                <code className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md">
+                <code className="text-xs bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500">
                   {JSON.stringify(lastSavedRef.current?.reporting_active ?? settings.reporting_active)}
                 </code>
               </div>
             </div>
           </div>
 
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all duration-300">
             <button
               onClick={handleSave}
               disabled={saving}
               aria-label={t("systemSettings.saveButtonAria")}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center disabled:opacity-50 transition-colors duration-200 text-base"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center disabled:opacity-50 transition-all duration-500 ease-in-out transform hover:scale-105 active:scale-95 hover:shadow-lg text-base"
             >
               {saving ? (
                 <>
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white transition-transform duration-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
@@ -384,7 +389,7 @@ export default function SystemSettingsPage() {
                 </>
               ) : (
                 <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                   {t("systemSettings.saveButton") || "Save settings"}
@@ -393,14 +398,14 @@ export default function SystemSettingsPage() {
             </button>
 
             {message.text && (
-              <div className={`w-full sm:w-auto px-4 py-3 rounded-lg text-center ${messageBgClass} ${messageTextClass} transition-colors duration-200 text-sm`}>
+              <div className={`w-full sm:w-auto px-4 py-3 rounded-lg text-center ${messageBgClass} ${messageTextClass} transition-all duration-500 ease-in-out transform animate-pulse`}>
                 {message.text}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex justify-center mt-6 text-center text-sm text-gray-500 dark:text-gray-400 transition-colors duration-200">
+        <div className="flex justify-center mt-6 text-center text-sm text-gray-500 dark:text-gray-400 transition-all duration-500 animate-fade-in">
           <p>{t("systemSettings.description")}</p>
         </div>
       </div>
@@ -414,6 +419,33 @@ export default function SystemSettingsPage() {
           onClose={() => setToast(null)}
         />
       )}
+
+      <style jsx>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out;
+        }
+        .animate-fade-in {
+          animation: fade-in 1.8s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

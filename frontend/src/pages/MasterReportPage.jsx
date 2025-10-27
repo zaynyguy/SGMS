@@ -19,6 +19,7 @@ const [loading, setLoading] = useState(false);
 const [master, setMaster] = useState(null);
 const [error, setError] = useState(null);
 const [granularity, setGranularity] = useState("quarterly");
+const [isRefreshing, setIsRefreshing] = useState(false);
 
 // --- STATE FOR GROUP DROPDOWN ---
 const [groupSearchTerm, setGroupSearchTerm] = useState(
@@ -61,6 +62,7 @@ return String(s)
 
 async function handleFetch() {
 setLoading(true);
+setIsRefreshing(true);
 setError(null);
 try {
 const data = await fetchMasterReport(groupId || undefined);
@@ -77,6 +79,7 @@ setMaster(null);
 }
 } finally {
 setLoading(false);
+setTimeout(() => setIsRefreshing(false), 500);
 }
 }
 
@@ -574,15 +577,16 @@ w.print();
 }
 
 return (
-<div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
-<div className="flex items-center gap-4 mb-5">
-<div className="text-sky-600 dark:text-sky-300 bg-gray-200 dark:bg-gray-900 p-3 rounded-lg">
+<div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-500 ease-out">
+<div className="flex items-center gap-4 mb-5 transition-all duration-500">
+<div className="text-sky-600 dark:text-sky-300 bg-gray-200 dark:bg-gray-900 p-3 rounded-lg transition-all duration-500 transform hover:scale-110 hover:rotate-6">
 <svg
 width="22"
 height="22"
 viewBox="0 0 24 24"
 fill="none"
 aria-hidden
+className="transition-all duration-500"
 >
 <path
 d="M3 3h7v7H3zM14 3h7v4h-7zM14 10h7v11h-7zM3 11h7v6H3z"
@@ -594,26 +598,26 @@ strokeLinejoin="round"
 </svg>
 </div>
 
-<div>
-<h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-gray-100">
+<div className="transition-all duration-500">
+<h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-gray-100 transition-all duration-500 transform hover:translate-x-2">
 {t("reports.master.title")}
 </h2>
-<div className="text-sm text-gray-500 dark:text-gray-300">
+<div className="text-sm text-gray-500 dark:text-gray-300 transition-all duration-700">
 {t("reports.master.subtitle")}
 </div>
 </div>
 </div>
 
 {/* --- UPDATED GROUP <select> DROPDOWN --- */}
-<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5">
-<div className="md:col-span-3">
-<label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+<div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5 transition-all duration-500">
+<div className="md:col-span-3 transition-all duration-500">
+<label className="block text-sm text-gray-600 dark:text-gray-300 mb-1 transition-all duration-300">
 {t("reports.master.groupSearchLabel", "Select Group")}
 </label>
 <select
 value={groupId}
 onChange={handleGroupSelectChange}
-className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent"
+className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all duration-300 transform hover:scale-105"
 >
 <option value="">
 {t("reports.master.allGroups", "All Groups")}
@@ -625,58 +629,58 @@ className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm 
 ))}
 </select>
 {error && (
-<div className="text-sm text-red-600 dark:text-red-400 mt-2">
+<div className="text-sm text-red-600 dark:text-red-400 mt-2 transition-all duration-500 transform hover:scale-105 animate-pulse">
 {error}
 </div>
 )}
 {groupLoadError && (
-<div className="text-sm text-yellow-600 dark:text-yellow-400 mt-2">
+<div className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 transition-all duration-500 transform hover:scale-105">
 {groupLoadError}
 </div>
 )}
 </div>
 
-<div className="md:col-span-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
+<div className="md:col-span-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-end transition-all duration-500">
 <button
 onClick={handleFetch}
 disabled={loading}
-className="px-4 py-2 bg-sky-600 text-white rounded-lg shadow flex items-center justify-center gap-2 hover:bg-sky-700 transition-colors"
+className="px-4 py-2 bg-sky-600 text-white rounded-lg shadow flex items-center justify-center gap-2 hover:bg-sky-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
 >
 {loading ? (
-<Loader className="h-4 w-4 animate-spin" />
+<Loader className={`h-4 w-4 animate-spin transition-all duration-500 ${isRefreshing ? 'scale-125' : 'scale-100'}`} />
 ) : (
 t("reports.master.loadButton")
 )}
 </button>
 <button
 onClick={exportPDF}
-className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
 >
 {t("reports.master.exportPDF")}
 </button>
 <button
 onClick={exportCSV}
-className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
 >
 {t("reports.master.exportCSV")}
 </button>
 </div>
 </div>
 
-<div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
-<div>
-<label className="text-sm text-gray-600 dark:text-gray-300">
+<div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4 transition-all duration-500">
+<div className="transition-all duration-500">
+<label className="text-sm text-gray-600 dark:text-gray-300 transition-all duration-300">
 {t("reports.master.granularityLabel")}
 </label>
-<div className="flex gap-2 mt-1">
+<div className="flex gap-2 mt-1 transition-all duration-500">
 {["monthly", "quarterly", "annual"].map((g) => (
 <button
 key={g}
 onClick={() => setGranularity(g)}
-className={`px-3 py-1.5 rounded-lg transition-colors ${
+className={`px-3 py-1.5 rounded-lg transition-all duration-300 transform hover:scale-110 active:scale-95 ${
 granularity === g
-? "bg-sky-600 text-white"
-: "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+? "bg-sky-600 text-white shadow-lg scale-105"
+: "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-md"
 }`}
 >
 {t(`reports.master.granularities.${g}`)}
@@ -685,7 +689,7 @@ granularity === g
 </div>
 </div>
 
-<div className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+<div className="ml-auto text-sm text-gray-500 dark:text-gray-400 transition-all duration-500 transform hover:scale-105">
 {t("reports.master.periodColumns", {
 count: periodColumns.length,
 granularity,
@@ -693,50 +697,54 @@ granularity,
 </div>
 </div>
 
-<div className="mb-6">
-<h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">
+<div className="mb-6 transition-all duration-500">
+<h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100 transition-all duration-500 transform hover:translate-x-2">
 {t("reports.master.narrativesTitle")}
 </h3>
 {!master && (
-<div className="text-sm text-gray-500 dark:text-gray-400">
+<div className="text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">
 {t("reports.master.noData")}
 </div>
 )}
 {master && master.goals && master.goals.length === 0 && (
-<div className="text-sm text-gray-500 dark:text-gray-400">
+<div className="text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">
 {t("reports.master.noGoals")}
 </div>
 )}
 {master && master.goals && master.goals.length > 0 && (
-<div className="space-y-4">
+<div className="space-y-4 transition-all duration-500">
 {master.goals.map((g, goalIndex) => {
 const goalNum = `${goalIndex + 1}`;
 return (
 <div
 key={g.id}
-className="p-4 border rounded bg-gray-50 dark:bg-gray-900"
+className="p-4 border rounded bg-gray-50 dark:bg-gray-900 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-1 hover:shadow-lg"
+style={{
+animationDelay: `${goalIndex * 100}ms`,
+transitionDelay: `${goalIndex * 50}ms`
+}}
 >
-<div className="flex items-center justify-between">
-<div>
-<div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">{`${goalNum}. ${g.title}`}</div>
-<div className="text-sm text-gray-500 dark:text-gray-300 mt-1">
+<div className="flex items-center justify-between transition-all duration-300">
+<div className="transition-all duration-500">
+<div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 transition-all duration-300 hover:scale-105">{`${goalNum}. ${g.title}`}</div>
+<div className="text-sm text-gray-500 dark:text-gray-300 mt-1 transition-all duration-500">
 {g.status} • {g.progress ?? 0}%
 </div>
 </div>
 </div>
 
-<div className="mt-4 pl-3 space-y-3">
+<div className="mt-4 pl-3 space-y-3 transition-all duration-500">
 {(g.tasks || []).map((task, taskIndex) => {
 const taskNum = `${goalNum}.${taskIndex + 1}`;
 return (
-<div key={task.id}>
-<div className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+<div key={task.id} className="transition-all duration-500 transform hover:translate-x-2">
+<div className="text-lg font-semibold text-gray-800 dark:text-gray-100 transition-all duration-300 hover:scale-105">
 {`${taskNum}. ${task.title}`}{" "}
-<span className="text-sm text-gray-400">
+<span className="text-sm text-gray-400 transition-all duration-500">
 ({task.progress ?? 0}%)
 </span>
 </div>
-<div className="pl-3 mt-3 space-y-3">
+<div className="pl-3 mt-3 space-y-3 transition-all duration-500">
 {(task.activities || []).map((a, activityIndex) => {
 const activityNum = `${taskNum}.${
 activityIndex + 1
@@ -744,31 +752,35 @@ activityIndex + 1
 return (
 <div
 key={a.id}
-className="p-3 bg-white dark:bg-gray-800 rounded border"
+className="p-3 bg-white dark:bg-gray-800 rounded border transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-1 hover:shadow-md"
+style={{
+animationDelay: `${activityIndex * 80}ms`,
+transitionDelay: `${activityIndex * 40}ms`
+}}
 >
-<div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-<div>
-<div className="text-base md:text-lg font-medium text-gray-800 dark:text-gray-100">{`${activityNum}. ${a.title}`}</div>
-<div className="text-sm text-gray-500 dark:text-gray-300 mt-1">
+<div className="flex flex-col md:flex-row md:items-center justify-between gap-2 transition-all duration-300">
+<div className="transition-all duration-500">
+<div className="text-base md:text-lg font-medium text-gray-800 dark:text-gray-100 transition-all duration-300 hover:scale-105">{`${activityNum}. ${a.title}`}</div>
+<div className="text-sm text-gray-500 dark:text-gray-300 mt-1 transition-all duration-500">
 {t("reports.master.targetText")}:{" "}
-<span className="font-medium text-gray-800 dark:text-gray-100">
+<span className="font-medium text-gray-800 dark:text-gray-100 transition-all duration-300">
 {a.targetMetric ? "" : "-"}
 </span>
 </div>
-<div className="mt-2">
+<div className="mt-2 transition-all duration-500">
 {a.targetMetric
 ? renderMetricsList(a.targetMetric)
 : null}
 </div>
 
 {/* --- ADDED PREVIOUS METRIC --- */}
-<div className="text-sm text-gray-500 dark:text-gray-300 mt-2">
+<div className="text-sm text-gray-500 dark:text-gray-300 mt-2 transition-all duration-500">
 {t("reports.master.previousText", "Previous")}:{" "}
-<span className="font-medium text-gray-800 dark:text-gray-100">
+<span className="font-medium text-gray-800 dark:text-gray-100 transition-all duration-300">
 {a.previousMetric ? "" : "-"}
 </span>
 </div>
-<div className="mt-2">
+<div className="mt-2 transition-all duration-500">
 {a.previousMetric
 ? renderMetricsList(a.previousMetric)
 : null}
@@ -776,7 +788,7 @@ className="p-3 bg-white dark:bg-gray-800 rounded border"
 {/* --- END PREVIOUS METRIC --- */}
 
 </div>
-<div className="text-sm text-gray-400">
+<div className="text-sm text-gray-400 transition-all duration-500 transform hover:scale-110">
 {a.status} •{" "}
 {a.isDone
 ? t("reports.master.done")
@@ -784,25 +796,29 @@ className="p-3 bg-white dark:bg-gray-800 rounded border"
 </div>
 </div>
 
-<div className="mt-3 space-y-2">
+<div className="mt-3 space-y-2 transition-all duration-500">
 {(a.reports || []).length === 0 ? (
-<div className="text-xs text-gray-400">
+<div className="text-xs text-gray-400 transition-all duration-500">
 {t("reports.master.noReports")}
 </div>
 ) : (
-(a.reports || []).map((r) => (
+(a.reports || []).map((r, reportIndex) => (
 <div
 key={r.id}
-className="text-sm border rounded p-2 bg-gray-50 dark:bg-gray-900"
+className="text-sm border rounded p-2 bg-gray-50 dark:bg-gray-900 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-0.5"
+style={{
+animationDelay: `${reportIndex * 60}ms`,
+transitionDelay: `${reportIndex * 30}ms`
+}}
 >
-<div className="flex flex-col sm:flex-row sm:justify-between gap-1">
-<div className="text-sm font-medium">
+<div className="flex flex-col sm:flex-row sm:justify-between gap-1 transition-all duration-300">
+<div className="text-sm font-medium transition-all duration-500 transform hover:scale-105">
 #{r.id} •{" "}
-<span className="text-gray-600 dark:text-gray-300">
+<span className="text-gray-600 dark:text-gray-300 transition-all duration-500">
 {r.status}
 </span>
 </div>
-<div className="text-xs text-gray-400">
+<div className="text-xs text-gray-400 transition-all duration-500 transform hover:scale-110">
 {r.createdAt
 ? new Date(
 r.createdAt
@@ -810,22 +826,22 @@ r.createdAt
 : ""}
 </div>
 </div>
-<div className="mt-1 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
+<div className="mt-1 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap transition-all duration-500">
 {r.narrative || (
-<em className="text-gray-400">
+<em className="text-gray-400 transition-all duration-500">
 {t("reports.noNarrative")}
 </em>
 )}
 </div>
 {r.metrics && (
-<div className="mt-2">
-<div className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+<div className="mt-2 transition-all duration-500">
+<div className="text-xs font-semibold text-gray-500 dark:text-gray-400 transition-all duration-300">
 {t(
 "reports.metrics.title",
 "Metrics"
 )}
 </div>
-<div className="mt-1">
+<div className="mt-1 transition-all duration-500">
 {renderMetricsList(r.metrics)}
 </div>
 </div>
@@ -850,35 +866,35 @@ r.createdAt
 </div>
 
 {/* --- THIS SECTION HANDLES THE ON-SCREEN HORIZONTAL SCROLLING --- */}
-<div>
-<h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100">
+<div className="transition-all duration-500">
+<h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100 transition-all duration-500 transform hover:translate-x-2">
 {t("reports.table.titleFull")}
 </h3>
 
-<div className="overflow-auto border rounded">
-<table className="min-w-full">
-<thead>
-<tr>
-<th className="border px-3 py-3 text-left text-base text-gray-900 dark:text-gray-100">
+<div className="overflow-auto border rounded transition-all duration-500 transform hover:shadow-lg">
+<table className="min-w-full transition-all duration-500">
+<thead className="transition-all duration-500">
+<tr className="transition-all duration-500">
+<th className="border px-3 py-3 text-left text-base text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
 {t("reports.table.title")}
 </th>
-<th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">
+<th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
 {t("reports.table.weight")}
 </th>
-<th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">
+<th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
 {t("reports.table.metric")}
 </th>
-<th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">
+<th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
 {t("reports.table.target")}
 </th>
 {/* --- ADDED PREVIOUS METRIC HEADER --- */}
-<th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100">
+<th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
 {t("reports.table.previous", "Previous")}
 </th>
 {periodColumns.map((p) => (
 <th
 key={p}
-className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100"
+className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700"
 >
 {granularity === "monthly"
 ? fmtMonthKey(p)
@@ -890,23 +906,27 @@ className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100"
 </tr>
 </thead>
 
-<tbody>
-{tableRows.map((row) => {
+<tbody className="transition-all duration-500">
+{tableRows.map((row, index) => {
 if (row.type === "goal") {
 return (
 <tr
 key={row.id}
-className="bg-indigo-50 dark:bg-indigo-900/10"
+className="bg-indigo-50 dark:bg-indigo-900/10 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-0.5 hover:shadow-md"
+style={{
+animationDelay: `${index * 50}ms`,
+transitionDelay: `${index * 30}ms`
+}}
 >
-<td className="border px-3 py-3 font-semibold text-gray-900 dark:text-gray-100">{`${row.number}. ${row.title}`}</td>
-<td className="border px-3 py-3 text-gray-700 dark:text-gray-200">
+<td className="border px-3 py-3 font-semibold text-gray-900 dark:text-gray-100 transition-all duration-300">{`${row.number}. ${row.title}`}</td>
+<td className="border px-3 py-3 text-gray-700 dark:text-gray-200 transition-all duration-300">
 {row.weight}
 </td>
-<td className="border px-3 py-3">—</td>
-<td className="border px-3 py-3">—</td>
-<td className="border px-3 py-3">—</td>
+<td className="border px-3 py-3 transition-all duration-300">—</td>
+<td className="border px-3 py-3 transition-all duration-300">—</td>
+<td className="border px-3 py-3 transition-all duration-300">—</td>
 {periodColumns.map((p) => (
-<td key={p} className="border px-3 py-3">
+<td key={p} className="border px-3 py-3 transition-all duration-300">
 —
 </td>
 ))}
@@ -914,16 +934,20 @@ className="bg-indigo-50 dark:bg-indigo-900/10"
 );
 } else if (row.type === "task") {
 return (
-<tr key={row.id} className="bg-gray-50 dark:bg-gray-900/20">
-<td className="border px-3 py-3 pl-6 text-gray-900 dark:text-gray-100">{`${row.number}. ${row.title}`}</td>
-<td className="border px-3 py-3 text-gray-700 dark:text-gray-200">
+<tr key={row.id} className="bg-gray-50 dark:bg-gray-900/20 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-0.5 hover:shadow-md"
+style={{
+animationDelay: `${index * 50}ms`,
+transitionDelay: `${index * 30}ms`
+}}>
+<td className="border px-3 py-3 pl-6 text-gray-900 dark:text-gray-100 transition-all duration-300">{`${row.number}. ${row.title}`}</td>
+<td className="border px-3 py-3 text-gray-700 dark:text-gray-200 transition-all duration-300">
 {row.weight}
 </td>
-<td className="border px-3 py-3">—</td>
-<td className="border px-3 py-3">—</td>
-<td className="border px-3 py-3">—</td>
+<td className="border px-3 py-3 transition-all duration-300">—</td>
+<td className="border px-3 py-3 transition-all duration-300">—</td>
+<td className="border px-3 py-3 transition-all duration-300">—</td>
 {periodColumns.map((p) => (
-<td key={p} className="border px-3 py-3">
+<td key={p} className="border px-3 py-3 transition-all duration-300">
 —
 </td>
 ))}
@@ -937,14 +961,15 @@ activity={row.activity}
 periods={periodColumns}
 granularity={granularity}
 number={row.number}
+index={index}
 />
 );
 }
 })}
 {tableRows.length === 0 && (
-<tr>
+<tr className="transition-all duration-500">
 <td
-className="p-6 text-center text-gray-500 dark:text-gray-400"
+className="p-6 text-center text-gray-500 dark:text-gray-400 transition-all duration-500"
 colSpan={5 + periodColumns.length}
 >
 {t("reports.table.noData")}
@@ -955,6 +980,42 @@ colSpan={5 + periodColumns.length}
 </table>
 </div>
 </div>
+
+{/* Custom animation styles */}
+<style jsx>{`
+@keyframes gentleSlideIn {
+from {
+opacity: 0;
+transform: translateY(20px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+
+@keyframes pulseGlow {
+0%, 100% { 
+box-shadow: 0 0 5px rgba(14, 165, 233, 0.3);
+}
+50% { 
+box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
+}
+}
+
+.animate-gentle-slide {
+animation: gentleSlideIn 0.6s ease-out both;
+}
+
+.animate-pulse-glow {
+animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Enhanced table row animations */
+.table-row-animation {
+animation: gentleSlideIn 0.5s ease-out both;
+}
+`}</style>
 </div>
 );
 }
@@ -1216,7 +1277,7 @@ return null;
 }
 
 /* ActivityRow updated: compact columns & percent/value toggle */
-function ActivityRow({ activity, periods, granularity, number, showPercent }) {
+function ActivityRow({ activity, periods, granularity, number, showPercent, index }) {
 const { t } = useTranslation();
 
 const metricKey = pickMetricForActivity(activity, null);
@@ -1254,26 +1315,30 @@ return String(val);
 }
 
 return (
-<tr className="bg-white dark:bg-gray-800">
-<td className="border px-3 py-3 text-base font-medium text-gray-900 dark:text-gray-100 pl-4 min-w-[240px] max-w-[420px]">
-<div className="truncate">{`${number} ${activity.title}`}</div>
+<tr className="bg-white dark:bg-gray-800 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-0.5 hover:shadow-md"
+style={{
+animationDelay: `${index * 60}ms`,
+transitionDelay: `${index * 40}ms`
+}}>
+<td className="border px-3 py-3 text-base font-medium text-gray-900 dark:text-gray-100 pl-4 min-w-[240px] max-w-[420px] transition-all duration-300">
+<div className="truncate transition-all duration-300 hover:scale-105">{`${number} ${activity.title}`}</div>
 </td>
 
-<td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-20 text-center">
-<div className="truncate">{activity.weight ?? "-"}</div>
+<td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-20 text-center transition-all duration-300">
+<div className="truncate transition-all duration-500">{activity.weight ?? "-"}</div>
 </td>
 
-<td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-28 text-center">
-<div className="truncate">{metricKey ?? "-"}</div>
+<td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-28 text-center transition-all duration-300">
+<div className="truncate transition-all duration-500">{metricKey ?? "-"}</div>
 </td>
 
-<td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono">
-<div className="truncate">{targetValue ?? "-"}</div>
+<td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono transition-all duration-300">
+<div className="truncate transition-all duration-500 transform hover:scale-110">{targetValue ?? "-"}</div>
 </td>
 
 {/* --- ADDED PREVIOUS METRIC CELL --- */}
-<td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono">
-<div className="truncate">{previousValue ?? "-"}</div>
+<td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono transition-all duration-300">
+<div className="truncate transition-all duration-500 transform hover:scale-110">{previousValue ?? "-"}</div>
 </td>
 
 {periods.map((p) => {
@@ -1287,9 +1352,9 @@ if (rawVal === null || rawVal === undefined) {
 return (
 <td
 key={p}
-className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-center w-[88px]"
+className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-center w-[88px] transition-all duration-300"
 >
-<div className="truncate">-</div>
+<div className="truncate transition-all duration-500">-</div>
 </td>
 );
 }
@@ -1306,10 +1371,10 @@ pct = (parsedVal / parsedTarget) * 100;
 return (
 <td
 key={p}
-className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-right w-[88px]"
+className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-right w-[88px] transition-all duration-300"
 >
-<div className="min-w-0">
-<div className="text-sm font-mono truncate">
+<div className="min-w-0 transition-all duration-500">
+<div className="text-sm font-mono truncate transition-all duration-500 transform hover:scale-110">
 {showPercent && pct !== null && !isNaN(pct)
 ? `${pct.toFixed(0)}%`
 : display}
@@ -1326,7 +1391,7 @@ className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-right 
 * Small helper: render metrics nicely (object or JSON)
 * ------------------------- */
 function renderMetricsList(metrics) {
-if (!metrics) return <div className="text-xs text-gray-400">—</div>;
+if (!metrics) return <div className="text-xs text-gray-400 transition-all duration-500">—</div>;
 
 let obj = null;
 try {
@@ -1338,21 +1403,21 @@ obj = metrics;
 } catch (err) {
 const s = String(metrics);
 return (
-<div className="text-xs font-mono break-words p-2 bg-white dark:bg-gray-900 rounded border text-gray-800 dark:text-gray-100">
+<div className="text-xs font-mono break-words p-2 bg-white dark:bg-gray-900 rounded border text-gray-800 dark:text-gray-100 transition-all duration-500 transform hover:scale-105">
 {s}
 </div>
 );
 }
 
 if (!obj || typeof obj !== "object") {
-return <div className="text-xs text-gray-400">—</div>;
+return <div className="text-xs text-gray-400 transition-all duration-500">—</div>;
 }
 const keys = Object.keys(obj);
-if (keys.length === 0) return <div className="text-xs text-gray-400">—</div>;
+if (keys.length === 0) return <div className="text-xs text-gray-400 transition-all duration-500">—</div>;
 
 return (
-<div className="space-y-1">
-{keys.map((k) => {
+<div className="space-y-1 transition-all duration-500">
+{keys.map((k, index) => {
 const value = obj[k];
 const displayValue =
 value !== null && typeof value === "object"
@@ -1361,12 +1426,16 @@ value !== null && typeof value === "object"
 return (
 <div
 key={k}
-className="flex items-start justify-between bg-white dark:bg-gray-900 rounded px-2 py-1 border dark:border-gray-700 gap-4"
+className="flex items-start justify-between bg-white dark:bg-gray-900 rounded px-2 py-1 border dark:border-gray-700 gap-4 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-0.5"
+style={{
+animationDelay: `${index * 50}ms`,
+transitionDelay: `${index * 25}ms`
+}}
 >
-<div className="text-xs text-gray-600 dark:text-gray-300 pt-px">
+<div className="text-xs text-gray-600 dark:text-gray-300 pt-px transition-all duration-300">
 {k}
 </div>
-<div className="text-xs font-mono text-gray-900 dark:text-gray-100 break-all text-right whitespace-pre-wrap">
+<div className="text-xs font-mono text-gray-900 dark:text-gray-100 break-all text-right whitespace-pre-wrap transition-all duration-500">
 {displayValue}
 </div>
 </div>

@@ -209,7 +209,7 @@ const UsersManagementPage = () => {
     }
     setProfilePicturePreview(null);
     setProfilePictureFile(null);
-    
+
     // If we were editing, restore the original picture to the preview
     if (userToEdit) {
       setProfilePicturePreview(userToEdit.profilePicture || null);
@@ -258,7 +258,7 @@ const UsersManagementPage = () => {
       // We no longer send http URLs in the payload. The file upload
       // after creation/update handles the image.
       if (!profilePictureFile && !profilePicturePreview) {
-          payload.profilePicture = null; // Explicitly set to null
+        payload.profilePicture = null; // Explicitly set to null
       }
       // --- END UPDATE ---
 
@@ -380,10 +380,98 @@ const UsersManagementPage = () => {
 
   return (
     <>
+      {/* ===== Animation / Transition Styles (local to component) ===== */}
+      <style>{`
+        /* entrance: fade + up */
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { from { opacity: 0; transform: scale(.98); } to { opacity:1; transform: scale(1); } }
+        @keyframes slideUpToast { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* table row entrance & hover lift */
+        .user-row {
+          opacity: 0;
+          transform: translateY(6px);
+          animation: fadeUp .28s cubic-bezier(.2,.9,.2,1) forwards;
+          animation-delay: var(--delay, 0ms);
+          transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .user-row:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+        }
+
+        /* mobile card entrance */
+        .user-card {
+          opacity: 0;
+          transform: translateY(6px);
+          animation: fadeUp .28s cubic-bezier(.2,.9,.2,1) forwards;
+          animation-delay: var(--delay, 0ms);
+          transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .user-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 10px 30px rgba(2,6,23,0.06);
+        }
+
+        /* modal overlay and dialog */
+        .modal-overlay {
+          opacity: 0;
+          animation: fadeIn .18s ease forwards;
+        }
+        .modal-dialog {
+          opacity: 0;
+          transform: scale(.98);
+          animation: popIn .18s cubic-bezier(.2,.9,.2,1) forwards;
+        }
+
+        /* toast slide-in */
+        .toast-anim {
+          opacity: 0;
+          transform: translateY(8px);
+          animation: slideUpToast .22s cubic-bezier(.2,.9,.2,1) forwards;
+        }
+
+        /* small avatar interaction */
+        .avatar-hover {
+          transition: transform .18s ease;
+          will-change: transform;
+        }
+        .avatar-hover:hover {
+          transform: rotate(-6deg) scale(1.03);
+        }
+
+        /* button press micro-feedback */
+        .btn-press {
+          transition: transform .12s ease, box-shadow .12s ease;
+          will-change: transform;
+        }
+        .btn-press:active {
+          transform: translateY(1px) scale(.995);
+        }
+
+        /* file label hover */
+        .file-label-anim {
+          transition: transform .12s ease, box-shadow .12s ease;
+        }
+        .file-label-anim:hover {
+          transform: translateY(-2px);
+        }
+      `}</style>
+
       {/* Toast (fixed bottom-right) */}
       {toast && (
         <div className="fixed z-50 right-5 bottom-5">
-          <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />
+          <div className="toast-anim">
+            <Toast
+              message={toast.text}
+              type={toast.type}
+              onClose={handleToastClose}
+            />
+          </div>
         </div>
       )}
 
@@ -406,7 +494,7 @@ const UsersManagementPage = () => {
           <button
             type="button"
             onClick={() => handleOpenUserModal(null)}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors text-sm md:text-base"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors text-sm md:text-base btn-press"
             disabled={submitting}
             aria-label={t("admin.users.addUser")}
           >
@@ -423,7 +511,7 @@ const UsersManagementPage = () => {
         className="space-y-6 p-0 sm:p-0"
       >
         {/* Desktop Table */}
-        <div className="hidden md:block overflow-x-auto rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="hidden md:block  rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           {users.length > 0 ? (
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800">
@@ -441,7 +529,7 @@ const UsersManagementPage = () => {
               </thead>
 
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {users.map((u) => {
+                {users.map((u, idx) => {
                   const roleLabel =
                     (u.role && (u.role.name || u.role)) ||
                     u.roleId ||
@@ -449,7 +537,8 @@ const UsersManagementPage = () => {
                   return (
                     <tr
                       key={u.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 user-row"
+                      style={{ ["--delay"]: `${idx * 40}ms` }}
                     >
                       <td className="px-4 py-3 whitespace-nowrap align-top">
                         <div className="flex items-center gap-3 min-w-0">
@@ -460,7 +549,7 @@ const UsersManagementPage = () => {
                             fallbackName={u.name}
                             fallbackUsername={u.username}
                             fallbackSeed={u.name || u.username}
-                            className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0"
+                            className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0 avatar-hover"
                             fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
                           />
                           {/* --- END UPDATE --- */}
@@ -489,7 +578,7 @@ const UsersManagementPage = () => {
                           <button
                             type="button"
                             onClick={() => handleOpenUserModal(u)}
-                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
+                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300 btn-press"
                             title={t("admin.actions.edit")}
                             disabled={submitting}
                             aria-label={t("admin.actions.edit")}
@@ -500,7 +589,7 @@ const UsersManagementPage = () => {
                           <button
                             type="button"
                             onClick={() => handleDeleteClick(u)}
-                            className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400"
+                            className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400 btn-press"
                             title={t("admin.actions.delete")}
                             disabled={submitting}
                             aria-label={t("admin.actions.delete")}
@@ -541,7 +630,7 @@ const UsersManagementPage = () => {
         {/* Mobile Card View */}
         <div className="md:hidden space-y-4">
           {users.length > 0 ? (
-            users.map((u) => {
+            users.map((u, idx) => {
               const roleLabel =
                 (u.role && (u.role.name || u.role)) ||
                 u.roleId ||
@@ -549,7 +638,8 @@ const UsersManagementPage = () => {
               return (
                 <article
                   key={u.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 user-card"
+                  style={{ ["--delay"]: `${idx * 40}ms` }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
@@ -560,7 +650,7 @@ const UsersManagementPage = () => {
                         fallbackName={u.name}
                         fallbackUsername={u.username}
                         fallbackSeed={u.name || u.username}
-                        className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0"
+                        className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0 avatar-hover"
                         fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
                       />
                       {/* --- END UPDATE --- */}
@@ -583,7 +673,7 @@ const UsersManagementPage = () => {
                       <button
                         type="button"
                         onClick={() => handleOpenUserModal(u)}
-                        className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400"
+                        className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400 btn-press"
                         disabled={submitting}
                         aria-label={t("admin.actions.edit")}
                         title={t("admin.actions.edit")}
@@ -594,7 +684,7 @@ const UsersManagementPage = () => {
                       <button
                         type="button"
                         onClick={() => handleDeleteClick(u)}
-                        className="p-2 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400"
+                        className="p-2 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400 btn-press"
                         disabled={submitting}
                         aria-label={t("admin.actions.delete")}
                         title={t("admin.actions.delete")}
@@ -636,12 +726,12 @@ const UsersManagementPage = () => {
         {/* User Form Modal */}
         {showUserModal && (
           <div
-            className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50 modal-overlay"
             role="dialog"
             aria-modal="true"
             aria-labelledby="user-modal-title"
           >
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-dialog">
               <div className="flex items-start justify-between mb-6 gap-4">
                 <h3
                   id="user-modal-title"
@@ -654,7 +744,7 @@ const UsersManagementPage = () => {
                 <button
                   type="button"
                   onClick={handleCloseUserModal}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors btn-press"
                   disabled={submitting}
                   aria-label={t("admin.actions.close")}
                 >
@@ -667,11 +757,12 @@ const UsersManagementPage = () => {
                   <div className="flex-shrink-0">
                     {/* --- UPDATED --- */}
                     {/* Show local objectURL preview if it exists */}
-                    {profilePicturePreview && profilePicturePreview.startsWith("blob:") ? (
+                    {profilePicturePreview &&
+                    profilePicturePreview.startsWith("blob:") ? (
                       <img
                         src={profilePicturePreview}
                         alt="preview"
-                        className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700"
+                        className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700 avatar-hover"
                       />
                     ) : (
                       // Otherwise, use AuthenticatedImage to show the persistent URL or fallback
@@ -681,7 +772,7 @@ const UsersManagementPage = () => {
                         fallbackName={formData.name}
                         fallbackUsername={formData.username}
                         fallbackSeed={formData.name || formData.username}
-                        className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700"
+                        className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700 avatar-hover"
                         fallbackClassName="w-24 h-24 rounded-full flex items-center justify-center text-white font-semibold"
                       />
                     )}
@@ -702,7 +793,7 @@ const UsersManagementPage = () => {
                       />
                       <label
                         htmlFor="user-picture"
-                        className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm"
+                        className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm file-label-anim"
                       >
                         {t("admin.users.form.upload")}
                       </label>
@@ -710,7 +801,7 @@ const UsersManagementPage = () => {
                         <button
                           type="button"
                           onClick={removeProfilePreview}
-                          className="text-sm text-red-600 dark:text-red-400"
+                          className="text-sm text-red-600 dark:text-red-400 btn-press"
                         >
                           {t("admin.users.form.remove")}
                         </button>
@@ -880,13 +971,13 @@ const UsersManagementPage = () => {
         {/* Delete Confirmation Modal */}
         {showDeleteConfirmModal && userToDelete && (
           <div
-            className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50 modal-overlay"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="delete-title"
             aria-describedby="delete-desc"
           >
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md modal-dialog">
               <div className="text-center">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
                   <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />

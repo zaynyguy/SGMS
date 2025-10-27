@@ -8,6 +8,7 @@ import { Loader } from "lucide-react";
  *  - empty date strings -> null
  *  - empty rollNo -> deleted
  *  - numeric-like strings -> numbers
+ * ENHANCED: Added smooth fade in/out animations
  */
 export default function GenericModal({
   modal,
@@ -28,7 +29,42 @@ export default function GenericModal({
   const [local, setLocal] = useState({});
   const [jsonError, setJsonError] = useState(null);
   const [inlineError, setInlineError] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  
   const firstFieldRef = useRef(null);
+  const modalRef = useRef(null);
+  const backdropRef = useRef(null);
+
+  // Animation management
+  useEffect(() => {
+    if (modal?.isOpen) {
+      setIsVisible(true);
+      setIsAnimating(true);
+      // Small delay to ensure DOM is updated before animation starts
+      requestAnimationFrame(() => {
+        if (backdropRef.current && modalRef.current) {
+          backdropRef.current.style.opacity = '1';
+          modalRef.current.style.transform = 'scale(1) translateY(0)';
+          modalRef.current.style.opacity = '1';
+        }
+      });
+    } else if (isVisible) {
+      // Start exit animation
+      setIsAnimating(true);
+      if (backdropRef.current && modalRef.current) {
+        backdropRef.current.style.opacity = '0';
+        modalRef.current.style.transform = 'scale(0.95) translateY(10px)';
+        modalRef.current.style.opacity = '0';
+      }
+      // Delay unmounting for animation to complete
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+        setIsAnimating(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [modal?.isOpen, isVisible]);
 
   const generateId = () => {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -182,9 +218,17 @@ export default function GenericModal({
       setLocal({});
     }
 
+    // Enhanced focus with animation
     setTimeout(() => {
-      if (firstFieldRef.current) firstFieldRef.current.focus?.();
-    }, 50);
+      if (firstFieldRef.current) {
+        firstFieldRef.current.focus?.();
+        // Add subtle focus animation
+        firstFieldRef.current.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+          if (firstFieldRef.current) firstFieldRef.current.style.transform = 'scale(1)';
+        }, 200);
+      }
+    }, 100);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modal?.isOpen, modal?.type, modal?.data, tasks, activities, resolveIds, goals]);
 
@@ -216,6 +260,7 @@ export default function GenericModal({
     if (inlineError) setInlineError(null);
   };
 
+  // Enhanced metric functions with animations
   const updateMetricRow = (idx, field, value) =>
     setLocal((p) => {
       const next = { ...(p || {}) };
@@ -497,7 +542,7 @@ export default function GenericModal({
     }
   };
 
-  if (!modal?.isOpen) return null;
+  if (!isVisible && !isAnimating) return null;
 
   const systemHint =
     modal.type === "createGoal" || modal.type === "editGoal"
@@ -509,93 +554,237 @@ export default function GenericModal({
       : null;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="generic-modal-title"
-    >
-      <div className="w-full max-w-lg bg-white dark:bg-gray-800 rounded shadow-lg overflow-auto max-h-[90vh]">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
-          <h3 id="generic-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
-            {modal.type === "createGoal" && t("project.modal.createGoal")}
-            {modal.type === "editGoal" && t("project.modal.editGoal")}
-            {modal.type === "createTask" && t("project.modal.createTask")}
-            {modal.type === "editTask" && t("project.modal.editTask")}
-            {modal.type === "createActivity" && t("project.modal.createActivity")}
-            {modal.type === "editActivity" && t("project.modal.editActivity")}
-          </h3>
-          <button
-            type="button"
-            onClick={() => setModal({ isOpen: false, type: null, data: null })}
-            className="text-gray-400 hover:text-gray-600"
-            aria-label={t("project.actions.close")}
-          >
-            ×
-          </button>
-        </div>
+    <>
+      <style>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .modal-shake {
+          animation: shake 0.4s ease-in-out;
+        }
+        .metric-row-enter {
+          animation: slideIn 0.2s ease-out;
+        }
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      
+      <div
+        ref={backdropRef}
+        className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="generic-modal-title"
+        style={{
+          opacity: 0,
+          pointerEvents: isAnimating ? 'auto' : 'none'
+        }}
+      >
+        <div
+          ref={modalRef}
+          className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-auto max-h-[90vh] transform transition-all duration-300 ease-out"
+          style={{
+            transform: 'scale(0.95) translateY(10px)',
+            opacity: 0
+          }}
+        >
+          {/* Enhanced header with smooth transitions */}
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
+            <h3 id="generic-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200">
+              {modal.type === "createGoal" && t("project.modal.createGoal")}
+              {modal.type === "editGoal" && t("project.modal.editGoal")}
+              {modal.type === "createTask" && t("project.modal.createTask")}
+              {modal.type === "editTask" && t("project.modal.editTask")}
+              {modal.type === "createActivity" && t("project.modal.createActivity")}
+              {modal.type === "editActivity" && t("project.modal.editActivity")}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setModal({ isOpen: false, type: null, data: null })}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200 transform hover:scale-110 hover:rotate-90 p-1 rounded-full"
+              aria-label={t("project.actions.close")}
+              style={{ transition: 'all 0.2s ease' }}
+            >
+              ×
+            </button>
+          </div>
 
-        <form onSubmit={submitLocal} className="px-4 py-4 space-y-3">
-          {(modal.type === "createActivity" || modal.type === "editActivity") && (
-            <>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.title")} *</label>
-              <input
-                ref={firstFieldRef}
-                name="title"
-                value={local.title || ""}
-                onChange={onLocalChange}
-                required
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
+          <form onSubmit={submitLocal} className="px-4 py-4 space-y-4">
+            {(modal.type === "createActivity" || modal.type === "editActivity") && (
+              <>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.title")} *</label>
+                <input
+                  ref={firstFieldRef}
+                  name="title"
+                  value={local.title || ""}
+                  onChange={onLocalChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                />
 
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.description")}</label>
-              <textarea
-                name="description"
-                value={local.description || ""}
-                onChange={onLocalChange}
-                rows="3"
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.description")}</label>
+                <textarea
+                  name="description"
+                  value={local.description || ""}
+                  onChange={onLocalChange}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-gray-400 dark:hover:border-gray-500"
+                />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.dueDate")}</label>
-                  <input
-                    name="dueDate"
-                    value={local.dueDate || ""}
-                    onChange={onLocalChange}
-                    type="date"
-                    className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.dueDate")}</label>
+                    <input
+                      name="dueDate"
+                      value={local.dueDate || ""}
+                      onChange={onLocalChange}
+                      type="date"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.weight")}</label>
+                    <input
+                      name="weight"
+                      value={local.weight ?? 1}
+                      onChange={onLocalChange}
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.weight")}</label>
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.status")}</label>
+                <select
+                  name="status"
+                  value={local.status || "To Do"}
+                  onChange={onLocalChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                >
+                  <option value="To Do">{t("project.status.toDo") || "To Do"}</option>
+                  <option value="In Progress">{t("project.status.inProgress") || "In Progress"}</option>
+                  <option value="Done">{t("project.status.completed") || "Done"}</option>
+                </select>
+
+                <div className="mt-3">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.labels.rollLabel")}</label>
                   <input
-                    name="weight"
-                    value={local.weight ?? 1}
+                    name="rollNo"
+                    value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
                     onChange={onLocalChange}
                     type="number"
-                    min="0.01"
-                    step="any"
-                    className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    min="1"
+                    step="1"
+                    placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
                   />
+                  <div className="text-xs text-gray-500 mt-1 transition-colors duration-200">{t("project.hints.hint")}</div>
                 </div>
-              </div>
 
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.status")}</label>
-              <select
-                name="status"
-                value={local.status || "To Do"}
-                onChange={onLocalChange}
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="To Do">{t("project.status.toDo") || "To Do"}</option>
-                <option value="In Progress">{t("project.status.inProgress") || "In Progress"}</option>
-                <option value="Done">{t("project.status.completed") || "Done"}</option>
-              </select>
+                {modal.data?.taskId && (
+                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-all duration-200">
+                    {(() => {
+                      const resolved = resolveIds(modal.data || {});
+                      const { taskWeight, used, available } = computeTaskWeightAvailable(resolved.taskId, modal.type === "editActivity" ? resolved.id : null);
+                      return t("project.hints.taskWeight", { taskWeight, used, available });
+                    })()}
+                  </div>
+                )}
 
-              <div className="mt-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.labels.rollLabel")}</label>
+                {/* Enhanced Metrics Section */}
+                <div className="transition-all duration-300">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.labels.targetMetrics")}</label>
+                  <div className="mt-2 space-y-2">
+                    {(Array.isArray(local.targetMetrics) ? local.targetMetrics : [{ id: "empty-0", key: "", value: "" }]).map((m, idx) => (
+                      <div 
+                        key={m.id} 
+                        className="flex gap-2 metric-row-enter transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1 rounded"
+                        style={{ animationDelay: `${idx * 50}ms` }}
+                      >
+                        <input
+                          placeholder={t("project.placeholders.metricKey")}
+                          value={m?.key || ""}
+                          onChange={(e) => updateMetricRow(idx, "key", e.target.value)}
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder={t("project.placeholders.metricValue")}
+                          value={m?.value || ""}
+                          onChange={(e) => updateMetricRow(idx, "value", e.target.value)}
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeMetricRow(idx)}
+                          className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-all duration-200 transform hover:scale-105 active:scale-95"
+                          aria-label={t("project.actions.remove")}
+                        >
+                          {t("project.actions.removeShort")}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button 
+                    type="button" 
+                    onClick={addMetricRow} 
+                    className="mt-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center gap-1"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    {t("project.actions.addMetric")}
+                  </button>
+                  {jsonError && <div className="text-xs text-red-500 mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded transition-all duration-200">{jsonError}</div>}
+                </div>
+              </>
+            )}
+
+            {/* Other form sections with enhanced animations... */}
+            {(modal.type === "createTask" || modal.type === "editTask") && (
+              <>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.title")} *</label>
+                <input
+                  ref={firstFieldRef}
+                  name="title"
+                  value={local.title || ""}
+                  onChange={onLocalChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                />
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.description")}</label>
+                <textarea
+                  name="description"
+                  value={local.description || ""}
+                  onChange={onLocalChange}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-gray-400 dark:hover:border-gray-500"
+                />
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.dueDate")}</label>
+                <input
+                  name="dueDate"
+                  value={local.dueDate || ""}
+                  onChange={onLocalChange}
+                  type="date"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                />
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.labels.rollLabel")}</label>
                 <input
                   name="rollNo"
                   value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
@@ -604,262 +793,183 @@ export default function GenericModal({
                   min="1"
                   step="1"
                   placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
-                  className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
                 />
-                <div className="text-xs text-gray-500 mb-1">{t("project.hints.hint")}</div>
-              </div>
+                <div className="text-xs text-gray-500 mt-1 transition-colors duration-200">{t("project.hints.hint")}</div>
 
-              {modal.data?.taskId && (
-                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                  {(() => {
-                    const resolved = resolveIds(modal.data || {});
-                    const { taskWeight, used, available } = computeTaskWeightAvailable(resolved.taskId, modal.type === "editActivity" ? resolved.id : null);
-                    return t("project.hints.taskWeight", { taskWeight, used, available });
-                  })()}
-                </div>
-              )}
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.weight")}</label>
+                <input
+                  name="weight"
+                  value={local.weight ?? 1}
+                  onChange={onLocalChange}
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                />
 
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.labels.targetMetrics")}</label>
-                <div className="mt-2 space-y-2">
-                  {(Array.isArray(local.targetMetrics) ? local.targetMetrics : [{ id: "empty-0", key: "", value: "" }]).map((m, idx) => (
-                    <div key={m.id} className="flex gap-2">
-                      <input
-                        placeholder={t("project.placeholders.metricKey")}
-                        value={m?.key || ""}
-                        onChange={(e) => updateMetricRow(idx, "key", e.target.value)}
-                        className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder={t("project.placeholders.metricValue")}
-                        value={m?.value || ""}
-                        onChange={(e) => updateMetricRow(idx, "value", e.target.value)}
-                        className="flex-1 px-2 py-1 border rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeMetricRow(idx)}
-                        className="px-2 py-1 bg-red-500 text-white rounded text-xs"
-                        aria-label={t("project.actions.remove")}
-                      >
-                        {t("project.actions.removeShort")}
-                      </button>
-                    </div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.status")}</label>
+                <select
+                  name="status"
+                  value={local.status || "To Do"}
+                  onChange={onLocalChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                >
+                  <option value="To Do">{t("project.status.toDo") || "To Do"}</option>
+                  <option value="In Progress">{t("project.status.inProgress") || "In Progress"}</option>
+                  <option value="Done">{t("project.status.completed") || "Done"}</option>
+                  <option value="Blocked">{t("project.status.blocked") || "Blocked"}</option>
+                </select>
+
+                {modal.data?.goalId && (
+                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-all duration-200">
+                    {(() => {
+                      const { goalId, id } = resolveIds(modal.data || {});
+                      const excludeTaskId = modal.type === "editTask" ? id : null;
+                      const { goalWeight, used, available } = computeGoalWeightAvailable(modal.data.goalId, excludeTaskId);
+                      return t("project.hints.goalWeight", { goalWeight, used, available });
+                    })()}
+                  </div>
+                )}
+              </>
+            )}
+
+            {(modal.type === "createGoal" || modal.type === "editGoal") && (
+              <>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.title")} *</label>
+                <input
+                  ref={firstFieldRef}
+                  name="title"
+                  value={local.title || ""}
+                  onChange={onLocalChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                />
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.description")}</label>
+                <textarea
+                  name="description"
+                  value={local.description || ""}
+                  onChange={onLocalChange}
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-gray-400 dark:hover:border-gray-500"
+                />
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.assignGroup")}</label>
+                <select
+                  name="groupId"
+                  value={local.groupId ?? ""}
+                  onChange={onLocalChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                >
+                  <option value="">{t("project.unassigned")}</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={String(g.id)}>
+                      {g.name}
+                    </option>
                   ))}
+                </select>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.startDate")}</label>
+                    <input
+                      name="startDate"
+                      value={local.startDate || ""}
+                      onChange={onLocalChange}
+                      type="date"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.endDate")}</label>
+                    <input
+                      name="endDate"
+                      value={local.endDate || ""}
+                      onChange={onLocalChange}
+                      type="date"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                    />
+                  </div>
                 </div>
-                <button type="button" onClick={addMetricRow} className="mt-2 px-2 py-1 bg-green-600 text-white rounded text-xs">
-                  + {t("project.actions.addMetric")}
-                </button>
-                {jsonError && <div className="text-xs text-red-500 mt-1">{jsonError}</div>}
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.status")}</label>
+                <select
+                  name="status"
+                  value={local.status || "Not Started"}
+                  onChange={onLocalChange}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                >
+                  <option value="Not Started">{t("project.status.notStarted") || "Not Started"}</option>
+                  <option value="In Progress">{t("project.status.inProgress") || "In Progress"}</option>
+                  <option value="On Hold">{t("project.status.onHold") || "On Hold"}</option>
+                  <option value="Completed">{t("project.status.completed") || "Completed"}</option>
+                </select>
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.labels.rollLabel")}</label>
+                <input
+                  name="rollNo"
+                  value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
+                  onChange={onLocalChange}
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                />
+                <div className="text-xs text-gray-500 mt-1 transition-colors duration-200">{t("project.hints.hint")}</div>
+
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.fields.weight")}</label>
+                <input
+                  name="weight"
+                  value={local.weight ?? 1}
+                  onChange={onLocalChange}
+                  type="number"
+                  min="0.01"
+                  step="any"
+                  max="100"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                />
+
+                {systemHint && (
+                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-all duration-200">
+                    {t("project.hints.systemWeight", { used: systemHint.used, available: systemHint.available }) ||
+                      `System used: ${systemHint.used}, available: ${systemHint.available}`}
+                  </div>
+                )}
+              </>
+            )}
+
+            {inlineError && (
+              <div 
+                className="text-sm text-red-600 dark:text-red-400 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 transition-all duration-200"
+                style={{ animation: 'shake 0.4s ease-in-out' }}
+              >
+                {inlineError}
               </div>
-            </>
-          )}
+            )}
 
-          {(modal.type === "createTask" || modal.type === "editTask") && (
-            <>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.title")} *</label>
-              <input
-                ref={firstFieldRef}
-                name="title"
-                value={local.title || ""}
-                onChange={onLocalChange}
-                required
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.description")}</label>
-              <textarea
-                name="description"
-                value={local.description || ""}
-                onChange={onLocalChange}
-                rows="3"
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.dueDate")}</label>
-              <input
-                name="dueDate"
-                value={local.dueDate || ""}
-                onChange={onLocalChange}
-                type="date"
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.labels.rollLabel")}</label>
-              <input
-                name="rollNo"
-                value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
-                onChange={onLocalChange}
-                type="number"
-                min="1"
-                step="1"
-                placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-              <div className="text-xs text-gray-500 mb-1">{t("project.hints.hint")}</div>
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.weight")}</label>
-              <input
-                name="weight"
-                value={local.weight ?? 1}
-                onChange={onLocalChange}
-                type="number"
-                min="0.01"
-                step="any"
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.status")}</label>
-              <select
-                name="status"
-                value={local.status || "To Do"}
-                onChange={onLocalChange}
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            {/* Enhanced footer with smooth transitions */}
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 bg-white dark:bg-gray-800 sticky bottom-0 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
+              <button
+                type="button"
+                onClick={() => setModal({ isOpen: false, type: null, data: null })}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-600 hover:scale-105 active:scale-95"
               >
-                <option value="To Do">{t("project.status.toDo") || "To Do"}</option>
-                <option value="In Progress">{t("project.status.inProgress") || "In Progress"}</option>
-                <option value="Done">{t("project.status.completed") || "Done"}</option>
-                <option value="Blocked">{t("project.status.blocked") || "Blocked"}</option>
-              </select>
-
-              {modal.data?.goalId && (
-                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                  {(() => {
-                    const { goalId, id } = resolveIds(modal.data || {});
-                    const excludeTaskId = modal.type === "editTask" ? id : null;
-                    const { goalWeight, used, available } = computeGoalWeightAvailable(modal.data.goalId, excludeTaskId);
-                    return t("project.hints.goalWeight", { goalWeight, used, available });
-                  })()}
-                </div>
-              )}
-            </>
-          )}
-
-          {(modal.type === "createGoal" || modal.type === "editGoal") && (
-            <>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.title")} *</label>
-              <input
-                ref={firstFieldRef}
-                name="title"
-                value={local.title || ""}
-                onChange={onLocalChange}
-                required
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.description")}</label>
-              <textarea
-                name="description"
-                value={local.description || ""}
-                onChange={onLocalChange}
-                rows="3"
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.assignGroup")}</label>
-              <select
-                name="groupId"
-                value={local.groupId ?? ""}
-                onChange={onLocalChange}
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                {t("project.actions.cancel")}
+              </button>
+              <button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 disabled:scale-100"
               >
-                <option value="">{t("project.unassigned")}</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={String(g.id)}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.startDate")}</label>
-                  <input
-                    name="startDate"
-                    value={local.startDate || ""}
-                    onChange={onLocalChange}
-                    type="date"
-                    className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.endDate")}</label>
-                  <input
-                    name="endDate"
-                    value={local.endDate || ""}
-                    onChange={onLocalChange}
-                    type="date"
-                    className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-              </div>
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.status")}</label>
-              <select
-                name="status"
-                value={local.status || "Not Started"}
-                onChange={onLocalChange}
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="Not Started">{t("project.status.notStarted") || "Not Started"}</option>
-                <option value="In Progress">{t("project.status.inProgress") || "In Progress"}</option>
-                <option value="On Hold">{t("project.status.onHold") || "On Hold"}</option>
-                <option value="Completed">{t("project.status.completed") || "Completed"}</option>
-              </select>
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.labels.rollLabel")}</label>
-              <input
-                name="rollNo"
-                value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
-                onChange={onLocalChange}
-                type="number"
-                min="1"
-                step="1"
-                placeholder={t("project.placeholders.rollNo") || "Leave empty to auto-assign"}
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-              <div className="text-xs text-gray-500 mb-1">{t("project.hints.hint")}</div>
-
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("project.fields.weight")}</label>
-              <input
-                name="weight"
-                value={local.weight ?? 1}
-                onChange={onLocalChange}
-                type="number"
-                min="0.01"
-                step="any"
-                max="100"
-                className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
-
-              {systemHint && (
-                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                  {t("project.hints.systemWeight", { used: systemHint.used, available: systemHint.available }) ||
-                    `System used: ${systemHint.used}, available: ${systemHint.available}`}
-                </div>
-              )}
-            </>
-          )}
-
-          {inlineError && <div className="text-sm text-red-600 dark:text-red-400">{inlineError}</div>}
-
-          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 bg-white dark:bg-gray-800 sticky bottom-0">
-            <button
-              type="button"
-              onClick={() => setModal({ isOpen: false, type: null, data: null })}
-              className="px-3 py-2 rounded border bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-            >
-              {t("project.actions.cancel")}
-            </button>
-            <button type="submit" disabled={isSubmitting} className="px-3 py-2 rounded bg-blue-600 text-white flex items-center disabled:opacity-50">
-              {isSubmitting ? <Loader className="h-4 w-4 animate-spin mr-2" /> : null}
-              {modal.type && modal.type.startsWith("edit") ? t("project.actions.save") : t("project.actions.create")}
-            </button>
-          </div>
-        </form>
+                {isSubmitting ? <Loader className="h-4 w-4 animate-spin mr-2" /> : null}
+                {modal.type && modal.type.startsWith("edit") ? t("project.actions.save") : t("project.actions.create")}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

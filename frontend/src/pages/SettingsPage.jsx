@@ -7,7 +7,7 @@ import Toast from "../components/common/Toast";
 import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
 import { useTheme } from "../context/ThemeContext";
-import AuthenticatedImage from "../components/common/AuthenticatedImage"; // <-- IMPORT THE NEW COMPONENT
+import AuthenticatedImage from "../components/common/AuthenticatedImage";
 
 /* ---------- Helpers (unchanged) ---------- */
 const formatBytes = (n) => {
@@ -21,8 +21,7 @@ const formatBytes = (n) => {
   }
   return `${Math.round(num * 10) / 10} ${sizes[i]}`;
 };
-// These helpers are now also in AuthenticatedImage, but keeping them here
-// is fine as this component also generates a fallback for the *preview*.
+
 const initialsFromName = (name, fallback) => {
   const n = (name || "").trim();
   if (!n) {
@@ -33,6 +32,7 @@ const initialsFromName = (name, fallback) => {
   if (parts.length === 1) return parts[0][0].toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
+
 const gradientFromString = (s) => {
   let hash = 0;
   for (let i = 0; i < (s || "").length; i += 1) hash = (hash << 5) - hash + s.charCodeAt(i);
@@ -67,6 +67,7 @@ const SettingsPage = () => {
   const [uploadingPicture, setUploadingPicture] = useState(false);
 
   const previewObjectUrlRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -125,6 +126,9 @@ const SettingsPage = () => {
     }
     setProfilePictureFile(null);
     setProfilePicturePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const uploadProfilePicture = async () => {
@@ -132,26 +136,18 @@ const SettingsPage = () => {
     setUploadingPicture(true);
     try {
       const fd = new FormData();
-      // This field name "profilePicture" must match the backend route's middleware
       fd.append("profilePicture", profilePictureFile);
 
       const token = typeof window !== "undefined" && window.__ACCESS_TOKEN
         ? window.__ACCESS_TOKEN
         : localStorage.getItem("authToken");
 
-      // Use the raw fetch logic from api/auth.js but manually
-      // We can't use `api()` because it stringifies the body
       const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/settings/profile-picture`, {
         method: "PUT",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
         body: fd,
       });
-      // Note: We are NOT using the _doFetch logic here, so a 401 will fail
-      // This is a simplification. For robustness, this should use `rawFetch`
-      // from `api/auth.js` if it's exported, or replicate the _doFetch logic.
-      // Assuming `rawFetch` can be imported and used:
-      // const resp = await rawFetch("/api/settings/profile-picture", "PUT", fd, { isFormData: true });
 
       if (!resp.ok) {
         const errText = await resp.text().catch(() => null);
@@ -172,7 +168,6 @@ const SettingsPage = () => {
         stored = {};
       }
 
-      // The response `data.profilePicture` contains the new *absolute* URL
       const merged = {
         ...stored,
         ...returnedUser,
@@ -183,7 +178,6 @@ const SettingsPage = () => {
 
       updateUser(merged, data.token || undefined);
 
-      // Update local settings state with the new absolute URL
       setSettings((s) => ({ ...s, profilePicture: merged.profilePicture }));
       removeProfilePicturePreview();
       showToast(t("settings.toasts.pictureSuccess") || "Profile picture updated", "update");
@@ -252,59 +246,59 @@ const SettingsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-200 dark:bg-gray-900 flex items-center justify-center p-6">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-500 mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">{t("settings.loading") || "Loading..."}</p>
+      <div className="min-h-screen bg-gray-200 dark:bg-gray-900 flex items-center justify-center p-6 transition-all duration-500">
+        <div className="flex flex-col items-center animate-fade-in-up">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-500 mb-4 transition-all duration-700" />
+          <p className="text-gray-500 dark:text-gray-400 transition-colors duration-300">{t("settings.loading") || "Loading..."}</p>
         </div>
       </div>
     );
   }
 
-  // Use preview if it exists, otherwise use the (absolute) URL from settings
   const avatarUrl = profilePicturePreview || settings.profilePicture || null;
   const initials = initialsFromName(settings.name || "", settings.username || "");
   const gradient = gradientFromString(settings.name || settings.username || "user");
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200 settings-wrap">
-      <header className="static top-0 z-20 bg-gray-200 dark:bg-gray-900/60 backdrop-blur-sm">
-        <div className="max-w-8xl justify-between mx-auto px-4 py-4 flex sm:flex-row sm:items-center gap-3 sm:gap-6 header-inner">
-          <div className="flex items-center gap-4 min-w-0">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-all duration-500 ease-in-out settings-wrap">
+      <header className="static top-0 z-20 bg-gray-200 dark:bg-gray-900/60 backdrop-blur-sm transition-all duration-500">
+        <div className="max-w-8xl justify-between mx-auto px-4 py-4 flex sm:flex-row sm:items-center gap-3 sm:gap-6 header-inner animate-fade-in-down">
+          <div className="flex items-center gap-4 min-w-0 transition-all duration-300">
             <div className="flex items-center min-w-0 header-actions">
-              <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-                <Settings className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+              <div className="p-3 rounded-lg bg-white dark:bg-gray-800 transition-all duration-300 hover:shadow-md hover:scale-105">
+                <Settings className="h-6 w-6 text-sky-600 dark:text-sky-300 transition-colors duration-300" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-medium sm:font-extrabold truncate">{t("settings.title") || "Settings"}</h1>
-                <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">{t("settings.subtitle")}</p>
+                <h1 className="text-xl sm:text-2xl font-medium sm:font-extrabold truncate transition-colors duration-300">{t("settings.title") || "Settings"}</h1>
+                <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl transition-colors duration-300">{t("settings.subtitle")}</p>
               </div>
             </div>
           </div>
 
-          <TopBar className="flex" />
+          <TopBar className="flex transition-transform duration-300 hover:scale-105" />
         </div>
       </header>
 
-      <main className="max-w-8xl mx-auto px-4 py-6 container">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700">
+      <main className="max-w-8xl mx-auto px-4 py-6 container animate-fade-in-up">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden divide-y divide-gray-100 dark:divide-gray-700 transition-all duration-500 ease-in-out transform hover:shadow-lg">
           <form onSubmit={handleSubmit} className="space-y-0">
             {/* Profile Picture */}
-            <section className="p-6 section">
+            <section className="p-6 section transition-all duration-300 ease-in-out transform hover:scale-[1.005]">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300">
+                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 transition-all duration-300 hover:scale-110">
                   <User size={18} />
                 </div>
-                <h2 className="text-lg font-semibold">{t("settings.profilePicture") || "Profile picture"}</h2>
+                <h2 className="text-lg font-semibold transition-colors duration-300">{t("settings.profilePicture") || "Profile picture"}</h2>
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-                <div className="relative responsive-avatar">
-                  {/* --- UPDATED --- */}
-                  {/* We show the local preview `profilePicturePreview` immediately if it exists.
-                      Otherwise, we use AuthenticatedImage to fetch the persistent `settings.profilePicture` url. */}
+                <div className="relative responsive-avatar transition-all duration-500">
                   {profilePicturePreview ? (
-                     <img src={profilePicturePreview} alt="Profile Preview" className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm" />
+                     <img 
+                       src={profilePicturePreview} 
+                       alt="Profile Preview" 
+                       className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-md" 
+                     />
                   ) : (
                     <AuthenticatedImage
                       src={settings.profilePicture}
@@ -312,46 +306,65 @@ const SettingsPage = () => {
                       fallbackName={settings.name}
                       fallbackUsername={settings.username}
                       fallbackSeed={settings.name || settings.username}
-                      className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm"
-                      fallbackClassName="w-28 h-28 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-sm"
+                      className="w-28 h-28 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-sm transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-md"
+                      fallbackClassName="w-28 h-28 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-sm transition-all duration-500 ease-in-out transform hover:scale-105"
                     />
                   )}
-                  {/* --- END UPDATE --- */}
 
                   {profilePicturePreview && (
-                    <button type="button" onClick={removeProfilePicturePreview} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md" aria-label="Remove preview">
-                      <X className="w-4 h-4" />
+                    <button 
+                      type="button" 
+                      onClick={removeProfilePicturePreview} 
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md transition-all duration-300 ease-in-out transform hover:scale-125 hover:bg-red-600 active:scale-95"
+                      aria-label="Remove preview"
+                    >
+                      <X className="w-4 h-4 transition-transform duration-300" />
                     </button>
                   )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                   <div>
-                    <input type="file" id="profile-picture" accept="image/*" onChange={handleProfilePictureChange} className="hidden" />
-                    <label htmlFor="profile-picture" className="inline-flex items-center px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                      <Upload className="w-4 h-4 mr-2" />
+                    <input 
+                      ref={fileInputRef}
+                      type="file" 
+                      id="profile-picture" 
+                      accept="image/*" 
+                      onChange={handleProfilePictureChange} 
+                      className="hidden" 
+                    />
+                    <label 
+                      htmlFor="profile-picture" 
+                      className="inline-flex items-center px-4 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-md active:scale-95"
+                    >
+                      <Upload className="w-4 h-4 mr-2 transition-transform duration-300" />
                       {t("settings.chooseImage") || "Choose image"}
                     </label>
                   </div>
 
                   <div className="flex items-center gap-2">
                     {profilePictureFile ? (
-                      <div className="text-sm text-gray-600 dark:text-gray-300">{profilePictureFile.name} • {formatBytes(profilePictureFile.size)}</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-300 transition-colors duration-300">{profilePictureFile.name} • {formatBytes(profilePictureFile.size)}</div>
                     ) : (
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{t("settings.pictureHint") || "Square image works best (max 5 MB)"}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">{t("settings.pictureHint") || "Square image works best (max 5 MB)"}</div>
                     )}
 
                     {profilePictureFile && (
-                      <button type="button" onClick={uploadProfilePicture} disabled={uploadingPicture} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60 transition-colors btn-sm-full">
+                      <button 
+                        type="button" 
+                        onClick={uploadProfilePicture} 
+                        disabled={uploadingPicture} 
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg transition-all duration-500 ease-in-out transform hover:scale-105 hover:bg-blue-700 hover:shadow-lg disabled:opacity-60 disabled:transform-none active:scale-95 btn-sm-full"
+                      >
                         {uploadingPicture ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                            <span>{t("settings.uploading") || "Uploading..."}</span>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white transition-transform duration-700" />
+                            <span className="transition-colors duration-300">{t("settings.uploading") || "Uploading..."}</span>
                           </>
                         ) : (
                           <>
-                            <Save className="w-4 h-4" />
-                            <span>{t("settings.upload") || "Upload"}</span>
+                            <Save className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
+                            <span className="transition-colors duration-300">{t("settings.upload") || "Upload"}</span>
                           </>
                         )}
                       </button>
@@ -362,82 +375,113 @@ const SettingsPage = () => {
             </section>
 
             {/* Personal Info */}
-            <section className="p-6 section">
+            <section className="p-6 section transition-all duration-300 ease-in-out transform hover:scale-[1.005]">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300">
+                <div className="p-2 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 transition-all duration-300 hover:scale-110">
                   <UserCircle size={18} />
                 </div>
-                <h2 className="text-lg font-semibold">{t("settings.personalInfo") || "Personal info"}</h2>
+                <h2 className="text-lg font-semibold transition-colors duration-300">{t("settings.personalInfo") || "Personal info"}</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 responsive-grid">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.username") || "Username"}</label>
-                  <input type="text" value={settings.username} readOnly className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400" />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.usernameHelp")}</p>
+                <div className="transition-all duration-300 transform hover:scale-[1.02]">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">{t("settings.username") || "Username"}</label>
+                  <input 
+                    type="text" 
+                    value={settings.username} 
+                    readOnly 
+                    className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 transition-all duration-300 ease-in-out transform hover:border-gray-400" 
+                  />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">{t("settings.usernameHelp")}</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.name") || "Full name"}</label>
-                  <input type="text" value={settings.name} onChange={(e) => setSettings({ ...settings, name: e.target.value })} className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder={t("settings.namePlaceholder") || "Your display name"} />
+                <div className="transition-all duration-300 transform hover:scale-[1.02]">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">{t("settings.name") || "Full name"}</label>
+                  <input 
+                    type="text" 
+                    value={settings.name} 
+                    onChange={(e) => setSettings({ ...settings, name: e.target.value })} 
+                    className="w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400 focus:scale-[1.02]" 
+                    placeholder={t("settings.namePlaceholder") || "Your display name"} 
+                  />
                 </div>
               </div>
             </section>
 
             {/* Appearance */}
-            <section className="p-6 section">
+            <section className="p-6 section transition-all duration-300 ease-in-out transform hover:scale-[1.005]">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300">
+                <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300 transition-all duration-300 hover:scale-110">
                   <Palette size={18} />
                 </div>
-                <h2 className="text-lg font-semibold">{t("settings.appearance") || "Appearance"}</h2>
+                <h2 className="text-lg font-semibold transition-colors duration-300">{t("settings.appearance") || "Appearance"}</h2>
               </div>
 
               <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.language") || "Language"}</label>
-                  <LanguageSwitcher compact value={settings.language} onChange={(lang) => setSettings({ ...settings, language: lang })} />
+                <div className="transition-all duration-300 transform hover:scale-[1.02]">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">{t("settings.language") || "Language"}</label>
+                  <LanguageSwitcher 
+                    compact 
+                    value={settings.language} 
+                    onChange={(lang) => setSettings({ ...settings, language: lang })} 
+                  />
                 </div>
               </div>
             </section>
 
             {/* Password */}
-            <section className="p-6 section">
+            <section className="p-6 section transition-all duration-300 ease-in-out transform hover:scale-[1.005]">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300">
+                <div className="p-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 transition-all duration-300 hover:scale-110">
                   <Shield size={18} />
                 </div>
-                <h2 className="text-lg font-semibold">{t("settings.changePassword") || "Change password"}</h2>
+                <h2 className="text-lg font-semibold transition-colors duration-300">{t("settings.changePassword") || "Change password"}</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 responsive-grid">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.oldPassword") || "Old password"}</label>
-                  <input type="password" value={oldPassword} onChange={(e) => { setOldPassword(e.target.value); if (e.target.value && oldPasswordError) setOldPasswordError(""); }} placeholder={t("settings.passwordPlaceholder") || "••••••••"} className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${oldPasswordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`} />
-                  {oldPasswordError && <p className="mt-1 text-xs text-red-500">{oldPasswordError}</p>}
+                <div className="transition-all duration-300 transform hover:scale-[1.02]">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">{t("settings.oldPassword") || "Old password"}</label>
+                  <input 
+                    type="password" 
+                    value={oldPassword} 
+                    onChange={(e) => { setOldPassword(e.target.value); if (e.target.value && oldPasswordError) setOldPasswordError(""); }} 
+                    placeholder={t("settings.passwordPlaceholder") || "••••••••"} 
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400 focus:scale-[1.02] ${oldPasswordError ? "border-red-500 animate-shake" : "border-gray-300"} bg-white dark:bg-gray-700`} 
+                  />
+                  {oldPasswordError && <p className="mt-1 text-xs text-red-500 transition-all duration-300 animate-fade-in">{oldPasswordError}</p>}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t("settings.newPassword") || "New password"}</label>
-                  <input type="password" value={newPassword} onChange={(e) => { setNewPassword(e.target.value); if (e.target.value && e.target.value.length < 8) setPasswordError(t("settings.errors.passwordTooShort") || "Password too short"); else setPasswordError(""); }} placeholder={t("settings.passwordPlaceholder") || "••••••••"} className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${passwordError ? "border-red-500" : "border-gray-300"} bg-white dark:bg-gray-700`} />
-                  {passwordError && <p className="mt-1 text-xs text-red-500">{passwordError}</p>}
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("settings.passwordRequirements") || "Minimum 8 characters."}</p>
+                <div className="transition-all duration-300 transform hover:scale-[1.02]">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 transition-colors duration-300">{t("settings.newPassword") || "New password"}</label>
+                  <input 
+                    type="password" 
+                    value={newPassword} 
+                    onChange={(e) => { setNewPassword(e.target.value); if (e.target.value && e.target.value.length < 8) setPasswordError(t("settings.errors.passwordTooShort") || "Password too short"); else setPasswordError(""); }} 
+                    placeholder={t("settings.passwordPlaceholder") || "••••••••"} 
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400 focus:scale-[1.02] ${passwordError ? "border-red-500 animate-shake" : "border-gray-300"} bg-white dark:bg-gray-700`} 
+                  />
+                  {passwordError && <p className="mt-1 text-xs text-red-500 transition-all duration-300 animate-fade-in">{passwordError}</p>}
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">{t("settings.passwordRequirements") || "Minimum 8 characters."}</p>
                 </div>
               </div>
             </section>
 
             {/* Submit */}
-            <section className="p-6 bg-gray-50 dark:bg-gray-700/50 flex justify-end section">
-              <button type="submit" disabled={saving || (newPassword && newPassword.length < 8) || (newPassword && !oldPassword)} className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors btn-sm-full">
+            <section className="p-6 bg-gray-50 dark:bg-gray-700/50 flex justify-end section transition-all duration-300">
+              <button 
+                type="submit" 
+                disabled={saving || (newPassword && newPassword.length < 8) || (newPassword && !oldPassword)} 
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-lg active:scale-95 btn-sm-full"
+              >
                 {saving ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    <span>{t("settings.saving") || "Saving..."}</span>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white transition-transform duration-700" />
+                    <span className="transition-colors duration-300">{t("settings.saving") || "Saving..."}</span>
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4" />
-                    <span>{t("settings.saveChanges") || "Save changes"}</span>
+                    <Save className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
+                    <span className="transition-colors duration-300">{t("settings.saveChanges") || "Save changes"}</span>
                   </>
                 )}
               </button>
@@ -447,6 +491,54 @@ const SettingsPage = () => {
       </main>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={handleToastClose} />}
+
+      <style jsx>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes fade-in-down {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out;
+        }
+        .animate-fade-in-down {
+          animation: fade-in-down 0.6s ease-out;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.4s ease-out;
+        }
+        .animate-shake {
+          animation: shake 0.4s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 };

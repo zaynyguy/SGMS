@@ -11,7 +11,7 @@
     "nav": {
       "users": "Users",
       "roles": "Roles",
-      "groups": "Groups"
+      "groups": "Offices"
     },
     "mobileNav": {
       "ariaLabel": "Access navigation"
@@ -47,6 +47,7 @@
     "table": {
       "file": "File",
       "type": "Type",
+      "context": "Context",
       "uploaded": "Uploaded",
       "actions": "Actions"
     },
@@ -127,27 +128,27 @@
     }
   },
   "groups": {
-    "title": "Groups",
-    "subtitle": "Create and manage groups and membership.",
-    "searchPlaceholder": "Search groups by name or description…",
-    "confirmDeleteTitle": "Delete Group",
-    "confirmDeleteMessage": "Are you sure you want to delete this group? \"{{name}}\"",
+    "title": "Offices",
+    "subtitle": "Create and manage Offices and membership.",
+    "searchPlaceholder": "Search Office by name or description…",
+    "confirmDeleteTitle": "Delete Office",
+    "confirmDeleteMessage": "Are you sure you want to delete this Office? \"{{groupName}}\"",
     "search": {
-      "placeholder": "Search groups by name or description…",
-      "aria": "Search groups"
+      "placeholder": "Search Offices by name or description…",
+      "aria": "Search Offices"
     },
-    "newGroup": "New group",
-    "loading": "Loading groups…",
-    "noResults": "No groups found.",
+    "newGroup": "New Office",
+    "loading": "Loading Offices…",
+    "noResults": "No Offices found.",
     "noDescription": "No description provided",
-    "confirmDelete": "Are you sure you want to delete this group?",
+    "confirmDelete": "Are you sure you want to delete this Office?",
     "messages": {
-      "loadFailed": "Failed to load groups",
-      "created": "Group created",
-      "updated": "Group updated",
-      "deleted": "Group deleted",
-      "saveFailed": "Failed to save group",
-      "deleteFailed": "Failed to delete group"
+      "loadFailed": "Failed to load Offices",
+      "created": "Office created",
+      "updated": "Office updated",
+      "deleted": "Office deleted",
+      "saveFailed": "Failed to save Office",
+      "deleteFailed": "Failed to delete Office"
     },
     "table": {
       "name": "Name",
@@ -161,35 +162,35 @@
     "updatedPrefix": "Updated:",
     "idPrefix": "ID:",
     "actions": {
-      "edit": "Edit group",
-      "delete": "Delete group",
+      "edit": "Edit Ofices",
+      "delete": "Delete Office",
       "toggle": "Toggle details"
     },
     "form": {
       "title": {
-        "create": "Create group",
-        "edit": "Edit group"
+        "create": "Create Office",
+        "edit": "Edit Office"
       },
       "close": "Close",
       "labels": {
-        "name": "Group name",
+        "name": "Office name",
         "description": "Description"
       },
       "buttons": {
         "uploadPicture": "Upload picture",
         "cancel": "Cancel",
-        "create": "Create group",
+        "create": "Create Office",
         "save": "Save changes",
         "saving": "Saving…",
         "remove": "Remove"
       },
       "errors": {
-        "nameRequired": "Group name is required",
+        "nameRequired": "Office name is required",
         "nameTooLong": "Name must be 50 characters or fewer",
         "descriptionTooLong": "Description must be 300 characters or fewer",
         "invalidImage": "Invalid image file",
         "imageTooLarge": "Image too large (max 5 MB)",
-        "saveFailed": "Saving group failed"
+        "saveFailed": "Saving Office failed"
       }
     },
     "members": {
@@ -205,7 +206,7 @@
       },
       "current": {
         "title": "Current members",
-        "empty": "No members in this group"
+        "empty": "No members in this Office"
       },
       "linkText": "{{count}} member(s)",
       "manage": "Manage members",
@@ -234,7 +235,8 @@
       "all": "All",
       "pending": "Pending",
       "approved": "Approved",
-      "rejected": "Rejected"
+      "rejected": "Rejected",
+      "groupAll": "All Groups"
     },
     "pagination": {
       "showingPage": "Page {{page}} of {{totalPages}} — {{total}} items",
@@ -253,7 +255,7 @@
     "noNarrative": "No narrative provided",
     "metrics_narrative": "Metrics",
     "attachments": "Attachments",
-    "attachments_download": {
+    "attachmentsDownload": {
       "download": "Download"
     },
     "adminComment": "Admin comment",
@@ -286,6 +288,13 @@
       "title": "Review reports",
       "subtitle": "Approve or reject submitted reports"
     },
+    "activityContext": {
+      "title": "Activity Context",
+      "target": "Activity Target",
+      "current": "Activity Current (Before Report)",
+      "help": "This shows the activity's metrics *before* this report is applied. Approving the report will add the new metrics to the 'Current' values."
+    },
+    "reportMetrics": "Metrics in this Report",
     "master": {
       "title": "Master report",
       "subtitle2": "Aggregate and export master reports",
@@ -293,9 +302,9 @@
       "loadFirstAlert": "Please load a master report first",
       "exportPDF": "Export (PDF)",
       "exportCSV": "Export (CSV)",
-      "groupLabel": "Group",
-      "groupIdLabel": "Group ID",
-      "groupIdPlaceholder": "Enter group id (optional)",
+      "groupLabel": "Office",
+      "groupIdLabel": "Office ID",
+      "groupIdPlaceholder": "Enter Office id (optional)",
       "narratives": "Narratives",
       "narrativesTitle": "Narratives",
       "noData": "No master report loaded",
@@ -307,6 +316,7 @@
       "open": "Open",
       "subtitle": "View aggregated goals, tasks and activity data",
       "generatedAt": "Generated at {{date}}",
+      "allGroups": "All Groups",
       "granularityLabel": "Granularity",
       "granularities": {
         "monthly": "Monthly",
@@ -325,6 +335,7 @@
       "task": "Task",
       "activity": "Activity",
       "titleFull": "Full data table",
+      "previous": "Previous",
       "noData": "No data available"
     },
     "metrics": {
@@ -348,7 +359,7 @@
     },
     "roles": {
       "title": "Roles & Permissions",
-      "subtitle": "Define roles and granular permissions for users and groups.",
+      "subtitle": "Define roles and granular permissions for users and Offices.",
       "loading": "Loading roles and permissions…",
       "rolesList": "Roles",
       "addRole": "Add role",
@@ -596,7 +607,7 @@
     },
 
     "fields": {
-      "group": "Group",
+      "group": "Office",
       "weight": "Weight",
       "due": "Due",
       "dueDate": "Due date",
@@ -605,10 +616,13 @@
       "title": "Title",
       "description": "Description",
       "progress": "Progress",
-      "assignGroup": "Assign to group",
+      "assignGroup": "Assign to Office",
       "narrative": "Narrative",
       "newStatus": "New status",
-      "status": "Status"
+      "status": "Status",
+      "previous": "Previous",
+      "target": "Target",
+      "current":"Current"
     },
 
     "sections": {
@@ -622,7 +636,9 @@
       "metrics": "Current Metrics",
       "attachments": "Attachments",
       "rollLabel": "Roll number (optional)",
-      "optional": "(optional)"
+      "optional": "(optional)",
+      "previousMetrics": "Previous Metrics",
+      "selectedFiles": "Selected files:"
     },
 
     "placeholders": {
@@ -639,7 +655,8 @@
       "metrics": "Add metrics as key/value pairs.",
       "attachments": "Max files: server-side limit applies.",
       "hint": "Optional. Positive integer. If left blank the system will auto-assign.",
-      "metricRemaining": "Current: {{current}} / {{target}} (Remaining: {{remaining}})"
+      "metricRemaining": "Current: {{current}} / {{target}} (Remaining: {{remaining}})", 
+      "maxAttachments": "Max 5 attachments."
     },
 
     "empty": {
@@ -669,7 +686,8 @@
       "missingTaskId": "Missing task id.",
       "weightExceedsTask": "Cannot set weight to {{newWeight}}. Task total is {{taskWeight}} and {{used}} is already used. Available: {{available}}.",
       "modalSubmit": "Failed to submit modal form.",
-      "metricKeyMissing": "Metric keys cannot be empty when a value is provided."
+      "metricKeyMissing": "Metric keys cannot be empty when a value is provided.",
+      "maxAttachments": "Maximum 5 attachments allowed. Extra files were ignored."
     },
 
     "toasts": {
@@ -759,7 +777,7 @@
     "failedLoadPrefix": "Failed to load: ",
     "errors": {
       "summary": "summary",
-      "groupCharts": "group charts",
+      "groupCharts": "Office charts",
       "taskCharts": "task charts",
       "reports": "reports distribution",
       "overdue": "overdue tasks",
@@ -795,7 +813,7 @@
         "subtitle": "Reports awaiting review"
       }
     },
-    "groupProgress": "Group progress",
+    "groupProgress": "Office progress",
     "topTasks": "Top tasks",
     "reportsDistribution1": "Reports distribution",
     "reportsDistribution": {
@@ -804,14 +822,14 @@
     "overdueTitle": "Overdue tasks",
     "tasks": "tasks",
     "openAll": "Open All",
-    "noOverdue": "No overdue tasks",
+    "noOverdue": "No overdue tasks//",
     "table": {
       "task": "Task",
       "due": "Due",
       "daysOverdue": "Days overdue",
       "assignee": "Assignee",
       "goal": "Goal",
-      "group": "Group",
+      "group": "Office",
       "link": "Link"
     },
     "noNotifications": "No notifications",

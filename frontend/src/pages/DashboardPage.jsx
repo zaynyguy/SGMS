@@ -18,10 +18,27 @@ import useProjectApi from "../hooks/useProjectApi";
 
 /* small helpers */
 const LoadingSkeleton = ({ className = "h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" }) => (
-  <div className={className} aria-hidden />
+  <div className={`${className} transition-all duration-500 ease-out`} aria-hidden />
 );
 
 const Modal = ({ open, onClose, children, title }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setIsVisible(true);
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 300);
+    } else {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setIsVisible(false);
+        setIsAnimating(false);
+      }, 300);
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
@@ -31,29 +48,53 @@ const Modal = ({ open, onClose, children, title }) => {
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!isVisible) return null;
+  
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-4xl max-h-[90vh] overflow-auto bg-white dark:bg-gray-900 rounded-lg shadow-2xl p-4 sm:p-6">
+    <div 
+      role="dialog" 
+      aria-modal="true" 
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out ${
+        open ? 'opacity-100' : 'opacity-0'
+      }`}
+    >
+      <div 
+        className={`absolute inset-0 bg-black/40 transition-all duration-500 ease-out ${
+          open ? 'opacity-100' : 'opacity-0'
+        }`} 
+        onClick={onClose} 
+      />
+      <div 
+        className={`relative z-10 w-full max-w-4xl max-h-[90vh] overflow-auto bg-white dark:bg-gray-900 rounded-lg shadow-2xl p-4 sm:p-6 transform transition-all duration-500 ease-out ${
+          open && !isAnimating ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-8'
+        }`}
+      >
         <div className="flex items-start justify-between gap-4 mb-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 transition-all duration-300">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-all duration-300 transform hover:scale-125 hover:rotate-90"
           >
             ✕
           </button>
         </div>
-        <div>{children}</div>
+        <div className="transition-all duration-500">{children}</div>
       </div>
     </div>
   );
 };
 
 const Card = ({ title, children, onClick, className = "", ariaLabel, headerActions }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
   const clickable = Boolean(onClick);
+
+  const handleMouseEnter = () => setIsHovered(true);
+  const handleMouseLeave = () => setIsHovered(false);
+  const handleMouseDown = () => setIsPressed(true);
+  const handleMouseUp = () => setIsPressed(false);
+
   return (
     <div
       role={clickable ? "button" : undefined}
@@ -66,16 +107,28 @@ const Card = ({ title, children, onClick, className = "", ariaLabel, headerActio
           onClick(e);
         }
       }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
       aria-label={ariaLabel || title}
-      className={`text-left p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm transition-transform transform ${
-        clickable ? "hover:shadow-md hover:-translate-y-0.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400" : ""
+      className={`text-left p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm transition-all duration-500 ease-out transform ${
+        clickable ? `hover:shadow-xl cursor-pointer focus:outline-none focus:ring-4 focus:ring-sky-400/30 ${
+          isHovered ? '-translate-y-2 scale-105' : 'translate-y-0 scale-100'
+        } ${isPressed ? 'scale-95' : ''}` : ""
       } ${className}`}
+      style={{
+        transform: `translateY(${isHovered && clickable ? '-8px' : '0px'}) scale(${isPressed ? 0.95 : isHovered && clickable ? 1.05 : 1})`,
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+      }}
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{title}</div>
+        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 transition-all duration-300 transform hover:translate-x-1">
+          {title}
+        </div>
         {headerActions}
       </div>
-      <div>{children}</div>
+      <div className="transition-all duration-500 ease-out">{children}</div>
     </div>
   );
 };
@@ -86,10 +139,17 @@ function formatDate(d) {
   return dt.toLocaleDateString();
 }
 
-/* --- Charts (kept identical / unchanged) --- */
-/* GroupBarChart */
+/* --- Charts (enhanced with animations) --- */
 const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, gap = 12 }) => {
-  if (!Array.isArray(data) || data.length === 0) return <div className="text-sm text-gray-500 dark:text-gray-400">No chart data</div>;
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    setAnimated(true);
+    const timer = setTimeout(() => setAnimated(false), 1000);
+    return () => clearTimeout(timer);
+  }, [data]);
+
+  if (!Array.isArray(data) || data.length === 0) return <div className="text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">No chart data</div>;
   const display = limit ? data.slice(0, limit) : data;
   const values = display.map((d) => Number(d.value ?? d.progress ?? 0));
   const max = Math.max(1, ...values);
@@ -101,9 +161,9 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
   const singleOffset = itemCount === 1 ? Math.floor((svgWidth - barW) / 2) : padding;
 
   return (
-    <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${svgWidth} ${height + 50}`} className="w-full h-[200px]" preserveAspectRatio="xMidYMid meet" role="img">
-        <line x1="0" y1={height} x2={svgWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="1" />
+    <div className="w-full overflow-x-auto transition-all duration-500">
+      <svg viewBox={`0 0 ${svgWidth} ${height + 50}`} className="w-full h-[200px] transition-all duration-1000" preserveAspectRatio="xMidYMid meet" role="img">
+        <line x1="0" y1={height} x2={svgWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700 transition-all duration-500" strokeWidth="1" />
         {display.map((d, i) => {
           const val = Number(d.value ?? d.progress ?? 0);
           const barH = Math.max(2, (val / max) * (height - 16));
@@ -120,15 +180,27 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
             displayLabel = label.slice(0, Math.max(3, maxChars - 1)) + "…";
           }
           return (
-            <g key={i} transform={`translate(${x},0)`}>
-              <rect x={0} y={y} width={w} height={barH} rx="6" fill={color} />
+            <g key={i} transform={`translate(${x},0)`} className="transition-all duration-1000 ease-out">
+              <rect 
+                x={0} 
+                y={height} 
+                width={w} 
+                height={animated ? barH : 0} 
+                rx="6" 
+                fill={color}
+                className="transition-all duration-1000 ease-out"
+                style={{
+                  transitionDelay: `${i * 100}ms`,
+                  transformOrigin: 'bottom'
+                }}
+              />
               <text
                 x={w / 2}
                 y={height + 20}
                 fontSize="11"
                 textAnchor="middle"
                 fill="#6B7280"
-                className="dark:fill-gray-400"
+                className="dark:fill-gray-400 transition-all duration-500"
                 style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 400, letterSpacing: "0.025em" }}
               >
                 {displayLabel}
@@ -140,6 +212,7 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
                   fontSize="10"
                   textAnchor="middle"
                   fill={color}
+                  className="transition-all duration-500"
                   style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 600 }}
                 >
                   {val}
@@ -149,49 +222,83 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
           );
         })}
       </svg>
-      {limit && data.length > limit && <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">+{data.length - limit} more</div>}
+      {limit && data.length > limit && <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center transition-all duration-500">+{data.length - limit} more</div>}
     </div>
   );
 };
 
 /* TaskBarChart */
 const TaskBarChart = ({ items = [], maxItems = 8 }) => {
-  if (!items || !items.length) return <div className="text-sm text-gray-500 dark:text-gray-400">No tasks</div>;
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    setAnimated(true);
+    const timer = setTimeout(() => setAnimated(false), 1200);
+    return () => clearTimeout(timer);
+  }, [items]);
+
+  if (!items || !items.length) return <div className="text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">No tasks</div>;
   const display = items.slice(0, maxItems);
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 transition-all duration-500">
       {display.map((it, idx) => {
         const value = Math.max(0, Math.min(100, Math.round(Number(it.progress ?? it.value ?? 0))));
         const color = it.color || `hsl(${(idx * 50) % 360},70%,50%)`;
         return (
-          <div key={idx} className="flex items-center gap-3">
+          <div 
+            key={idx} 
+            className="flex items-center gap-3 transition-all duration-500 ease-out transform hover:translate-x-2"
+            style={{
+              animationDelay: `${idx * 100}ms`,
+              transitionDelay: `${idx * 50}ms`
+            }}
+          >
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{it.label}</div>
-                <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-2">{value}%</div>
+                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate transition-all duration-300 hover:scale-105">
+                  {it.label}
+                </div>
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-2 transition-all duration-500 transform hover:scale-125">
+                  {value}%
+                </div>
               </div>
 
               <div
-                className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden"
+                className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden transition-all duration-500"
                 role="progressbar"
                 aria-valuenow={value}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-label={`${it.label} progress`}
               >
-                <div title={`${it.label}: ${value}%`} style={{ width: `${value}%`, background: color }} className="h-3 rounded-full transition-all" />
+                <div 
+                  title={`${it.label}: ${value}%`} 
+                  style={{ 
+                    width: animated ? `${value}%` : '0%', 
+                    background: color 
+                  }} 
+                  className="h-3 rounded-full transition-all duration-1000 ease-out" 
+                />
               </div>
             </div>
           </div>
         );
       })}
-      {items.length > maxItems && <div className="text-xs text-gray-500 dark:text-gray-400">+{items.length - maxItems} more</div>}
+      {items.length > maxItems && <div className="text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">+{items.length - maxItems} more</div>}
     </div>
   );
 };
 
 /* PieChart */
 const PieChart = ({ slices = [], size = 220 }) => {
+  const [animated, setAnimated] = useState(false);
+
+  useEffect(() => {
+    setAnimated(true);
+    const timer = setTimeout(() => setAnimated(false), 1500);
+    return () => clearTimeout(timer);
+  }, [slices]);
+
   const items = Array.isArray(slices) ? slices : [];
   const total = items.reduce((s, x) => s + Number(x.value ?? x.count ?? 0), 0);
 
@@ -206,7 +313,7 @@ const PieChart = ({ slices = [], size = 220 }) => {
 
   if (total === 0) {
     return (
-      <div className="flex items-center justify-center h-40">
+      <div className="flex items-center justify-center h-40 transition-all duration-500">
         <div className="text-sm text-gray-500 dark:text-gray-400">No report</div>
       </div>
     );
@@ -222,27 +329,27 @@ const PieChart = ({ slices = [], size = 220 }) => {
     const s = nonZero[0];
     const fill = getColorFor(s, items.indexOf(s));
     return (
-      <div className="flex md:flex-col flex-row items-center gap-4">
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
-          <circle cx={cx} cy={cy} r={r} fill={fill} stroke="#fff" strokeWidth="1" className="dark:stroke-gray-800" />
-          <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800" />
-          <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold">
+      <div className="flex md:flex-col flex-row items-center gap-4 transition-all duration-500">
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="transition-all duration-1000 transform hover:scale-110">
+          <circle cx={cx} cy={cy} r={r} fill={fill} stroke="#fff" strokeWidth="1" className="dark:stroke-gray-800 transition-all duration-500" />
+          <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800 transition-all duration-500" />
+          <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold transition-all duration-500">
             {total}
           </text>
         </svg>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 transition-all duration-500">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
             {items.map((it, i) => {
               const val = Number(it.value ?? it.count ?? 0);
               const pct = Math.round((val / total) * 100);
               return (
-                <div key={i} className="flex items-center gap-3 text-sm">
-                  <span style={{ background: getColorFor(it, i) }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0" />
+                <div key={i} className="flex items-center gap-3 text-sm transition-all duration-500 transform hover:translate-x-2">
+                  <span style={{ background: getColorFor(it, i) }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0 transition-all duration-300 transform hover:scale-125" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <div className="truncate text-gray-700 dark:text-gray-300">{it.label}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 ml-2">({pct}%)</div>
+                      <div className="truncate text-gray-700 dark:text-gray-300 transition-all duration-300 hover:scale-105">{it.label}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 ml-2 transition-all duration-500 transform hover:scale-125">({pct}%)</div>
                     </div>
                   </div>
                 </div>
@@ -256,8 +363,8 @@ const PieChart = ({ slices = [], size = 220 }) => {
 
   let angle = 0;
   return (
-    <div className="flex md:flex-col flex-row items-center gap-4">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
+    <div className="flex md:flex-col flex-row items-center gap-4 transition-all duration-500">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="transition-all duration-1000 transform hover:scale-110">
         {items.map((s, i) => {
           const val = Number(s.value ?? s.count ?? 0);
           const portion = val / total;
@@ -270,26 +377,40 @@ const PieChart = ({ slices = [], size = 220 }) => {
           const x2 = cx + r * Math.cos(endAngle);
           const y2 = cy + r * Math.sin(endAngle);
           const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-          return <path key={i} d={d} fill={getColorFor(s, i)} stroke="#fff" className="dark:stroke-gray-800" strokeWidth="1" />;
+          return (
+            <path 
+              key={i} 
+              d={d} 
+              fill={getColorFor(s, i)} 
+              stroke="#fff" 
+              className="dark:stroke-gray-800 transition-all duration-1000" 
+              strokeWidth="1"
+              style={{
+                transformOrigin: `${cx}px ${cy}px`,
+                transform: animated ? 'scale(1)' : 'scale(0)',
+                transition: `transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 200}ms`
+              }}
+            />
+          );
         })}
-        <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800" />
-        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold">
+        <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800 transition-all duration-500" />
+        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold transition-all duration-500">
           {total}
         </text>
       </svg>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 transition-all duration-500">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
           {items.map((it, i) => {
             const val = Number(it.value ?? it.count ?? 0);
             const pct = Math.round((val / total) * 100);
             return (
-              <div key={i} className="flex items-center gap-3 text-sm">
-                <span style={{ background: getColorFor(it, i) }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0" />
+              <div key={i} className="flex items-center gap-3 text-sm transition-all duration-500 transform hover:translate-x-2">
+                <span style={{ background: getColorFor(it, i) }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0 transition-all duration-300 transform hover:scale-125" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <div className="truncate text-gray-700 dark:text-gray-300">{it.label}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 ml-2">({pct}%)</div>
+                    <div className="truncate text-gray-700 dark:text-gray-300 transition-all duration-300 hover:scale-105">{it.label}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 ml-2 transition-all duration-500 transform hover:scale-125">({pct}%)</div>
                   </div>
                 </div>
               </div>
@@ -301,32 +422,41 @@ const PieChart = ({ slices = [], size = 220 }) => {
   );
 };
 
-/* Overdue / Notifications / Audit panels (unchanged) */
+/* Overdue / Notifications / Audit panels (enhanced) */
 const OverdueTable = ({ rows = [], loading, t }) => {
-  if (loading) return <LoadingSkeleton className="h-48 w-full" />;
-  if (!rows.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.noOverdue")}</div>;
+  if (loading) return <LoadingSkeleton className="h-48 w-full transition-all duration-500" />;
+  if (!rows.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.noOverdue")}</div>;
   return (
-    <div className="overflow-auto">
-      <table className="w-full text-sm">
-        <thead className="text-left text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
+    <div className="overflow-auto transition-all duration-500">
+      <table className="w-full text-sm transition-all duration-500">
+        <thead className="text-left text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 transition-all duration-500">
           <tr>
-            <th className="p-2">{t("dashboard.table.task")}</th>
-            <th className="p-2">{t("dashboard.table.due")}</th>
-            <th className="p-2">{t("dashboard.table.daysOverdue")}</th>
-            <th className="p-2">{t("dashboard.table.goal")}</th>
-            <th className="p-2">{t("dashboard.table.group")}</th>
+            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.task")}</th>
+            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.due")}</th>
+            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.daysOverdue")}</th>
+            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.goal")}</th>
+            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.group")}</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={r.id || r.taskId} className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-              <td className="p-2 dark:text-gray-300">{r.taskTitle}</td>
-              <td className="p-2 dark:text-gray-300">{formatDate(r.dueDate)}</td>
-              <td className="p-2">
-                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs">{r.days_overdue ?? r.daysOverdue ?? 0}</span>
+          {rows.map((r, index) => (
+            <tr 
+              key={r.id || r.taskId} 
+              className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-0.5"
+              style={{
+                animationDelay: `${index * 50}ms`,
+                transitionDelay: `${index * 30}ms`
+              }}
+            >
+              <td className="p-2 dark:text-gray-300 transition-all duration-300">{r.taskTitle}</td>
+              <td className="p-2 dark:text-gray-300 transition-all duration-300">{formatDate(r.dueDate)}</td>
+              <td className="p-2 transition-all duration-300">
+                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs transition-all duration-500 transform hover:scale-110">
+                  {r.days_overdue ?? r.daysOverdue ?? 0}
+                </span>
               </td>
-              <td className="p-2 dark:text-gray-300">{r.goalTitle}</td>
-              <td className="p-2 dark:text-gray-300">{r.groupName}</td>
+              <td className="p-2 dark:text-gray-300 transition-all duration-300">{r.goalTitle}</td>
+              <td className="p-2 dark:text-gray-300 transition-all duration-300">{r.groupName}</td>
             </tr>
           ))}
         </tbody>
@@ -336,13 +466,15 @@ const OverdueTable = ({ rows = [], loading, t }) => {
 };
 
 const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsRead, marking, t, navigate }) => {
-  if (loading) return <LoadingSkeleton className="h-40 w-full" />;
-  if (!notifications.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.noNotifications")}</div>;
+  if (loading) return <LoadingSkeleton className="h-40 w-full transition-all duration-500" />;
+  if (!notifications.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.noNotifications")}</div>;
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-white bg-red-500 px-2 py-0.5 rounded-full">{unread}</span>
+    <div className="transition-all duration-500">
+      <div className="flex items-center justify-between mb-3 transition-all duration-500">
+        <div className="flex items-center gap-2 transition-all duration-500">
+          <span className="text-xs text-white bg-red-500 px-2 py-0.5 rounded-full transition-all duration-500 transform hover:scale-125">
+            {unread}
+          </span>
           {unread > 0 && (
             <button
               onClick={(e) => {
@@ -350,16 +482,16 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
                 onMarkAsRead();
               }}
               disabled={marking}
-              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50"
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline disabled:opacity-50 transition-all duration-300 transform hover:scale-105"
             >
               {marking ? t("dashboard.notifications.marking") : t("dashboard.notifications.markAll")}
             </button>
           )}
         </div>
       </div>
-      <ul className="space-y-2">
-        {notifications.map((n) => (
-          <li key={n.id}>
+      <ul className="space-y-2 transition-all duration-500">
+        {notifications.map((n, index) => (
+          <li key={n.id} className="transition-all duration-500 ease-out transform hover:scale-105">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -369,10 +501,16 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
                   navigate("/notification");
                 }
               }}
-              className={`w-full text-left p-3 rounded-lg border ${n.isRead ? "border-gray-200 dark:border-gray-700" : "border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30"} hover:shadow-sm transition`}
+              className={`w-full text-left p-3 rounded-lg border transition-all duration-500 transform hover:-translate-y-1 ${
+                n.isRead ? "border-gray-200 dark:border-gray-700" : "border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30"
+              } hover:shadow-lg`}
+              style={{
+                animationDelay: `${index * 100}ms`,
+                transitionDelay: `${index * 50}ms`
+              }}
             >
-              <div className="text-sm mb-1 dark:text-gray-300">{n.message || n.type}</div>
-              <div className="text-xs text-gray-400 dark:text-gray-500">{new Date(n.createdAt || n.time || n._raw?.createdAt).toLocaleString()}</div>
+              <div className="text-sm mb-1 dark:text-gray-300 transition-all duration-300">{n.message || n.type}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 transition-all duration-500">{new Date(n.createdAt || n.time || n._raw?.createdAt).toLocaleString()}</div>
             </button>
           </li>
         ))}
@@ -382,21 +520,30 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
 };
 
 const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
-  if (loading) return <LoadingSkeleton className="h-40 w-full" />;
-  if (auditPermDenied) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.audit.noPermission")}</div>;
-  if (!logs.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400">{t("dashboard.audit.noLogs")}</div>;
+  if (loading) return <LoadingSkeleton className="h-40 w-full transition-all duration-500" />;
+  if (auditPermDenied) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.audit.noPermission")}</div>;
+  if (!logs.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.audit.noLogs")}</div>;
   return (
-    <div>
-      <ul className="space-y-2">
-        {logs.map((l) => (
-          <li key={l.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <div className="flex justify-between items-start">
-              <div>
-                <span className="font-medium text-gray-900 dark:text-gray-300">{l.userName || `User ${l.userId}`}</span>
-                <span className="text-gray-700 dark:text-gray-400"> {l.action} </span>
-                <span className="text-gray-500 dark:text-gray-500"> {l.entity}</span>
+    <div className="transition-all duration-500">
+      <ul className="space-y-2 transition-all duration-500">
+        {logs.map((l, index) => (
+          <li 
+            key={l.id} 
+            className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-1 hover:shadow-md"
+            style={{
+              animationDelay: `${index * 80}ms`,
+              transitionDelay: `${index * 40}ms`
+            }}
+          >
+            <div className="flex justify-between items-start transition-all duration-300">
+              <div className="transition-all duration-500">
+                <span className="font-medium text-gray-900 dark:text-gray-300 transition-all duration-300 hover:scale-105">{l.userName || `User ${l.userId}`}</span>
+                <span className="text-gray-700 dark:text-gray-400 transition-all duration-500"> {l.action} </span>
+                <span className="text-gray-500 dark:text-gray-500 transition-all duration-500"> {l.entity}</span>
               </div>
-              <div className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">{new Date(l.createdAt || l._raw?.createdAt).toLocaleString()}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap transition-all duration-500 transform hover:scale-110">
+                {new Date(l.createdAt || l._raw?.createdAt).toLocaleString()}
+              </div>
             </div>
           </li>
         ))}
@@ -428,6 +575,7 @@ export default function DashboardPage() {
   const [error, setError] = useState(null);
   const [auditPermDenied, setAuditPermDenied] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showTasksModal, setShowTasksModal] = useState(false);
@@ -518,6 +666,7 @@ export default function DashboardPage() {
       setError(String(err));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [filters, t, hasAuditPerm]);
 
@@ -541,6 +690,7 @@ export default function DashboardPage() {
       return;
     }
     lastRefreshAt.current = now;
+    setRefreshing(true);
     loadAll();
     if (project && typeof project.loadGoals === "function") project.loadGoals().catch(() => {});
   };
@@ -636,64 +786,72 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 bg-gray-200 dark:bg-gray-900 min-h-screen transition-colors duration-300">
+    <div className="p-4 md:p-6 lg:p-8 bg-gray-200 dark:bg-gray-900 min-h-screen transition-all duration-500 ease-out">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center min-w-0 gap-4">
-          <div className="p-3 rounded-lg bg-white dark:bg-gray-800">
-            <Home className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+      <div className="flex items-center justify-between gap-4 mb-6 transition-all duration-500">
+        <div className="flex items-center min-w-0 gap-4 transition-all duration-500">
+          <div className="p-3 rounded-lg bg-white dark:bg-gray-800 transition-all duration-500 transform hover:scale-110 hover:rotate-6">
+            <Home className="h-6 w-6 text-sky-600 dark:text-sky-300 transition-all duration-500" />
           </div>
-          <div>
-            <h1 className="flex text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white truncate">{t("dashboard.title")}</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{t("dashboard.subtitle")}</p>
+          <div className="transition-all duration-500">
+            <h1 className="flex text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white truncate transition-all duration-500 transform ">
+              {t("dashboard.title")}
+            </h1>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 transition-all duration-700">{t("dashboard.subtitle")}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 transition-all duration-500">
           <button
             onClick={handleRefresh}
-            className="px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"
+            className={`px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-all duration-500 transform hover:scale-110 active:scale-95 ${
+              refreshing ? 'animate-pulse' : ''
+            }`}
             aria-label={t("dashboard.aria.refresh")}
             disabled={loading}
           >
-            <svg className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className={`w-4 h-4 transition-all duration-500 ${loading || refreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <span className="hidden sm:inline">{t("dashboard.refresh")}</span>
+            <span className="hidden sm:inline transition-all duration-300">{t("dashboard.refresh")}</span>
           </button>
 
-          <div className="flex items-center"><TopBar /></div>
+          <div className="flex items-center transition-all duration-500 transform hover:scale-105"><TopBar /></div>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 rounded-lg mb-4">
+        <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 rounded-lg mb-4 transition-all duration-500 transform hover:scale-105 animate-pulse">
           {error}
         </div>
       )}
 
       {/* BENTO GRID */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 transition-all duration-500">
         {/* KPI cards */}
-        <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 transition-all duration-500">
           {/* Goals Card */}
           <Card title={t("dashboard.cards.goals.title")} onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}>
             {loading ? (
-              <LoadingSkeleton className="h-8 w-24" />
+              <LoadingSkeleton className="h-8 w-24 transition-all duration-500" />
             ) : (
-              <div>
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+              <div className="transition-all duration-500">
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform ">
                   {hasGoalPercent ? `${overall_goal_progress.toFixed(2)}%` : goalsTotal > 0 ? `${goalsFinished} of ${goalsTotal}` : "-"}
-                  <sub className="text-[10px]">{t("dashboard.percentage")}</sub>
+                  <sub className="text-[10px] transition-all duration-300">{t("dashboard.percentage")}</sub>
                 </div>
 
                 {goalsTotal > 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${goalsFinished} ${t("dashboard.cards.goals.outOf")} ${goalsTotal} ${t("dashboard.cards.goals.title").toLowerCase()} ${t("dashboard.cards.goals.haveBeenDone")}`}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">
+                    {`${goalsFinished} ${t("dashboard.cards.goals.outOf")} ${goalsTotal} ${t("dashboard.cards.goals.title").toLowerCase()} ${t("dashboard.cards.goals.haveBeenDone")}`}
+                  </div>
                 )}
 
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">
                   {goalDelta ? (
-                    <span className={goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                    <span className={`transition-all duration-500 transform hover:scale-110 ${
+                      goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                    }`}>
                       {goalDelta} {t("dashboard.cards.goals.fromLast")}
                     </span>
                   ) : (
@@ -707,17 +865,17 @@ export default function DashboardPage() {
           {/* Tasks Card */}
           <Card title={t("dashboard.cards.tasks.title")} onClick={goToTasks} ariaLabel={t("dashboard.cards.tasks.aria")}>
             {loading ? (
-              <LoadingSkeleton className="h-8 w-24" />
+              <LoadingSkeleton className="h-8 w-24 transition-all duration-500" />
             ) : (
-              <div>
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+              <div className="transition-all duration-500">
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
                   {hasTaskPercent ? `${overall_task_progress.toFixed(2)}%` : tasksTotal > 0 ? `${tasksFinished} of ${tasksTotal}` : "-"}
-                  <sub className="text-[10px]">{t("dashboard.percentage")}</sub>
+                  <sub className="text-[10px] transition-all duration-300">{t("dashboard.percentage")}</sub>
                 </div>
 
-                {tasksTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${tasksFinished} ${t("dashboard.cards.tasks.outOf")} ${tasksTotal} ${t("dashboard.cards.tasks.title").toLowerCase()} ${t("dashboard.cards.tasks.haveBeenDone")}`}</div>}
+                {tasksTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{`${tasksFinished} ${t("dashboard.cards.tasks.outOf")} ${tasksTotal} ${t("dashboard.cards.tasks.title").toLowerCase()} ${t("dashboard.cards.tasks.haveBeenDone")}`}</div>}
 
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.tasks.subtitle")}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{t("dashboard.cards.tasks.subtitle")}</div>
               </div>
             )}
           </Card>
@@ -725,17 +883,17 @@ export default function DashboardPage() {
           {/* Activities Card */}
           <Card title={t("dashboard.cards.activities.title")} onClick={goToActivities} ariaLabel={t("dashboard.cards.activities.aria")}>
             {loading ? (
-              <LoadingSkeleton className="h-8 w-24" />
+              <LoadingSkeleton className="h-8 w-24 transition-all duration-500" />
             ) : (
-              <div>
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+              <div className="transition-all duration-500">
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
                   {hasActivityPercent ? `${overall_activity_progress.toFixed(2)}%` : activitiesTotal > 0 ? `${activitiesFinished} of ${activitiesTotal}` : "-"}
-                  <sub className="text-[10px]">{t("dashboard.percentage")}</sub>
+                  <sub className="text-[10px] transition-all duration-300">{t("dashboard.percentage")}</sub>
                 </div>
 
-                {activitiesTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{`${activitiesFinished} ${t("dashboard.cards.activities.outOf")} ${activitiesTotal} ${t("dashboard.cards.activities.title").toLowerCase()} ${t("dashboard.cards.activities.haveBeenDone")}`}</div>}
+                {activitiesTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{`${activitiesFinished} ${t("dashboard.cards.activities.outOf")} ${activitiesTotal} ${t("dashboard.cards.activities.title").toLowerCase()} ${t("dashboard.cards.activities.haveBeenDone")}`}</div>}
 
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.activities.subtitle")}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{t("dashboard.cards.activities.subtitle")}</div>
               </div>
             )}
           </Card>
@@ -743,49 +901,60 @@ export default function DashboardPage() {
           {/* Pending Reports Card */}
           <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports} ariaLabel={t("dashboard.cards.pendingReports.aria")}>
             {loading ? (
-              <LoadingSkeleton className="h-8 w-24" />
+              <LoadingSkeleton className="h-8 w-24 transition-all duration-500" />
             ) : (
-              <div>
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">{pending_reports ?? 0}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("dashboard.cards.pendingReports.subtitle")}</div>
+              <div className="transition-all duration-500">
+                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
+                  {pending_reports ?? 0}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{t("dashboard.cards.pendingReports.subtitle")}</div>
               </div>
             )}
           </Card>
         </div>
 
         {/* Charts */}
-        <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500">
           <Card title={t("dashboard.groupProgress")} onClick={() => setShowGroupModal(true)} className="p-4 flex flex-col justify-between h-full">
-            {loading ? (<LoadingSkeleton className="h-28" />) : (<div className="mt-3 "><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} /></div>)}
+            {loading ? (<LoadingSkeleton className="h-28 transition-all duration-500" />) : (<div className="mt-3 transition-all duration-500"><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} /></div>)}
           </Card>
 
           <Card title={t("dashboard.topTasks")} onClick={() => setShowTasksModal(true)} className="p-4">
-            {loading ? (<LoadingSkeleton className="h-28" />) : (<TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />)}
+            {loading ? (<LoadingSkeleton className="h-28 transition-all duration-500" />) : (<TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />)}
           </Card>
 
           <Card title={t("dashboard.reportsDistribution1")} onClick={() => navigate("/report")} className="p-4" ariaLabel={t("dashboard.reportsDistribution.aria")}>
-            {loading ? <LoadingSkeleton className="h-28" /> : <div className="flex justify-center"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
+            {loading ? <LoadingSkeleton className="h-28 transition-all duration-500" /> : <div className="flex justify-center transition-all duration-500"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
           </Card>
         </div>
 
         {hasAuditPerm ? (
-          <div className="lg:col-span-12">
+          <div className="lg:col-span-12 transition-all duration-500">
             <Card title={t("dashboard.audit.title")} onClick={goToAudit}><AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} /></Card>
           </div>
         ) : null}
 
         {/* Overdue + Notifications */}
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8 transition-all duration-500">
           <Card
             title={
-              <div className="flex items-center justify-between h-6 min-w-0">
-                <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">{t("dashboard.overdueTitle")}</span>
-                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full">{(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}</span>
+              <div className="flex items-center justify-between h-6 min-w-0 transition-all duration-500">
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate transition-all duration-300 hover:translate-x-1">
+                  {t("dashboard.overdueTitle")}
+                </span>
+                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full transition-all duration-500 transform hover:scale-125">
+                  {(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}
+                </span>
               </div>
             }
             headerActions={
-              <div className="flex items-center gap-2">
-                <button onClick={(e) => { e.stopPropagation(); goToTasks(); }} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{t("dashboard.openAll")}</button>
+              <div className="flex items-center gap-2 transition-all duration-500">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); goToTasks(); }} 
+                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline transition-all duration-300 transform hover:scale-110"
+                >
+                  {t("dashboard.openAll")}
+                </button>
               </div>
             }
           >
@@ -793,7 +962,7 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 transition-all duration-500">
           <Card title={t("dashboard.notifications.title")} onClick={goToNotifications}>
             <NotificationsPanel
               notifications={dashboardData.notifications}
@@ -811,14 +980,41 @@ export default function DashboardPage() {
 
       {/* Modals */}
       <Modal open={showGroupModal} onClose={() => setShowGroupModal(false)} title={t("dashboard.groupProgress")}>
-        {loading ? <LoadingSkeleton className="h-40" /> : <div className="overflow-x-auto"><div className="flex gap-6 items-end pb-4">{(dashboardData.groups || []).map((g, idx) => (<div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[84px]"><div className="w-12 h-32 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end"><div style={{ height: `${Math.max(6, Math.round((Number(g.value ?? g.progress ?? 0) / Math.max(1, ...((dashboardData.groups || []).map(x=>Number(x.value ?? x.progress ?? 0)))))*100))}%`, background: g.color }} className="w-full transition-all" /></div><div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 break-words max-w-[120px] min-h-[2.5rem] flex items-center justify-center">{g.name}</div><div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{Math.round(Number(g.value ?? g.progress ?? 0))}%</div></div>))}</div></div>}
+        {loading ? <LoadingSkeleton className="h-40 transition-all duration-500" /> : <div className="overflow-x-auto transition-all duration-500"><div className="flex gap-6 items-end pb-4 transition-all duration-500">{(dashboardData.groups || []).map((g, idx) => (<div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[84px] transition-all duration-500 transform hover:scale-110"><div className="w-12 h-32 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end transition-all duration-1000"><div style={{ height: `${Math.max(6, Math.round((Number(g.value ?? g.progress ?? 0) / Math.max(1, ...((dashboardData.groups || []).map(x=>Number(x.value ?? x.progress ?? 0)))))*100))}%`, background: g.color }} className="w-full transition-all duration-1000 ease-out" /></div><div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 break-words max-w-[120px] min-h-[2.5rem] flex items-center justify-center transition-all duration-300">{g.name}</div><div className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500 transform hover:scale-125">{Math.round(Number(g.value ?? g.progress ?? 0))}%</div></div>))}</div></div>}
       </Modal>
 
       <Modal open={showTasksModal} onClose={() => setShowTasksModal(false)} title={t("dashboard.topTasks")}>
-        {loading ? (<LoadingSkeleton className="h-40" />) : (<div className="space-y-4"><TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={dashboardData.taskBars.length || 1000} /></div>)}
+        {loading ? (<LoadingSkeleton className="h-40 transition-all duration-500" />) : (<div className="space-y-4 transition-all duration-500"><TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={dashboardData.taskBars.length || 1000} /></div>)}
       </Modal>
 
-      <div aria-live="polite" className="sr-only">{loading ? t("dashboard.aria.loading") : t("dashboard.aria.loaded")}</div>
+      <div aria-live="polite" className="sr-only transition-all duration-500">{loading ? t("dashboard.aria.loading") : t("dashboard.aria.loaded")}</div>
+
+      {/* Custom animation styles */}
+      <style jsx>{`
+        @keyframes gentleBounce {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+        }
+        
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-gentle-bounce {
+          animation: gentleBounce 2s ease-in-out infinite;
+        }
+        
+        .animate-slide-in-up {
+          animation: slideInUp 0.6s ease-out both;
+        }
+      `}</style>
     </div>
   );
 }
