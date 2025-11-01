@@ -529,7 +529,7 @@ const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
         {logs.map((l, index) => (
           <li 
             key={l.id} 
-            className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-500 ease-out transform hover:scale-105 hover:-translate-y-1 hover:shadow-md"
+            className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-500 ease-out transform hover:scale-100 hover:-translate-y-1 hover:shadow-md"
             style={{
               animationDelay: `${index * 80}ms`,
               transitionDelay: `${index * 40}ms`
@@ -980,7 +980,7 @@ export default function DashboardPage() {
 
       {/* Modals */}
       <Modal open={showGroupModal} onClose={() => setShowGroupModal(false)} title={t("dashboard.groupProgress")}>
-        {loading ? <LoadingSkeleton className="h-40 transition-all duration-500" /> : <div className="overflow-x-auto transition-all duration-500"><div className="flex gap-6 items-end pb-4 transition-all duration-500">{(dashboardData.groups || []).map((g, idx) => (<div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[84px] transition-all duration-500 transform hover:scale-110"><div className="w-12 h-32 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end transition-all duration-1000"><div style={{ height: `${Math.max(6, Math.round((Number(g.value ?? g.progress ?? 0) / Math.max(1, ...((dashboardData.groups || []).map(x=>Number(x.value ?? x.progress ?? 0)))))*100))}%`, background: g.color }} className="w-full transition-all duration-1000 ease-out" /></div><div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 break-words max-w-[120px] min-h-[2.5rem] flex items-center justify-center transition-all duration-300">{g.name}</div><div className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500 transform hover:scale-125">{Math.round(Number(g.value ?? g.progress ?? 0))}%</div></div>))}</div></div>}
+        {loading ? <LoadingSkeleton className="h-40 transition-all duration-500" /> : <div className="overflow-x-auto transition-all duration-500"><div className="flex gap-6 items-end pb-4 transition-all duration-500">{(dashboardData.groups || []).map((g, idx) => (<div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[84px] transition-all duration-500 transform hover:scale-95"><div className="w-12 h-32 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end transition-all duration-1000"><div style={{ height: `${Math.max(6, Math.round((Number(g.value ?? g.progress ?? 0) / Math.max(1, ...((dashboardData.groups || []).map(x=>Number(x.value ?? x.progress ?? 0)))))*100))}%`, background: g.color }} className="w-full transition-all duration-1000 ease-out" /></div><div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 break-words max-w-[120px] min-h-[2.5rem] flex items-center justify-center transition-all duration-300">{g.name}</div><div className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500 transform hover:scale-125">{Math.round(Number(g.value ?? g.progress ?? 0))}%</div></div>))}</div></div>}
       </Modal>
 
       <Modal open={showTasksModal} onClose={() => setShowTasksModal(false)} title={t("dashboard.topTasks")}>

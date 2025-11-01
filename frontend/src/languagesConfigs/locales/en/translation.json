@@ -822,7 +822,7 @@
     "overdueTitle": "Overdue tasks",
     "tasks": "tasks",
     "openAll": "Open All",
-    "noOverdue": "No overdue tasks//",
+    "noOverdue": "No overdue tasks",
     "table": {
       "task": "Task",
       "due": "Due",

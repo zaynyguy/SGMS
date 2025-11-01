@@ -4,14 +4,12 @@ import { initReactI18next } from 'react-i18next';         // import React bindin
 import enTranslation from './locales/en/translation.json';
 import amTranslation from './locales/am/translation.json';
 import orTranslation from './locales/or/translation.json';
-import hrTranslation from './locales/hr/translation.json';
 
 // Define resources object
 const resources = {
   en: { translation: enTranslation },  // English translations
   am: { translation: amTranslation },  // Amharic translations
   or: { translation: orTranslation },  // Oromo   translations
-  hr: { translation: hrTranslation }   // Harari  translations
 };
 
 // Initialize

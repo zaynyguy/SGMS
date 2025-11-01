@@ -47,6 +47,7 @@
     "table": {
       "file": "Dosee",
       "type": "Akaakuu",
+                  "context": "Haala wanta tokkoo",
       "uploaded": "Olkaa'ameera",
       "actions": "Gochaalee"
     },
@@ -235,7 +236,8 @@
       "all": "Hunda",
       "pending": "Eeggataa kan jiru",
       "approved": "Mirkanaa'e",
-      "rejected": "Dide"
+      "rejected": "Dide",
+      "groupAll": "Garee hunda"
     },
     "pagination": {
       "showingPage": "Fuula {{page}} kan {{totalPages}} — {{total}} wantoota",
@@ -287,6 +289,13 @@
       "title": "Gabaasawwan gamaaggamaa",
       "subtitle": "Gabaasa dhiyaate ni raggaasisa ykn ni didu"
     },
+    "activityContext": {
+      "title": "Haala hojii",
+      "target": "Galma gochaa",
+      "current": "Gocha Yeroo ammaa (gabaasa dura) .",
+      "help": "Kunis safartuuwwan sochii osoo *hojiirra hin oolin* agarsiisa. Gabaasa raggaasisuun safartuuwwan haaraa gatiiwwan 'amma' irratti dabalata."
+    },
+    "reportMetrics": "በዚህ ሪፖርት ውስጥ ያሉ መለኪያዎች",
     "master": {
       "title": "Gabaasa mastersii",
       "subtitle2": "Gabaasa master walitti qabuu fi al-ergii",
@@ -308,6 +317,7 @@
       "open": "Banaa",
       "subtitle": "Galmoota, hojiiwwanii fi daataa sochii walitti qabaman ilaali",
       "generatedAt": "Maddisiifame irratti {{date}}",
+      "allGroups": "Garee hunda",
       "granularityLabel": "granularity jedhamuun beekama",
       "granularities": {
         "monthly": "Ji'a ji'aan",
@@ -326,6 +336,7 @@
       "task": "Hojii",
       "activity": "Hojii",
       "titleFull": "Gabatee deetaa guutuu",
+      "previous": "Kan duraa",
       "noData": "Daataan hin jiru"
     },
     "metrics": {
@@ -611,7 +622,10 @@
       "assignGroup": "Gareen ramadi",
       "narrative": "Seenaa",
       "newStatus": "Haala haaraa",
-      "status": "Haala"
+      "status": "Haala",
+      "previous": "Kana dura",
+      "target": "Xiyyeeffannoo",
+      "current":"Amma"
     },
 
     "sections": {
@@ -625,7 +639,9 @@
       "metrics": "Safartuuwwan Ammaa",
       "attachments": "Dabalata",
       "rollLabel": "Lakkoofsa roll (dirqama)",
-      "optional": "(dirqama)"
+      "optional": "(dirqama)",
+      "previousMetrics": "Safartuuwwan Duraa",
+      "selectedFiles": "Faayilota Filataman:"
     },
 
     "placeholders": {
@@ -642,7 +658,8 @@
       "metrics": "Meetirii akka lamaan furtuu/gatii itti dabali.",
       "attachments": "Faayilota guddaa: daangaa gama sarvarii ni hojjeta.",
       "hint": "Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada.",
-      "metricRemaining": "Amma: {{current}} / {{target}} (Hafe: {{remaining}})"
+      "metricRemaining": "Amma: {{current}} / {{target}} (Hafe: {{remaining}})",
+      "maxAttachments": "Dabalata baay'inaan 5."
     },
     "empty": {
       "noGoals": "Kaayyoon hin argamne. Galma kee isa jalqabaa uumi.",
@@ -671,7 +688,8 @@
       "missingTaskId": "Id hojii dhabame.",
       "weightExceedsTask": "Ulfaatina gara {{newWeight}} saaguu hin danda'u. Waliigala hojii {{taskWeight}} fi {{used}} duraan fayyadamaa jira. Argama: {{available}}.",
       "modalSubmit": "Unka moodaalii dhiyeessuu hin dandeenye.",
-      "metricKeyMissing": "Furtuuwwan safartuu yeroo gatiin kennamu duwwaa ta'uu hin danda'an."
+      "metricKeyMissing": "Furtuuwwan safartuu yeroo gatiin kennamu duwwaa ta'uu hin danda'an.",
+      "maxAttachments": "Maximum 5 attachments ni hayyamama. Faayiloonni dabalataa tuffatamaniiru."
     },
 
     "toasts": {

@@ -1,282 +1,829 @@
 {
-  "login": {
-    "title": "ሰለጥኹ ሀምበይሌ ዲጅኹ",
-    "subtitle": "ኪም አካውቲኾ ቦኡ",
-    "prompt": "መቦአሌ መለያኾው ኤስቡ",
-    "username_label": "ዚተናፈኢ ሱም",
-    "username_placeholder": "ዚተናፈኢ ሱምኾው ኤስቡ",
-    "password_label": "ሲርሪ ጩቅቲ",
-    "password_placeholder": "ሲርሪ ጩቅቲኾው ኤስቡ",
-    "password_too_short": "ሲርሪ ጩቅቲ አነሰገር 8 ሐርፊያች መኽነ ሐለባ",
-    "remember_label": "ቀጠብ ኡሸኝ",
-    "forgot_password": "ሲርሪ ጩቅቲኾው ረሰኾ?",
-    "no_account": "አካውንት ኤለኹሚ?",
-    "signup_link": "አካውንት መክፈትሌ",
-    "button_signin": "ቦኡ",
-    "logging_in": "መቦአቤ...",
-    "error_default": "መቦአሌ አልቲፈረካም። ሐጂስቤ ጌብቱ።",
-    "language_label": "ሲናን",
-    "lang_en": "ኢንጊሊዝ ሲናን",
-    "lang_am": "አሕመራ ሲናን",
-    "lang_or": "ኦሮሞ ሲናን",
-    "lang_hr": "ሐረሪ ሲናን"
+  "access": {
+    "title": "ዚዱቅቲ አትሒዳድሪ",
+    "subtitle": "ማን ባህሪያትን እና ውሂብን በድርጅቱ ላይ መድረስ እንደሚችል ይቆጣጠሩ።",
+    "nav": {
+      "users": "ተናፋኢያች", 
+      "roles": "መሾቀልቲ", 
+      "groups": "አግቡራች" 
+    },
+    "mobileNav": {
+      "ariaLabel": "ዚዱቅቲ ደፍደፍቲ"
+    }
   },
-  "accessDenied": {
-    "title": "403",
-    "heading": "ዱቅቲዞ ተኸተረመሐል",
-    "message": "ኦውፊበሕ፣ ዪ ሰፍሓው መሔጀሌ ሩኽሳ ኤለኹም።",
-    "button": "ኪም ሊሚ ሰፍሐ ሌጥ"
+  "attachments": {
+    "title": "አባሪዎች",
+    "subtitle": "ፋፋይላች ,ሱቁላች ዋ ሰነዳች ሪፖርታች ዋ መሐዋች አትሒዳድሪ", 
+    "viewToggleAria": "የአባሪዎችን እይታ ቀያይር",
+    "view": {
+      "grid": "ፍርግርግ",
+      "gridTitle": "የፍርግርግ እይታ",
+      "table": "ዙርዙርቲ", 
+      "tableTitle": "ዚዙርዙርቲ ሔጆት" 
+    },
+    "closePreview": "ሜገልዛጥ ሔጆት አቆፍሊ", 
+    "messages": {
+      "failedLoad": "ተሳአዲ አልኻናም", 
+      "noFileReturned": "ተናፋኢቤ ዚርገገባ ፋይል ኤሉም", 
+      "downloadFailed": "ሞረድዞ አልኻናም", 
+      "deleteFailed": "መማሻ አልኻናም " 
+    },
+    "loading": "ተስጂልቤ ሐል", 
+    "noAttachmentsTitle": "አሐዱም ኤሉም",  
+    "noAttachmentsSubtitle": "ዪ ሪፖርትሌ አሐዱም አባሪ ኤላም", 
+    "table": {
+      "file": "ፋይል", 
+      "type": "አይና", 
+      "uploaded": "ተሴጀላ", 
+      "actions": "ኹንቲያች" 
+    },
+    "idPrefix": "መታወቃ", 
+    "uploadedPrefix": "ተሴጀላ",
+    "empty": "ቆፍ", 
+    "download": "ሞረድ", 
+    "preview": "ሜገል ኹንቲ", 
+    "delete": "ሸጥ", 
+    "confirmDelete": "መማሻ ተኸሺነኹ?", 
+    "searchPlaceholder": "ሱም ዋ መታወቃው አይነቤ የኸሻሉ…",  
+    "searchAria": "መፋጨ ቶያ", 
+    "clearSearchAria": "መፋጫዉ ማሻ", 
+    "clearSearchTitle": "መፋጫዉ ማሻ" 
+
   },
-  "dashboard": {
-    "title": "ዪ ሊሚ ሰፍሐንታ"
+  "audit": {
+    "title": "ዚ,ኦዲት መዝገብ",
+    "subtitle": "የስርዓት ክስተቶች፣ ደህንነት እና የተጠቃሚ እንቅስቃሴ የዘመን ቅደም ተከተል መዝገብ ይመልከቱ።",
+    "loadFailed": "የኦዲት ምዝግብ ማስታወሻዎችን መጫን አልተሳካም።",
+    "exportCsv": "CSV ኪም አባት ጊፈር",
+    "csv": {
+      "filename": "ኦዲት-ምዝግብ ቀጠብቲያች.csv" 
+
+    },
+    "export": {
+      "success": "ኪምቃጪ መግፈር ቴገላ" 
+    },
+    "searchPlaceholder": " ተናፋኢቤ ፋጩ",
+    "searchAria": "ኦዲት ምዝገባ ፋጭ", 
+    "results": {
+      "showing": "ከ{{total}} ምዝግብ ማስታወሻዎች ውስጥ {{filtered}} በማሳየት ላይ"መሔጀቤ
+    },
+    "loading": "መሴጀልቤ…", 
+    "filters": {
+      "show": "መላያቹ ኡር",
+      "hide": "መጥለልቲያቹ ሼምቂ",
+      "title": "መትማጃ" , 
+      "fromDate": "አያምቤ", 
+      "toDate": "ኢላ ሖጂ",
+      "apply": "መትማጃው የንከኦ",
+      "clear": " ሑሉፍ ባይቲያች አኔዝፊ",
+      "applied": "ሑሉፍ ባይቲያች ኒካ",
+
+      "cleared": "ሑሉፍ ባይቲያች ኔዘፉ"
+    },
+
+    "table": {
+      "timestamp": "ወቅቲ መሐተም",
+      "user": "ተናፋኢ", 
+      "entity": "ቃም",
+      "action": "ኹንቲ",
+      "details": "ጠብቲ"
+    },
+    "noLogs": {
+      "title": "አሐዱዱም ቀጠብቲያች አልቲረኸቡም", 
+      "none": "ዚሴጀሉ ቀጠብቲያች ኤሉም",
+      "tryAdjust": "ዚኻድ መ"
+    },
+    "expanded": {
+      "fullDetails": "ሙሉ በያን",
+      "additionalInfo": "ዚያደ ኸበር", 
+      "idLabel": "መታወቂያ፡",
+      "entityLabel": "ቃም",
+      "ipLabel": "አይፒ፡",
+      "userAgentLabel": "ተናፋኢ ወኪል፡-",
+      "show": "በያናቹ ኡር",
+      "hide": "በያናቹ ሼምቂ"
+    },
+    "na": "ኤን/ኤ", 
+    "pagination": {
+      "range": "ከ{{total}} ወደ {{to}} ከ{{from}}» በማሳየት ላይ",ሞራ
+      "previous": "ሜገል",
+      "next": "ተኼታይ"
+    }
   },
-  "errorBoundary": {
-    "title": "አሐድ ኸጠእ ተኸለቀመሐል",
-    "message": "ዛልቲሔሰባ ኸጠእ ተኸለቃ። ሰፍሐዞው ሐጂስቤ አቴግሊ።",
-    "detailsTitle": "ዚኸጠእ ዙርዙረቲያች",
-    "technicalDetails": "ቴክኒካል ዙርዙርቲያች:",
-    "componentStack": "ዚፈስሊ ሐድዲ:",
-    "refreshButton": "ሰፍሐዞው ሐጂስቤ አቴግሉ"
+  "groups": {
+    "title": "አግቡር",
+    "subtitle": "አግቡራቹ የኽለቁማ የትሒዳድሩ",
+    "searchPlaceholder": "አግቡራቹ ሱምቤ ዋ በያንቤ ፋጩ…",
+    "search": {
+      "placeholder": "አግቡራቹ ሱምቤ ዋ በያንቤ ፋጩ…",
+    "search": {
+
+      "aria": "አግቡራቹ ፋጭ"
+    },
+    "newGroup": "ሐጂስ አግቡር", 
+    "loading": "አግቡራቹ ሜሰብ…",
+    "noResults": "አሐድ አግቡራቹም አልቲረኸቡም", 
+    "noDescription": "ዚሰጣ በያን ኤሉም",
+    "confirmDelete": "ዪ አግቡሩ መማሻ የኸሺነሉ",
+    "messages": {
+      "loadFailed": "አግቡራቹ ሜሰብ አልኻናም",
+      "created": "አግቡር ተኸለቃ",
+      "updated": "አግቡር ሌቃ",
+      "deleted": "አግቡር ተማሻ",
+      "saveFailed": "አግቡር ሞረድ አልኻናም",
+      "deleteFailed": "አግቡር መማሻ አልኻናም"
+    },
+    "table": {
+      "name": "ሱም", 
+      "description": "በያን",
+      "members": "አግቡራች",
+      "created": "ዚትኸለቃ",
+      "updated": "ሐጂስ ኻና",
+      "actions": "ኺንቲያች" 
+    },
+    "createdPrefix": "ተኸለቃ:",
+    "updatedPrefix": "ተናወጣ:",
+    "idPrefix": "መታወቂያ፡", 
+    "actions": {
+      "edit": "አግቡር ዲላጋ",
+      "delete": "አግቡር ማሽ",
+      "toggle": "ዚር ዙርቲ ናዉጣ" 
+    },
+    "form": {
+      "title": {
+        "create": "አግቡር ኺለቅ",
+        "edit": "አግቡር" 
+      },
+      "close": "ተላሐዳ",
+      "labels": {
+        "name": "አግቡር ሱም",
+        "description": "በያን"
+      },
+      "buttons": {
+        "uploadPicture": "ሱራ ኤስቢ",
+        "cancel": "ሸጥ",
+        "create": "አግቡር የኽለቁ", 
+        "save": "መናወጥቲ ዪርዱ",
+        "saving": "ሞረድቤ…", 
+        "remove": "አትቃኒ" 
+      },
+      "errors": {
+        "nameRequired": "አግቡር ሱም ፋጭ",
+        "nameTooLong": "ሱም 50 አልተኑም መነስ ሐልባ",
+        "descriptionTooLong": "መግለጥቲ 300 አልታኑም አዞቤ ላይ መኽና ሐልባ",
+        "invalidImage": "ሊኪ ዘልኻና ሱራፋይል",
+        "imageTooLarge": "ሱራ ጊዲር መኽና (ቢበዛ 5 ሜባ)", 
+        "saveFailed": "ቡአግቡር ሞረድ አልኻናም"
+      }
+    },
+    "members": {
+      "title": {
+        "manage": "አግቡራቹ መትሒዳደር" 
+      },
+      "add": {
+        "title": "አግቡር ዲበል", 
+        "selectUser": "አግቡር ዲበል", 
+        "button": "አግቡር ዲበል", 
+        "adding": "ማከል ላይቤ…",
+        "noAvailable": "አሐዱም ተናፋኢ ኤሉም" 
+      },
+      "current": {
+        "title": "አኸዛጥ አግቡራች",
+        "empty": "ዪ አግቡረቤ አሐዱም ኤሉም"
+      },
+      "linkText": "{{count}} አባል(ዎች)",አግቡራች
+      "manage": "አግቡራቹ የትሒዳድሪ",
+      "label": "አግቡር",
+      "remove": {
+        "title": "አግቡር ናቅሲ"
+      }
+    }
   },
-  "settings": {
-    "title": "መትዋዋች",
-    "loading": "መትዋዋቹው መጤነቤ ሀል...",
-    "personalInfo": "ዚሩኻድ ማእሉማት",
-    "username": "ዚተናፈኢ ሱም",
-    "name": "ሱም",
-    "appearance": "ሲፋ ኹንቲ",
-    "language": "ሉኻ",
-    "theme": "ሲፋ",
-    "lightMode": "ነጪሕ የኽኒ",
-    "darkMode": "ጠይ የኽኒ",
-    "changePassword": "ሲርሪ ጩቅቲ መናወጥሌ",
-    "oldPassword": "ዚናራ ሲርሪ ጩቅቲ",
-    "newPassword": "ሐጂስ ሲርሪ ጩቅቲ",
-    "passwordPlaceholder": "ሲርሪ ጩቅቲኾው ኤስቡ",
-    "saveChanges": "ኒውጢያቹው አንቢር",
-    "saving": "...",
-    "saveButton": "መትዋዋቹው አንቢር",
-    "saveSuccess": "መትዋዋች ሰሕቤ ተሴጀሉመሐል",
-    "connectionTesting": "ዚኢሜል ኺድማ ሜሰብሌ መጌበትቤ...",
-    "connectionSuccess": "ዚኢሜል ኺድማ ተራኦት ተቄበለመሐል",
-    "reportingPeriod": {
-      "title": "ዚሪፖርቲ ወቅቲ መትዋዋች",
-      "monthlyDueDate": "ዋሕሪዛጥ ሪፖርት አኺርታኝ አያም",
-      "fiscalYearStart": "ዚፋይናንስ ዓመት ሜገልታኝ ዋሕሪ"
+  "reports": {
+    "noReports": "አሐዱም ሪፓርት ኤሉም ዪቤ የኽለቁ",
+    "header": {
+      "title": "ሪፖርታች: ",
+      "subtitle": "ረፓርት የሔጆማ የግፈሮ"
     },
-    "emailServer": {
-      "title": "ዚኢሜል ኺድማ መትዋዋች",
-      "smtpHost": "SMTP መኻደም",
-      "smtpHostPlaceholder": "ሚሳሎሌ smtp.example.com",
-      "port": "ፖርት",
-      "portPlaceholder": "ሚሳልሌ 587",
-      "username": "ዚተናፈኢ ሱም",
-      "usernamePlaceholder": "SMTP ዚተናፈኢ ሱም",
-      "password": "ሲርሪ ጩቅቲ",
-      "passwordPlaceholder": "SMTP ሲርሪ ጩቅቲ",
-      "testConnection": "መትራአሌ ጌብቲ"
+    "tabs": {
+      "review": "በያን", 
+      "master": "ሐቡ ረፖርት"
     },
-    "fileUpload": {
-      "title": "ሲጂሊ መግፈር መትዋዋች",
-      "maxFileSize": "ጊዲር ሲጂሊ ቂያስ (MB)",
-      "maxFileSizePlaceholder": "ሚሳልሌ 10",
-      "allowedFileTypes": "ሩኽሳ ዛለዩ ሲጂሊ አይናች",
-      "allowedFileTypesPlaceholder": "ሚሳልሌ .pdf,.doc,.docx,.xls,.xlsx"
+    "search": {
+      "placeholder": "ሪፖርት ተናፋኢያች ኩቱቡ ፋጩ…",
+      "button": "ፋጭ"
     },
-    "notifications": {
-      "title": "አቴወቆት መትዋዋች",
-      "reportDue": "ሪፖርቲ ሜሰብ አያም ዚቆረረሳ ተናፈኢያቹ አቴውቂ",
-      "onSubmission": "ሪፖርቲ ዚቦአሳ አትሒዳድሪያቹ አቴውቂ",
-      "weeklySummary": "ሳቲዛጥ መጣለልቲ ኢሜላቹ ጊፈር"
+    "refresh": "ናውጢ",
+    "filters": {
+      "all": "ከሉዞም",
+      "pending": "መጢባበቅቤ",
+      "approved": "ኻና",
+      "rejected": "ተሐደጋ"
     },
-    "emailTemplates": {
-      "title": "ዚኢሜል ሰፍሐ",
-      "placeholder": "ኢዴቤ ኢሜል ሰፍሐኾው ኤስቡ...",
-      "default": "ዚናሬኹ ኢሜል ሊሕዳኝ..."
+    "pagination": {
+      "showingPage": "ገጽ {{page}} የ{{totalPages}} — {{total}} ንጥሎች",ሉሕ
+      "first": "አሐድታኝ",
+      "prev": "ሜገልታኝ",
+      "next": "ቤሔር",
+      "last": "ኣኺር"
     },
-    "toasts": {
-      "updateSuccess": "መትዋዋች ሰሕቤ ተናወጡመሐል"
+    "pageSize": "ሉህ ቂያስ",
+    "status": {
+      "Approved": "ኻና",
+      "Rejected": "ተሐደጋ",
+      "Pending": "ጠብቲ ላይ"
+    },
+    "narrative": "ወር",
+    "noNarrative": "በያን አልቲሰጣም",
+    "metrics_narrative": "መቃየስቲያች",
+    "attachments": "አባረያች",
+    "attachments_download": {
+      "download": "ኡርዲ"
+    },
+    "adminComment": "ዚ አትሒዳድሪ ኹንቲ",
+    "resubmissionDeadline": "መስጣ ያም",
+    "adminComment_placeholder": {
+      "placeholder": "ኡስጡ ኹንቲዉ የ ሔጁ"
+    },
+    "actions": {
+      "approve": "ኡሽ",
+      "reject": "ሒደግ"
+    },
+    "action": {
+      "updatedTo": "ወደ {{status}} ተዘምኗል",ተቃየሳ
+      "failed": "አልኻናም"
+    },
+    "noReports1": "ዪትሪዛል ሪፓረት ኤሉም",
+    "noReports2": "ሪፓርታች ኤሉም",
+    "noReports3": "ተስጂላች ኤሉም",
+    "noReports4": "ዚሴጀላች አልቲረኸቡም",
+    "noReports5": "ዚሴጀላች አልቲረኸቡም",
+    
+    "footer": {
+      "systemName": "SGMS"SGMs
+    },
+    "status2": {
+      "Approved": "ጸድቋል",ኻና
+      "Rejected": "ውድቅ ተደርጓል",ተሐደጋ
+      "Pending": "በመጠባበቅ ላይ"መንቆረርቤ
+    },
+    "review": {
+      "title": "ሪፖርቶችን ይገምግሙ",ሪፖርታቹ የሔጁ
+      "subtitle": "የቀረቡ ሪፖርቶችን ማጽደቅ ወይም ውድቅ አድርግ"ዚቀረቡ ሪፖርታሞሻ
+    },
+    "master": {
+      "title": "ማስተር ሪፖርት": "ማስተር ሪፖርት, 
+      "subtitle2": "ዋና ሪፖርቶች: : ን ሰብስብ እና ወደ ውጪ ላክ"ነሳምቲማ ነግፈር,
+      "loadButton": "ሪፖርትን ጫን",ሪፖርት ሴጅሊ
+      "loadFirstAlert": "እባክዎ መጀመሪያ ዋና ሪፖርት ይጫኑ", ሜገልታኝ ሪፖርቱ የንኮኦ
+      "exportPDF": "ወደ ውጪ ላክ (PDF)",ኪም አባት ጊፈር
+      "exportCSV": "ወደ ውጪ ላክ (CSV)",ኪምኡስጡ ጊፈረ
+      "groupLabel": "ቡድን",አግቡር
+      "groupIdLabel": "የቡድን መታወቂያ",ዚ አግቡረ መታወቂያ
+      "groupIdPlaceholder": "የቡድን መታወቂያ አስገባ (አማራጭ)",ዚ አግቡረ መታወቂያ ኤስቢ
+      "narratives": "ትረካዎች", ወራች
+      "narrativesTitle": "ትረካዎች",ወራች
+      "noData": "ምንም ዋና ዘገባ አልተጫነም።",ዋና ተስጂል አልቲነከአመ
+      "noGoals": "ምንም ግቦች የሉም",ሐደፋች ኤለም
+      "noReports": "ለዚህ እንቅስቃሴ ምንም ሪፖርቶች የሉም",ሪፖርታች ኤሉም
+      "targetLabel": "ዒላማ",ሐደፍ
+      "targetText": "ዒላማ",ሐደፍ
+      "done": "ተከናውኗል",ኻና
+      "open": "ክፈት",ኪፈተ
+      "subtitle": "የተዋሃዱ ግቦችን፣ ተግባሮችን እና የእንቅስቃሴ ውሂብን ይመልከቱ",ዚአሐድነት አላማ
+      "generatedAt": "የተፈጠረው በ{{date}}",ዚትኸለቃ
+      "granularityLabel": "ግራኑላርነት",
+      "granularities": {
+        "monthly": "ወርሃዊ",ወሕሪ
+        "quarterly": "በየሩብ ዓመቱ",ሩቡ አመት
+        "annual": "አመታዊ"አመት
+      },
+      "periodColumns": "{{count}} ጊዜ(ዎች) — {{granularity}}"ወቅቲ
+    },
+    "table": {
+      "title": "ርዕስ",በርናሚጅ
+      "weight": "ክብደት",ሪዝና
+      "metric": "መለኪያ",መቃየስቲ
+      "target": "ዒላማ",ሐደፍ
+      "type": "ዓይነት",አይና
+      "goal": "ግብ",ሐደፍ
+      "task": "ተግባር",ዲላጋ
+      "activity": "እንቅስቃሴ",ጠብጠብቲ
+      "titleFull": "ሙሉ የውሂብ ሰንጠረዥ",ሙሉ ሰንጠረጅ
+      "noData": "ምንም ውሂብ አይገኝም" አሐዱም ዪትረኸቡሜል
+    },
+    "metrics": {
+      "empty": "—",
+      "invalid": "ልክ ያልሆኑ መለኪያዎች" ጠብ ዘልታ
     },
     "errors": {
-      "loadError": "መትዋዋቹ ሰሕቤ መጤነሌ አልቲፈረካም",
-      "updateError": "መትዋዋቹ ሰሕቤ መናወጥሌ አልቲፈረካም",
-      "passwordTooShort": "ሲርሪ ጩቅቲ አነሰገር 8 ሐርፊያች መኽነ ሐለባ",
-      "missingEmailDetails": "ዚኢሜል ኺድማ ዙርዙርቲያቹ ኤስቡ",
-      "connectionFailed": "ኪም ኢሜል ኺድማ መትራኣሌ አልቲፈረካም"
+      "loadReports": "ሪፖርቶችን መጫን አልተሳካም።",ሪፓርታቹ ሜሰብ አልኻናም
+      "attachments": "ዓባሪዎችን መጫን አልተሳካም።",ሜሠብ አልኻናም
+      "downloadFailed": "ማውረድ አልተሳካም"ሞረድዞ አልኻናም
     }
   },
   "admin": {
-    "title": "ዚአትሒዳድሪ ሊሚ ሰፍሐ",
-    "header": "ዚአትሒዳድሪ ፓነል",
-    "mobileMenu": {
-      "toggle": "ኒውጢ ሚልሐጅ"
-    },
-    "tabs": {
-      "users": "ተናፈኢያች",
-      "roles": "ሲጃያች",
-      "settings": "መትዋዋች",
-      "auditLog": "ዚኦዲት ሲጂሊlog",
-      "switchTo": "{tab} ሉኻ መናወጥሌ"
-    },
-    "sidebar": {
-      "appName": "ዚአትሒዳድራ ፓነል",
-      "logoAlt": "ሙነዘማ አላማ",
-      "menu": {
-        "dashboard": "ሊሚ ሰፍሐ",
-        "settings": "መትዋዋ",
-        "admin": "አትሒዳድሪ"
-      },
-      "logout": "ዊጠእ",
-      "closeMenu": "ሚልሐጁ አቆፍሊ",
-      "openMenu": "ሚልሐጁ ኪፈት"
-    },
+    "na": "—",
     "actions": {
-      "cancel": "ማሽ",
-      "saveChanges": "ኒውጢያቹው አንቢር",
-      "create": "ሐጂስ ዲለግ",
-      "delete": "ማሽ",
-      "tryAgain": "ሐጂስቤ የጌብቱ"
-    },
-    "users": {
-      "addUser": "ተናፈኢ ዲበል",
-      "edit": "ቄምሲ",
-      "delete": "ማሽ",
-      "editUser": "ተናፈኢ {name} ቄምሲ",
-      "deleteUser": "ተናፈኢው {name} ማሽ",
-      "editUserTitle": "ተናፈኢ ቄምሲ",
-      "createUserTitle": "ተናፈኢ ዲበል",
-      "noUsers": "ተናፈኢዞ አልቲረኸባም",
-      "notAvailable": "አልቲረኸባም",
-      "role": "ሲጃ",
-      "changeStatus": "ኹንቲው ናውጢ",
-      "statusChanged": "ዚ{name} ኹንቲ ኪም {status} ተናወጠመሐል",
-      "status": {
-        "active": "ኑቁሕ",
-        "inactive": "ኑቁሕ ዘልታ",
-        "pending": "ሜቀቤ ሐል"
-      },
-      "tableHeaders": {
-        "username": "ተናፈኢ ሱም",
-        "name": "ሱም",
-        "role": "ሲጃ",
-        "status": "ኹንቲ",
-        "actions": "ኢሾታች"
-      },
-      "form": {
-        "username": "ተናፈኢ ሱም",
-        "usernamePlaceholder": "ተናፈኢ ሱም ኤስቡ",
-        "name": "ሙሉእ ሱም",
-        "namePlaceholder": "ሙሉእ ሱም ኤስቡ",
-        "password": "ሲርሪ ጩቅቲ",
-        "newPassword": "ሐጂስ ሲርሪ ጩቅቲ",
-        "passwordPlaceholder": "ሲርሪ ጩቅቲ ኤስቡ",
-        "role": "ሲጃ",
-        "selectRole": "ሲጃ ሚለሑ"
-      },
-      "deleteConfirm": {
-        "title": "መትማሸዞው የቂን ኡሽ",
-        "message": "ዚ{name} ተናፈኢ መማሸ መኽሸኾ የቂኒንተኹ? ተማሸጊር ዪርገብጉሜል።"
-      },
-      "toasts": {
-        "createSuccess": "ተናፈኢ {name} ሰሕቤ ተደለገመሐል!",
-        "updateSuccess": "ተናፈኢ {name} ሰሕቤ ጠብኻነመሐል!",
-        "deleteSuccess": "ተነፈኢ {name} ተማሸመሐል!"
-      },
-      "errors": {
-        "loadFailed": "ተናፈኢያች ዙርዙር መጤነሌ አልቲፈረካም፦ {error}",
-        "saveFailed": "ተናፈኢያች ተስጂል ሞሸሌ አለቲፈረካም፦ {error}",
-        "deleteFailed": "ተናፈኢያቹ መማሸሌ አልቲፈረካም፦ {error}",
-        "passwordTooShort": "ሲርሪ ጩቅቲ አነሰጊር 8 ሐርፊ መኽነ ሐልባ"
-      }
+      "tryAgain": "እንደገና ይሞክሩ",ሐጂስቤ ጌብቲ
+      "saveChanges": "ለውጦችን ያስቀምጡ",ኒውጢያች ኡርዲ
+      "cancel": "ሰርዝ",ማሽ
+      "processing": "በማስሄድ ላይ...",ዪሊጥዛል
+      "deleting": "በመሰረዝ ላይ"ዪትማሽዛል
     },
     "roles": {
-      "title": "ዚሲጃ አትሒዳደሮት",
-      "rolesList": "ሲጃያች",
-      "permissions": "ሩኽሳች",
-      "permission": "ሩኽሳ",
-      "roleName": "ዚሲጃ ሱም",
-      "roleNamePlaceholder": "ዚሲጃ ሱም ኤስቡ",
-      "description": "መቤየንቲ",
-      "descriptionPlaceholder": "መቤየንቲ ኤስቡ",
-      "optional": "መምለሕቲ",
-      "noRoles": "ሲጃ ኤሉም",
-      "noPermissions": "ሩኽሳ ኤሉም",
-      "addRole": "ሲጃ ዲበል",
-      "editRoleTitle": "ሲጃ ቄምሲ",
-      "createRoleTitle": "ሲጃ ዲለግ",
-      "editRole": "{name} ቄምሲ",
-      "deleteRole": "{name} ማሽ",
-      "enabled": "አትፌርኪ",
-      "disabled": "አተትፌርኪ",
-      "permissionStatus": "{role} ዚ{permission} ሩኽሳ ኹንቲ {status} ኢንታ",
-      "loading": "ሲጃያቹ መጤነቤ...",
+      "title": "ሚናዎች እና ፈቃዶች",ዋናች ዋ ፊቃዳች
+      "subtitle": "ለተጠቃሚዎች እና ቡድኖች ሚናዎች እና አጠቃላይ ፈቃዶችን ይግለጹ።",ተናፋኢሌ ሩኽሳው ዬምዱ
+      "loading": "ሚናዎችን እና ፈቃዶችን በመጫን ላይ…", ዋና ዋ ሩኽሳ ኒካ
+      "rolesList": "ሚናዎች",ዋና
+      "addRole": "ሚና ጨምር",ዋና ዲበል
+      "roleNamePlaceholder": "ሚና ስም አስገባ እና አስገባን ተጫን",ዋና ሱም ኤስቢ
+      "roleNameAria": "የሚና ስም",ዋና ሱም
+      "noRoles": "ምንም ሚናዎች አይገኙም።",ዋናች ኤሉም
+      "noPermissions": "ምንም ፈቃዶች የሉም።",ሩኽሳ ኤሉም
+      "roleName": "የሚና ስም",ዋና ሱም
+      "createdAt": "ተፈጠረ",ተኸለቃ
+      "updatedAt": "ተዘምኗል",ተናወጣ
+      "permission": "ፍቃድ", ሩኽሳ
+      "permissions": "ፈቃዶች",ሩኽሳች
+      "enabled": "የነቃ",ዚነቀሐ
+      "disabled": "ተሰናክሏል",በለላ
+      "permissionStatus": "ለሚና {{role}} ፍቃድ {{status}} ነው",ዋና ፍቃድ ነው
+      "editingRole": "ፈቃዶችን ያርትዑ",ሩኽሳ
+      "deleteRole": "ሚና ሰርዝ",ዋና ማሽ
       "deleteConfirm": {
-        "title": "ሲጃ መትማሸዞው የቂን ኡሽ",
-        "message": "ዚ'{name}' ሲጃው መማሻ መኽሸኾው የቂኒንተኹ?"
+        "message": "እርግጠኛ ነህ ሚና \"{{name}}\" መሰረዝ ትፈልጋለህ?" መማሻ ተኸሺነኽ?
       },
+      "deleteDisabled": "ይህ ሚና ሊሰረዝ አይችልም።", ዪ ሓጃ ዪትማሺሌ  ዪፈርኩሜል
       "toasts": {
-        "createSuccess": "ሲጃ '{name}' ሰሕቤ ተደለገማሐል",
-        "updateSuccess": "ሲጃ '{name}' ሰሕቤ ተሴጀለማሐል",
-        "deleteSuccess": "ሲጃ '{name}' ተማሸመሐል"
+        "createSuccess": "ሚና \"{{name}}\" ተፈጥሯል።", ተኸለቃ
+        "updateSuccess": "ፈቃዶች ተዘምነዋል", ሩኽሳች ተናወጥ
+        "deleteSuccess": "ሚና \"{{name}}\" ተሰርዟል።" ተማሹ
       },
       "errors": {
-        "title": "ሲጃ መእሉማት ለአይቤ ኸጠእ",
-        "loadError": "ሲጃያቹ መጤነሌ አልቲፈረካም",
-        "saveError": "ሲጃው ተስጂል ሞሸሌ አለቲፈረካም፦ {error}",
-        "deleteError": "ሲጃው መማሸሌ አለቲፈረካም፦ {error}"
+        "loadError": "ሚናዎችን ወይም ፈቃዶችን መጫን አልተሳካም።",  ሩኽሳች መሴጀል አልኻናም
+        "title": "ሚናዎችን መጫን አልተቻለም", መሴጃል አልኻናም
+        "saveError": "ለውጦችን ማስቀመጥ አልተሳካም {{#if error}}: {{error}}{{/if}}", ኒዉጢያቹ ሞረድ አልኻናም
+        "deleteError": "ሚናን መሰረዝ አልተሳካም {{#if error}}: {{error}}{{/if}}" ኡገዞ መማሻ  አልኻናም
+      },
+      "roleActions": {
+        "add": "ሚና ይፍጠሩ", ኡጋ የኽለቁ
+        "remove": "ሚናን ያስወግዱ" ኡጋ ፊቅ ዩሹ
+      },
+      "aria": {
+        "permissionToggle": "ለሚና ፈቃድ ቀይር"  ኡጋዞ ሩኽሳ ናውጡ
+      },
+      "placeholders": {
+        "search": "ሚናዎችን ፈልግ..."  ኡጋ ፋጭ
       }
     },
-    "auditLog": {
-      "title": "ዚኦዲት ሲጂል",
-      "exportButton": "CSVቤ የውጠእ",
-      "searchPlaceholder": "ሲጂሊያቹ መፋጨቤ...",
-      "searchLabel": "ዚኦዲት ሲጂሊያቹ ፋጭ",
-      "fromDate": "አያም:",
-      "toDate": "ኢላዋ:",
-      "applyFilters": "መጥላያቹ ተናፈእ",
-      "noEntries": "ዚኦዲት ሲጂሊ አልቲረኸባም",
-      "tableHeaders": {
-        "timestamp": "ወቅቲ",
-        "user": "ተናፈኢ",
-        "entity": "ኢልሊ ፊክሪ",
-        "action": "ኢሾት",
-        "details": "ዙርዙር"
+    "actions2": {
+      "edit": "አስተካክል", ናውጢ
+      "delete": "ሰርዝ", ማሽ
+      "close": "ገጠመ", ዳበሊ
+      "cancel": "ሰርዝ",  ማሽ
+      "processing": "በማስሄድ ላይ...", መሌጣ ላይቤ
+      "saveChanges": "ለውጦችን ያስቀምጡ", ኒውጣያቹ ኡርዲ
+      "create": "ፍጠር", ኺለቅ
+      "deleting": "በመሰረዝ ላይ..." መማሻ ቤ
+    },
+    "users": {
+      "title": "ተጠቃሚዎች", ተናፋኢያች
+      "subtitle": "የመተግበሪያ ተጠቃሚዎችን እና ሚናቸውን ይፍጠሩ፣ ያርትዑ እና ያስተዳድሩ።",  
+      "addUser": "ተጠቃሚ ጨምር",  ተናፋኢ  ዲበል
+      "noUsers": "ተጠቃሚዎች የሉም",ተናፋኢያች ኤሉም
+      "noUsersDescription": "እስካሁን ምንም ተጠቃሚዎች የሉም። ለመጀመር አንድ ይፍጠሩ።",",ተናፋኢያች ኤሉም
+      "table": {
+        "user": "ተጠቃሚ",ተናፋኢ
+        "role": "ሚና", ኡጋ
+        "actions": "ድርጊቶች"ኹንቲያች
       },
-      "actions": {
-        "submitted": "ቴሰበማሐል",
-        "created": "ተደለገማሐል",
-        "updated": "አጌየማሐል",
-        "deleted": "ተማሻማሓል",
-        "approved": "ሩኽሳ ተሰጤውማሓል",
-        "rejected": "ተኸተራማሓል"
+      "noRole": "ያልተመደበ", ዘልቲረመዳ
+      "editUserTitle": "ተጠቃሚን ያርትዑ", ተናፋኢ
+      "createUserTitle": "ተጠቃሚ ፍጠር", ተናፋኢ ኺለቁ
+      "form": {
+        "picture": "የመገለጫ ሥዕል", ዚመግለጥቲ ሱራ
+        "upload": "ስቀል", አሴቅሊ
+        "remove": "አስወግድ", አትቃኒ
+        "pictureHint": "ምስል መስቀል ወይም ባዶ መተው ትችላለህ።", ሱራ መሴቀል ዋ መሕደግ 
+        "username": "የተጠቃሚ ስም", ተናፋኢ ሱም
+        "usernamePlaceholder": "የተጠቃሚ ስም አስገባ",ተናፋኢ ሱም ኤስቢ
+        "name": "ሙሉ ስም", ሙሉ ሱም
+        "namePlaceholder": "ሙሉ ስም አስገባ", ሙሉ ሱም ኤስቢ
+        "password": "የይለፍ ቃል", 
+        "newPassword": "አዲስ የይለፍ ቃል (አሁኑን ለማቆየት ባዶውን ይተው)", ቁልፊ ጩቅቲ
+        "passwordPlaceholder": "የይለፍ ቃል አስገባ", ቁልፊ ጩቅቲ ኤስቢ
+        "role": "ሚና", ኡጋ
+        "selectRole": "ሚና ይምረጡ" ኡጋ የምለሑ
       },
-      "mockUsers": {
-        "alice": "አሊስ ጆንሰን",
-        "john": "ጆን ስሚት",
-        "emma": "ኤማ ዴቪስ",
-        "michael": "ሚካኤል ብራውን"
+      "deleteConfirm": {
+        "title": "ተጠቃሚን ሰርዝ", ተናፋ ኢ ማሽ
+        "message": "እርግጠኛ ነህ {{name}}ን መሰረዝ ትፈልጋለህ?" የቂንተኽ መማሻ ተኸሺነኽ
       },
-      "mockDetails": {
-        "projectSubmitted": "ሐጂስ የፕሮጀክት አቡራ ተሰጣማሐል",
-        "reportCreated": "ዚዋሕሪ ፋይናንስ ሪፖርት ተደለቀማሓል",
-        "userUpdated": "ዚተናፈኢ ሩኽሳያች አጌዩማሓል",
-        "settingsChanged": "መትዋዋች ተናወጡማሓል"
+      "toasts": {
+        "createSuccess": "ተጠቃሚ \"{{name}}\" ተፈጥሯል።", ተናፋኢ ኺለቅ
+        "updateSuccess": "ተጠቃሚ \"{{name}}\" ዘምኗል", ተናፋኢ ተናወጣ
+        "deleteSuccess": "ተጠቃሚ \"{{name}}\" ተሰርዟል"ተናፋኢ ተማሸ
       },
-      "toast": {
-        "filtersApplied": "መጥላያች መድለግቤ ሐሉ",
-        "exportSuccess": "ዚኦዲት ሲጂልሊ ሰሕቤ መውጠሌ ተፈረከማሓል"
+      "errors": {
+        "loadFailed": "ተጠቃሚዎችን መጫን አልተሳካም፦ {{error}}",መሴጀል አልኻናም
+        "invalidImage": "የተመረጠው ፋይል ምስል አይደለም", ሱራ አልታም
+        "imageTooLarge": "ምስሉ በጣም ትልቅ ነው (ቢበዛ 5 ሜባ)", ሱራዞ ጊዲሪንታ
+        "usernameRequired": "የተጠቃሚ ስም ያስፈልጋል", ተናፋኢ ሱም የትኺሻል
+        "nameRequired": "ሙሉ ስም ያስፈልጋል",ሙሉ ሱም የትኺሻል
+        "passwordRequired": "ለአዲስ ተጠቃሚዎች የይለፍ ቃል ያስፈልጋል", ሐጂስ ተናፋኢያችሌ ቂልፊ ጩቅቲ የትኺሻል 
+        "passwordTooShort": "የይለፍ ቃል ቢያንስ 8 ቁምፊዎች መሆን አለበት", 8 ቁልፊ ጩቅቲ መኽና ሐልባ
+        "roleRequired": "እባክዎ ሚና ይምረጡ",ኡጋ የምለሑ
+        "formValidation": "እባክዎ የቅጹን ስህተቶች ያስተካክሉ",  ሚጊርዞ ኸጣ ጠብ ዩሹ
+        "pictureUploadFailed": "የመገለጫ ሥዕል መስቀል አልተሳካም",መግለጥቲ ለራሱ አልኻናም
+        "saveFailed": "ተጠቃሚን ማስቀመጥ አልተሳካም፦ {{error}}",ተናፋኢ ሞረድ አልኻናም
+        "deleteFailed": "ተጠቃሚን መሰረዝ አልተሳካም፦ {{error}}" ተናፋኢ መማሻ አልኻናም
+      },
+      "placeholders": {
+        "search": "ተጠቃሚዎችን ፈልግ..." ተናፋኢ ፋጭ
       }
     }
   },
-  "sidebar": {
-    "appName": "SGMS",
-    "logoAlt": "ሙነዘማ አላማ",
-    "menu": {
-      "dashboard": "ሊሚ ሰፍሐ",
-      "settings": "መትዋዋ",
-      "admin": "አትሒዳደሮት"
+  "settings": {
+    "title": "ቅንብሮች", ጠብቲያች
+    "subtitle": "የመተግበሪያ-ሰፊ ምርጫዎችን፣ መልክን እና ውህደቶችን ያቀናብሩ።", ቆር ዋ ሉቁጣቹ ዳብሊ
+    "loading": "ቅንብሮችን በመጫን ላይ…",  ጠብ ኡሽ
+    "profilePicture": "የመገለጫ ሥዕል", መትገለጥቲ ሱራ
+    "chooseImage": "ምስል ይምረጡ", ሱራ ሚለሑ
+    "pictureHint": "የካሬ ምስል በተሻለ ሁኔታ ይሰራል (ቢበዛ 5 ሜባ)", አማንቤ ዪትደለጋል
+    "uploading": "በመስቀል ላይ...", ኡገቤ
+    "upload": "ስቀል",አሴቅሊ
+    "personalInfo": "የግል መረጃ", ዚኻድ ኸበር
+    "username": "የተጠቃሚ ስም", ተናፋኢ ሱም
+    "usernameHelp": "የተጠቃሚ ስም ሊስተካከል አይችልም።",ጠብመንጃ ዪፈርኩሜል
+    "name": "ሙሉ ስም", ሙሉ ሱም
+    "namePlaceholder": "የማሳያ ስምህ", ሞራ ሱም
+    "appearance": "መልክ", ቆር
+    "language": "ቋንቋ", ሉኻ
+    "changePassword": "የይለፍ ቃል ቀይር", ዚ ሹሙቅቲ  ጩቅቲው ናውጢ
+    "oldPassword": "የድሮ የይለፍ ቃል", ነዲ ዛጥ
+    "newPassword": "አዲስ የይለፍ ቃል", ሐጂስ
+    "passwordPlaceholder": "••••••••",
+    "passwordRequirements": "ቢያንስ 8 ቁምፊዎች።", ኢላማ 8 መፍተሓች
+    "saving": "በማስቀመጥ ላይ…", ሞረድቤ
+    "saveChanges": "ለውጦችን ያስቀምጡ"  ኒውጢያች ዩርዱ,
+    "toasts": {
+      "pictureSuccess": "የመገለጫ ሥዕል ተዘምኗል",ሱራ ተናወጣ
+      "updateSuccess": "ቅንብሮች ተዘምነዋል" ጠብቲያች ተናወጡ
     },
-    "logout": "ዊጠእ",
-    "closeMenu": "መቆፋይ ሚልሐጅ"
+    "errors": {
+      "loadError": "ቅንብሮችን መጫን አልተሳካም።", ጠብ አላያም
+      "invalidImage": "ልክ ያልሆነ የምስል ፋይል", ሱራ አልኻናም
+      "imageTooLarge": "ምስሉ በጣም ትልቅ ነው (ቢበዛ 5 ሜባ)", ሱራዞ ጊዲሪንታ
+      "uploadError": "የመገለጫ ሥዕል መስቀል አልተሳካም",ጠብቁ አላያም
+      "oldPasswordRequired": "የይለፍ ቃልህን ለመለወጥ የድሮ ይለፍ ቃል ያስፈልጋል", ሲሪ ጩቅቲኻው ናውጢ
+      "passwordTooShort": "የይለፍ ቃል ቢያንስ 8 ቁምፊዎች መሆን አለበት" አነሰጊር 8 የኽኒ
+    }
+  },
+  "sidebar": {
+    "menu": {
+      "dashboard": "ዳሽቦርድ",
+      "settings": "ቅንብሮች", ጠብቲፈያች
+      "systemSettings": "የስርዓት ቅንብሮች",አደብ ጠብቲያች
+      "audit": "የኦዲት ምዝግብ ማስታወሻዎች", ቀጠብቲያች
+      "accessManagement": "የመዳረሻ አስተዳደር", ዱቅቲ አትሒዳድሪ
+      "reports": "ሪፖርቶች", ሪፖርታች
+      "projectManagement": "የፕሮጀክት አስተዳደር",ፕሮጀክት አትሒዳድሪ
+      "attachments": "አባሪዎች",
+      "notification": "ማሳወቂያዎች" አቴወቆት
+    },
+    "logoAlt": "የኩባንያ አርማ", 
+    "appName": "SGMS", SGMS
+    "profileAlt": "የተጠቃሚ መገለጫ ሥዕል", ተናፋኢ ሱራ
+    "logout": "ዘግተህ ውጣ", አቆፍሊማ ዊጣ
+    "openMenu": "የጎን አሞሌ ምናሌን ይክፈቱ",
+    "closeMenu": "የጎን አሞሌ ምናሌን ዝጋ"
+  },
+  "systemSettings": {
+    "title": "የስርዓት ቅንብሮች",
+    "subtitle": "የስርዓት ባህሪን፣ ውህደቶችን፣ ምትኬዎችን እና የአካባቢ አማራጮችን ያዋቅሩ።",
+    "allowedAttachmentTypes": {
+      "label": "የተፈቀዱ የአባሪ ዓይነቶች",
+      "help": "ለፋይል ሰቀላ የትኞቹ የ MIME አይነቶች እንደሚፈቀዱ ይግለጹ።"
+    },
+    "current": "የአሁኑ ዋጋ", አኸ ቂማ
+    "auditRetention": {
+      "label": "የኦዲት ማቆየት (ቀናት)", ኦዲት ቀለሕ ሞሻ
+      "help": "የኦዲት መዝገቦችን ለማቆየት የቀኖች ብዛት። ላልተወሰነ ጊዜ እንዲቆይ ወደ 0 አቀናብር።",
+      "placeholder": "0"
+    },
+    "maxAttachmentSize": {
+      "label": "ከፍተኛ የአባሪ መጠን (ሜባ)",
+      "help": "በሜጋባይት ውስጥ ላሉ አባሪዎች የሚፈቀደው ከፍተኛው የፋይል መጠን። ገደብን ለማሰናከል ወደ 0 ያቀናብሩ።",
+      "placeholder": "0"
+    },
+    "reporting": {
+      "label": "ሪፖርት ማድረግ", ሪፖርት ሞሻ
+      "help": "በስርዓቱ ውስጥ የሪፖርት ማድረጊያ ባህሪያትን አንቃ ወይም አሰናክል።"
+    },
+    "enabled": "ነቅቷል", ነቀሐ
+    "disabled": "ተሰናክሏል",በለላ
+    "saving": "በማስቀመጥ ላይ…", ሞረድቤ
+    "saveButton": "ቅንብሮችን ያስቀምጡ",ጠብቲያቹ ዪርዱ
+    "saveButtonAria": "የስርዓት ቅንብሮችን ያስቀምጡ",ጠብቲያቹ ዪርዱ
+
+    "messages": {
+      "failedLoad": "የስርዓት ቅንብሮችን መጫን አልተሳካም።",ጠብቲያቹ ዪርዱ
+      "noChanges": "ለማስቀመጥ ምንም ለውጦች የሉም", አሐድ ጠብቲም ኤሉም
+      "saved": "ቅንብሮች ተቀምጠዋል",ጠብቲያቹ አትጌብ
+
+      "failedSave": "ቅንብሮችን ማስቀመጥ አልተሳካም" ጠብቲያቹ ሞረድ አልኻናም
+    },
+    "description": "እንደ የተፈቀዱ አባሪዎች፣ የኦዲት ማቆየት እና ሪፖርት ማድረግን የመሳሰሉ አለምአቀፍ የስርዓት ቅንብሮችን ያዋቅሩ።"
+  },
+  "project": {
+    "title": "የፕሮጀክት አስተዳዳሪ",ዚ ፕሮጀክት አትሒዳድሪ
+    "subtitle": "ግቦችን ፣ ተግባሮችን እና ተግባሮችን ያደራጁ", ሒጡራች ዋ ዲላጋች
+    "na": "—",
+    "searchPlaceholder": "ግቦችን ፈልግ...",አላማቹ ፋጭ
+    "searchAria": "ግቦችን ይፈልጉ",አላማቹ ፋጭ
+    "unassigned": "ያልተመደበ", ዘልቲረመዳ
+    "none": "- ምንም ለውጥ የለም -", ኒዉጢ ኤሉም
+
+    "actions": {
+      "refresh": "አድስ",ናዉጢ
+      "addGoal": "ግብ ጨምር", ሐደፍ ዲበል
+      "addTask": "ተግባር ጨምር", ዲላጋ ዲበል
+      "addActivity": "እንቅስቃሴን ጨምር", መሻወርቲ ዲበል
+      "edit": "አስተካክል", ጠብ ኡሽ
+      "delete": "ሰርዝ",ማሽ
+      "toggleGoal": "ግብ ቀይር",ሐደፍ ናውጢ
+      "toggleTask": "ተግባር ቀያይር",ዲላጋ ናውጢ
+      "remove": "አስወግድ", ኺተር
+      "removeShort": "X",  X
+      "addMetric": "መለኪያ አክል", መናወጥ ቄሲ
+      "cancel": "ሰርዝ", ማሽ
+      "save": "አስቀምጥ", ኢርዲ
+      "create": "ፍጠር", ኺለቅ
+      "submit": "አስገባ",ኤስቢ
+      "mobileMenu": "ምናሌ ክፈት",ሚሳል ኡሽ
+      "open": "ክፈት", ኪፈት
+      "close": "ገጠመ",አትራ
+      "submitReport": "ሪፖርት አስገባ" ሪፖርት ኤስቢ
+    },
+
+    "fields": {
+      "group": "ቡድን", አግቡር
+      "weight": "ክብደት", ዊድላ
+      "due": "ሁለት",ኮት
+      "dueDate": "ሁለት ቀኖች",ኮት ያም
+      "startDate": "የመጀመሪያ ቀን",ሜገልታኝ ያም
+      "endDate": "የመጨረሻ ቀን",አኺርታኝ ያም
+      "title": "ርዕስ", መቅናናእቲ
+      "description": "መግለጫ",መግለጥቲ
+      "progress": "እድገት",መሌቃ
+      "assignGroup": "ለቡድን መድብ", አግቡርሌ ጠብ ኡሽ
+      "narrative": "ትረካ",
+      "newStatus": "አዲስ ሁኔታ",
+      "status": "ሁኔታ"
+    },
+
+    "sections": {
+      "tasks": "ተግባራት",
+      "activities": "እንቅስቃሴዎች"
+    },
+
+    "labels": {
+      "targetMetrics": "የዒላማ መለኪያዎች",
+      "activity": "እንቅስቃሴ",
+      "metrics": "ዒላማ / መለኪያዎች",
+      "attachments": "አባሪዎች"
+    },
+
+    "placeholders": {
+      "metricKey": "ቁልፍ",
+      "metricValue": "ዋጋ"
+    },
+
+    "hints": {
+      "taskWeight": "የተግባር አጠቃላይ፡ {{taskWeight}}። በሌሎች ተግባራት ጥቅም ላይ የዋለ፡ {{used}}። ይገኛል፡ {{available}}።",
+      "goalWeight": "አጠቃላይ ግብ፡ {{goalWeight}}። በሌሎች ተግባራት ጥቅም ላይ የዋለ፡ {{used}}። ይገኛል፡ {{available}}።",
+      "systemWeight": "ጥቅም ላይ የዋለው የሥርዓት ክብደት፡ {{used}}፣ ይገኛል፡ {{available}}",
+      "metrics": "መለኪያዎችን እንደ ቁልፍ/እሴት ጥንዶች ያክሉ።",
+      "attachments": "ከፍተኛ ፋይሎች፡ የአገልጋይ-ጎን ገደብ ተፈጻሚ ነው።"
+    },
+
+    "empty": {
+      "noGoals": "ምንም ግቦች አልተገኙም። የመጀመሪያ ግብዎን ይፍጠሩ።",
+      "noMatch": "ከፍለጋህ ጋር የሚዛመዱ ግቦች የሉም።",
+      "noTasks": "ለዚህ ግብ ምንም ተግባራት የሉም።",
+      "noActivities": "ለዚህ ተግባር ምንም እንቅስቃሴዎች የሉም።"
+    },
+
+    "errors": {
+      "loadGoals": "ግቦችን መጫን አልተሳካም.",
+      "loadTasks": "ተግባራትን መጫን አልተሳካም።",
+      "loadActivities": "እንቅስቃሴዎችን መጫን አልተሳካም.",
+      "createGoal": "ግብ መፍጠር አልተሳካም.",
+      "updateGoal": "ግብን ማዘመን አልተሳካም።",
+      "deleteGoal": "ግብን መሰረዝ አልተሳካም.",
+      "createTask": "ተግባር መፍጠር አልተሳካም።",
+      "updateTask": "ተግባርን ማዘመን አልተሳካም።",
+      "deleteTask": "ተግባርን መሰረዝ አልተሳካም.",
+      "createActivity": "እንቅስቃሴ መፍጠር አልተሳካም።",
+      "updateActivity": "እንቅስቃሴን ማዘመን አልተሳካም።",
+      "deleteActivity": "እንቅስቃሴን መሰረዝ አልተሳካም።",
+      "submitReport": "ሪፖርት ማስገባት አልተሳካም.",
+      "missingGoalId": "የጠፋ የግብ መታወቂያ።",
+      "weightNonNegative": "ክብደት ከ0 በላይ ወይም እኩል መሆን አለበት።",
+      "weightExceeds": "ክብደትን ወደ {{newWeight}} ማዋቀር አልተቻለም። ጠቅላላ ግብ {{goalWeight}} ነው እና {{used}} አስቀድሞ ጥቅም ላይ ውሏል። ይገኛል፡ {{available}}።",
+      "missingTaskId": "የተግባር መታወቂያ ይጎድላል።",
+      "weightExceedsTask": "ክብደትን ወደ {{newWeight}} ማዋቀር አልተቻለም። የተግባር አጠቃላይ {{taskWeight}} ነው እና {{used}} አስቀድሞ ጥቅም ላይ ውሏል። ይገኛል፡ {{available}}።",
+      "modalSubmit": "የሞዳል ቅጽ ማስገባት አልተሳካም።",
+      "metricKeyMissing": "እሴት ሲቀርብ የሜትሪክ ቁልፎች ባዶ ሊሆኑ አይችሉም።"
+    },
+
+    "toasts": {
+      "goalCreated": "የተፈጠረ ግብ",
+      "goalUpdated": "ግብ የዘመነ",
+      "goalDeleted": "ግብ ተሰርዟል",
+      "taskCreated": "ተግባር ተፈጥሯል",
+      "taskUpdated": "ተግባር ተዘምኗል",
+      "taskDeleted": "ተግባር ተሰርዟል",
+      "activityCreated": "የተፈጠረ እንቅስቃሴ",
+      "activity Updated": "እንቅስቃሴ ተዘምኗል",
+      "activityDeleted": "እንቅስቃሴ ተሰርዟል",
+      "reportSubmitted": "ሪፖርት ገብቷል"
+    },
+
+    "modal": {
+      "createGoal": "ግብ ፍጠር",
+      "editGoal": "ግብ አርትዕ",
+      "createTask": "ተግባር ፍጠር",
+      "editTask": "ተግባርን አርትዕ",
+      "createActivity": "እንቅስቃሴ ፍጠር",
+      "editActivity": "እንቅስቃሴን አርትዕ",
+      "submitReport": "ሪፖርት አስገባ"
+    },
+
+    "pagination": {
+      "showing": "{{from}} - {{to}} ከ{{total}} በማሳየት ላይ",
+      "perPage": "{{n}} በገጽ",
+      "prev": "ቀዳሚ",
+      "next": "ቀጥሎ"
+    },
+
+    "inspector": {
+      "title": "ኢንስፔክተር",
+      "empty": "ዝርዝሮችን ለማየት ግብ ምረጥ"
+    },
+
+    "status": {
+      "notStarted": "አልተጀመረም",
+      "inProgress": "በሂደት ላይ",
+      "completed": "የተጠናቀቀ",
+      "open": "ክፍት"
+    },
+
+    "labelsSmall": {
+      "activity": "እንቅስቃሴ"
+    },
+    "confirm": {
+      "deleteGoal": "እርግጠኛ ነዎት ይህን ግብ መሰረዝ ይፈልጋሉ? ሁሉም ተዛማጅ ተግባራት ይወገዳሉ እና ይህ እርምጃ ሊቀለበስ አይችልም።",
+      "deleteTask": "እርግጠኛ ነዎት የተመረጡትን ተግባራት መሰረዝ ይፈልጋሉ? ይህ እርምጃ ሊቀለበስ አይችልም።",
+      "deleteActivity": "እርግጠኛ ነዎት ይህን እንቅስቃሴ መሰረዝ ይፈልጋሉ? ይህ እርምጃ ሊቀለበስ አይችልም።"
+    }
+  },
+  "login": {
+    "company_logo_alt": "የኩባንያ አርማ",
+    "title": "እንኳን ተመለሱ",
+    "subtitle": "የከተማ ልማት እና ግንባታ ቤሩ",
+    "form_title": "ወደ መለያህ ግባ",
+    "username_label": "የተጠቃሚ ስም",
+    "username_placeholder": "የተጠቃሚ ስምህን አስገባ",
+    "password_label": "የይለፍ ቃል",
+    "password_placeholder": "የይለፍ ቃልዎን ያስገቡ",
+    "show_password": "የይለፍ ቃል አሳይ",
+    "hide_password": "የይለፍ ቃል ደብቅ",
+    "password_too_short": "የይለፍ ቃል ቢያንስ 8 ቁምፊዎች መሆን አለበት",
+    "error_default": "መግባት አልተቻለም። እባክዎ ምስክርነቶችዎን ያረጋግጡ እና እንደገና ይሞክሩ።",
+    "logging_in": "መግባት...",
+    "button_signin": "ግባ"
+  },
+  "dashboard": {
+    "title": "ዳሽቦርድ",
+    "subtitle": "የግቦች፣ ተግባራት፣ ሪፖርቶች እና የቅርብ ጊዜ እንቅስቃሴዎች አጠቃላይ እይታ",
+    "aria": {
+      "refresh": "ዳሽቦርድ አድስ",
+      "loading": "ዳሽቦርድ በመጫን ላይ",
+      "loaded": "ዳሽቦርድ ተጭኗል"
+    },
+    "refresh": "አድስ",
+    "failedLoadPrefix": "መጫን አልተሳካም: ",
+    "errors": {
+      "summary": "ማጠቃለያ",
+      "groupCharts": "የቡድን ገበታዎች",
+      "taskCharts": "የተግባር ገበታዎች",
+      "reports": "ሪፖርቶች ስርጭት",
+      "overdue": "የዘገዩ ተግባራት",
+      "notifications": "ማሳወቂያዎች",
+      "audit": "የኦዲት መዝገቦች"
+    },
+    "cards": {
+      "goals": {
+        "title": "ግቦች",
+        "aria": "ክፍት ግቦች",
+        "fromLast": "ከመጨረሻው ጊዜ",
+        "noComparison": "አጠቃላይ የግብ ግስጋሴ"
+      },
+      "tasks": {
+        "title": "ተግባራት",
+        "aria": "ክፍት ተግባራት",
+        "subtitle": "አጠቃላይ የተግባር ሂደት"
+      },
+      "activities": {
+        "title": "እንቅስቃሴዎች",
+        "aria": "ክፍት እንቅስቃሴዎች",
+        "subtitle": "አጠቃላይ የእንቅስቃሴ ሂደት"
+      },
+      "pendingReports": {
+        "title": "በመጠባበቅ ላይ ያሉ ሪፖርቶች",
+        "aria": "ክፍት በመጠባበቅ ላይ ያሉ ሪፖርቶች",
+        "subtitle": "ግምገማ በመጠባበቅ ላይ ያሉ ሪፖርቶች"
+      }
+    },
+    "groupProgress": "የቡድን እድገት",
+    "topTasks": "ዋና ተግባራት",
+    "reportsDistribution1": "የሪፖርት ስርጭት",
+    "reportsDistribution": {
+      "aria": "ክፍት ሪፖርቶች"
+    },
+    "overdueTitle": "የዘገዩ ተግባራት",
+    "tasks": "ተግባራት",
+    "open": "ክፍት",
+    "nooverdue": "የዘገዩ ተግባራት የሉም",
+    "table": {
+      "task": "ተግባር",
+      "due": "የተጠናቀቀ",
+      "daysOverdue": "ቀናቶች አልፈዋል",
+      "assignee": "መዳቢ",
+      "goal": "ግብ",
+      "group": "ቡድን",
+      "link": "አገናኝ"
+    },
+    "noNotifications": "ምንም ማሳወቂያዎች የሉም",
+    "notifications": {
+      "title": "ማሳወቂያዎች",
+      "marking": "ምልክት ማድረግ...",
+      "markAll": "ሁሉንም እንደተነበቡ ምልክት ያድርጉበት"
+    },
+    "audit": {
+      "title": "የኦዲት መዝገብ",
+      "noPermission": "የኦዲት ምዝግብ ማስታወሻዎችን ለማየት ፍቃድ የለዎትም።",
+      "noLogs": "ምንም የኦዲት ምዝግብ ማስታወሻዎች አልተገኙም"
+    }
+  },
+  "notifications": {
+    "title": "ማሳወቂያዎች",
+    "subtitle": "ማንቂያዎችን፣ መልዕክቶችን እና የስርዓት ማስታወቂያዎችን ይመልከቱ እና ያቀናብሩ - እንደተነበቡ ምልክት ያድርጉ፣ ያጣሩ እና አስፈላጊ በሆኑ ነገሮች ላይ እርምጃ ይውሰዱ።",
+    "unreadCount": "{{count}} ያልተነበበ",
+    "markAll": "ሁሉንም እንደተነበቡ ምልክት ያድርጉበት",
+    "filter": {
+      "label": "ማጣሪያ:",
+      "all": "ሁሉም",
+      "unread": "ያልተነበበ",
+      "read": "አንብብ"
+    },
+    "loading": "ማሳወቂያዎችን በመጫን ላይ…",
+    "noNotifications": "ምንም የሚታዩ ማሳወቂያዎች የሉም",
+    "markAsRead": "እንደተነበበ ምልክት አድርግበት",
+    "loadMore": "ተጨማሪ ጫን",
+    "loadingMore": "ተጨማሪ በመጫን ላይ...",
+    "errors": {
+      "loadFailed": "ማሳወቂያዎችን መጫን አልተሳካም",
+      "markReadFailed": "ማሳወቂያ እንደተነበበ ምልክት ማድረግ አልተሳካም",
+      "markAllFailed": "ሁሉንም ማሳወቂያዎች እንደተነበቡ ምልክት ማድረግ አልተሳካም"
+    },
+    "aria": {
+      "title": "የማሳወቂያዎች ገጽ",
+      "filter": "የማሳወቂያ ማጣሪያ",
+      "markAll": "ሁሉንም ማሳወቂያዎች እንደተነበቡ ምልክት ያድርጉባቸው",
+      "loadMore": "ተጨማሪ ማሳወቂያዎችን ጫን"
+    },
+    "meta": {
+      "unreadSingular": "{{count}} ያልተነበበ",
+      "unreadPlural": "{{count}} ያልተነበበ"
+    },
+    "timestamps": {
+      "formatted": "{{date}}"
+    }
+  },
+  "notificationsPreview": {
+    "recentAria": "የቅርብ ጊዜ ማሳወቂያዎች",
+    "title": "ማሳወቂያዎች",
+    "label": "ማሳወቂያዎች",
+    "unreadCount": "{{count}} ያልተነበበ",
+    "noNotifications": "ምንም ማሳወቂያዎች የሉም",
+    "mark": "ምልክት",
+    "open": "ክፍት",
+    "viewAll": "ሁሉንም ይመልከቱ",
+    "refresh": "አድስ"
   }
 }
+
+

@@ -1,5 +1,13 @@
 // src/components/AllowedTypesInput.jsx
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+  useLayoutEffect,
+} from "react";
+import { createPortal } from "react-dom";
 
 /* --- helpers (same as before) --- */
 const EXT_TO_MIME = {
@@ -65,6 +73,7 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
 
   const inputRef = useRef();
   const containerRef = useRef();
+  const dropdownRef = useRef(); // ref to portal dropdown element
   const initialMountRef = useRef(true);
   const onChangeRef = useRef(onChange);
   useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
@@ -170,11 +179,14 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
     }
   }
 
-  // close suggestions when clicking outside — but BEFORE closing, commit typed input (if any)
+  // close suggestions when clicking outside — but ignore clicks inside portal dropdown
   useEffect(() => {
     function onDocClick(e) {
       if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target)) {
+      const clickedInContainer = containerRef.current.contains(e.target);
+      const clickedInDropdown = dropdownRef.current ? dropdownRef.current.contains(e.target) : false;
+
+      if (!clickedInContainer && !clickedInDropdown) {
         // commit typed value before closing (use DOM value to avoid stale closure)
         const domVal = inputRef.current?.value ?? "";
         if (domVal.trim()) {
@@ -186,7 +198,27 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
     }
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
-  }, [addRaw]); // re-register if addRaw identity changes
+  }, [addRaw]);
+
+  // Dropdown positioning: measure container rect and update on scroll/resize
+  const [dropdownRect, setDropdownRect] = useState(null);
+  useLayoutEffect(() => {
+    if (!showSuggestions) return;
+    function updateRect() {
+      const el = containerRef.current;
+      if (!el) return setDropdownRect(null);
+      const r = el.getBoundingClientRect();
+      setDropdownRect(r);
+    }
+    updateRect();
+    window.addEventListener("resize", updateRect);
+    // capture scroll events to catch scrolls on any ancestor
+    window.addEventListener("scroll", updateRect, true);
+    return () => {
+      window.removeEventListener("resize", updateRect);
+      window.removeEventListener("scroll", updateRect, true);
+    };
+  }, [showSuggestions, input, suggestions.length]);
 
   return (
     <div ref={containerRef} className="w-full relative text-gray-900 dark:text-gray-300">
@@ -240,12 +272,21 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
         </div>
       </div>
 
-      {showSuggestions && suggestions.length > 0 && (
+      {/* Portal-based dropdown: renders in document.body so it escapes stacking contexts */}
+      {showSuggestions && suggestions.length > 0 && dropdownRect && createPortal(
         <div
+          ref={dropdownRef}
           id="allowed-types-listbox"
           role="listbox"
           aria-label="Suggested attachment types"
-          className="absolute left-0 right-0 mt-1 border rounded bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 shadow-sm z-30 max-h-56 overflow-auto"
+          style={{
+            position: "absolute",
+            top: dropdownRect.bottom + window.scrollY,
+            left: dropdownRect.left + window.scrollX,
+            width: dropdownRect.width,
+            zIndex: 2147483647,
+          }}
+          className="border rounded bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 shadow-sm max-h-56 overflow-auto"
         >
           <div className="p-2">
             {suggestions.map((s, i) => {
@@ -256,6 +297,7 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
                   type="button"
                   role="option"
                   aria-selected={active}
+                  // use onMouseDown (not onClick) so the portal selection happens before document mousedown handler
                   onMouseDown={(e) => { e.preventDefault(); selectSuggestionByIndex(i); }}
                   onMouseEnter={() => setHighlight(i)}
                   className={`w-full text-left px-3 py-2 rounded ${active ? "bg-gray-100 dark:bg-gray-600" : "hover:bg-gray-50 dark:hover:bg-gray-600"}`}
@@ -266,7 +308,8 @@ export default function AllowedTypesInput({ value = [], onChange, placeholder })
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

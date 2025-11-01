@@ -47,6 +47,7 @@
     "table": {
       "file": "ፋይል",
       "type": "ዓይነት",
+            "context": "አውድ",
       "uploaded": "ተጭኗል",
       "actions": "ድርጊቶች"
     },
@@ -234,7 +235,8 @@
       "all": "ሁሉም",
       "pending": "በመጠባበቅ ላይ",
       "approved": "ጸድቋል",
-      "rejected": "ውድቅ ተደርጓል"
+      "rejected": "ውድቅ ተደርጓል",
+            "groupAll": "ሁሉም ቡድኖች"
     },
     "pagination": {
       "showingPage": "ገጽ {{page}} የ{{totalPages}} — {{total}} ንጥሎች",
@@ -286,6 +288,13 @@
       "title": "ሪፖርቶችን ይገምግሙ",
       "subtitle": "የቀረቡ ሪፖርቶችን ማጽደቅ ወይም ውድቅ አድርግ"
     },
+        "activityContext": {
+      "title": "የእንቅስቃሴ አውድ",
+      "target": "የእንቅስቃሴ ኢላማ",
+      "current": "የእንቅስቃሴ ወቅታዊ (ከሪፖርቱ በፊት)",
+      "help": "ይህ የእንቅስቃሴውን መለኪያዎች *ከመተግበሩ* በፊት ያሳያል። ሪፖርቱን ማጽደቅ አዲሶቹን መለኪያዎች ወደ 'የአሁኑ' እሴቶች ያክላል።"
+    },
+    "reportMetrics": "በዚህ ሪፖርት ውስጥ ያሉ መለኪያዎች",
     "master": {
       "title": "ማስተር ሪፖርት",
       "subtitle2": "ዋና ሪፖርቶችን ሰብስብ እና ወደ ውጪ ላክ",
@@ -307,6 +316,7 @@
       "open": "ክፈት",
       "subtitle": "የተዋሃዱ ግቦችን፣ ተግባሮችን እና የእንቅስቃሴ ውሂብን ይመልከቱ",
       "generatedAt": "የተፈጠረው በ{{date}}",
+            "allGroups": "ሁሉም ቡድኖች",
       "granularityLabel": "ግራኑላርነት",
       "granularities": {
         "monthly": "ወርሃዊ",
@@ -325,6 +335,7 @@
       "task": "ተግባር",
       "activity": "እንቅስቃሴ",
       "titleFull": "ሙሉ የውሂብ ሰንጠረዥ",
+            "previous": "ቀዳሚ",
       "noData": "ምንም ውሂብ አይገኝም"
     },
     "metrics": {
@@ -608,7 +619,10 @@
       "assignGroup": "ለቡድን መድብ",
       "narrative": "ትረካ",
       "newStatus": "አዲስ ሁኔታ",
-      "status": "ሁኔታ"
+      "status": "ሁኔታ",
+            "previous": "ቀዳሚ",
+      "target": "ዒላማ",
+      "current":"የአሁኑ"
     },
 
     "sections": {
@@ -622,7 +636,9 @@
       "metrics": "የአሁኑ መለኪያዎች",
       "attachments": "አባሪዎች",
       "rollLabel": "ጥቅል ቁጥር (ከተፈለገ)",
-      "optional": "(ከተፈለገ)"
+      "optional": "(ከተፈለገ)",
+            "previousMetrics": "ቀዳሚ መለኪያዎች",
+      "selectedFiles": "የተመረጡ ፋይሎች፡"
     },
 
     "placeholders": {
@@ -639,7 +655,8 @@
       "metrics": "መለኪያዎችን እንደ ቁልፍ/እሴት ጥንዶች ያክሉ።",
       "attachments": "ከፍተኛ ፋይሎች፡ የአገልጋይ-ጎን ገደብ ተፈጻሚ ነው።",
       "hint": "ከተፈለገ አዎንታዊ ኢንቲጀር. ባዶ ከሆነ ስርዓቱ በራስ-ሰር ይመድባል።",
-      "metricRemaining": "አሁን: {{current}} / {{target}} (ቀሪው: {{remaining}})"
+      "metricRemaining": "አሁን: {{current}} / {{target}} (ቀሪው: {{remaining}})",
+            "maxAttachments": "ቢበዛ 5 አባሪዎች።"
     },
 
     "empty": {
@@ -669,7 +686,8 @@
       "missingTaskId": "የተግባር መታወቂያ ይጎድላል።",
       "weightExceedsTask": "ክብደትን ወደ {{newWeight}} ማዋቀር አልተቻለም። የተግባር አጠቃላይ {{taskWeight}} ነው እና {{used}} አስቀድሞ ጥቅም ላይ ውሏል። ይገኛል፡ {{available}}።",
       "modalSubmit": "የሞዳል ቅጽ ማስገባት አልተሳካም።",
-      "metricKeyMissing": "እሴት ሲቀርብ የሜትሪክ ቁልፎች ባዶ ሊሆኑ አይችሉም።"
+      "metricKeyMissing": "እሴት ሲቀርብ የሜትሪክ ቁልፎች ባዶ ሊሆኑ አይችሉም።",
+            "maxAttachments": "ቢበዛ 5 አባሪዎች ይፈቀዳሉ። ተጨማሪ ፋይሎች ችላ ተብለዋል።"
     },
 
     "toasts": {
@@ -804,7 +822,7 @@
     "overdueTitle": "የዘገዩ ተግባራት",
     "tasks": "ተግባራት",
     "openAll": "ሁሉንም ክፈት",
-    "nooverdue": "የዘገዩ ተግባራት የሉም",
+    "noOverdue": "የዘገዩ ተግባራት የሉም",
     "table": {
       "task": "ተግባር",
       "due": "የተጠናቀቀ",
