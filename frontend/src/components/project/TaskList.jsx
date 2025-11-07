@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronRight, ChevronDown, Edit, Trash2, Calendar, List, Plus as PlusIcon } from "lucide-react";
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
-import { formatDate } from "../../utils/projectUtils"; // <-- fixed path
+import { formatDate } from "../../uites/projectUtils"; 
 import ActivityList from "./ActivityList";
 
 function TaskList({
