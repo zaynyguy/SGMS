@@ -4,15 +4,24 @@ import { api } from "./auth"; // Adjust this import path
 
 /**
  * API functions for Tasks.
- *
- * REFACTORED: Removed Activity-related functions.
- * Those now live in `api/activities.js` and use the `/api/tasks/{taskId}/...` route,
- * which matches the `useProjectApi` hook.
  */
 
 // Get all tasks under a goal
-export const fetchTasksByGoal = (goalId) =>
-  api(`/api/goals/${goalId}/tasks`, "GET");
+export const fetchTasksByGoal = (goalId, quarter = 0) => {
+  if (!goalId) throw new Error("goalId required");
+
+  let url = `/api/goals/${goalId}/tasks`;
+
+  // If a specific quarter is requested (and not "All"),
+  // append it as a query parameter.
+  // The backend should use this to return only tasks
+  // that have activities assigned to that quarter.
+  if (quarter > 0) {
+    url += `?quarter=${quarter}`;
+  }
+  
+  return api(url, "GET");
+}
 
 // Create a new task under a goal
 export const createTask = (goalId, taskData) =>

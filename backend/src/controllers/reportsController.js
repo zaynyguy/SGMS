@@ -4,8 +4,8 @@ const fs = require("fs");
 const { logAudit } = require("../helpers/audit");
 const notificationService = require("../services/notificationService");
 const {
-generateReportHtml,
-generateReportJson,
+  generateReportHtml,
+  generateReportJson,
 } = require("../helpers/reportHelper");
 const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 const { getAttachmentSettings } = require("../utils/systemSettings");
@@ -13,15 +13,15 @@ const { uploadFile, deleteFile } = require("../services/uploadService");
 
 /* helper: check permission */
 function hasPermission(req, perm) {
-if (!req.user) return false;
-const perms = req.user.permissions || req.user.perms || [];
-return Array.isArray(perms) && perms.includes(perm);
+  if (!req.user) return false;
+  const perms = req.user.permissions || req.user.perms || [];
+  return Array.isArray(perms) && perms.includes(perm);
 }
 
 /* helper: fetch enriched report row */
 // MODIFIED: Added activity's target and current metrics for context on review page
 async function fetchReportWithGroup(reportId) {
-const q = `
+  const q = `
 SELECT r.*, u.name as user_name,
 a.title as activity_title,
 a."targetMetric" as activity_target_metric,
@@ -39,24 +39,26 @@ LEFT JOIN "Groups" gr ON g."groupId" = gr.id
 WHERE r.id = $1
 LIMIT 1
 `;
-const { rows } = await db.query(q, [reportId]);
-return rows[0] || null;
+  const { rows } = await db.query(q, [reportId]);
+  return rows[0] || null;
 }
 
 exports.canSubmitReport = async (req, res) => {
-try {
-const { rows } = await db.query(
-`SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
-);
-if (!rows[0]) return res.json({ reporting_active: false });
-const val = rows[0].value;
-const isActive =
-typeof val === "boolean" ? val : String(val).toLowerCase() === "true";
-return res.json({ reporting_active: Boolean(isActive) });
-} catch (err) {
-console.error("canSubmitReport error:", err);
-return res.status(500).json({ reporting_active: false, error: err.message });
-}
+  try {
+    const { rows } = await db.query(
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
+    );
+    if (!rows[0]) return res.json({ reporting_active: false });
+    const val = rows[0].value;
+    const isActive =
+      typeof val === "boolean" ? val : String(val).toLowerCase() === "true";
+    return res.json({ reporting_active: Boolean(isActive) });
+  } catch (err) {
+    console.error("canSubmitReport error:", err);
+    return res
+      .status(500)
+      .json({ reporting_active: false, error: err.message });
+  }
 };
 
 exports.submitReport = async (req, res) => {
@@ -69,15 +71,24 @@ exports.submitReport = async (req, res) => {
       `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
     );
     if (!rows[0]) {
-      return res.status(403).json({ message: "Reporting is currently disabled." });
+      return res
+        .status(403)
+        .json({ message: "Reporting is currently disabled." });
     }
     const val = rows[0].value;
     const isActive =
       typeof val === "boolean" ? val : String(val).toLowerCase() === "true";
-    if (!isActive) return res.status(403).json({ message: "Reporting is currently disabled." });
+    if (!isActive)
+      return res
+        .status(403)
+        .json({ message: "Reporting is currently disabled." });
   } catch (err) {
     console.error("Error reading reporting_active setting:", err);
-    return res.status(500).json({ message: "Unable to determine reporting status. Contact admin." });
+    return res
+      .status(500)
+      .json({
+        message: "Unable to determine reporting status. Contact admin.",
+      });
   }
 
   const client = await db.connect();
@@ -91,7 +102,8 @@ exports.submitReport = async (req, res) => {
     if (metrics_data) {
       if (typeof metrics_data === "string") {
         try {
-          parsedMetrics = metrics_data.trim() === "" ? null : JSON.parse(metrics_data);
+          parsedMetrics =
+            metrics_data.trim() === "" ? null : JSON.parse(metrics_data);
         } catch (e) {
           // If it's not JSON, keep raw (but we won't validate non-objects)
           parsedMetrics = metrics_data;
@@ -102,7 +114,11 @@ exports.submitReport = async (req, res) => {
     }
 
     // === VALIDATION: ensure incoming numeric metric additions won't exceed target ===
-    if (parsedMetrics && typeof parsedMetrics === "object" && Object.keys(parsedMetrics).length > 0) {
+    if (
+      parsedMetrics &&
+      typeof parsedMetrics === "object" &&
+      Object.keys(parsedMetrics).length > 0
+    ) {
       // lock the activity row so currentMetric/targetMetric won't race
       const actQ = await client.query(
         `SELECT "currentMetric", "targetMetric" FROM "Activities" WHERE id = $1 FOR UPDATE`,
@@ -154,9 +170,17 @@ exports.submitReport = async (req, res) => {
         const scalarTarget = extractNumeric(targetMetric);
         if (scalarTarget !== null) {
           targetVal = scalarTarget;
-        } else if (targetMetric && typeof targetMetric === "object" && k in targetMetric) {
+        } else if (
+          targetMetric &&
+          typeof targetMetric === "object" &&
+          k in targetMetric
+        ) {
           targetVal = extractNumeric(targetMetric[k]);
-        } else if (targetMetric && typeof targetMetric === "object" && "target" in targetMetric) {
+        } else if (
+          targetMetric &&
+          typeof targetMetric === "object" &&
+          "target" in targetMetric
+        ) {
           // support shape like { target: 14 }
           targetVal = extractNumeric(targetMetric.target);
         }
@@ -187,9 +211,15 @@ exports.submitReport = async (req, res) => {
     // INSERT the report (unchanged behaviour) - we use parsedMetrics (possibly {} or null)
     const reportResult = await client.query(
       `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       RETURNING *`,
-      [activityId, req.user.id, narrative || null, parsedMetrics || {}, new_status || null]
+VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+RETURNING *`,
+      [
+        activityId,
+        req.user.id,
+        narrative || null,
+        parsedMetrics || {},
+        new_status || null,
+      ]
     );
     const report = reportResult.rows[0];
 
@@ -198,8 +228,8 @@ exports.submitReport = async (req, res) => {
       const attachmentSettings = await getAttachmentSettings();
       const maxSizeMb = Number(
         attachmentSettings?.maxSizeMb ||
-        attachmentSettings?.max_attachment_size_mb ||
-        10
+          attachmentSettings?.max_attachment_size_mb ||
+          10
       );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
       const oversized = req.files.filter((f) => {
@@ -212,10 +242,16 @@ exports.submitReport = async (req, res) => {
       });
       if (oversized.length) {
         for (const f of req.files) {
-          try { fs.unlinkSync(f.path); } catch (e) {}
+          try {
+            fs.unlinkSync(f.path);
+          } catch (e) {}
         }
         await client.query("ROLLBACK");
-        return res.status(400).json({ message: `One or more files exceed the maximum allowed size of ${maxSizeMb} MB.` });
+        return res
+          .status(400)
+          .json({
+            message: `One or more files exceed the maximum allowed size of ${maxSizeMb} MB.`,
+          });
       }
     }
 
@@ -227,7 +263,7 @@ exports.submitReport = async (req, res) => {
           uploadedFiles.push({ uploaded, originalFile: file });
           const insertRes = await client.query(
             `INSERT INTO "Attachments"("reportId", "fileName", "filePath", "fileType", "provider", "publicId", "createdAt")
-             VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
+VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
             [
               report.id,
               uploaded.fileName || file.originalname,
@@ -244,10 +280,17 @@ exports.submitReport = async (req, res) => {
           for (const entry of uploadedFiles) {
             try {
               if (entry.uploaded && entry.uploaded.provider === "cloudinary") {
-                await deleteFile(entry.uploaded.url, { public_id: entry.uploaded.public_id });
-              } else if (entry.uploaded && entry.uploaded.provider === "local") {
+                await deleteFile(entry.uploaded.url, {
+                  public_id: entry.uploaded.public_id,
+                });
+              } else if (
+                entry.uploaded &&
+                entry.uploaded.provider === "local"
+              ) {
                 try {
-                  const fname = path.basename(entry.uploaded.url || entry.originalFile.path || "");
+                  const fname = path.basename(
+                    entry.uploaded.url || entry.originalFile.path || ""
+                  );
                   const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
                   if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
                 } catch (e) {}
@@ -257,7 +300,9 @@ exports.submitReport = async (req, res) => {
             }
           }
           for (const f of req.files) {
-            try { fs.unlinkSync(f.path); } catch (e) {}
+            try {
+              fs.unlinkSync(f.path);
+            } catch (e) {}
           }
           await client.query("ROLLBACK");
           return res.status(500).json({ error: "File upload failed." });
@@ -301,24 +346,27 @@ exports.submitReport = async (req, res) => {
       try {
         const permRes = await db.query(
           `SELECT DISTINCT u.id
-           FROM "Users" u
-           JOIN "Roles" r ON u."roleId" = r.id
-           JOIN "RolePermissions" rp ON rp."roleId" = r.id
-           JOIN "Permissions" p ON p.id = rp."permissionId"
-           WHERE p.name = $1`,
+FROM "Users" u
+JOIN "Roles" r ON u."roleId" = r.id
+JOIN "RolePermissions" rp ON rp."roleId" = r.id
+JOIN "Permissions" p ON p.id = rp."permissionId"
+WHERE p.name = $1`,
           ["manage_reports"]
         );
         for (const r of permRes.rows) if (r && r.id) recipients.add(r.id);
       } catch (permErr) {
-        console.error("submitReport: failed to query manage_reports users:", permErr);
+        console.error(
+          "submitReport: failed to query manage_reports users:",
+          permErr
+        );
       }
 
       try {
         const actRes = await db.query(
           `SELECT a.title AS activity_title, t."assigneeId" AS task_assignee
-           FROM "Activities" a
-           LEFT JOIN "Tasks" t ON t.id = a."taskId"
-           WHERE a.id = $1 LIMIT 1`,
+FROM "Activities" a
+LEFT JOIN "Tasks" t ON t.id = a."taskId"
+WHERE a.id = $1 LIMIT 1`,
           [activityId]
         );
         const arow = actRes.rows[0];
@@ -342,11 +390,17 @@ exports.submitReport = async (req, res) => {
               level: "info",
             });
           } catch (nerr) {
-            console.error(`submitReport: failed to notify user ${uid} about report ${report.id}:`, nerr);
+            console.error(
+              `submitReport: failed to notify user ${uid} about report ${report.id}:`,
+              nerr
+            );
           }
         }
       } catch (aerr) {
-        console.error("submitReport: failed to fetch activity/task assignee:", aerr);
+        console.error(
+          "submitReport: failed to fetch activity/task assignee:",
+          aerr
+        );
       }
     } catch (outerNotifyErr) {
       console.error("submitReport: notify recipients failed", outerNotifyErr);
@@ -364,13 +418,23 @@ exports.submitReport = async (req, res) => {
     for (const entry of uploadedFiles) {
       try {
         if (entry.uploaded && entry.uploaded.provider === "cloudinary") {
-          try { await deleteFile(entry.uploaded.url, { public_id: entry.uploaded.public_id }); } catch (e) { console.error(e); }
+          try {
+            await deleteFile(entry.uploaded.url, {
+              public_id: entry.uploaded.public_id,
+            });
+          } catch (e) {
+            console.error(e);
+          }
         } else if (entry.uploaded && entry.uploaded.provider === "local") {
           try {
-            const fname = path.basename(entry.uploaded.url || entry.originalFile.path || "");
+            const fname = path.basename(
+              entry.uploaded.url || entry.originalFile.path || ""
+            );
             const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
             if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
-          } catch (e) { console.error(e); }
+          } catch (e) {
+            console.error(e);
+          }
         }
       } catch (cleanupErr) {
         console.error("cleanup after tx rollback error:", cleanupErr);
@@ -378,7 +442,9 @@ exports.submitReport = async (req, res) => {
     }
     if (req.files && req.files.length) {
       for (let file of req.files) {
-        try { fs.unlinkSync(file.path); } catch (e) {}
+        try {
+          fs.unlinkSync(file.path);
+        } catch (e) {}
       }
     }
     console.error("Error submitting report:", err);
@@ -388,171 +454,201 @@ exports.submitReport = async (req, res) => {
   }
 };
 
-
 exports.reviewReport = async (req, res) => {
-const { reportId } = req.params;
-const { status, adminComment, resubmissionDeadline } = req.body;
+  const { reportId } = req.params;
+  const { status, adminComment, resubmissionDeadline } = req.body;
 
-if (!status || !["Approved", "Rejected"].includes(status)) {
-return res.status(400).json({ error: "Invalid status provided." });
-}
+  if (!status || !["Approved", "Rejected"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status provided." });
+  }
 
-const client = await db.connect();
-try {
-await client.query("BEGIN");
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
 
-const repRes = await client.query(`SELECT * FROM "Reports" WHERE id = $1 FOR UPDATE`, [reportId]);
-if (!repRes.rows[0]) {
-await client.query("ROLLBACK");
-return res.status(404).json({ error: "Report not found." });
-}
-const beforeReport = repRes.rows[0];
+    const repRes = await client.query(
+      `SELECT * FROM "Reports" WHERE id = $1 FOR UPDATE`,
+      [reportId]
+    );
+    if (!repRes.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Report not found." });
+    }
+    const beforeReport = repRes.rows[0];
 
-const { rows: updatedRows } = await client.query(
-`UPDATE "Reports"
+    const { rows: updatedRows } = await client.query(
+      `UPDATE "Reports"
 SET status = $1,
 "adminComment" = COALESCE($2, "adminComment"),
 "resubmissionDeadline" = COALESCE($3, "resubmissionDeadline"),
 "updatedAt" = NOW()
 WHERE id = $4
 RETURNING *`,
-[status, adminComment || null, resubmissionDeadline || null, reportId]
-);
-const updatedReport = updatedRows[0];
+      [status, adminComment || null, resubmissionDeadline || null, reportId]
+    );
+    const updatedReport = updatedRows[0];
 
-try {
-await logAudit({
-userId: req.user.id,
-action: "REPORT_REVIEWED",
-entity: "Report",
-entityId: reportId,
-before: beforeReport,
-after: updatedReport,
-details: { status, adminComment },
-client,
-req,
-});
-} catch (e) {
-console.error("REPORT_REVIEWED audit failed (in-tx):", e);
-}
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "REPORT_REVIEWED",
+        entity: "Report",
+        entityId: reportId,
+        before: beforeReport,
+        after: updatedReport,
+        details: { status, adminComment },
+        client,
+        req,
+      });
+    } catch (e) {
+      console.error("REPORT_REVIEWED audit failed (in-tx):", e);
+    }
 
-// On approval: apply metrics (idempotent), update activity status if requested
-if (status === "Approved") {
-// parse metrics_data to JSON if stored as string
-let metricsObj = updatedReport.metrics_data || {};
-if (typeof metricsObj === "string") {
-try { metricsObj = metricsObj.trim() === "" ? {} : JSON.parse(metricsObj); } catch { metricsObj = {}; }
-}
+    // On approval: apply metrics (idempotent), update activity status if requested
+    if (status === "Approved") {
+      // parse metrics_data to JSON if stored as string
+      let metricsObj = updatedReport.metrics_data || {};
+      if (typeof metricsObj === "string") {
+        try {
+          metricsObj = metricsObj.trim() === "" ? {} : JSON.parse(metricsObj);
+        } catch {
+          metricsObj = {};
+        }
+      }
 
-// Apply metrics only if not already applied and there's meaningful metrics
-if (!updatedReport.applied && metricsObj && Object.keys(metricsObj).length) {
-try {
-await client.query(
-`SELECT accumulate_metrics($1::int, $2::jsonb, $3::int)`,
-[updatedReport.activityId, metricsObj, req.user.id]
-);
-await client.query(
-`UPDATE "Reports" SET applied = true, "appliedBy" = $1, "appliedAt" = NOW() WHERE id = $2`,
-[req.user.id, reportId]
-);
-} catch (applyErr) {
-console.error("Failed to apply metrics via accumulate_metrics:", applyErr);
-// don't fail entire transaction just because accumulation failed; surface error
-// choose to rollback to be safe
-await client.query("ROLLBACK");
-return res.status(500).json({ error: "Failed to apply report metrics." });
-}
-}
+      // Apply metrics only if not already applied and there's meaningful metrics
+      if (
+        !updatedReport.applied &&
+        metricsObj &&
+        Object.keys(metricsObj).length
+      ) {
+        try {
+          await client.query(
+            `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int)`,
+            [updatedReport.activityId, metricsObj, req.user.id]
+          );
+          await client.query(
+            `UPDATE "Reports" SET applied = true, "appliedBy" = $1, "appliedAt" = NOW() WHERE id = $2`,
+            [req.user.id, reportId]
+          );
+        } catch (applyErr) {
+          console.error(
+            "Failed to apply metrics via accumulate_metrics:",
+            applyErr
+          );
+          // don't fail entire transaction just because accumulation failed; surface error
+          // choose to rollback to be safe
+          await client.query("ROLLBACK");
+          return res
+            .status(500)
+            .json({ error: "Failed to apply report metrics." });
+        }
+      }
 
-// If new_status provided on the report, update activity status accordingly
-if (updatedReport.new_status) {
-await client.query(
-`UPDATE "Activities"
+      // If new_status provided on the report, update activity status accordingly
+      if (updatedReport.new_status) {
+        await client.query(
+          `UPDATE "Activities"
 SET status = $1::"activity_status",
 "isDone" = CASE WHEN $1::"activity_status"='Done' THEN true ELSE "isDone" END,
 "updatedAt" = NOW()
 WHERE id = $2`,
-[updatedReport.new_status, updatedReport.activityId]
-);
-}
-}
+          [updatedReport.new_status, updatedReport.activityId]
+        );
+      }
+    }
 
-await client.query("COMMIT");
+    await client.query("COMMIT");
 
-// notify report owner
-try {
-await notificationService({
-userId: beforeReport.userId,
-type: "report_review",
-message: `Your report #${beforeReport.id} was ${status.toLowerCase()}.`,
-meta: { reportId: beforeReport.id },
-level: status === "Rejected" ? "warning" : "info",
-});
-} catch (nerr) {
-console.error("reviewReport: notify failed", nerr);
-}
+    // notify report owner
+    try {
+      await notificationService({
+        userId: beforeReport.userId,
+        type: "report_review",
+        message: `Your report #${beforeReport.id} was ${status.toLowerCase()}.`,
+        meta: { reportId: beforeReport.id },
+        level: status === "Rejected" ? "warning" : "info",
+      });
+    } catch (nerr) {
+      console.error("reviewReport: notify failed", nerr);
+    }
 
-try {
-const enrichedUpdated = await fetchReportWithGroup(updatedReport.id);
-return res.json(enrichedUpdated || updatedReport);
-} catch (fetchErr) {
-console.error("reviewReport: failed to fetch enriched report:", fetchErr);
-return res.json(updatedReport);
-}
-} catch (err) {
-await client.query("ROLLBACK");
-console.error("Error reviewing report:", err);
-res.status(500).json({ error: err.message });
-} finally {
-client.release();
-}
+    try {
+      const enrichedUpdated = await fetchReportWithGroup(updatedReport.id);
+      return res.json(enrichedUpdated || updatedReport);
+    } catch (fetchErr) {
+      console.error("reviewReport: failed to fetch enriched report:", fetchErr);
+      return res.json(updatedReport);
+    }
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error reviewing report:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 };
 
 exports.getAllReports = async (req, res) => {
-try {
-const page = Math.max(parseInt(req.query.page || "1", 10), 1);
-const pageSize = Math.min(Math.max(parseInt(req.query.pageSize || "20", 10), 1), 200);
-const offset = (page - 1) * pageSize;
-const status = req.query.status ? String(req.query.status) : null;
-const qRaw = req.query.q ? String(req.query.q).trim() : null;
+  try {
+    const page = Math.max(parseInt(req.query.page || "1", 10), 1);
+    const pageSize = Math.min(
+      Math.max(parseInt(req.query.pageSize || "20", 10), 1),
+      200
+    );
+    const offset = (page - 1) * pageSize;
+    const status = req.query.status ? String(req.query.status) : null;
+    const qRaw = req.query.q ? String(req.query.q).trim() : null;
 
-const isAdmin = hasPermission(req, "manage_reports");
-const canViewGroup = hasPermission(req, "view_reports");
+    const isAdmin = hasPermission(req, "manage_reports");
+    const canViewGroup = hasPermission(req, "view_reports");
 
-const rebuiltParams = [pageSize, offset];
-const rebuiltWhereClauses = [];
+    const rebuiltParams = [pageSize, offset];
+    const rebuiltWhereClauses = [];
 
-const pushParam = (val) => { rebuiltParams.push(val); return `$${rebuiltParams.length}`; };
+    const pushParam = (val) => {
+      rebuiltParams.push(val);
+      return `$${rebuiltParams.length}`;
+    };
 
-if (!isAdmin && canViewGroup) {
-const gRes2 = await db.query(`SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`, [req.user.id]);
-const groupIds2 = gRes2.rows.map((r) => r.groupId).filter(Boolean);
-if (groupIds2.length) {
-const groupParam = pushParam(groupIds2);
-const userParam = pushParam(req.user.id);
-rebuiltWhereClauses.push(`(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`);
-} else {
-const userParam = pushParam(req.user.id);
-rebuiltWhereClauses.push(`r."userId" = ${userParam}`);
-}
-} else if (!isAdmin && !canViewGroup) {
-return res.status(403).json({ error: "Forbidden" });
-}
+    if (!isAdmin && canViewGroup) {
+      const gRes2 = await db.query(
+        `SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`,
+        [req.user.id]
+      );
+      const groupIds2 = gRes2.rows.map((r) => r.groupId).filter(Boolean);
+      if (groupIds2.length) {
+        const groupParam = pushParam(groupIds2);
+        const userParam = pushParam(req.user.id);
+        rebuiltWhereClauses.push(
+          `(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`
+        );
+      } else {
+        const userParam = pushParam(req.user.id);
+        rebuiltWhereClauses.push(`r."userId" = ${userParam}`);
+      }
+    } else if (!isAdmin && !canViewGroup) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
-if (status) {
-const p = pushParam(status);
-rebuiltWhereClauses.push(`r.status = ${p}`);
-}
+    if (status) {
+      const p = pushParam(status);
+      rebuiltWhereClauses.push(`r.status = ${p}`);
+    }
 
-if (qRaw) {
-const p = pushParam(`%${qRaw}%`);
-rebuiltWhereClauses.push(`(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`);
-}
+    if (qRaw) {
+      const p = pushParam(`%${qRaw}%`);
+      rebuiltWhereClauses.push(
+        `(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`
+      );
+    }
 
-const rebuiltWhere = rebuiltWhereClauses.length ? "WHERE " + rebuiltWhereClauses.join(" AND ") : "";
+    const rebuiltWhere = rebuiltWhereClauses.length
+      ? "WHERE " + rebuiltWhereClauses.join(" AND ")
+      : "";
 
-// MODIFIED: Added a."targetMetric" and a."currentMetric"
-const sql = `
+    // MODIFIED: Added a."targetMetric" and a."currentMetric"
+    const sql = `
 SELECT r.*, u.name as user_name,
 a.title as activity_title,
 a."targetMetric" as activity_target_metric,
@@ -573,15 +669,15 @@ ORDER BY r."createdAt" DESC
 LIMIT $1 OFFSET $2
 `;
 
-const { rows } = await db.query(sql, rebuiltParams);
-const total = rows.length ? Number(rows[0].total_count || 0) : 0;
-const cleaned = rows.map(({ total_count, ...r }) => r);
+    const { rows } = await db.query(sql, rebuiltParams);
+    const total = rows.length ? Number(rows[0].total_count || 0) : 0;
+    const cleaned = rows.map(({ total_count, ...r }) => r);
 
-return res.json({ rows: cleaned, page, pageSize, total });
-} catch (err) {
-console.error("Error fetching all reports (paginated):", err);
-res.status(500).json({ error: err.message });
-}
+    return res.json({ rows: cleaned, page, pageSize, total });
+  } catch (err) {
+    console.error("Error fetching all reports (paginated):", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // PATCH: Revised generateMasterReport handler to ensure activity previous/current/target metrics
@@ -592,7 +688,7 @@ exports.generateMasterReport = async (req, res) => {
   const format = (req.query.format || "").toLowerCase();
 
   try {
-    // original-style SELECT: keep the same columns and names you had before
+    // MODIFIED: Added a."quarterlyGoals" to the SELECT statement
     const rows = await db.query(
       `
 SELECT g.id as goal_id,
@@ -612,6 +708,7 @@ a.description as activity_description,
 a."currentMetric",
 a."targetMetric",
 a."previousMetric",
+a."quarterlyGoals",
 a.weight as activity_weight,
 a."isDone" as activity_done,
 a.status as activity_status,
@@ -656,7 +753,8 @@ ORDER BY entity_id, snapshot_month
       if (!historyByActivity[aid]) historyByActivity[aid] = [];
       historyByActivity[aid].push({
         snapshot_month: r.snapshot_month,
-        progress: typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
+        progress:
+          typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
         metrics: r.metrics || {},
         recorded_at: r.recorded_at,
       });
@@ -667,7 +765,11 @@ ORDER BY entity_id, snapshot_month
       for (const row of raw) {
         if (!row.activity_id || !row.report_id) continue;
         const actId = row.activity_id;
-        const createdAt = row.report_createdat || row.report_createdAt || row.createdat || row.createdAt;
+        const createdAt =
+          row.report_createdat ||
+          row.report_createdAt ||
+          row.createdat ||
+          row.createdAt;
         const metrics = row.report_metrics || {};
         if (!historyByActivity[actId]) historyByActivity[actId] = [];
         historyByActivity[actId].push({
@@ -689,14 +791,34 @@ ORDER BY entity_id, snapshot_month
         const d = new Date(dateStr);
         if (isNaN(d)) continue;
         const monthKey = `${d.getFullYear()}-${d.getMonth() + 1}`;
-        const quarterKey = `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
+        const quarterKey = `${d.getFullYear()}-Q${
+          Math.floor(d.getMonth() / 3) + 1
+        }`;
         const yearKey = `${d.getFullYear()}`;
-        if (!breakdowns[numericActId].monthly[monthKey]) breakdowns[numericActId].monthly[monthKey] = [];
-        breakdowns[numericActId].monthly[monthKey].push({ date: dateStr, progress: snap.progress, metrics: snap.metrics, recorded_at: snap.recorded_at || snap.date });
-        if (!breakdowns[numericActId].quarterly[quarterKey]) breakdowns[numericActId].quarterly[quarterKey] = [];
-        breakdowns[numericActId].quarterly[quarterKey].push({ date: dateStr, progress: snap.progress, metrics: snap.metrics, recorded_at: snap.recorded_at || snap.date });
-        if (!breakdowns[numericActId].annual[yearKey]) breakdowns[numericActId].annual[yearKey] = [];
-        breakdowns[numericActId].annual[yearKey].push({ date: dateStr, progress: snap.progress, metrics: snap.metrics, recorded_at: snap.recorded_at || snap.date });
+        if (!breakdowns[numericActId].monthly[monthKey])
+          breakdowns[numericActId].monthly[monthKey] = [];
+        breakdowns[numericActId].monthly[monthKey].push({
+          date: dateStr,
+          progress: snap.progress,
+          metrics: snap.metrics,
+          recorded_at: snap.recorded_at || snap.date,
+        });
+        if (!breakdowns[numericActId].quarterly[quarterKey])
+          breakdowns[numericActId].quarterly[quarterKey] = [];
+        breakdowns[numericActId].quarterly[quarterKey].push({
+          date: dateStr,
+          progress: snap.progress,
+          metrics: snap.metrics,
+          recorded_at: snap.recorded_at || snap.date,
+        });
+        if (!breakdowns[numericActId].annual[yearKey])
+          breakdowns[numericActId].annual[yearKey] = [];
+        breakdowns[numericActId].annual[yearKey].push({
+          date: dateStr,
+          progress: snap.progress,
+          metrics: snap.metrics,
+          recorded_at: snap.recorded_at || snap.date,
+        });
       }
     }
 
@@ -732,19 +854,31 @@ ORDER BY entity_id, snapshot_month
             activity.previousMetric = activityPreviousById[activity.id];
           }
           // Attach history exactly as before (unchanged behavior)
-          activity.history = breakdowns[activity.id] || { monthly: {}, quarterly: {}, annual: {} };
+          activity.history = breakdowns[activity.id] || {
+            monthly: {},
+            quarterly: {},
+            annual: {},
+          };
         }
       }
     }
     // === end minimal change ===
 
-    if (format === "html" || (req.headers.accept && req.headers.accept.includes("text/html") && !req.query.format)) {
+    if (
+      format === "html" ||
+      (req.headers.accept &&
+        req.headers.accept.includes("text/html") &&
+        !req.query.format)
+    ) {
       const html = generateReportHtml(raw);
       return res.set("Content-Type", "text/html").send(html);
     }
     return res.json(masterJson);
   } catch (err) {
-    console.error("Error generating master report:", err && err.message ? err.message : err);
+    console.error(
+      "Error generating master report:",
+      err && err.message ? err.message : err
+    );
     res.status(500).json({ error: err.message || String(err) });
   }
 };

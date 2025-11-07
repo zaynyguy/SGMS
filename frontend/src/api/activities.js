@@ -8,9 +8,18 @@ import { api } from "./auth"; // Adjust this import path
  */
 
 // List activities for a task
-export async function fetchActivitiesByTask(taskId) {
+export async function fetchActivitiesByTask(taskId, quarter = 0) {
   if (!taskId) throw new Error("taskId required");
-  return await api(`/api/tasks/${taskId}/activities`, "GET");
+  
+  let url = `/api/tasks/${taskId}/activities`;
+  
+  // If a specific quarter is requested (and not "All"),
+  // append it as a query parameter for the backend to filter.
+  if (quarter > 0) {
+    url += `?quarter=${quarter}`;
+  }
+  
+  return await api(url, "GET");
 }
 
 // Create activity under a task

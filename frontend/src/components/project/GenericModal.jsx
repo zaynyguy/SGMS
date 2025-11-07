@@ -7,6 +7,7 @@ import { Loader } from "lucide-react";
 * It can be pre-populated with data from `modal.data`.
 *
 * MODIFIED: Added "previousMetric" fields and logic.
+* MODIFIED: Added "quarterlyGoals" fields and logic.
 * ENHANCED: Added smooth Transforms, Transitions & Animations
 */
 export default function GenericModal({
@@ -195,6 +196,8 @@ if (found) source = found;
 
 // Now populate form state according to modal.type
 if (modal.type === "createActivity" || modal.type === "editActivity") {
+// MODIFICATION: Add quarterlyGoals to initial state
+const qGoals = source.quarterlyGoals || {};
 setLocal({
 title: source.title || "",
 description: source.description || "",
@@ -206,6 +209,13 @@ rollNo: initRoll(source.rollNo),
 // MODIFIED: Added previousMetrics
 previousMetrics: parseMetricData(source.previousMetric ?? source.previousMetrics),
 targetMetrics: parseMetricData(source.targetMetric ?? source.targetMetrics),
+// MODIFICATION: Add quarterlyGoals from source
+quarterlyGoals: {
+q1: qGoals.q1 ?? "",
+q2: qGoals.q2 ?? "",
+q3: qGoals.q3 ?? "",
+q4: qGoals.q4 ?? "",
+},
 });
 } else if (modal.type === "createTask" || modal.type === "editTask") {
 setLocal({
@@ -273,6 +283,26 @@ setLocal((p) => ({ ...p, [name]: nextVal }));
 if (name === "targetMetric" && jsonError) setJsonError(null);
 if (inlineError) setInlineError(null);
 };
+
+// ----------------------------------------------------------------
+// MODIFICATION START: Add handler for quarterly goals inputs
+// ----------------------------------------------------------------
+const onQuarterlyChange = (e) => {
+const { name, value } = e.target; // name will be "q1", "q2" etc.
+setLocal((p) => ({
+...p,
+quarterlyGoals: {
+...(p.quarterlyGoals || {}),
+// Store as number or empty string
+[name]: value === "" ? "" : Number(value)
+}
+}));
+if (inlineError) setInlineError(null);
+};
+// ----------------------------------------------------------------
+// MODIFICATION END
+// ----------------------------------------------------------------
+
 
 // Enhanced metric row animations
 const updateMetricRow = (idx, field, value) =>
@@ -533,11 +563,30 @@ obj[String(m.key).trim()] = m.value ?? "";
 return obj;
 };
 
+// ----------------------------------------------------------------
+// MODIFICATION START: Add quarterlyGoals to payload
+// ----------------------------------------------------------------
+// Helper to convert local.quarterlyGoals {q1: 5, q2: ""} to {"q1": 5}
+const quarterlyGoalsToObject = (quarters) => {
+const obj = {};
+if (quarters) {
+['q1', 'q2', 'q3', 'q4'].forEach(q => {
+const val = quarters[q];
+// Only include if it's a valid number
+if (val !== "" && val !== null && val !== undefined && !isNaN(Number(val))) {
+obj[q] = Number(val);
+}
+});
+}
+return obj;
+};
+
 // CREATE ACTIVITY
 if (modal.type === "createActivity") {
 const { goalId, taskId } = resolveIds(modal.data || {});
 const payload = { ...local };
-// MODIFIED: Convert both metric arrays to objects
+// MODIFIED: Convert all metric arrays to objects
+payload.quarterlyGoals = quarterlyGoalsToObject(local.quarterlyGoals);
 payload.targetMetric = metricsToObject(local.targetMetrics);
 payload.previousMetric = metricsToObject(local.previousMetrics);
 delete payload.targetMetrics;
@@ -555,7 +604,8 @@ setInlineError(t("project.errors.missingTaskId") || "Missing task or activity id
 return;
 }
 const payload = { ...local };
-// MODIFIED: Convert both metric arrays to objects
+// MODIFIED: Convert all metric arrays to objects
+payload.quarterlyGoals = quarterlyGoalsToObject(local.quarterlyGoals);
 payload.targetMetric = metricsToObject(local.targetMetrics);
 payload.previousMetric = metricsToObject(local.previousMetrics);
 delete payload.targetMetrics;
@@ -568,6 +618,10 @@ await callHandler(onUpdateActivity, [
 ]);
 return;
 }
+// ----------------------------------------------------------------
+// MODIFICATION END
+// ----------------------------------------------------------------
+
 } catch (err) {
 console.error("modal submit error", err);
 setInlineError(err?.message || t("project.errors.modalSubmit") || "Submit failed");
@@ -753,6 +807,35 @@ return t("project.hints.taskWeight", { taskWeight, used, available });
 })()}
 </div>
 )}
+
+{/* ---------------------------------------------------------------- */}
+{/* MODIFICATION START: Add Quarterly Goals section */}
+{/* ---------------------------------------------------------------- */}
+<div className="transition-all duration-300">
+<label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">{t("project.labels.quarterlyGoals", "Quarterly Goals")}</label>
+<p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{t("project.hints.quarterlyGoals", "Define target metrics for each quarter. These should sum up to the yearly target.")}</p>
+<div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+{['q1', 'q2', 'q3', 'q4'].map(q => (
+<div key={q}>
+<label className="text-xs font-medium text-gray-600 dark:text-gray-400">{q.toUpperCase()}</label>
+<input
+name={q}
+type="number"
+min="0"
+step="any"
+placeholder={t(`project.placeholders.quarterlyGoal`, `Goal for ${q.toUpperCase()}`)}
+value={local.quarterlyGoals?.[q] ?? ""}
+onChange={onQuarterlyChange}
+className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+/>
+</div>
+))}
+</div>
+</div>
+{/* ---------------------------------------------------------------- */}
+{/* MODIFICATION END */}
+{/* ---------------------------------------------------------------- */}
+
 
 {/* Enhanced Previous Metrics Section */}
 <div className="transition-all duration-300">

@@ -49,32 +49,55 @@ function nullIfEmpty(v) {
 exports.getActivitiesByTask = async (req, res) => {
   const taskId = toIntOrNull(req.params.taskId);
   if (!taskId) return res.status(400).json({ message: "Invalid taskId" });
-   
+
+  // MODIFIED: Read quarter from query string
+  const quarter = toIntOrNull(req.query.quarter);
+  if (quarter && (quarter < 1 || quarter > 4)) {
+    return res
+      .status(400)
+      .json({ message: "Invalid quarter parameter. Must be 1, 2, 3, or 4." });
+  }
+
   try {
     const isManager =
       Array.isArray(req.user?.permissions) &&
       req.user.permissions.includes("manage_gta");
 
-    const baseQ = `
+    // MODIFIED: Build query dynamically to support filtering
+    let baseQueryStr = `
 SELECT a.*, t."goalId", gl."groupId", g.name AS "groupName"
 FROM "Activities" a
 JOIN "Tasks" t ON a."taskId" = t.id
 JOIN "Goals" gl ON t."goalId" = gl.id
 JOIN "Groups" g ON gl."groupId" = g.id
-WHERE a."taskId" = $1
+`;
+
+    const params = [taskId];
+    const whereClauses = [`a."taskId" = $1`];
+
+    if (!isManager) {
+      baseQueryStr += ' JOIN "UserGroups" ug ON ug."groupId" = g.id';
+      params.push(req.user.id);
+      whereClauses.push(`ug."userId" = $${params.length}`);
+    }
+
+    // MODIFIED: Add quarterly filter if provided
+    if (quarter) {
+      const qKey = `q${quarter}`;
+      params.push(qKey);
+      // This query checks if the JSON key (e.g., 'q1') exists and has a numeric value > 0
+      whereClauses.push(
+        `COALESCE((a."quarterlyGoals"->>$${params.length})::numeric, 0) > 0`
+      );
+    }
+
+    const finalQuery = `
+${baseQueryStr}
+WHERE ${whereClauses.join(" AND ")}
 ORDER BY COALESCE(a."rollNo", 999999), a."createdAt" DESC
 `;
 
-    if (isManager) {
-      const { rows } = await db.query(baseQ, [taskId]);
-      return res.json(rows);
-    }
-
-    const q = baseQ.replace(
-      'WHERE a."taskId" = $1',
-      `JOIN "UserGroups" ug ON ug."groupId" = g.id WHERE a."taskId" = $1 AND ug."userId" = $2`
-    );
-    const { rows } = await db.query(q, [taskId, req.user.id]);
+    const { rows } = await db.query(finalQuery, params);
     return res.json(rows);
   } catch (err) {
     console.error("getActivitiesByTask error:", err);
@@ -88,7 +111,7 @@ exports.createActivity = async (req, res) => {
   const taskId = toIntOrNull(req.params.taskId);
   if (!taskId) return res.status(400).json({ message: "Invalid taskId" });
 
-  // MODIFIED: Added previousMetric
+  // MODIFIED: Added quarterlyGoals
   const {
     title,
     description,
@@ -97,6 +120,7 @@ exports.createActivity = async (req, res) => {
     targetMetric,
     previousMetric,
     rollNo,
+    quarterlyGoals, // Added
   } = req.body;
 
   if (!title || String(title).trim() === "") {
@@ -104,8 +128,9 @@ exports.createActivity = async (req, res) => {
   }
 
   const parsedTargetMetric = safeParseJson(targetMetric);
-  // MODIFIED: Parse previousMetric
   const parsedPreviousMetric = safeParseJson(previousMetric);
+  // MODIFIED: Parse quarterlyGoals
+  const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
 
   try {
     const activity = await db.tx(async (client) => {
@@ -162,11 +187,11 @@ exports.createActivity = async (req, res) => {
           throw err;
         }
 
-        // MODIFIED: Added "previousMetric"
+        // MODIFIED: Added "quarterlyGoals"
         insertRes = await client.query(
           `INSERT INTO "Activities"
-("taskId", "rollNo", title, description, "dueDate", "weight", "targetMetric", "previousMetric", "createdAt", "updatedAt")
-VALUES ($1,$2,$3,$4,$5,$6,$7, $8, NOW(), NOW())
+("taskId", "rollNo", title, description, "dueDate", "weight", "targetMetric", "previousMetric", "quarterlyGoals", "createdAt", "updatedAt")
+VALUES ($1,$2,$3,$4,$5,$6,$7, $8, $9, NOW(), NOW())
 RETURNING *`,
           [
             taskId,
@@ -176,15 +201,16 @@ RETURNING *`,
             dueDate || null,
             newWeight,
             parsedTargetMetric ?? null,
-            parsedPreviousMetric ?? null, // MODIFIED
+            parsedPreviousMetric ?? null,
+            parsedQuarterlyGoals ?? null, // Added
           ]
         );
       } else {
-        // MODIFIED: Added "previousMetric"
+        // MODIFIED: Added "quarterlyGoals"
         insertRes = await client.query(
           `INSERT INTO "Activities"
-("taskId", title, description, "dueDate", "weight", "targetMetric", "previousMetric", "createdAt", "updatedAt")
-VALUES ($1,$2,$3,$4,$5,$6, $7, NOW(), NOW())
+("taskId", title, description, "dueDate", "weight", "targetMetric", "previousMetric", "quarterlyGoals", "createdAt", "updatedAt")
+VALUES ($1,$2,$3,$4,$5,$6, $7, $8, NOW(), NOW())
 RETURNING *`,
           [
             taskId,
@@ -193,7 +219,8 @@ RETURNING *`,
             dueDate || null,
             newWeight,
             parsedTargetMetric ?? null,
-            parsedPreviousMetric ?? null, // MODIFIED
+            parsedPreviousMetric ?? null,
+            parsedQuarterlyGoals ?? null, // Added
           ]
         );
       }
@@ -245,12 +272,10 @@ RETURNING *`,
     if (err && err.status === 400)
       return res.status(400).json({ message: err.message });
     if (err && err.code === "23505") {
-      return res
-        .status(409)
-        .json({
-          message:
-            "rollNo conflict: that roll number is already in use for this task.",
-        });
+      return res.status(409).json({
+        message:
+          "rollNo conflict: that roll number is already in use for this task.",
+      });
     }
     return res
       .status(500)
@@ -263,7 +288,7 @@ exports.updateActivity = async (req, res) => {
   if (!activityId)
     return res.status(400).json({ message: "Invalid activityId" });
 
-  // MODIFIED: Added previousMetric
+  // MODIFIED: Added quarterlyGoals
   const {
     title,
     description,
@@ -271,7 +296,8 @@ exports.updateActivity = async (req, res) => {
     dueDate,
     weight,
     targetMetric,
-    previousMetric, // MODIFIED
+    previousMetric,
+    quarterlyGoals, // Added
     isDone,
     rollNo,
   } = req.body;
@@ -358,8 +384,9 @@ exports.updateActivity = async (req, res) => {
       }
 
       const parsedTargetMetric = safeParseJson(targetMetric);
-      // MODIFIED: Parse previousMetric
       const parsedPreviousMetric = safeParseJson(previousMetric);
+      // MODIFIED: Parse quarterlyGoals
+      const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
 
       // sanitize incoming strings: convert empty string -> null, trim where appropriate
       const safeTitle = nullIfEmpty(title)
@@ -372,7 +399,7 @@ exports.updateActivity = async (req, res) => {
       const safeDueDate = nullIfEmpty(dueDate); // empty string => null (this fixes DateTimeParseError)
       const safeIsDone = isDone === undefined ? null : toBoolean(isDone);
 
-      // MODIFIED: Added "previousMetric" = COALESCE($10, "previousMetric")
+      // MODIFIED: Added "previousMetric" = COALESCE($10, ...) and "quarterlyGoals" = COALESCE($11, ...)
       const r = await client.query(
         `UPDATE "Activities"
 SET "rollNo" = COALESCE($1, "rollNo"),
@@ -380,7 +407,8 @@ title=$2, description=$3, status=COALESCE($4, status),
 "dueDate"=$5, "weight"=$6,
 "targetMetric"=COALESCE($7, "targetMetric"),
 "isDone"=COALESCE($8, "isDone"), "updatedAt"=NOW(),
-"previousMetric"=COALESCE($10, "previousMetric")
+"previousMetric"=COALESCE($10, "previousMetric"),
+"quarterlyGoals"=COALESCE($11, "quarterlyGoals")
 WHERE id=$9
 RETURNING *`,
         [
@@ -393,7 +421,8 @@ RETURNING *`,
           parsedTargetMetric ?? null,
           safeIsDone,
           activityId,
-          parsedPreviousMetric ?? null, // MODIFIED
+          parsedPreviousMetric ?? null,
+          parsedQuarterlyGoals ?? null, // Added
         ]
       );
 

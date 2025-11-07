@@ -22,8 +22,3 @@ export const updateGoal = (goalId, goalData) =>
 export const deleteGoal = (goalId) =>
   api(`/api/goals/${goalId}`, "DELETE");
 
-// List tasks for a goal
-// This is defined here but `useProjectApi` imports it from `tasks.js`
-// We'll keep the one in `tasks.js` as the primary one.
-// export const fetchGoalTasks = (goalId, page = 1, pageSize = 20) =>
-//   api(`/api/goals/${goalId}/tasks?page=${page}&pageSize=${pageSize}`, "GET");
