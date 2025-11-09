@@ -5,12 +5,14 @@ import { useTranslation } from "react-i18next";
 import { fetchGroups } from "../api/groups";
 
 /* -------------------------
- * Master Report page wrapper
- * MODIFIED:
- * - Added "Previous" metric column to data table.
- * - Added "Previous" metric to narrative section.
- * - Added "Previous" metric to print and CSV export functions.
- * ------------------------- */
+* Master Report page wrapper
+* MODIFIED:
+* - Added "Yearly Progress %" column (Current / Target * 100).
+* - Renamed quarterly "Variance %" to "Progress %".
+* - Updated 'getQuarterlyStats' to calculate progress: (Record / Goal) * 100.
+* - Updated 'getOverallMetrics' to also return 'currentVal'.
+* - Print and CSV exports updated to reflect both changes.
+* ------------------------- */
 export default function MasterReportPageWrapper() {
   const { t } = useTranslation();
 
@@ -145,111 +147,186 @@ export default function MasterReportPageWrapper() {
     return rows;
   }, [master]);
 
-  function generateHtmlForPrint() {
-    const data = master || { goals: [] };
-    const periods = periodColumns;
-    const columnsHtml = periods
+  // Generate table headers for print/export
+  const periodHeadersHtml = useMemo(() => {
+    if (granularity === "quarterly") {
+      return periodColumns
+        .map((p) => {
+          const label = fmtQuarterKey(p);
+          return [
+            `<th style="padding:8px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qGoal", "Goal"))} (${escapeHtml(label)})</th>`,
+            `<th style="padding:8px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qRecord", "Record"))} (${escapeHtml(label)})</th>`,
+            // MODIFIED: Header label changed to "Progress %"
+            `<th style="padding:8px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qProgress", "Progress %"))} (${escapeHtml(label)})</th>`,
+          ].join("");
+        })
+        .join("");
+    }
+    // Monthly or Annual
+    return periodColumns
       .map((p) => {
         let label = p;
         if (granularity === "monthly") label = fmtMonthKey(p);
-        if (granularity === "quarterly") label = fmtQuarterKey(p);
         return `<th style="padding:8px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(
           label
         )}</th>`;
       })
       .join("");
+  }, [periodColumns, granularity, t]);
+
+  // Generate table cells for print/export
+  const periodCellsHtml = (row) => {
+    const emptyCell = `<td style="padding:8px;border:1px solid #ddd">—</td>`;
+
+    if (row.type === "goal" || row.type === "task") {
+      const numCols = granularity === "quarterly" ? periodColumns.length * 3 : periodColumns.length;
+      // Add 1 for the new Yearly Progress % column
+      return Array(numCols + 1).fill(emptyCell).join("");
+    }
+    // Activity row
+    const a = row.activity;
+    const mk = pickMetricForActivity(a, null);
+
+    // --- Yearly Progress Cell (must be calculated first) ---
+    const { targetVal, prevVal, currentVal } = getOverallMetrics(a, mk);
+    const targetNum = toNumberOrNull(targetVal);
+    const currentNum = toNumberOrNull(currentVal);
+    let yearlyProgressPct = null;
+    if (targetNum !== null && currentNum !== null) {
+      if (targetNum > 0) {
+        yearlyProgressPct = (currentNum / targetNum) * 100;
+      } else if (targetNum === 0) {
+        yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
+      }
+    }
+    const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(2)}%`;
+    const yearlyProgressCell = `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
+    // --- End Yearly ---
+
+
+    if (granularity === "quarterly") {
+      const quarterlyCells = periodColumns.map(p => {
+        // MODIFIED: 'variance' is now 'progress'
+        const { goal, record, progress } = getQuarterlyStats(a, p, mk);
+        // MODIFIED: Format the percentage value
+        const displayProgress = progress === null ? '-' : `${progress.toFixed(2)}%`;
+
+        return [
+          `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(goal ?? "-"))}</td>`,
+          `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(record ?? "-"))}</td>`,
+          // MODIFIED: Display the formatted percentage
+          `<td style="padding:8px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
+        ].join("");
+      }).join("");
+      return yearlyProgressCell + quarterlyCells;
+    }
+
+    // Monthly or Annual
+    const periodCells = periodColumns
+      .map((p) => {
+        const v = getLatestMetricValueInPeriod(
+          a,
+          p,
+          granularity,
+          mk
+        );
+        if (v === null || v === undefined) return emptyCell;
+        let dv = v;
+        if (typeof dv === "object") {
+          try {
+            const k = Object.keys(dv || {})[0];
+            if (k) dv = dv[k];
+            else dv = JSON.stringify(dv);
+          } catch (e) { dv = JSON.stringify(dv); }
+        }
+        return `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
+      })
+      .join("");
+    
+    return yearlyProgressCell + periodCells;
+  };
+
+  function generateHtmlForPrint() {
+    const data = master || { goals: [] };
+    const columnsHtml = periodHeadersHtml; // Use memoized headers
 
     const rowsHtml = tableRows
       .map((row) => {
         const titleWithNumber = `${row.number}. ${row.title}`;
-        if (row.type === "goal") {
-          return `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:700">${escapeHtml(
+        const padding = row.type === "goal" ? '8px' : (row.type === "task" ? '20px' : '34px');
+        const weight = row.type === 'goal' ? '700' : '400';
+        
+        // Non-activity rows
+        if (row.type !== "activity") {
+          const emptyQuarterlyCells = granularity === "quarterly" ? periodColumns.length * 3 : periodColumns.length;
+          const emptyCells = Array(emptyQuarterlyCells + 1).fill(0).map(() => `<td style="padding:8px;border:1px solid #ddd">—</td>`).join(""); // +1 for yearly progress
+
+          return `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:${weight};padding-left:${padding}">${escapeHtml(
             titleWithNumber
           )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
             String(row.weight)
-          )}</td><td style="padding:8px;border:1px solid #ddd">—</td><td style="padding:8px;border:1px solid #ddd">—</td><td style="padding:8px;border:1px solid #ddd">—</td>${periods
-            .map(() => `<td style="padding:8px;border:1px solid #ddd">—</td>`)
-            .join("")}</tr>`;
-        } else if (row.type === "task") {
-          return `<tr><td style="padding:8px;border:1px solid #ddd;padding-left:20px">${escapeHtml(
-            titleWithNumber
-          )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
-            String(row.weight)
-          )}</td><td style="padding:8px;border:1px solid #ddd">—</td><td style="padding:8px;border:1px solid #ddd">—</td><td style="padding:8px;border:1px solid #ddd">—</td>${periods
-            .map(() => `<td style="padding:8px;border:1px solid #ddd">—</td>`)
-            .join("")}</tr>`;
+          )}</td><td style="padding:8px;border:1px solid #ddd">—</td><td style="padding:8px;border:1px solid #ddd">—</td><td style="padding:8px;border:1px solid #ddd">—</td>${emptyCells}</tr>`;
+        }
+
+        // Activity row
+        const mk = pickMetricForActivity(row.activity, null);
+        const { targetVal, prevVal, currentVal } = getOverallMetrics(row.activity, mk);
+
+        // Calculate Yearly Progress
+        const targetNum = toNumberOrNull(targetVal);
+        const currentNum = toNumberOrNull(currentVal);
+        let yearlyProgressPct = null;
+        if (targetNum !== null && currentNum !== null) {
+          if (targetNum > 0) yearlyProgressPct = (currentNum / targetNum) * 100;
+          else if (targetNum === 0) yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
+        }
+        const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(2)}%`;
+
+        const quarterlyCellsHtml = periodCellsHtml(row); // This already includes the yearly cell, let's fix that.
+        
+        // --- Recalculate periodCellsHtml just for this function ---
+        const yearlyProgressCell = `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
+        let periodCells = "";
+
+        if (granularity === "quarterly") {
+          periodCells = periodColumns.map(p => {
+            const { goal, record, progress } = getQuarterlyStats(row.activity, p, mk);
+            const displayProgress = progress === null ? '-' : `${progress.toFixed(2)}%`;
+            return [
+              `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(goal ?? "-"))}</td>`,
+              `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(record ?? "-"))}</td>`,
+              `<td style="padding:8px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
+            ].join("");
+          }).join("");
         } else {
-          const mk = pickMetricForActivity(row.activity, null);
-
-          let targetVal = "";
-          if (typeof row.activity.targetMetric === "number")
-            targetVal = row.activity.targetMetric;
-          else if (
-            mk &&
-            row.activity.targetMetric &&
-            mk in row.activity.targetMetric
-          )
-            targetVal = row.activity.targetMetric[mk];
-          else if (
-            row.activity.targetMetric &&
-            typeof row.activity.targetMetric === "object" &&
-            "target" in row.activity.targetMetric
-          )
-            targetVal = row.activity.targetMetric.target;
-
-          let prevVal = "";
-          if (typeof row.activity.previousMetric === "number")
-            prevVal = row.activity.previousMetric;
-          else if (
-            mk &&
-            row.activity.previousMetric &&
-            mk in row.activity.previousMetric
-          )
-            prevVal = row.activity.previousMetric[mk];
-          else if (
-            row.activity.previousMetric &&
-            typeof row.activity.previousMetric === "object" &&
-            "previous" in row.activity.previousMetric
-          )
-            prevVal = row.activity.previousMetric.previous;
-
-          const periodCells = periods
-            .map((p) => {
-              const v = getLatestMetricValueInPeriod(
-                row.activity,
-                p,
-                granularity,
-                mk
-              );
-              if (v === null || v === undefined)
-                return `<td style="padding:8px;border:1px solid #ddd">-</td>`;
+          // Monthly or Annual
+          periodCells = periodColumns.map((p) => {
+              const v = getLatestMetricValueInPeriod(row.activity, p, granularity, mk);
+              if (v === null || v === undefined) return `<td style="padding:8px;border:1px solid #ddd">—</td>`;
               let dv = v;
               if (typeof dv === "object") {
                 try {
                   const k = Object.keys(dv || {})[0];
-                  if (k) dv = dv[k];
-                  else dv = JSON.stringify(dv);
-                } catch (e) {
-                  dv = JSON.stringify(dv);
-                }
+                  if (k) dv = dv[k]; else dv = JSON.stringify(dv);
+                } catch (e) { dv = JSON.stringify(dv); }
               }
-              return `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(
-                String(dv)
-              )}</td>`;
-            })
-            .join("");
-          return `<tr><td style="padding:8px;border:1px solid #ddd;padding-left:34px">${escapeHtml(
-            titleWithNumber
-          )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
-            String(row.weight)
-          )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
-            mk ?? "-"
-          )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
-            String(targetVal ?? "-")
-          )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
-            String(prevVal ?? "-")
-          )}</td>${periodCells}</tr>`;
+              return `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
+            }).join("");
         }
+        // --- End recalculation ---
+
+
+        return `<tr><td style="padding:8px;border:1px solid #ddd;padding-left:${padding}">${escapeHtml(
+          titleWithNumber
+        )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+          String(row.weight)
+        )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+          mk ?? "-"
+        )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+          String(targetVal ?? "-")
+        )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+          String(prevVal ?? "-")
+        )}</td>${yearlyProgressCell}${periodCells}</tr>`;
       })
       .join("");
 
@@ -260,6 +337,99 @@ export default function MasterReportPageWrapper() {
     const generated = t("reports.master.generatedAt", {
       date: new Date().toLocaleString(),
     });
+
+    // --- UPDATED NARRATIVE SECTION ---
+    // (This now includes quarterlyGoals)
+    const narrativesHtml = data.goals
+      .map((g, goalIndex) => {
+        const goalNum = `${goalIndex + 1}`;
+        return `
+<div style="margin-bottom:12px;padding:10px;border:1px solid #eee;border-radius:6px;background:#fbfbfb" class="print-goal-narrative">
+<div style="font-weight:700;font-size:15px">${escapeHtml(
+          `${goalNum}. ${g.title}`
+        )} <span style="font-weight:400;color:#6b7280">• ${escapeHtml(
+          String(g.status || "—")
+        )} • ${escapeHtml(String(g.progress ?? 0))}% • weight: ${escapeHtml(
+          String(g.weight ?? "-")
+        )}</span></div>
+<div style="margin-top:8px;padding-left:8px">
+${(g.tasks || [])
+          .map((task, taskIndex) => {
+            const taskNum = `${goalNum}.${taskIndex + 1}`;
+            return `
+<div style="margin-bottom:8px">
+<div style="font-weight:600">${escapeHtml(
+              `${taskNum}. ${task.title}`
+            )} <span style="color:#6b7280">(${escapeHtml(
+              String(task.progress ?? 0)
+            )}%) • weight: ${escapeHtml(String(task.weight ?? "-"))}</span></div>
+${(task.activities || [])
+              .map((activity, activityIndex) => {
+                const activityNum = `${taskNum}.${activityIndex + 1}`;
+                return `
+<div style="margin-left:16px;margin-top:6px;padding:8px;border:1px solid #f1f5f9;border-radius:4px;background:#fff">
+<div style="font-weight:600">${escapeHtml(
+                  `${activityNum}. ${activity.title}`
+                )}</div>
+<div style="color:#6b7280;margin-top:6px;font-size:12px;"><strong>${escapeHtml(
+                  t("reports.master.targetLabel")
+                )}:</strong> ${
+                  activity.targetMetric
+                    ? escapeHtml(JSON.stringify(activity.targetMetric))
+                    : "-"
+                }</div>
+
+{/* --- ADDED CURRENT METRIC --- */}
+<div style="color:#6b7280;margin-top:4px;font-size:12px;"><strong>${escapeHtml(
+                  t("reports.master.currentLabel", "Current")
+                )}:</strong> ${
+                  activity.currentMetric
+                    ? escapeHtml(JSON.stringify(activity.currentMetric))
+                    : "-"
+                }</div>
+
+<div style="color:#6b7280;margin-top:4px;font-size:12px;"><strong>${escapeHtml(
+                  t("reports.master.previousLabel", "Previous")
+                )}:</strong> ${
+                  activity.previousMetric
+                    ? escapeHtml(JSON.stringify(activity.previousMetric))
+                    : "-"
+                }</div>
+
+<div style="color:#6b7280;margin-top:4px;font-size:12px;"><strong>${escapeHtml(
+                  t("reports.master.quarterlyGoals", "Quarterly Goals")
+                )}:</strong> ${
+                  activity.quarterlyGoals
+                    ? escapeHtml(JSON.stringify(activity.quarterlyGoals))
+                    : "-"
+                }</div>
+<div style="margin-top:8px">${(activity.reports || [])
+                  .map(
+                    (r) =>
+                      `<div style="padding:6px;border-top:1px dashed #eee"><strong>#${escapeHtml(
+                        String(r.id)
+                      )}</strong> • ${escapeHtml(String(r.status || "—"))} • ${
+                        r.createdAt
+                          ? escapeHtml(new Date(r.createdAt).toLocaleString())
+                          : ""
+                      }<div class="narrative" style="margin-top:6px">${escapeHtml(
+                        r.narrative || ""
+                      )}</div></div>`
+                  )
+                  .join("")}</div>
+</div>
+`;
+              })
+              .join("")}
+</div>
+`;
+          })
+          .join("")}
+</div>
+</div>
+`;
+      })
+      .join("");
 
     return `<!doctype html>
 <html>
@@ -336,79 +506,7 @@ margin-top: 12px;
 
 <section>
 <h2>${escapeHtml(narratives)}</h2>
-${data.goals
-  .map((g, goalIndex) => {
-    const goalNum = `${goalIndex + 1}`;
-    return `
-{/* --- ADDED 'print-goal-narrative' CLASS --- */}
-<div style="margin-bottom:12px;padding:10px;border:1px solid #eee;border-radius:6px;background:#fbfbfb" class="print-goal-narrative">
-<div style="font-weight:700;font-size:15px">${escapeHtml(
-      `${goalNum}. ${g.title}`
-    )} <span style="font-weight:400;color:#6b7280">• ${escapeHtml(
-      String(g.status || "—")
-    )} • ${escapeHtml(String(g.progress ?? 0))}% • weight: ${escapeHtml(
-      String(g.weight ?? "-")
-    )}</span></div>
-<div style="margin-top:8px;padding-left:8px">
-${(g.tasks || [])
-  .map((task, taskIndex) => {
-    const taskNum = `${goalNum}.${taskIndex + 1}`;
-    return `
-<div style="margin-bottom:8px">
-<div style="font-weight:600">${escapeHtml(
-      `${taskNum}. ${task.title}`
-    )} <span style="color:#6b7280">(${escapeHtml(
-      String(task.progress ?? 0)
-    )}%) • weight: ${escapeHtml(String(task.weight ?? "-"))}</span></div>
-${(task.activities || [])
-  .map((activity, activityIndex) => {
-    const activityNum = `${taskNum}.${activityIndex + 1}`;
-    return `
-<div style="margin-left:16px;margin-top:6px;padding:8px;border:1px solid #f1f5f9;border-radius:4px;background:#fff">
-<div style="font-weight:600">${escapeHtml(
-      `${activityNum}. ${activity.title}`
-    )}</div>
-<div style="color:#6b7280;margin-top:6px">${escapeHtml(
-      t("reports.master.targetLabel")
-    )}: ${
-      activity.targetMetric
-        ? escapeHtml(JSON.stringify(activity.targetMetric))
-        : "-"
-    }</div>
-<div style="color:#6b7280;margin-top:4px">${escapeHtml(
-      t("reports.master.previousLabel", "Previous")
-    )}: ${
-      activity.previousMetric
-        ? escapeHtml(JSON.stringify(activity.previousMetric))
-        : "-"
-    }</div>
-<div style="margin-top:8px">${(activity.reports || [])
-      .map(
-        (r) =>
-          `<div style="padding:6px;border-top:1px dashed #eee"><strong>#${escapeHtml(
-            String(r.id)
-          )}</strong> • ${escapeHtml(String(r.status || "—"))} • ${
-            r.createdAt
-              ? escapeHtml(new Date(r.createdAt).toLocaleString())
-              : ""
-          }<div class="narrative" style="margin-top:6px">${escapeHtml(
-            r.narrative || ""
-          )}</div></div>`
-      )
-      .join("")}</div>
-</div>
-`;
-  })
-  .join("")}
-</div>
-`;
-  })
-  .join("")}
-</div>
-</div>
-`;
-  })
-  .join("")}
+${narrativesHtml}
 </section>
 
 <section style="margin-top:18px">
@@ -420,6 +518,8 @@ ${(task.activities || [])
       t("reports.table.target")
     )}</th><th>${escapeHtml(
       t("reports.table.previous", "Previous")
+    )}</th><th>${escapeHtml(
+      t("reports.table.yearlyProgress", "Yearly Progress %") /* ADDED */
     )}</th>${columnsHtml}</tr></thead>
 <tbody>${rowsHtml}</tbody>
 </table>
@@ -429,14 +529,26 @@ ${(task.activities || [])
 </html>`;
   }
 
-  {
-    /* --- REWRITTEN CSV EXPORT FUNCTION (HIERARCHICAL) --- */
-  }
   function exportCSV() {
     if (!master) return alert(t("reports.master.loadFirstAlert"));
     const periods = periodColumns;
 
-    // New headers for the "grouped" style.
+    // --- NEW: Dynamic headers for CSV ---
+    const periodHeaders = [];
+    if (granularity === "quarterly") {
+      periods.forEach(p => {
+        const label = fmtQuarterKey(p);
+        periodHeaders.push(`${t("reports.table.qGoal", "Goal")} (${label})`);
+        periodHeaders.push(`${t("reports.table.qRecord", "Record")} (${label})`);
+        // MODIFIED: Header label
+        periodHeaders.push(`${t("reports.table.qProgress", "Progress %")} (${label})`);
+      });
+    } else {
+      periods.forEach(p => {
+        periodHeaders.push(granularity === "monthly" ? fmtMonthKey(p) : p);
+      });
+    }
+
     const headers = [
       t("reports.table.goalNum", "Goal #"),
       t("reports.table.goal", "Goal"),
@@ -448,85 +560,79 @@ ${(task.activities || [])
       t("reports.table.metric", "Metric"),
       t("reports.table.target", "Target"),
       t("reports.table.previous", "Previous"),
-      ...periods,
+      t("reports.table.yearlyProgress", "Yearly Progress %"), // ADDED
+      ...periodHeaders,
     ];
 
     const rows = [];
-    const emptyPeriodCells = periods.map(() => "");
+    // MODIFIED: Added 1 more empty cell for Yearly Progress
+    const emptyPeriodCells = periodHeaders.map(() => "");
+    const emptyGoalTaskRow = ["", "", "", "", "", ...emptyPeriodCells];
+
 
     master.goals.forEach((g, goalIndex) => {
       const goalNum = `${goalIndex + 1}`;
-      // Add Goal Row
-      const goalRow = [
-        goalNum,
-        g.title,
-        "", // Task #
-        "", // Task
-        "", // Activity #
-        "", // Activity
-        g.weight ?? "",
-        "", // Metric
-        "", // Target
-        "", // Previous
-        ...emptyPeriodCells,
-      ];
-      rows.push(goalRow);
+      rows.push([
+        goalNum, g.title, "", "", "", "", g.weight ?? "", "", "", "",
+        ...emptyGoalTaskRow,
+      ]);
 
       (g.tasks || []).forEach((task, taskIndex) => {
         const taskNum = `${goalNum}.${taskIndex + 1}`;
-        // Add Task Row
-        const taskRow = [
-          "", // Goal #
-          "", // Goal
-          taskNum,
-          task.title,
-          "", // Activity #
-          "", // Activity
-          task.weight ?? "",
-          "", // Metric
-          "", // Target
-          "", // Previous
-          ...emptyPeriodCells,
-        ];
-        rows.push(taskRow);
+        rows.push([
+          "", "", taskNum, task.title, "", "", task.weight ?? "", "", "", "",
+          ...emptyGoalTaskRow,
+        ]);
 
         (task.activities || []).forEach((a, activityIndex) => {
           const activityNum = `${taskNum}.${activityIndex + 1}`;
           const mk = pickMetricForActivity(a, null);
-          const target =
-            mk && a.targetMetric && mk in a.targetMetric
-              ? a.targetMetric[mk]
-              : a.targetMetric?.target ?? "";
-          const prev =
-            mk && a.previousMetric && mk in a.previousMetric
-              ? a.previousMetric[mk]
-              : a.previousMetric?.previous ?? "";
-          const periodVals = periods.map((p) => {
-            const v = getLatestMetricValueInPeriod(a, p, granularity, mk);
-            if (v === null || v === undefined) return "";
-            if (typeof v === "object") {
-              const k = Object.keys(v || {})[0];
-              if (k) return String(v[k]);
-              return JSON.stringify(v);
-            }
-            return String(v);
-          });
+          const { targetVal, prevVal, currentVal } = getOverallMetrics(a, mk); // MODIFIED
 
-          // Add Activity Row
-          const actRow = [
-            "", // Goal #
-            "", // Goal
-            "", // Task #
-            "", // Task
-            activityNum,
-            a.title,
-            a.weight ?? "",
-            mk ?? "",
-            target ?? "",
-            prev ?? "",
+          // Calculate Yearly Progress
+          const targetNum = toNumberOrNull(targetVal);
+          const currentNum = toNumberOrNull(currentVal);
+          let yearlyProgressPct = null;
+          if (targetNum !== null && currentNum !== null) {
+            if (targetNum > 0) yearlyProgressPct = (currentNum / targetNum) * 100;
+            else if (targetNum === 0) yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
+          }
+          const displayYearlyProgress = yearlyProgressPct === null ? '' : `${yearlyProgressPct.toFixed(2)}%`;
+          // End Yearly Progress
+
+          const periodVals = [];
+          if (granularity === "quarterly") {
+            periods.forEach(p => {
+              // MODIFIED: 'variance' is now 'progress'
+              const { goal, record, progress } = getQuarterlyStats(a, p, mk);
+              // MODIFIED: Format as percentage string
+              const displayProgress = progress === null ? "" : `${progress.toFixed(2)}%`;
+              periodVals.push(goal ?? "");
+              periodVals.push(record ?? "");
+              periodVals.push(displayProgress);
+            });
+          } else {
+            periods.forEach(p => {
+              const v = getLatestMetricValueInPeriod(a, p, granularity, mk);
+              if (v === null || v === undefined) {
+                periodVals.push("");
+                return;
+              }
+              if (typeof v === "object") {
+                const k = Object.keys(v || {})[0];
+                if (k) periodVals.push(String(v[k]));
+                else periodVals.push(JSON.stringify(v));
+              } else {
+                periodVals.push(String(v));
+              }
+            });
+          }
+
+          rows.push([
+            "", "", "", "", activityNum, a.title, a.weight ?? "", mk ?? "", targetVal ?? "", prevVal ?? "",
+            displayYearlyProgress, // ADDED
             ...periodVals,
-          ];
-          rows.push(actRow);
+          ]);
         });
       });
     });
@@ -546,7 +652,7 @@ ${(task.activities || [])
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `master_report_${groupId || "all"}.csv`;
+    a.download = `master_report_${granularity}_${groupId || "all"}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -562,7 +668,7 @@ ${(task.activities || [])
       try {
         w.focus();
         w.print();
-      } catch (e) {}
+      } catch (e) { }
     }, 400);
   }
 
@@ -638,9 +744,8 @@ ${(task.activities || [])
           >
             {loading ? (
               <Loader
-                className={`h-4 w-4 animate-spin transition-all duration-500 ${
-                  isRefreshing ? "scale-125" : "scale-100"
-                }`}
+                className={`h-4 w-4 animate-spin transition-all duration-500 ${isRefreshing ? "scale-125" : "scale-100"
+                  }`}
               />
             ) : (
               t("reports.master.loadButton")
@@ -671,11 +776,10 @@ ${(task.activities || [])
               <button
                 key={g}
                 onClick={() => setGranularity(g)}
-                className={`px-3 py-1.5 rounded-lg transition-all duration-300 transform hover:scale-110 active:scale-95 ${
-                  granularity === g
+                className={`px-3 py-1.5 rounded-lg transition-all duration-300 transform hover:scale-110 active:scale-95 ${granularity === g
                     ? "bg-sky-600 text-white shadow-lg scale-105"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-md"
-                }`}
+                  }`}
               >
                 {t(`reports.master.granularities.${g}`)}
               </button>
@@ -743,9 +847,8 @@ ${(task.activities || [])
                           </div>
                           <div className="pl-3 mt-3 space-y-3 transition-all duration-500">
                             {(task.activities || []).map((a, activityIndex) => {
-                              const activityNum = `${taskNum}.${
-                                activityIndex + 1
-                              }`;
+                              const activityNum = `${taskNum}.${activityIndex + 1
+                                }`;
                               return (
                                 <div
                                   key={a.id}
@@ -770,6 +873,19 @@ ${(task.activities || [])
                                           : null}
                                       </div>
 
+                                      {/* --- ADDED CURRENT METRIC --- */}
+                                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-2 transition-all duration-500">
+                                        {t("reports.master.currentLabel", "Current")}:{" "}
+                                        <span className="font-medium text-gray-800 dark:text-gray-100 transition-all duration-300">
+                                          {a.currentMetric ? "" : "-"}
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 transition-all duration-500">
+                                        {a.currentMetric
+                                          ? renderMetricsList(a.currentMetric)
+                                          : null}
+                                      </div>
+
                                       {/* --- ADDED PREVIOUS METRIC --- */}
                                       <div className="text-sm text-gray-500 dark:text-gray-300 mt-2 transition-all duration-500">
                                         {t(
@@ -786,7 +902,23 @@ ${(task.activities || [])
                                           ? renderMetricsList(a.previousMetric)
                                           : null}
                                       </div>
-                                      {/* --- END PREVIOUS METRIC --- */}
+                                      {/* --- ADDED QUARTERLY GOALS --- */}
+                                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-2 transition-all duration-500">
+                                        {t(
+                                          "reports.master.quarterlyGoals",
+                                          "Quarterly Goals"
+                                        )}
+                                        :{" "}
+                                        <span className="font-medium text-gray-800 dark:text-gray-100 transition-all duration-300">
+                                          {a.quarterlyGoals ? "" : "-"}
+                                        </span>
+                                      </div>
+                                      <div className="mt-2 transition-all duration-500">
+                                        {a.quarterlyGoals
+                                          ? renderMetricsList(a.quarterlyGoals)
+                                          : null}
+                                      </div>
+                                      {/* --- END QUARTERLY GOALS --- */}
                                     </div>
                                     <div className="text-sm text-gray-400 transition-all duration-500 transform">
                                       {a.status} •{" "}
@@ -808,12 +940,10 @@ ${(task.activities || [])
                                             key={r.id}
                                             className="text-sm border rounded p-2 bg-gray-50 dark:bg-gray-900 transition-all duration-500 ease-out transform"
                                             style={{
-                                              animationDelay: `${
-                                                reportIndex * 60
-                                              }ms`,
-                                              transitionDelay: `${
-                                                reportIndex * 30
-                                              }ms`,
+                                              animationDelay: `${reportIndex * 60
+                                                }ms`,
+                                              transitionDelay: `${reportIndex * 30
+                                                }ms`,
                                             }}
                                           >
                                             <div className="flex flex-col sm:flex-row sm:justify-between gap-1 transition-all duration-300">
@@ -826,8 +956,8 @@ ${(task.activities || [])
                                               <div className="text-xs text-gray-400 transition-all duration-500 transform">
                                                 {r.createdAt
                                                   ? new Date(
-                                                      r.createdAt
-                                                    ).toLocaleString()
+                                                    r.createdAt
+                                                  ).toLocaleString()
                                                   : ""}
                                               </div>
                                             </div>
@@ -893,20 +1023,36 @@ ${(task.activities || [])
                 <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   {t("reports.table.target")}
                 </th>
-                {/* --- ADDED PREVIOUS METRIC HEADER --- */}
                 <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   {t("reports.table.previous", "Previous")}
                 </th>
-                {periodColumns.map((p) => (
+                {/* ADDED: Yearly Progress % Header */}
+                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  {t("reports.table.yearlyProgress", "Yearly Progress %")}
+                </th>
+                {/* --- NEW: Dynamic Headers for Quarterly --- */}
+                {granularity === "quarterly" ? periodColumns.map(p => {
+                  const label = fmtQuarterKey(p);
+                  return (
+                    <React.Fragment key={p}>
+                      <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        {t("reports.table.qGoal", "Goal")} ({label})
+                      </th>
+                      <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        {t("reports.table.qRecord", "Record")} ({label})
+                      </th>
+                      {/* MODIFIED: Header Label */}
+                      <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        {t("reports.table.qProgress", "Progress %")} ({label})
+                      </th>
+                    </React.Fragment>
+                  );
+                }) : periodColumns.map((p) => (
                   <th
                     key={p}
                     className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
-                    {granularity === "monthly"
-                      ? fmtMonthKey(p)
-                      : granularity === "quarterly"
-                      ? fmtQuarterKey(p)
-                      : p}
+                    {granularity === "monthly" ? fmtMonthKey(p) : p}
                   </th>
                 ))}
               </tr>
@@ -914,17 +1060,18 @@ ${(task.activities || [])
 
             <tbody className="transition-all duration-500">
               {tableRows.map((row, index) => {
-                if (row.type === "goal") {
+                if (row.type === "goal" || row.type === "task") {
+                  const numEmptyCols = granularity === 'quarterly' ? periodColumns.length * 3 : periodColumns.length;
                   return (
                     <tr
                       key={row.id}
-                      className="bg-indigo-50 dark:bg-indigo-900/10 transition-all duration-500 ease-out transform"
+                      className={`${row.type === 'goal' ? 'bg-indigo-50 dark:bg-indigo-900/10' : 'bg-gray-50 dark:bg-gray-900/20'} transition-all duration-500 ease-out transform`}
                       style={{
                         animationDelay: `${index * 50}ms`,
                         transitionDelay: `${index * 30}ms`,
                       }}
                     >
-                      <td className="border px-3 py-3 font-semibold text-gray-900 dark:text-gray-100 transition-all duration-300">{`${row.number}. ${row.title}`}</td>
+                      <td className={`border px-3 py-3 font-semibold text-gray-900 dark:text-gray-100 transition-all duration-300 ${row.type === 'task' ? 'pl-6' : ''}`}>{`${row.number}. ${row.title}`}</td>
                       <td className="border px-3 py-3 text-gray-700 dark:text-gray-200 transition-all duration-300">
                         {row.weight}
                       </td>
@@ -937,42 +1084,13 @@ ${(task.activities || [])
                       <td className="border px-3 py-3 transition-all duration-300">
                         —
                       </td>
-                      {periodColumns.map((p) => (
+                      {/* ADDED: Empty cell for Yearly Progress */}
+                      <td className="border px-3 py-3 transition-all duration-300">
+                        —
+                      </td>
+                      {Array(numEmptyCols).fill(0).map((_, i) => (
                         <td
-                          key={p}
-                          className="border px-3 py-3 transition-all duration-300"
-                        >
-                          —
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                } else if (row.type === "task") {
-                  return (
-                    <tr
-                      key={row.id}
-                      className="bg-gray-50 dark:bg-gray-900/20 transition-all duration-500 ease-out transform"
-                      style={{
-                        animationDelay: `${index * 50}ms`,
-                        transitionDelay: `${index * 30}ms`,
-                      }}
-                    >
-                      <td className="border px-3 py-3 pl-6 text-gray-900 dark:text-gray-100 transition-all duration-300">{`${row.number}. ${row.title}`}</td>
-                      <td className="border px-3 py-3 text-gray-700 dark:text-gray-200 transition-all duration-300">
-                        {row.weight}
-                      </td>
-                      <td className="border px-3 py-3 transition-all duration-300">
-                        —
-                      </td>
-                      <td className="border px-3 py-3 transition-all duration-300">
-                        —
-                      </td>
-                      <td className="border px-3 py-3 transition-all duration-300">
-                        —
-                      </td>
-                      {periodColumns.map((p) => (
-                        <td
-                          key={p}
+                          key={i}
                           className="border px-3 py-3 transition-all duration-300"
                         >
                           —
@@ -989,6 +1107,7 @@ ${(task.activities || [])
                       granularity={granularity}
                       number={row.number}
                       index={index}
+                      t={t}
                     />
                   );
                 }
@@ -997,7 +1116,8 @@ ${(task.activities || [])
                 <tr className="transition-all duration-500">
                   <td
                     className="p-6 text-center text-gray-500 dark:text-gray-400 transition-all duration-500"
-                    colSpan={5 + periodColumns.length}
+                    // MODIFIED: Colspan from 5 to 6
+                    colSpan={6 + (granularity === 'quarterly' ? periodColumns.length * 3 : periodColumns.length)}
                   >
                     {t("reports.table.noData")}
                   </td>
@@ -1010,57 +1130,77 @@ ${(task.activities || [])
 
       {/* Custom animation styles */}
       <style jsx>{`
-        @keyframes gentleSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
+@keyframes gentleSlideIn {
+from {
+opacity: 0;
+transform: translateY(20px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
 
-        @keyframes pulseGlow {
-          0%,
-          100% {
-            box-shadow: 0 0 5px rgba(14, 165, 233, 0.3);
-          }
-          50% {
-            box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
-          }
-        }
+@keyframes pulseGlow {
+0%,
+100% {
+box-shadow: 0 0 5px rgba(14, 165, 233, 0.3);
+}
+50% {
+box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
+}
+}
 
-        .animate-gentle-slide {
-          animation: gentleSlideIn 0.6s ease-out both;
-        }
+.animate-gentle-slide {
+animation: gentleSlideIn 0.6s ease-out both;
+}
 
-        .animate-pulse-glow {
-          animation: pulseGlow 2s ease-in-out infinite;
-        }
+.animate-pulse-glow {
+animation: pulseGlow 2s ease-in-out infinite;
+}
 
-        /* Enhanced table row animations */
-        .table-row-animation {
-          animation: gentleSlideIn 0.5s ease-out both;
-        }
-      `}</style>
+/* Enhanced table row animations */
+.table-row-animation {
+animation: gentleSlideIn 0.5s ease-out both;
+}
+`}</style>
     </div>
   );
 }
 
 /* -------------------------
- * Master report helpers & table row
- * ------------------------- */
+* Master report helpers & table row
+* ------------------------- */
 
 /**
- * Normalize period keys returned from backend into canonical monthly/quarterly/annual keys:
- * - monthly -> "YYYY-MM" (from any of: "YYYY-M", "YYYY-MM", "YYYY-MM-DD", ISO string)
- * - quarterly -> "YYYY-Qn"
- * - annual -> "YYYY"
- */
+* Utility function to safely parse JSON strings or return the object if already parsed.
+* @param {string|object} v - The value to parse.
+* @returns {object|null} The parsed object or null.
+*/
+function safeParseJson(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "object") return v;
+  if (typeof v === "string") {
+    try {
+      return v.trim() === "" ? null : JSON.parse(v);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+* Utility function to convert value to a number, or null if invalid.
+*/
+function toNumberOrNull(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(String(v).replace(/,/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
 function normalizePeriodKey(rawKey, granularity) {
   if (!rawKey) return null;
-  // if rawKey is a Date-like string "2025-10-01T00:00:00Z" or "2025-10-01"
   const tryDate = new Date(rawKey);
   if (!isNaN(tryDate)) {
     const y = tryDate.getFullYear();
@@ -1070,8 +1210,6 @@ function normalizePeriodKey(rawKey, granularity) {
       return `${y}-Q${Math.floor(tryDate.getMonth() / 3) + 1}`;
     return String(y);
   }
-
-  // if `rawKey` already like 'YYYY-M' or 'YYYY-MM'
   const parts = String(rawKey).split("-");
   if (granularity === "monthly") {
     if (parts.length >= 2) {
@@ -1083,7 +1221,6 @@ function normalizePeriodKey(rawKey, granularity) {
   }
   if (granularity === "quarterly") {
     if (rawKey.includes("-Q")) return rawKey;
-    // try parse as 'YYYY-MM' -> convert to quarter
     if (parts.length >= 2) {
       const y = parts[0];
       const m = Number(parts[1]);
@@ -1092,14 +1229,12 @@ function normalizePeriodKey(rawKey, granularity) {
     }
     return rawKey;
   }
-  // annual
   if (parts.length >= 1) return parts[0];
   return rawKey;
 }
 
 function fmtMonthKey(dateKey) {
   if (!dateKey) return "";
-  // expected canonical 'YYYY-MM' or 'YYYY-MM-DD' or ISO
   const [yPart, mPart] = String(dateKey).split("-");
   if (!mPart) return dateKey;
   const y = Number(yPart);
@@ -1111,7 +1246,9 @@ function fmtMonthKey(dateKey) {
   });
 }
 function fmtQuarterKey(q) {
+  if (!q) return q;
   const [y, qn] = String(q).split("-Q");
+  if (!qn) return q;
   return `Q${qn} ${y}`;
 }
 
@@ -1125,6 +1262,17 @@ function flattenPeriods(masterJson, granularity) {
           const normalized = normalizePeriodKey(rawKey, granularity);
           if (normalized) set.add(normalized);
         });
+        // ALSO add periods from quarterlyGoals if they don't have history
+        if (granularity === "quarterly" && a.quarterlyGoals) {
+          const qGoals = safeParseJson(a.quarterlyGoals);
+          if (qGoals) {
+            Object.keys(qGoals).forEach(qKey => { // q1, q2
+              // We need a year. Assume current year for now if history is empty?
+              // This is tricky. Let's rely on history *for now*.
+              // A better approach would be to get year from goal/task.
+            });
+          }
+        }
       });
     });
   });
@@ -1149,21 +1297,22 @@ function flattenPeriods(masterJson, granularity) {
 
 function pickMetricForActivity(activity, metricKey) {
   if (metricKey) return metricKey;
-  const tg = activity.targetMetric || {};
+  const tg = safeParseJson(activity.targetMetric) || {};
   const tgKeys = Object.keys(tg);
   if (tgKeys.length) return tgKeys[0];
-  const curKeys = activity.currentMetric
-    ? Object.keys(activity.currentMetric)
-    : [];
+  const cur = safeParseJson(activity.currentMetric) || {};
+  const curKeys = Object.keys(cur);
   if (curKeys.length) return curKeys[0];
+
   const hist = activity.history || {};
   for (const g of ["monthly", "quarterly", "annual"]) {
     const periodObj = hist[g] || {};
     for (const periodKey of Object.keys(periodObj)) {
       const reports = periodObj[periodKey] || [];
       for (const r of reports) {
-        if (r.metrics && typeof r.metrics === "object") {
-          const keys = Object.keys(r.metrics);
+        const metrics = safeParseJson(r.metrics);
+        if (metrics && typeof metrics === "object") {
+          const keys = Object.keys(metrics);
           if (keys.length) return keys[0];
         }
       }
@@ -1172,90 +1321,45 @@ function pickMetricForActivity(activity, metricKey) {
   return null;
 }
 
-/* -------------------------
- * NEW HELPERS: extraction + parsing
- * ------------------------- */
-
-/**
- * Extract a sensible primitive metric value from a metrics object for a given metricKey.
- */
 function extractMetricValue(metricsObj, metricKey) {
   if (!metricsObj) return null;
+  const metrics = safeParseJson(metricsObj);
+  if (!metrics) return null;
 
-  function unwrapPrimitive(x) {
-    if (x === null || x === undefined) return x;
-    if (typeof x !== "object") return x;
-    const ks = Object.keys(x);
-    for (const k of ks) {
-      const v = x[k];
-      if (v === null || v === undefined) return v;
-      if (typeof v !== "object") return v;
-      const innerKs = Object.keys(v || {});
-      for (const ik of innerKs) {
-        const iv = v[ik];
-        if (iv === null || iv === undefined) return iv;
-        if (typeof iv !== "object") return iv;
-      }
-    }
-    try {
-      return JSON.stringify(x);
-    } catch (e) {
-      return null;
-    }
+  // Check top level
+  if (metricKey && metrics[metricKey] !== undefined) return metrics[metricKey];
+  // Check common nested names
+  if (metrics.currentMetric) {
+    const current = safeParseJson(metrics.currentMetric);
+    if (current && metricKey && current[metricKey] !== undefined) return current[metricKey];
+  }
+  if (metrics.metrics_data) {
+    const metricsData = safeParseJson(metrics.metrics_data);
+    if (metricsData && metricKey && metricsData[metricKey] !== undefined) return metricsData[metricKey];
   }
 
-  if (metricKey) {
-    if (metricsObj.currentMetric && metricKey in metricsObj.currentMetric) {
-      return unwrapPrimitive(metricsObj.currentMetric[metricKey]);
+  // If no key, find first
+  if (!metricKey) {
+    if (metrics.currentMetric) {
+      const current = safeParseJson(metrics.currentMetric);
+      const k = Object.keys(current || {})[0];
+      if (k) return current[k];
     }
-    if (metricKey in metricsObj) {
-      return unwrapPrimitive(metricsObj[metricKey]);
+    if (metrics.metrics_data) {
+      const metricsData = safeParseJson(metrics.metrics_data);
+      const k = Object.keys(metricsData || {})[0];
+      if (k) return metricsData[k];
     }
-    if (metricsObj.targetMetric && metricKey in metricsObj.targetMetric) {
-      return unwrapPrimitive(metricsObj.targetMetric[metricKey]);
-    }
-    return null;
+    const k = Object.keys(metrics)[0];
+    if (k) return metrics[k];
   }
-
-  if (
-    metricsObj.currentMetric &&
-    typeof metricsObj.currentMetric === "object"
-  ) {
-    const k1 = Object.keys(metricsObj.currentMetric)[0];
-    if (k1) return unwrapPrimitive(metricsObj.currentMetric[k1]);
-  }
-  if (metricsObj.targetMetric && typeof metricsObj.targetMetric === "object") {
-    const k2 = Object.keys(metricsObj.targetMetric)[0];
-    if (k2) return unwrapPrimitive(metricsObj.targetMetric[k2]);
-  }
-  const topKeys = Object.keys(metricsObj);
-  if (topKeys.length) return unwrapPrimitive(metricsObj[topKeys[0]]);
   return null;
 }
 
-/**
- * Try to parse a numeric-ish string for percentage calculations.
- * Removes commas, whitespace and any non-digit/dot/minus characters (but preserve dot and minus).
- */
 function parseNumberForPct(x) {
-  if (x === null || x === undefined) return NaN;
-  if (typeof x === "number") return Number(x);
-  const s = String(x).trim();
-  if (s === "") return NaN;
-  const cleaned = s.replace(/[^0-9.\-]/g, "");
-  if (cleaned === "" || cleaned === "." || cleaned === "-" || cleaned === "-.")
-    return NaN;
-  const v = Number(cleaned);
-  return isNaN(v) ? NaN : v;
+  return toNumberOrNull(x); // Use updated helper
 }
 
-/* -------------------------
- * REWRITTEN: reliable period lookup + latest metric extraction
- * ------------------------- */
-
-/**
- * Get the latest metric value for an activity within a normalized period (month/quarter/year).
- */
 function getLatestMetricValueInPeriod(
   activity,
   periodKey,
@@ -1266,7 +1370,6 @@ function getLatestMetricValueInPeriod(
   const normalizedKey = normalizePeriodKey(periodKey, granularity);
   if (!normalizedKey) return null;
 
-  // collect all reports across raw keys that match the normalizedKey
   const candidateReports = [];
   const rawKeys = Object.keys(hist || {});
   for (const rk of rawKeys) {
@@ -1277,23 +1380,21 @@ function getLatestMetricValueInPeriod(
         for (const r of bucket) candidateReports.push(r);
       }
     } catch (e) {
-      // ignore malformed keys
+      // ignore
     }
   }
 
   if (candidateReports.length === 0) return null;
 
-  // sort ascending by date (robust)
   candidateReports.sort((a, b) => {
-    const da = a && a.date ? new Date(a.date) : null;
-    const db = b && b.date ? new Date(b.date) : null;
+    const da = a && a.date ? new Date(a.date) : (a && a.createdAt ? new Date(a.createdAt) : null);
+    const db = b && b.date ? new Date(b.date) : (b && b.createdAt ? new Date(b.createdAt) : null);
     if (!da && !db) return 0;
     if (!da) return -1;
     if (!db) return 1;
     return da - db;
   });
 
-  // walk backwards (latest first) and extract first non-null metric value
   for (let i = candidateReports.length - 1; i >= 0; i--) {
     const r = candidateReports[i];
     if (!r || !r.metrics) continue;
@@ -1304,52 +1405,90 @@ function getLatestMetricValueInPeriod(
   return null;
 }
 
+// Helper to get Goal, Record, Progress %
+// ---
+// MODIFIED: This function now calculates progress as a percentage.
+// ---
+function getQuarterlyStats(activity, periodKey, metricKey) {
+  const qKey = String(periodKey).split('-Q')[1]; // e.g., "1" from "2024-Q1"
+  if (!qKey) return { goal: null, record: null, progress: null };
+
+  const qGoals = safeParseJson(activity.quarterlyGoals);
+  const goal = qGoals ? toNumberOrNull(qGoals[`q${qKey}`]) : null;
+  const recordRaw = getLatestMetricValueInPeriod(activity, periodKey, 'quarterly', metricKey);
+  const record = toNumberOrNull(recordRaw);
+
+  let progress_pct = null;
+  if (record !== null && goal !== null) {
+    if (goal > 0) {
+      // Standard percentage calculation
+      progress_pct = (record / goal) * 100;
+    } else if (goal === 0) {
+      progress_pct = (record > 0) ? 100.0 : 0.0; // If goal is 0, any record > 0 is 100% progress
+    }
+  }
+
+  return { goal, record, progress: progress_pct }; // 'progress' key now holds the percentage
+}
+
+// Helper to get overall Target, Previous, and Current
+// MODIFIED: Now returns 'currentVal'
+function getOverallMetrics(activity, metricKey) {
+  // Target
+  const targetObj = safeParseJson(activity.targetMetric) || {};
+  let targetVal = null;
+  if (metricKey && targetObj[metricKey] !== undefined) targetVal = targetObj[metricKey];
+  else if (typeof targetObj === "number") targetVal = targetObj;
+  else if (targetObj && Object.keys(targetObj).length > 0) targetVal = targetObj[Object.keys(targetObj)[0]];
+
+  // Previous
+  const previousObj = safeParseJson(activity.previousMetric) || {};
+  let prevVal = null;
+  if (metricKey && previousObj[metricKey] !== undefined) prevVal = previousObj[metricKey];
+  else if (typeof previousObj === "number") prevVal = previousObj;
+  else if (previousObj && Object.keys(previousObj).length > 0) prevVal = previousObj[Object.keys(previousObj)[0]];
+  
+  // Current
+  const currentObj = safeParseJson(activity.currentMetric) || {};
+  let currentVal = null;
+  if (metricKey && currentObj[metricKey] !== undefined) currentVal = currentObj[metricKey];
+  else if (typeof currentObj === "number") currentVal = currentObj;
+  else if (currentObj && Object.keys(currentObj).length > 0) currentVal = currentObj[Object.keys(currentObj)[0]];
+
+  return { targetVal, prevVal, currentVal };
+}
+
 /* ActivityRow updated: compact columns & percent/value toggle */
 function ActivityRow({
   activity,
   periods,
   granularity,
   number,
-  showPercent,
   index,
+  t,
 }) {
-  const { t } = useTranslation();
-
   const metricKey = pickMetricForActivity(activity, null);
+  // MODIFIED: Get currentVal as well
+  const { targetVal, prevVal, currentVal } = getOverallMetrics(activity, metricKey);
 
-  const targetObj = activity.targetMetric || {};
-  let targetValue = null;
-  if (metricKey && metricKey in targetObj) targetValue = targetObj[metricKey];
-  else if (typeof targetObj === "number") targetValue = targetObj;
-  else if (targetObj && typeof targetObj === "object" && "target" in targetObj)
-    targetValue = targetObj.target ?? null;
+  // ADDED: Calculate Yearly Progress
+  const targetNum = toNumberOrNull(targetVal);
+  const currentNum = toNumberOrNull(currentVal);
+  let yearlyProgressPct = null;
+  if (targetNum !== null && currentNum !== null) {
+    if (targetNum > 0) {
+      yearlyProgressPct = (currentNum / targetNum) * 100;
+    } else if (targetNum === 0) {
+      yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
+    }
+  }
+  const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(2)}%`;
 
-  const previousObj = activity.previousMetric || {};
-  let previousValue = null;
-  if (metricKey && metricKey in previousObj)
-    previousValue = previousObj[metricKey];
-  else if (typeof previousObj === "number") previousValue = previousObj;
-  else if (
-    previousObj &&
-    typeof previousObj === "object" &&
-    "previous" in previousObj
-  )
-    previousValue = previousObj.previous ?? null;
 
   function formatMetricValue(val) {
-    if (val === null || val === undefined) return null;
+    if (val === null || val === undefined) return "-";
     if (typeof val === "object") {
-      const keys = Object.keys(val || {});
-      if (keys.length === 1) {
-        const inner = val[keys[0]];
-        if (typeof inner === "object") return JSON.stringify(inner);
-        return String(inner);
-      }
-      try {
-        return JSON.stringify(val);
-      } catch (e) {
-        return String(val);
-      }
+      return JSON.stringify(val);
     }
     return String(val);
   }
@@ -1380,43 +1519,53 @@ function ActivityRow({
 
       <td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono transition-all duration-300">
         <div className="truncate transition-all duration-500 transform">
-          {targetValue ?? "-"}
+          {targetVal ?? "-"}
         </div>
       </td>
 
-      {/* --- ADDED PREVIOUS METRIC CELL --- */}
       <td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono transition-all duration-300">
         <div className="truncate transition-all duration-500 transform">
-          {previousValue ?? "-"}
+          {prevVal ?? "-"}
         </div>
       </td>
 
-      {periods.map((p) => {
+      {/* ADDED: Yearly Progress % Cell */}
+      <td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono transition-all duration-300">
+        <div className="truncate transition-all duration-500 transform">
+          {displayYearlyProgress}
+        </div>
+      </td>
+
+
+      {/* --- NEW: Dynamic Cells for Quarterly --- */}
+      {granularity === "quarterly" ? periods.map(p => {
+        // MODIFIED: 'variance' is now 'progress'
+        const { goal, record, progress } = getQuarterlyStats(activity, p, metricKey);
+        // MODIFIED: Format as percentage string
+        const displayProgress = progress === null ? '-' : `${progress.toFixed(2)}%`;
+
+        return (
+          <React.Fragment key={p}>
+            <td className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-right w-[88px] font-mono transition-all duration-300">
+              <div className="truncate">{goal ?? '-'}</div>
+            </td>
+            <td className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-right w-[88px] font-mono transition-all duration-300">
+              <div className="truncate">{record ?? '-'}</div>
+            </td>
+            {/* MODIFIED: Display formatted percentage, removed color */}
+            <td className={`border px-2 py-2 text-sm text-right w-[88px] font-mono font-medium text-gray-700 dark:text-gray-200 transition-all duration-300`}>
+              <div className="truncate">{displayProgress}</div>
+            </td>
+          </React.Fragment>
+        );
+      }) : periods.map((p) => {
         const rawVal = getLatestMetricValueInPeriod(
           activity,
           p,
           granularity,
           metricKey
         );
-        if (rawVal === null || rawVal === undefined) {
-          return (
-            <td
-              key={p}
-              className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-center w-[88px] transition-all duration-300"
-            >
-              <div className="truncate transition-all duration-500">-</div>
-            </td>
-          );
-        }
-        const display = formatMetricValue(rawVal) ?? "-";
-
-        // percentage calculations (kept but only displayed when showPercent === true)
-        let pct = null;
-        const parsedVal = parseNumberForPct(rawVal);
-        const parsedTarget = parseNumberForPct(targetValue);
-        if (!isNaN(parsedVal) && !isNaN(parsedTarget) && parsedTarget !== 0) {
-          pct = (parsedVal / parsedTarget) * 100;
-        }
+        const display = formatMetricValue(rawVal);
 
         return (
           <td
@@ -1425,9 +1574,7 @@ function ActivityRow({
           >
             <div className="min-w-0 transition-all duration-500">
               <div className="text-sm font-mono truncate transition-all duration-500 transform">
-                {showPercent && pct !== null && !isNaN(pct)
-                  ? `${pct.toFixed(0)}%`
-                  : display}
+                {display}
               </div>
             </div>
           </td>
@@ -1438,8 +1585,8 @@ function ActivityRow({
 }
 
 /* -------------------------
- * Small helper: render metrics nicely (object or JSON)
- * ------------------------- */
+* Small helper: render metrics nicely (object or JSON)
+* ------------------------- */
 function renderMetricsList(metrics) {
   if (!metrics)
     return (

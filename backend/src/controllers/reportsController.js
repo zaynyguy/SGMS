@@ -113,15 +113,18 @@ exports.submitReport = async (req, res) => {
       }
     }
 
-    // === VALIDATION: ensure incoming numeric metric additions won't exceed target ===
+    // === VALIDATION: ensure incoming numeric metric *replacement* won't exceed target ===
+    // *** MODIFICATION START ***
+    // The logic here was changed from accumulation validation (existing + incoming)
+    // to replacement validation (incoming) to match the database sp_SubmitReport function.
     if (
       parsedMetrics &&
       typeof parsedMetrics === "object" &&
       Object.keys(parsedMetrics).length > 0
     ) {
-      // lock the activity row so currentMetric/targetMetric won't race
+      // lock the activity row so targetMetric won't race
       const actQ = await client.query(
-        `SELECT "currentMetric", "targetMetric" FROM "Activities" WHERE id = $1 FOR UPDATE`,
+        `SELECT "targetMetric" FROM "Activities" WHERE id = $1 FOR UPDATE`,
         [activityId]
       );
       if (!actQ.rows[0]) {
@@ -129,7 +132,7 @@ exports.submitReport = async (req, res) => {
         return res.status(404).json({ error: "Activity not found." });
       }
       const activityRow = actQ.rows[0];
-      const currentMetric = activityRow.currentMetric || {};
+      // We only need the targetMetric for replacement validation
       const targetMetric = activityRow.targetMetric || {};
 
       const violations = []; // collect keys that would exceed target
@@ -160,10 +163,6 @@ exports.submitReport = async (req, res) => {
           continue;
         }
 
-        // existing current for that key
-        const existingRaw = currentMetric && currentMetric[k];
-        const existing = extractNumeric(existingRaw) ?? 0;
-
         // determine target for that key
         let targetVal = null;
         // if targetMetric is scalar numeric (e.g. 14), use it
@@ -186,13 +185,16 @@ exports.submitReport = async (req, res) => {
         }
 
         if (targetVal !== null) {
-          if (existing + incoming > targetVal) {
+          // *** THE FIX ***
+          // Check if the new value *itself* exceeds the target.
+          // (Changed from: existing + incoming > targetVal)
+          if (incoming > targetVal) {
             violations.push({
               key: k,
-              existing,
+              // existing: undefined, // Not relevant for replacement validation
               incoming,
               target: targetVal,
-              wouldBe: existing + incoming,
+              wouldBe: incoming, // The new value *is* what it "would be"
             });
           }
         }
@@ -207,6 +209,7 @@ exports.submitReport = async (req, res) => {
       }
     }
     // === end validation ===
+    // *** MODIFICATION END ***
 
     // INSERT the report (unchanged behaviour) - we use parsedMetrics (possibly {} or null)
     const reportResult = await client.query(
@@ -228,8 +231,8 @@ RETURNING *`,
       const attachmentSettings = await getAttachmentSettings();
       const maxSizeMb = Number(
         attachmentSettings?.maxSizeMb ||
-          attachmentSettings?.max_attachment_size_mb ||
-          10
+        attachmentSettings?.max_attachment_size_mb ||
+        10
       );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
       const oversized = req.files.filter((f) => {
@@ -244,7 +247,7 @@ RETURNING *`,
         for (const f of req.files) {
           try {
             fs.unlinkSync(f.path);
-          } catch (e) {}
+          } catch (e) { }
         }
         await client.query("ROLLBACK");
         return res
@@ -293,7 +296,7 @@ VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
                   );
                   const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
                   if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
-                } catch (e) {}
+                } catch (e) { }
               }
             } catch (cleanupErr) {
               console.error("cleanup after failed upload error:", cleanupErr);
@@ -302,7 +305,7 @@ VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
           for (const f of req.files) {
             try {
               fs.unlinkSync(f.path);
-            } catch (e) {}
+            } catch (e) { }
           }
           await client.query("ROLLBACK");
           return res.status(500).json({ error: "File upload failed." });
@@ -444,7 +447,7 @@ WHERE a.id = $1 LIMIT 1`,
       for (let file of req.files) {
         try {
           fs.unlinkSync(file.path);
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     console.error("Error submitting report:", err);
@@ -523,6 +526,7 @@ RETURNING *`,
         Object.keys(metricsObj).length
       ) {
         try {
+          // Note: Your accumulate_metrics function is already set to REPLACE, not accumulate.
           await client.query(
             `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int)`,
             [updatedReport.activityId, metricsObj, req.user.id]
@@ -791,9 +795,8 @@ ORDER BY entity_id, snapshot_month
         const d = new Date(dateStr);
         if (isNaN(d)) continue;
         const monthKey = `${d.getFullYear()}-${d.getMonth() + 1}`;
-        const quarterKey = `${d.getFullYear()}-Q${
-          Math.floor(d.getMonth() / 3) + 1
-        }`;
+        const quarterKey = `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1
+          }`;
         const yearKey = `${d.getFullYear()}`;
         if (!breakdowns[numericActId].monthly[monthKey])
           breakdowns[numericActId].monthly[monthKey] = [];
@@ -825,34 +828,75 @@ ORDER BY entity_id, snapshot_month
     // Build hierarchical master JSON using your existing helper
     const masterJson = generateReportJson(raw);
 
-    // === MINIMAL & SAFE CHANGE: attach previousMetric only ===
-    // Build a map from raw rows to pick the first non-null previousMetric for each activity
+    // === FIX: ATTACH previousMetric, quarterlyGoals, AND currentMetric ===
+    // Build maps from raw rows to pick the first non-null value for each activity
     const activityPreviousById = {};
+    const activityQuarterlyGoalsById = {};
+    const activityCurrentMetricById = {}; // <-- ADDED
+
     for (const row of raw) {
       const aid = Number(row.activity_id);
       if (!aid) continue;
-      if (activityPreviousById[aid]) continue; // already filled
-      // defensive lookups for column name variants
-      const candidate =
-        row.activity_previous_metric ??
-        row.previousmetric ??
-        row.previous_metric ??
-        row["previousMetric"] ??
-        row["previous_metric"] ??
-        row.previousMetric ??
-        null;
-      if (candidate !== null && typeof candidate !== "undefined") {
-        activityPreviousById[aid] = candidate;
+
+      // Populate previousMetric
+      if (!activityPreviousById[aid]) {
+        const candidate =
+          row.activity_previous_metric ??
+          row.previousmetric ??
+          row.previous_metric ??
+          row["previousMetric"] ??
+          row["previous_metric"] ??
+          row.previousMetric ??
+          null;
+        if (candidate !== null && typeof candidate !== "undefined") {
+          activityPreviousById[aid] = candidate;
+        }
+      }
+
+      // Populate quarterlyGoals
+      if (!activityQuarterlyGoalsById[aid]) {
+        const candidate =
+          row.quarterlygoals ??
+          row["quarterlyGoals"] ??
+          row.quarterlyGoals ??
+          null;
+        if (candidate !== null && typeof candidate !== "undefined") {
+          activityQuarterlyGoalsById[aid] = candidate;
+        }
+      }
+
+      // <-- ADDED: Populate currentMetric
+      if (!activityCurrentMetricById[aid]) {
+        const candidate =
+          row.currentmetric ??
+          row["currentMetric"] ??
+          row.currentMetric ??
+          null;
+        if (candidate !== null && typeof candidate !== "undefined") {
+          activityCurrentMetricById[aid] = candidate;
+        }
       }
     }
 
-    // Inject previousMetric onto activity objects, but do NOT touch currentMetric/targetMetric/history/progress etc.
+    // Inject all metrics onto activity objects
     for (const goal of masterJson.goals || []) {
       for (const task of goal.tasks || []) {
         for (const activity of task.activities || []) {
+          // Add previousMetric
           if (activityPreviousById[activity.id] && !activity.previousMetric) {
             activity.previousMetric = activityPreviousById[activity.id];
           }
+
+          // Add quarterlyGoals
+          if (activityQuarterlyGoalsById[activity.id] && !activity.quarterlyGoals) {
+            activity.quarterlyGoals = activityQuarterlyGoalsById[activity.id];
+          }
+
+          // <-- ADDED: Add currentMetric
+          if (activityCurrentMetricById[activity.id] && !activity.currentMetric) {
+            activity.currentMetric = activityCurrentMetricById[activity.id];
+          }
+
           // Attach history exactly as before (unchanged behavior)
           activity.history = breakdowns[activity.id] || {
             monthly: {},
@@ -862,7 +906,7 @@ ORDER BY entity_id, snapshot_month
         }
       }
     }
-    // === end minimal change ===
+    // === end fix ===
 
     if (
       format === "html" ||

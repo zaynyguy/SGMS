@@ -205,14 +205,8 @@ export default function ProjectManagement() {
     updateActivityItem,
     deleteActivityItem,
     submitReportForActivity,
-    // ----------------------------------------------------------------
-    // MODIFICATION: Get the state setters
-    // ----------------------------------------------------------------
     setActivities,
     setTasks,
-    // ----------------------------------------------------------------
-    // MODIFICATION END
-    // ----------------------------------------------------------------
   } = api;
 
   // Mount animation
@@ -277,21 +271,15 @@ export default function ProjectManagement() {
     }
   }, [sortKey, sortOrder]);
 
-  // ----------------------------------------------------------------
-  // MODIFICATION: Clear tasks AND activities on quarter change
-  // ----------------------------------------------------------------
+  // When quarter changes, clear loaded data to force a refetch
   useEffect(() => {
-    // When quarter changes, clear loaded data to force a refetch
     if (setActivities) setActivities({});
-    if (setTasks) setTasks({}); // <-- Also clear tasks
+    if (setTasks) setTasks({}); // Also clear tasks
     
     // And collapse any open items
     setExpandedTask(null);
-    setExpandedGoal(null); // <-- Also collapse goals
+    setExpandedGoal(null); // Also collapse goals
   }, [currentQuarter, setActivities, setTasks]);
-  // ----------------------------------------------------------------
-  // MODIFICATION END
-  // ----------------------------------------------------------------
 
   /* ----------------- Toggle UI helpers ----------------- */
   const toggleGoal = useCallback(
@@ -301,9 +289,7 @@ export default function ProjectManagement() {
       } else {
         setExpandedGoal(goal.id);
         setSelectedGoal(goal);
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to loadTasks
-        // ----------------------------------------------------------------
+        // Pass currentQuarter to loadTasks
         if (!tasks[goal.id]) {
           try {
             await loadTasks(goal.id, currentQuarter);
@@ -322,9 +308,7 @@ export default function ProjectManagement() {
         setExpandedTask(null);
       } else {
         setExpandedTask(task.id);
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to loadActivities
-        // ----------------------------------------------------------------
+        // Pass currentQuarter to loadActivities
         if (!activities[task.id]) {
           try {
             await loadActivities(task.id, currentQuarter);
@@ -387,9 +371,6 @@ export default function ProjectManagement() {
       try {
         await createTaskItem(goalId, payload);
         setModal({ isOpen: false, type: null, data: null });
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to loadTasks
-        // ----------------------------------------------------------------
         await loadTasks(goalId, currentQuarter);
         await loadGoals();
       } catch (err) {
@@ -404,9 +385,6 @@ export default function ProjectManagement() {
       try {
         await updateTaskItem(goalId, taskId, payload);
         setModal({ isOpen: false, type: null, data: null });
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to loadTasks
-        // ----------------------------------------------------------------
         await loadTasks(goalId, currentQuarter);
         await loadGoals();
       } catch (err) {
@@ -437,9 +415,6 @@ export default function ProjectManagement() {
       try {
         await createActivityItem(taskId, payload);
         setModal({ isOpen: false, type: null, data: null });
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to reloads
-        // ----------------------------------------------------------------
         await loadActivities(taskId, currentQuarter);
         await loadTasks(goalId, currentQuarter);
         await loadGoals();
@@ -455,9 +430,6 @@ export default function ProjectManagement() {
       try {
         await updateActivityItem(taskId, activityId, payload);
         setModal({ isOpen: false, type: null, data: null });
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to reloads
-        // ----------------------------------------------------------------
         await loadActivities(taskId, currentQuarter);
         await loadTasks(goalId, currentQuarter);
         await loadGoals();
@@ -498,19 +470,13 @@ export default function ProjectManagement() {
     try {
       if (toDelete.type === "goal") {
         await deleteGoalItem(toDelete.goalId || toDelete.id);
-        // Full refresh will be handled by loadGoals
+        await loadGoals(); // Full refresh
       } else if (toDelete.type === "task") {
         await deleteTaskItem(toDelete.goalId, toDelete.taskId);
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to reload
-        // ----------------------------------------------------------------
         await loadTasks(toDelete.goalId, currentQuarter);
         await loadGoals();
       } else if (toDelete.type === "activity") {
         await deleteActivityItem(toDelete.taskId, toDelete.activityId);
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to reloads
-        // ----------------------------------------------------------------
         await loadActivities(toDelete.taskId, currentQuarter);
         await loadTasks(toDelete.goalId, currentQuarter);
         await loadGoals();
@@ -534,23 +500,56 @@ export default function ProjectManagement() {
   ]);
 
   /* ----------------- Submit report ----------------- */
-  const openSubmitModal = useCallback(
-    (goalId, taskId, activityId) => {
-      const taskActivities = activities[taskId] || [];
-      const activity = taskActivities.find(
-        (a) => String(a.id) === String(activityId)
-      );
-
-      const data = {
-        goalId,
-        taskId,
-        activityId,
-        activity, 
+  
+const openSubmitModal = useCallback(
+  async (goalId, taskId, activityId) => {
+    try {
+ 
+      const localSafeParse = (v) => {
+        if (v === null || v === undefined) return null;
+        if (typeof v === "object") return v;
+        if (typeof v === "string") {
+          try { return v.trim() === "" ? null : JSON.parse(v); } catch { return v; }
+        }
+        return v;
       };
-      setSubmitModal({ isOpen: true, data: data });
-    },
-    [activities]
-  );
+
+      let taskActivities = activities[taskId] || [];
+      let activity = taskActivities.find((a) => String(a.id) === String(activityId));
+
+      if (!activity) {
+   
+        try {
+          const list = await loadActivities(taskId, currentQuarter);
+          taskActivities = list || activities[taskId] || [];
+          activity = taskActivities.find((a) => String(a.id) === String(activityId));
+        } catch (err) {
+          console.error("Failed to load activities inside openSubmitModal:", err);
+        }
+      }
+
+      if (!activity) {
+        showToast(t("project.errors.activityNotLoaded", "Activity details not loaded. Please expand the task or refresh and try again."), "error");
+        return;
+      }
+
+      activity = {
+        ...activity,
+        targetMetric: localSafeParse(activity.targetMetric) ?? {},
+        currentMetric: localSafeParse(activity.currentMetric) ?? {},
+        quarterlyGoals: localSafeParse(activity.quarterlyGoals) ?? {},
+      };
+
+      const data = { goalId, taskId, activityId, activity, currentQuarter };
+      setSubmitModal({ isOpen: true, data });
+    } catch (err) {
+      console.error("openSubmitModal error:", err);
+      showToast(t("project.errors.unableOpenSubmit", "Unable to open submit modal."), "error");
+    }
+  },
+  [activities, loadActivities, currentQuarter, showToast, t]
+);
+
 
   const closeSubmitModal = useCallback(() => {
     setSubmitModal({ isOpen: false, data: null });
@@ -636,9 +635,6 @@ export default function ProjectManagement() {
         await submitReportForActivity(activityId, fd);
         closeSubmitModal();
 
-        // ----------------------------------------------------------------
-        // MODIFICATION: Pass currentQuarter to reloads
-        // ----------------------------------------------------------------
         if (taskId) await loadActivities(taskId, currentQuarter);
         if (goalId) await loadTasks(goalId, currentQuarter);
         await loadGoals();
@@ -711,9 +707,6 @@ export default function ProjectManagement() {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      // ----------------------------------------------------------------
-      // MODIFICATION: Clear tasks/activities on refresh
-      // ----------------------------------------------------------------
       if (setActivities) setActivities({});
       if (setTasks) setTasks({});
       setExpandedTask(null);
@@ -787,13 +780,18 @@ export default function ProjectManagement() {
               </div>
             </div>
 
-            <div className="mt-4 w-full project-controls">
-              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                <div className="flex-1">
+            {/* ---------------------------------------------------------------- */}
+            {/* MODIFICATION START: Responsive Header Layout
+            /* ---------------------------------------------------------------- */}
+            <div className="mt-4 w-full project-controls space-y-4">
+              
+              {/* Row 1: Search and Actions */}
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                {/* Search Bar */}
+                <div className="flex-1 w-full">
                   <label htmlFor="project-search" className="sr-only">
                     {t("project.search") || "Search goals"}
                   </label>
-
                   <div className="relative w-full">
                     <input
                       id="project-search"
@@ -813,7 +811,6 @@ export default function ProjectManagement() {
                       }
                       className="w-full rounded-md border bg-white dark:bg-gray-800 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400 project-search-focus transition-all duration-200"
                     />
-
                     {searchTerm && (
                       <button
                         type="button"
@@ -832,32 +829,13 @@ export default function ProjectManagement() {
                     )}
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 p-1 rounded-lg shadow-sm">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 pl-2">
-                    {t("project.quarterFilter", "Quarter")}:
-                  </span>
-                  {[0, 1, 2, 3, 4].map((q) => (
-                    <button
-                      key={q}
-                      onClick={() => setCurrentQuarter(q)}
-                      className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 ${
-                        currentQuarter === q
-                          ? "bg-sky-600 text-white shadow"
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
-                      }`}
-                    >
-                      {q === 0 ? t("project.all", "All") : `Q${q}`}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex justify-end items-center gap-2">
+                
+                {/* Sort/Refresh/Add Buttons */}
+                <div className="flex-shrink-0 w-full sm:w-auto flex justify-end items-center gap-2">
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-600 dark:text-gray-300">
                       {t("project.sort.label") || "Sort"}
                     </label>
-
                     <select
                       aria-label="Sort by"
                       value={sortKey}
@@ -875,7 +853,6 @@ export default function ProjectManagement() {
                         {t("project.sort.created") || "Created"}
                       </option>
                     </select>
-
                     <button
                       onClick={() =>
                         setSortOrder((s) => (s === "asc" ? "desc" : "asc"))
@@ -933,7 +910,39 @@ export default function ProjectManagement() {
                   )}
                 </div>
               </div>
+              
+              {/* Row 2: Quarter Filters (Responsive) */}
+              <div className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 pl-2 flex-shrink-0">
+                    {t("project.quarterFilter", "Quarter")}:
+                  </span>
+                  <div className="flex flex-wrap flex-1 gap-2 min-w-[200px]">
+                    {[0, 1, 2, 3, 4].map((q) => (
+                      <button
+                        key={q}
+                        onClick={() => setCurrentQuarter(q)}
+                        className={`
+                          px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 
+                          flex-1 sm:flex-auto
+                          ${
+                            currentQuarter === q
+                              ? "bg-sky-600 text-white shadow"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                          }
+                        `}
+                      >
+                        {q === 0 ? t("project.all", "All") : `Q${q}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
             </div>
+            {/* ---------------------------------------------------------------- */}
+            {/* MODIFICATION END */}
+            {/* ---------------------------------------------------------------- */}
           </header>
 
           <main className="grid gap-6 project-content-transition">

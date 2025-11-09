@@ -157,8 +157,48 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
   );
 
   // ----------------------------------------------------------------
-  // MODIFICATION START: `loadActivities` now accepts `quarter`
+  // MODIFICATION START: `loadActivities` now accepts `quarter` and normalizes activity fields
   // ----------------------------------------------------------------
+
+  // Safe JSON parse helper: returns object if JSON string, otherwise original value
+  const safeParseJson = (v) => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "object") return v;
+    if (typeof v === "string") {
+      try {
+        return v.trim() === "" ? null : JSON.parse(v);
+      } catch {
+        return v;
+      }
+    }
+    return v;
+  };
+
+  // Normalize activity fields so consumers always get consistent shapes
+  const normalizeActivity = (a) => {
+    if (!a || typeof a !== "object") return a;
+    const copy = { ...a };
+    try {
+      const t = safeParseJson(copy.targetMetric ?? copy.target_metrics ?? copy.targetMetric);
+      copy.targetMetric = t === null ? {} : t;
+    } catch {
+      copy.targetMetric = copy.targetMetric ?? {};
+    }
+    try {
+      const c = safeParseJson(copy.currentMetric ?? copy.current_metrics ?? copy.currentMetric);
+      copy.currentMetric = c === null ? {} : c;
+    } catch {
+      copy.currentMetric = copy.currentMetric ?? {};
+    }
+    try {
+      const q = safeParseJson(copy.quarterlyGoals ?? copy.quarterly_goals ?? copy.quarterlyGoals);
+      copy.quarterlyGoals = q === null ? {} : q;
+    } catch {
+      copy.quarterlyGoals = copy.quarterlyGoals ?? {};
+    }
+    return copy;
+  };
+
   const loadActivities = useCallback(
     async (taskId, quarter = 0, opts = {}) => {
       if (!taskId) return [];
@@ -180,12 +220,12 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
         try {
           // Pass the quarter parameter to the API fetch function
           const resp = await fetchActivitiesByTask(taskId, quarter);
-          const list = Array.isArray(resp) ? resp : resp?.rows ?? [];
-          
-          // Note: This stores activities by taskId, NOT by quarter.
-          // When the quarter changes, the ProjectManagement page should
-          // clear `expandedTask`, forcing this function to be called again,
-          // which will overwrite the [taskId] entry with the newly filtered list.
+          const rawList = Array.isArray(resp) ? resp : resp?.rows ?? [];
+
+          // Normalize each activity to ensure targetMetric/currentMetric/quarterlyGoals are objects
+          const list = rawList.map(normalizeActivity);
+
+          // Store activities by taskId (overwrites previous entry for that taskId)
           setActivities((prev) => ({ ...prev, [taskId]: list }));
           return list;
         } catch (err) {
@@ -202,8 +242,9 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
       promise.finally(() => inFlightActivityLoads.current.delete(loadKey));
       return promise;
     },
-    [] // No dependencies needed as fetchActivitiesByTask is a stable import
+    []
   );
+
   // ----------------------------------------------------------------
   // MODIFICATION END
   // ----------------------------------------------------------------
@@ -365,7 +406,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
         setSuccess("Activity created");
         // We don't know the current quarter, so just reload with default (0)
         // The ProjectManagement page will override this by calling loadActivities again
-        await loadActivities(taskId, 0); 
+        await loadActivities(taskId, 0);
       } catch (err) {
         console.error("createActivity error:", err);
         setError(err?.message || "Failed to create activity");
@@ -522,7 +563,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
 
     // totals + finished
     totalGoals: totals.goalsTotal,
-    finishedGoals: totals.finishedGoals,
+    finishedGoals: totals.goalsFinished,
     totalTasks: totals.tasksTotal,
     finishedTasks: totals.tasksFinished,
     totalActivities: totals.activitiesTotal,
