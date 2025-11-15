@@ -133,6 +133,7 @@
     "searchPlaceholder": "ቡድኖችን በስም ወይም በመግለጫ ፈልግ…",
     "confirmDeleteTitle": "ቡድን ሰርዝ",
     "confirmDeleteMessage": "እርግጠኛ ነዎት ይህን ቡድን መሰረዝ ይፈልጋሉ? \"{{name}}\"",
+    "membersCount": "አባላት",
     "search": {
       "placeholder": "ቡድኖችን በስም ወይም በመግለጫ ፈልግ…",
       "aria": "ቡድኖችን ፈልግ"
@@ -316,7 +317,10 @@
       "open": "ክፈት",
       "subtitle": "የተዋሃዱ ግቦችን፣ ተግባሮችን እና የእንቅስቃሴ ውሂብን ይመልከቱ",
       "generatedAt": "የተፈጠረው በ{{date}}",
-            "allGroups": "ሁሉም ቡድኖች",
+      "allGroups": "ሁሉም ቡድኖች",
+      "currentLabel": "የአሁኑ",
+      "previousText": "የቀድሞ",
+      "quarterlyGoals": "የሩብ ግቦች",
       "granularityLabel": "ግራኑላርነት",
       "granularities": {
         "monthly": "ወርሃዊ",
@@ -335,12 +339,17 @@
       "task": "ተግባር",
       "activity": "እንቅስቃሴ",
       "titleFull": "ሙሉ የውሂብ ሰንጠረዥ",
-            "previous": "ቀዳሚ",
-      "noData": "ምንም ውሂብ አይገኝም"
+      "previous": "ቀዳሚ",
+      "noData": "ምንም ውሂብ አይገኝም",
+      "yearlyProgress": "ዓመታዊ እድገት %",
+      "qGoal": "ግብ",
+      "qRecord": "መዝገብ",
+      "qProgress": "እድገት %"
     },
     "metrics": {
       "empty": "—",
-      "invalid": "ልክ ያልሆኑ መለኪያዎች"
+      "invalid": "ልክ ያልሆኑ መለኪያዎች",
+      "title": "መለኪያዎች"
     },
     "errors": {
       "loadReports": "ሪፖርቶችን መጫን አልተሳካም።",
@@ -620,9 +629,11 @@
       "narrative": "ትረካ",
       "newStatus": "አዲስ ሁኔታ",
       "status": "ሁኔታ",
-            "previous": "ቀዳሚ",
+      "previous": "ቀዳሚ",
       "target": "ዒላማ",
-      "current":"የአሁኑ"
+      "current":"የአሁኑ",
+      "metrics": "ሜትሪክስ",
+      "quarterlyGoals": "የሩብ ዓመት ግቦች"
     },
 
     "sections": {
@@ -637,7 +648,7 @@
       "attachments": "አባሪዎች",
       "rollLabel": "ጥቅል ቁጥር (ከተፈለገ)",
       "optional": "(ከተፈለገ)",
-            "previousMetrics": "ቀዳሚ መለኪያዎች",
+      "previousMetrics": "ቀዳሚ መለኪያዎች",
       "selectedFiles": "የተመረጡ ፋይሎች፡"
     },
 
@@ -656,14 +667,16 @@
       "attachments": "ከፍተኛ ፋይሎች፡ የአገልጋይ-ጎን ገደብ ተፈጻሚ ነው።",
       "hint": "ከተፈለገ አዎንታዊ ኢንቲጀር. ባዶ ከሆነ ስርዓቱ በራስ-ሰር ይመድባል።",
       "metricRemaining": "አሁን: {{current}} / {{target}} (ቀሪው: {{remaining}})",
-            "maxAttachments": "ቢበዛ 5 አባሪዎች።"
+      "maxAttachments": "ቢበዛ 5 አባሪዎች።",
+      "overallHint": "አጠቃላይ ዒላማ፡ {{target}}። ጠቅላላ እድገት፡ {{used}}። የቀረው፡ {{remaining}}።"
     },
 
     "empty": {
       "noGoals": "ምንም ግቦች አልተገኙም። የመጀመሪያ ግብዎን ይፍጠሩ።",
       "noMatch": "ከፍለጋህ ጋር የሚዛመዱ ግቦች የሉም።",
       "noTasks": "ለዚህ ግብ ምንም ተግባራት የሉም።",
-      "noActivities": "ለዚህ ተግባር ምንም እንቅስቃሴዎች የሉም።"
+      "noActivities": "ለዚህ ተግባር ምንም እንቅስቃሴዎች የሉም።",
+      "noDescription": "ምንም መግለጫ አልተሰጠም"
     },
 
     "errors": {
@@ -848,6 +861,7 @@
     "title": "ማሳወቂያዎች",
     "subtitle": "ማንቂያዎችን፣ መልዕክቶችን እና የስርዓት ማስታወቂያዎችን ይመልከቱ እና ያቀናብሩ - እንደተነበቡ ምልክት ያድርጉ፣ ያጣሩ እና አስፈላጊ በሆኑ ነገሮች ላይ እርምጃ ይውሰዱ።",
     "unreadCount": "{{count}} ያልተነበበ",
+    "unread": "ያልተነበቡ ማሳወቂያዎች",
     "markAll": "ሁሉንም እንደተነበቡ ምልክት ያድርጉበት",
     "toasts": {
     "markedRead": "ማሳወቂያ በተሳካ ሁኔታ እንደተነበበ ምልክት ተደርጎበታል!",

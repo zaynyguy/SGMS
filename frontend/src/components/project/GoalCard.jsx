@@ -227,7 +227,7 @@ function GoalCard({
               >
                 <div className="flex items-start justify-between">
                   {/* rollNo displayed before title */}
-                  <h3 id={`goal-${goal.id}-title`} className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-3 goal-fade-in">
+                  <h3 id={`goal-${goal.id}-title`} className="text-lg md:text-xl font-bold text-gray-900 dark:text-white break-words flex items-center gap-3 goal-fade-in">
                     {goal?.rollNo !== undefined && goal?.rollNo !== null ? (
                       <span className="text-sky-600 dark:text-sky-400 font-semibold goal-pulse-on-hover">{String(goal.rollNo)}.</span>
                     ) : null}
@@ -235,11 +235,11 @@ function GoalCard({
                   </h3>
                 </div>
 
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 break-words goal-fade-in" style={{ animationDelay: "50ms" }}>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 break-words goal-fade-in" style={{ animationDelay: "50ms" }}>
                   {goal.description || t("project.na") || "—"}
                 </p>
 
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-300 goal-fade-in" style={{ animationDelay: "100ms" }}>
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-[11px] text-gray-500 dark:text-gray-300 goal-fade-in" style={{ animationDelay: "100ms" }}>
                   <span className="whitespace-nowrap">
                     {t("project.fields.group") || "Group"}:{" "}
                     <strong className="text-gray-800 dark:text-gray-100">{goal.groupName || t("project.unassigned")}</strong>
@@ -263,7 +263,7 @@ function GoalCard({
                   </button>
                 </div>
 
-                <div className="hidden md:flex flex-col items-end text-xs text-gray-500 dark:text-gray-300 mr-3 w-36">
+                <div className="hidden md:flex flex-col items-end text-[11px] text-gray-500 dark:text-gray-300 mr-3 w-36">
                   <div className="w-full goal-progress-glow">
                     <ProgressBar progress={goal.progress ?? 0} variant="goal" />
                   </div>
@@ -302,7 +302,7 @@ function GoalCard({
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs text-gray-600 dark:text-gray-300">
             <div className="flex items-center gap-2 goal-stagger-item" style={{ animationDelay: "150ms" }}>
               <Calendar className="h-4 w-4" />
               <span className="truncate">
@@ -333,7 +333,7 @@ function GoalCard({
             {(renderContent || isExpanded) && (
               <div className="mt-6 pl-0 sm:pl-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 goal-fade-in">
+                  <h4 className="text-xs font-semibold text-gray-900 dark:text-white flex items-center gap-2 goal-fade-in">
                     <CheckSquare className="h-4 w-4 text-sky-600 goal-pulse-on-hover" /> {t("project.sections.tasks") || "Tasks"}
                   </h4>
                   <div>
@@ -343,7 +343,7 @@ function GoalCard({
                            e.stopPropagation();
                            onCreateTask && onCreateTask(goal.id);
                         }}
-                        className="px-2 py-1 bg-blue-500 text-white rounded text-xs flex items-center gap-1 goal-btn-interactive goal-pulse-on-hover"
+                        className="px-2 py-1 bg-blue-500 text-white rounded text-[11px] flex items-center gap-1 goal-btn-interactive goal-pulse-on-hover"
                         title={t("project.actions.addTask") || "Add Task"}
                       >
                         <PlusIcon className="h-3 w-3" /> {t("project.actions.addTask") || "Add Task"}

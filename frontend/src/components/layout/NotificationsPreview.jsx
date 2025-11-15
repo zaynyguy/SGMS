@@ -29,8 +29,10 @@ export default function NotificationPreview({
   const toastTimer = useRef(null);
   const popoverRef = useRef(null);
   const toastRef = useRef(null);
+  const closeTimeoutRef = useRef(null);
 
   const [open, setOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -38,7 +40,6 @@ export default function NotificationPreview({
 
   const [latestNew, setLatestNew] = useState(null);
   const [showToast, setShowToast] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
 
   const lastKnownIdRef = useRef(null);
   const shownToastIdsRef = useRef(new Set());
@@ -64,7 +65,7 @@ export default function NotificationPreview({
   }, []);
 
   const TOAST_MS = 4200;
-  const POPOVER_WIDTH = 320;
+  const POPOVER_WIDTH = 320; // keep in sync with the w-80 below
   const POPOVER_HEIGHT = 420;
 
   const iconFor = (level) => {
@@ -258,18 +259,28 @@ export default function NotificationPreview({
 
   const openPreviewAtBell = () => {
     if (!bellRef.current) return;
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
     const rect = bellRef.current.getBoundingClientRect();
     const scrollY = window.scrollY || window.pageYOffset;
     const c = computeCoords(rect, scrollY, position);
     setCoords(c);
+    setIsClosing(false);
     setOpen(true);
-    setIsAnimating(true);
     loadPreview();
   };
 
   const closePreview = () => {
-    setIsAnimating(true);
-    setOpen(false);
+    // play closing animation, then actually close
+    setIsClosing(true);
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsClosing(false);
+      setOpen(false);
+      closeTimeoutRef.current = null;
+    }, 220); // should be slightly longer than the CSS animation (200ms)
   };
 
   const handleMouseEnter = () => {
@@ -339,9 +350,9 @@ export default function NotificationPreview({
               transform: coords.transform,
               zIndex: 9999,
             }}
-            className="notification-popover"
+            className={`notification-popover ${isClosing ? "closing" : ""}`}
           >
-            <div className="w-80 max-h-[420px] bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transform transition-all duration-300 ease-out origin-top">
+            <div className="w-80 max-w-[90vw] max-h-[460px] bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transform transition-all duration-300 ease-out origin-top">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
                 <div className="text-sm font-medium text-gray-900 dark:text-white transition-colors duration-200">
                   {t("notificationsPreview.title")}
@@ -360,9 +371,9 @@ export default function NotificationPreview({
                 {buildDisplayList(notifications).map((n, index) => (
                   <div 
                     key={n.id} 
-                    className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 transform hover:scale-[1.02] ${
+                    className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 transform  ${
                       n.isRead ? "bg-white dark:bg-gray-900" : "bg-blue-50 dark:bg-blue-900/20"
-                    }`}
+                    } notification-item`}
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className="flex-shrink-0 mt-0.5 transition-transform duration-200 hover:scale-110">
@@ -394,6 +405,7 @@ export default function NotificationPreview({
                       <button
                         onClick={() => {
                           navigate(item?.to || "/notification");
+                          // close immediately but play closing animation too
                           closePreview();
                         }}
                         className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors duration-200"
@@ -405,16 +417,16 @@ export default function NotificationPreview({
                 ))}
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
                 <button 
-                  onClick={() => navigate(item?.to || "/notification")} 
-                  className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
+                  onClick={() => { setIsClosing(true); if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current); closeTimeoutRef.current = setTimeout(() => { setIsClosing(false); setOpen(false); closeTimeoutRef.current = null; }, 220); navigate(item?.to || "/notification"); }} 
+                  className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
                 >
                   {t("notificationsPreview.viewAll")}
                 </button>
                 <button 
                   onClick={loadPreview} 
-                  className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
+                  className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
                 >
                   {t("notificationsPreview.refresh")}
                 </button>
@@ -450,9 +462,9 @@ export default function NotificationPreview({
               })(),
               transform: "translate(0,0)",
             }}
-            className="notification-toast"
+            className={`notification-toast`}
           >
-            <div className="w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] group">
+            <div className="w-80 max-w-[90vw] bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden cursor-pointer hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] group">
               <div className="p-3 flex items-start gap-3">
                 <div className="flex-shrink-0 mt-0.5 transition-transform duration-200 group-hover:scale-110">
                   {iconFor(latestNew.level)}
@@ -478,6 +490,7 @@ export default function NotificationPreview({
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
       if (hideTimer.current) clearTimeout(hideTimer.current);
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
     };
   }, []);
 
@@ -563,6 +576,8 @@ export default function NotificationPreview({
           tabIndex={0}
           onClick={handleBellClick}
           onKeyDown={handleBellKeyDown}
+          aria-haspopup="dialog"
+          aria-expanded={open}
           aria-label={item?.label || t("notificationsPreview.label")}
           className={`flex items-center p-2 rounded-full transition-all duration-300 ${
             showExpanded ? "justify-normal" : "justify-center"
@@ -643,19 +658,19 @@ export default function NotificationPreview({
             ))}
           </div>
 
-          <div className="mt-4 flex items-center justify-between">
+          <div className="mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
             <button
               onClick={() => {
                 setSheetOpen(false);
                 navigate(item?.to || "/notification");
               }}
-              className="text-sm px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
+              className="text-sm px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
               {t("notificationsPreview.viewAll")}
             </button>
             <button 
               onClick={loadPreview} 
-              className="text-sm px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
+              className="text-sm px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
               {t("notificationsPreview.refresh")}
             </button>

@@ -117,7 +117,7 @@ function TaskList({
     return (
       <div className="p-3 task-fade-in">
         <style>{css}</style>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex items-center gap-2 text-xs text-gray-500">
           <List className="h-4 w-4" />
           {t("project.loadingTasks") || "Loading tasks…"}
         </div>
@@ -127,7 +127,7 @@ function TaskList({
 
   if (!goalTasks || goalTasks.length === 0) {
     return (
-      <div className="p-3 text-sm text-gray-500 task-fade-in">
+      <div className="p-3 text-xs text-gray-500 task-fade-in">
         <style>{css}</style>
         {t("project.empty.noTasks") || "No tasks for this goal."}
       </div>
@@ -239,7 +239,7 @@ function TaskList({
                 <button
                   type="button"
                   onClick={() => onEditTask && onEditTask(goal.id, task)}
-                  className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-sm task-btn task-pulse"
+                  className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-xs task-btn task-pulse"
                   title={t("project.actions.edit") || "Edit task"}
                 >
                   <Edit className="h-4 w-4 dark:text-blue-400" />
@@ -247,7 +247,7 @@ function TaskList({
                 <button
                   type="button"
                   onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
-                  className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-sm text-red-600 task-btn"
+                  className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded-md text-xs text-red-600 task-btn"
                   title={t("project.actions.delete") || "Delete task"}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -255,7 +255,7 @@ function TaskList({
               </div>
             )}
 
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-gray-600 dark:text-gray-300 pl-0 sm:pl-9 task-stagger-item" style={{ animationDelay: `${index * 60 + 150}ms` }}>
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-gray-600 dark:text-gray-300 pl-0 sm:pl-9 task-stagger-item" style={{ animationDelay: `${index * 60 + 150}ms` }}>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 flex-shrink-0" />
                 <span className="truncate">{t("project.fields.due") || "Due"}: {formatDate(task.dueDate)}</span>
@@ -272,7 +272,7 @@ function TaskList({
               {shouldRenderContent && (
                 <div className="mt-4 pl-0 sm:pl-9">
                   <div className="flex items-center justify-between mb-2">
-                    <h6 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 task-fade-in">
+                    <h6 className="text-xs font-semibold text-gray-900 dark:text-white flex items-center gap-2 task-fade-in">
                       <List className="h-4 w-4 text-sky-600 task-pulse" /> {t("project.sections.activities") || "Activities"}
                     </h6>
 
@@ -281,7 +281,7 @@ function TaskList({
                         <button
                           type="button"
                           onClick={() => onCreateActivity && onCreateActivity(goal.id, task.id)}
-                          className="px-2 py-1 text-xs bg-blue-500 text-white rounded task-btn task-pulse"
+                          className="px-2 py-1 text-[11px] bg-blue-500 text-white rounded task-btn task-pulse"
                           title={t("actions.addActivity") || "Add Activity"}
                         >
                           <PlusIcon className="inline-block h-3 w-3 mr-1" /> {t("project.actions.addActivity") || "Add Activity"}

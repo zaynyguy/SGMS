@@ -6,7 +6,6 @@ import TopBar from "../components/layout/TopBar";
 
 import useProjectApi from "../hooks/useProjectApi";
 
-// import HeaderActions from "../components/project/HeaderActions"; // Not in provided files
 import GoalCard from "../components/project/GoalCard";
 import PaginationFooter from "../components/project/PaginationFooter";
 import GenericModal from "../components/project/GenericModal";
@@ -42,7 +41,7 @@ function ConfirmModal({
   if (!open) return null;
   return (
     <div
-      className={`fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50 project-overlay ${
+      className={`fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-3 z-50 project-overlay ${
         isMounted ? "opacity-100" : "opacity-0"
       }`}
       role="alertdialog"
@@ -50,11 +49,11 @@ function ConfirmModal({
       aria-labelledby="confirm-modal-title"
       aria-describedby="confirm-modal-desc"
     >
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md project-modal">
+      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-2xl w-full max-w-sm project-modal text-sm">
         <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-3 project-pulse">
+          <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 mb-2 project-pulse">
             <svg
-              className="h-6 w-6 text-red-600 dark:text-red-400"
+              className="h-5 w-5 text-red-600 dark:text-red-400"
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden
@@ -78,25 +77,25 @@ function ConfirmModal({
 
           <h3
             id="confirm-modal-title"
-            className="mt-2 text-lg font-semibold text-gray-900 dark:text-white project-slide-in"
+            className="mt-2 text-sm font-semibold text-gray-900 dark:text-white project-slide-in"
           >
             {title}
           </h3>
 
           <p
             id="confirm-modal-desc"
-            className="mt-2 text-sm text-gray-600 dark:text-gray-400 project-fade-in"
+            className="mt-2 text-xs text-gray-600 dark:text-gray-400 project-fade-in"
           >
             {message}
           </p>
         </div>
 
-        <div className="mt-6 flex flex-col sm:flex-row gap-3 project-stagger-buttons">
+        <div className="mt-4 flex flex-col sm:flex-row gap-2 project-stagger-buttons">
           <button
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 project-btn project-slide-in-left"
+            className="flex-1 px-4 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 project-btn project-slide-in-left"
           >
             {cancelLabel}
           </button>
@@ -105,11 +104,11 @@ function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm project-btn project-slide-in-right disabled:opacity-60 flex items-center justify-center"
+            className="flex-1 px-4 py-2 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm project-btn project-slide-in-right disabled:opacity-60 flex items-center justify-center"
           >
             {loading ? (
               <>
-                <div className="project-spinner-small mr-2"></div>
+                <div className="project-spinner-small mr-1.5"></div>
                 <span>
                   {(t && t("project.actions.deleting")) || "Deleting..."}
                 </span>
@@ -596,20 +595,6 @@ const openSubmitModal = useCallback(
         effectiveStatus = "Done";
       }
 
-      if (
-        (effectiveStatus === "Done" || effectiveStatus === "Completed") &&
-        !allMetricsFilled
-      ) {
-        showToast(
-          t(
-            "project.errors.completeMetricsRequired",
-            "Cannot set status to 'Done' without filling all target metrics."
-          ),
-          "error"
-        );
-        return; 
-      }
-
       let metricsObj = null;
       if (Array.isArray(metricsArray) && metricsArray.length > 0) {
         metricsObj = {};
@@ -629,7 +614,6 @@ const openSubmitModal = useCallback(
         for (let i = 0; i < files.length; i += 1)
           fd.append("attachments", files[i]);
       }
-      // ... (end validation logic) ...
 
       try {
         await submitReportForActivity(activityId, fd);
@@ -745,7 +729,7 @@ const openSubmitModal = useCallback(
         .project-header-icon { animation: projectFadeIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
         .project-title { animation: projectSlideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
         .project-controls { animation: projectFadeIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-        .project-spinner-small { width: 16px; height: 16px; border: 2px solid transparent; border-top: 2px solid currentColor; border-radius: 50%; animation: projectSpin 1s linear infinite; }
+        .project-spinner-small { width: 14px; height: 14px; border: 2px solid transparent; border-top: 2px solid currentColor; border-radius: 50%; animation: projectSpin 1s linear infinite; }
         .project-content-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .project-search-focus:focus { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
         .project-sort-active { transition: all 0.3s ease; }
@@ -753,23 +737,23 @@ const openSubmitModal = useCallback(
       `}</style>
 
       <div
-        className={`min-h-screen bg-gray-200 dark:bg-gray-900 p-4 md:p-6 transition-colors duration-200 ${
+        className={`min-h-screen bg-gray-200 dark:bg-gray-900 p-3 md:p-4 transition-colors duration-200 ${
           isMounted ? "opacity-100" : "opacity-0"
         }`}
       >
         <div className="max-w-8xl mx-auto">
-          <header className="mb-4">
-            <div className="flex items-start md:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-lg bg-white dark:bg-gray-800 project-header-icon">
-                  <Target className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+          <header className="mb-3 ">
+            <div className="flex items-center md:items-center justify-between gap-3 rounded-2xl bg-white dark:bg-gray-800 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/40 shadow-sm px-4 py-3 transition-all duration-300">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-800 project-header-icon">
+                  <Target className="h-5 w-5 text-sky-600 dark:text-sky-300" />
                 </div>
 
                 <div className="project-title">
-                  <h1 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                  <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white leading-tight">
                     {t("project.title")}
                   </h1>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-300 project-fade-in">
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 project-fade-in">
                     {t("project.subtitle")}
                   </p>
                 </div>
@@ -783,10 +767,10 @@ const openSubmitModal = useCallback(
             {/* ---------------------------------------------------------------- */}
             {/* MODIFICATION START: Responsive Header Layout
             /* ---------------------------------------------------------------- */}
-            <div className="mt-4 w-full project-controls space-y-4">
+            <div className="mt-3 w-full project-controls space-y-3">
               
               {/* Row 1: Search and Actions */}
-              <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center gap-2">
                 {/* Search Bar */}
                 <div className="flex-1 w-full">
                   <label htmlFor="project-search" className="sr-only">
@@ -809,7 +793,7 @@ const openSubmitModal = useCallback(
                       placeholder={
                         t("project.searchPlaceholder") || "Search goals..."
                       }
-                      className="w-full rounded-md border bg-white dark:bg-gray-800 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400 project-search-focus transition-all duration-200"
+                      className="w-full rounded-md border bg-white dark:bg-gray-800 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400 project-search-focus transition-all duration-200"
                     />
                     {searchTerm && (
                       <button
@@ -822,7 +806,7 @@ const openSubmitModal = useCallback(
                             console.error("loadGoals error:", err);
                           });
                         }}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 project-btn hover:scale-110"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 project-btn hover:scale-110"
                       >
                         ×
                       </button>
@@ -831,16 +815,16 @@ const openSubmitModal = useCallback(
                 </div>
                 
                 {/* Sort/Refresh/Add Buttons */}
-                <div className="flex-shrink-0 w-full sm:w-auto flex justify-end items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="flex-shrink-0 w-full sm:w-auto flex justify-end items-center gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-xs text-gray-600 dark:text-gray-300">
                       {t("project.sort.label") || "Sort"}
                     </label>
                     <select
                       aria-label="Sort by"
                       value={sortKey}
                       onChange={(e) => setSortKey(e.target.value)}
-                      className="ml-1 rounded-md border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 px-2 py-1 text-sm shadow-sm focus:outline-none project-btn project-sort-active"
+                      className="ml-1 rounded-md border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 px-1.5 py-1 text-xs shadow-sm focus:outline-none project-btn project-sort-active"
                       title="Choose sort key"
                     >
                       <option value="rollNo">
@@ -857,7 +841,7 @@ const openSubmitModal = useCallback(
                       onClick={() =>
                         setSortOrder((s) => (s === "asc" ? "desc" : "asc"))
                       }
-                      className="ml-2 px-2 py-1 rounded border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 flex items-center gap-2 hover:shadow-sm project-btn project-sort-active"
+                      className="ml-1.5 px-1.5 py-1 rounded border text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 flex items-center gap-1 hover:shadow-sm project-btn project-sort-active"
                       title={
                         sortOrder === "asc"
                           ? t("project.sort.ascending") || "Ascending"
@@ -869,7 +853,7 @@ const openSubmitModal = useCallback(
                         {sortOrder === "asc" ? "Asc" : "Desc"}
                       </span>
                       <ArrowUpDown
-                        className={`h-4 w-4 project-icon-rotate ${
+                        className={`h-3.5 w-3.5 project-icon-rotate ${
                           sortOrder === "desc" ? "rotate-180" : ""
                         }`}
                       />
@@ -879,16 +863,16 @@ const openSubmitModal = useCallback(
                   <button
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className="px-3 py-1 rounded border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 flex items-center project-btn hover:scale-105 disabled:opacity-60"
+                    className="px-2 py-1 rounded border text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 flex items-center project-btn hover:scale-105 disabled:opacity-60"
                     title={t("project.refresh") || "Refresh"}
                     aria-label="Refresh goals"
                   >
                     <RefreshCcw
-                      className={`h-4 w-4 mr-2 ${
+                      className={`h-3.5 w-3.5 mr-1.5 ${
                         isRefreshing ? "project-refresh-spin" : ""
                       }`}
                     />
-                    <span className="text-sm">
+                    <span className="text-xs">
                       {t("project.refresh") || "Refresh"}
                     </span>
                   </button>
@@ -898,12 +882,12 @@ const openSubmitModal = useCallback(
                       onClick={() =>
                         setModal({ isOpen: true, type: "createGoal", data: null })
                       }
-                      className="ml-1 px-3 py-1 rounded bg-sky-600 text-white hover:bg-sky-700 flex items-center project-btn"
+                      className="ml-1 px-2 py-1 rounded bg-sky-600 text-white hover:bg-sky-700 flex items-center project-btn"
                       aria-label="Add goal"
                       title={t("project.addGoal") || "Add goal"}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      <span className="text-sm">
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      <span className="text-xs">
                         {t("project.addGoalLabel") || "Add Goal"}
                       </span>
                     </button>
@@ -914,16 +898,16 @@ const openSubmitModal = useCallback(
               {/* Row 2: Quarter Filters (Responsive) */}
               <div className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 pl-2 flex-shrink-0">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 pl-1 flex-shrink-0">
                     {t("project.quarterFilter", "Quarter")}:
                   </span>
-                  <div className="flex flex-wrap flex-1 gap-2 min-w-[200px]">
+                  <div className="flex flex-wrap flex-1 gap-1.5 min-w-[180px]">
                     {[0, 1, 2, 3, 4].map((q) => (
                       <button
                         key={q}
                         onClick={() => setCurrentQuarter(q)}
                         className={`
-                          px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-200 
+                          px-2 py-1 rounded-md text-xs font-semibold transition-all duration-200 
                           flex-1 sm:flex-auto
                           ${
                             currentQuarter === q
@@ -945,22 +929,22 @@ const openSubmitModal = useCallback(
             {/* ---------------------------------------------------------------- */}
           </header>
 
-          <main className="grid gap-6 project-content-transition">
+          <main className="grid gap-4 project-content-transition">
             <div className="lg:col-span-8">
               {isLoadingGoals ? (
-                <div className="space-y-4 project-fade-in">
+                <div className="space-y-3 project-fade-in">
                   <SkeletonCard rows={2} />
                   <SkeletonCard rows={3} />
                   <SkeletonCard rows={1} />
                 </div>
               ) : sortedGoals.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center text-sm text-gray-500 dark:text-gray-400 project-fade-in project-shake">
+                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 text-center text-xs text-gray-500 dark:text-gray-400 project-fade-in project-shake">
                   {goals.length === 0
                     ? t("project.empty.noGoals")
                     : t("project.empty.noMatch")}
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {sortedGoals.map((goal, index) => (
                     <GoalCard
                       key={goal.id}

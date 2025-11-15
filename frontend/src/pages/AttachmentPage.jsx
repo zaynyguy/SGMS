@@ -32,23 +32,22 @@ const formatDate = (d) => {
 };
 
 function IconForType({ fileType }) {
-  if (!fileType) return <File className="h-5 w-5 transition-all duration-300 ease-in-out transform hover:scale-110" />;
-  if (fileType.includes("image")) return <ImgIcon className="h-5 w-5 transition-all duration-300 ease-in-out transform hover:scale-110" />;
-  if (fileType.includes("pdf")) return <FileText className="h-5 w-5 transition-all duration-300 ease-in-out transform hover:scale-110" />;
-  return <File className="h-5 w-5 transition-all duration-300 ease-in-out transform hover:scale-110" />;
+  if (!fileType) return <File className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />;
+  if (fileType.includes("image")) return <ImgIcon className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />;
+  if (fileType.includes("pdf")) return <FileText className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />;
+  return <File className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />;
 }
 
 function ImagePreviewModal({ src, name, onClose, t }) {
   const [isVisible, setIsVisible] = useState(false);
   
   useEffect(() => {
-    // Trigger animation after mount
     requestAnimationFrame(() => setIsVisible(true));
   }, []);
 
   const handleClose = () => {
     setIsVisible(false);
-    setTimeout(onClose, 300); // Wait for animation to complete
+    setTimeout(onClose, 300);
   };
 
   if (!src) return null;
@@ -63,12 +62,12 @@ function ImagePreviewModal({ src, name, onClose, t }) {
         }`}
       >
         <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-700 transition-colors duration-200">
-          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate max-w-[60vw] transition-colors duration-200">
+          <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate max-w-[60vw] transition-colors duration-200">
             {name}
           </div>
           <button 
             onClick={handleClose} 
-            className="text-gray-600 dark:text-gray-300 px-2 py-1 text-xl leading-none transition-all duration-200 ease-in-out transform hover:scale-110 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+            className="text-gray-600 dark:text-gray-300 px-2 py-1 text-lg leading-none transition-all duration-200 ease-in-out transform hover:scale-110 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
             aria-label={t("attachments.closePreview")} 
             title={t("attachments.closePreview")}
           >
@@ -84,9 +83,9 @@ function ImagePreviewModal({ src, name, onClose, t }) {
             fallbackClassName="max-w-full max-h-[80vh] w-[80vw] min-h-[50vh] flex flex-col items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded transition-colors duration-300"
           >
             <div className="flex flex-col items-center justify-center p-8 text-center animate-pulse">
-              <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4 transition-transform duration-300 ease-in-out transform hover:scale-110" />
-              <p className="font-semibold transition-colors duration-200">{t("attachments.previewErrorTitle", "Cannot load preview")}</p>
-              <p className="text-sm mt-1 transition-colors duration-200">{t("attachments.previewErrorSubtitle", "The file may be corrupt or inaccessible.")}</p>
+              <AlertTriangle className="w-10 h-10 text-yellow-500 mb-3 transition-transform duration-300 ease-in-out transform hover:scale-110" />
+              <p className="font-semibold text-sm transition-colors duration-200">{t("attachments.previewErrorTitle", "Cannot load preview")}</p>
+              <p className="text-xs mt-1 transition-colors duration-200">{t("attachments.previewErrorSubtitle", "The file may be corrupt or inaccessible.")}</p>
             </div>
           </AuthenticatedImage>
         </div>
@@ -118,24 +117,24 @@ function ConfirmModal({ open, title, message, onCancel, onConfirm, loading, conf
       aria-modal="true"
     >
       <div 
-        className={`bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 ease-out ${
+        className={`bg-white dark:bg-gray-800 p-5 rounded-xl shadow-2xl w-full max-w-sm transform transition-all duration-300 ease-out ${
           isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-4'
         }`}
       >
         <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-3 transition-all duration-300 ease-in-out transform hover:scale-110">
-            <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400 transition-transform duration-300" />
+          <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 mb-3 transition-all duration-300 ease-in-out transform hover:scale-110">
+            <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400 transition-transform duration-300" />
           </div>
-          <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200">{title}</h3>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 transition-colors duration-200">{message}</p>
+          <h3 className="mt-2 text-base font-semibold text-gray-900 dark:text-white transition-colors duration-200">{title}</h3>
+          <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 transition-colors duration-200">{message}</p>
         </div>
 
-        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        <div className="mt-5 flex flex-col sm:flex-row gap-2">
           <button 
             type="button" 
             onClick={onCancel} 
             disabled={loading}
-            className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 ease-in-out transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
+            className="flex-1 px-4 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 ease-in-out transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
           >
             {cancelLabel}
           </button>
@@ -144,9 +143,9 @@ function ConfirmModal({ open, title, message, onCancel, onConfirm, loading, conf
             type="button" 
             onClick={onConfirm} 
             disabled={loading}
-            className="flex-1 px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
+            className="flex-1 px-4 py-2 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-all duration-200 ease-in-out transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
           >
-            {loading ? (<><Loader2 className="h-4 w-4 animate-spin mr-2 transition-transform duration-300" /> Deleting...</>) : confirmLabel}
+            {loading ? (<><Loader2 className="h-3 w-3 animate-spin mr-1 transition-transform duration-300" /> Deleting...</>) : confirmLabel}
           </button>
         </div>
       </div>
@@ -166,18 +165,18 @@ const BreadcrumbRow = ({ at }) => {
   if (pieces.length === 0) return null;
 
   return (
-    <div className="mt-2 text-sm text-gray-600 dark:text-gray-300 transition-all duration-300 ease-in-out">
-      <nav className="flex items-center gap-2 flex-wrap">
+    <div className="mt-1 text-xs text-gray-600 dark:text-gray-300 transition-all duration-300 ease-in-out">
+      <nav className="flex items-center gap-1 flex-wrap">
         {pieces.map((p, i) => (
-          <div key={p.key} className="flex items-center gap-2 transition-all duration-200">
+          <div key={p.key} className="flex items-center gap-1 transition-all duration-200">
             <span 
-              className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-ellipsis overflow-hidden whitespace-nowrap max-w-[30ch] block transition-all duration-200 ease-in-out transform hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-600"
+              className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-ellipsis overflow-hidden whitespace-nowrap max-w-[25ch] block transition-all duration-200 ease-in-out transform hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-600"
               title={p.label}
             >
               {p.label}
             </span>
             {i < pieces.length - 1 && (
-              <span className="text-gray-400 dark:text-gray-500 transition-colors duration-200">
+              <span className="text-gray-400 dark:text-gray-500 text-xs transition-colors duration-200">
                 ›
               </span>
             )}
@@ -198,9 +197,9 @@ export default function AttachmentsPage({ reportId }) {
   const [error, setError] = useState(null);
 
   // UI
-  const [preview, setPreview] = useState(null); // { src, name }
+  const [preview, setPreview] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedIds, setExpandedIds] = useState([]); // attachments with breadcrumbs visible
+  const [expandedIds, setExpandedIds] = useState([]);
 
   // Toast
   const [toast, setToast] = useState(null);
@@ -328,108 +327,107 @@ export default function AttachmentsPage({ reportId }) {
     });
   }, [attachments, searchTerm]);
 
-  // short context: prefer activity > task > goal > group
   const shortContext = (at) => at.activityTitle || at.taskTitle || at.goalTitle || at.groupName || "";
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 sm:p-6 transition-all duration-500 ease-in-out">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-3 sm:p-4 transition-all duration-500 ease-in-out">
       <div className="max-w-8xl mx-auto animate-fade-in">
-        <header className="mb-6 flex flex-col gap-4 transition-all duration-300">
-          <div className="flex items-center justify-between gap-4 transition-all duration-300">
-            <div className="flex items-center gap-4 min-w-0 transition-all duration-300">
-              <div className="p-3 rounded-lg bg-white dark:bg-gray-800 shrink-0 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg">
-                <Paperclip className="h-6 w-6 text-sky-600 dark:text-sky-300 transition-transform duration-300 ease-in-out transform hover:rotate-12" />
+        {/* Card-style Header */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3 mb-4 transition-all duration-500 ease-in-out hover:shadow-md">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br bg-gray-200 dark:bg-gray-900 shadow-inner transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg">
+                  <Paperclip className="h-5 w-5 text-sky-600 dark:text-sky-300 transition-transform duration-300 ease-in-out transform hover:rotate-12" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-lg  font-bold text-gray-900 dark:text-white truncate transition-colors duration-300">
+                    {t("attachments.title")}
+                  </h1>
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 truncate max-w-[60ch] transition-colors duration-300">
+                    {t("attachments.subtitle")}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0 transition-all duration-300">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white truncate transition-colors duration-300">
-                  {t("attachments.title")}
-                </h1>
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-300 truncate max-w-[60ch] transition-colors duration-300">
-                  {t("attachments.subtitle")}
-                </p>
+
+              <div className="flex items-center gap-2">
+                <div className="block transition-all duration-300">
+                  <TopBar />
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 transition-all duration-300">
-              <div className="hidden md:block transition-all duration-300">
-                <TopBar />
-              </div>
-            </div>
+            
           </div>
-
-          <div className="flex items-center gap-3 transition-all duration-300">
-            <div className="relative flex-1 min-w-0 transition-all duration-300">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-all duration-300">
-                <Search className="h-4 w-4 text-gray-400 transition-colors duration-300" />
+          
+        </div>
+        <div className="flex items-center gap-3 mb-4">
+              <div className="relative flex-1 min-w-0">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-3.5 w-3.5 text-gray-400 transition-colors duration-300" />
+                </div>
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={t("attachments.searchPlaceholder")}
+                  className="pl-9 pr-8 py-2 text-xs w-full rounded-lg border border-gray-200 dark:border-gray-700  bg-white dark:bg-gray-800 text-gray-900 dark:text-white min-w-0 transition-all duration-300 ease-in-out focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transform hover:shadow-sm"
+                  aria-label={t("attachments.searchAria")}
+                />
+                {searchTerm && (
+                  <button 
+                    onClick={() => setSearchTerm("")} 
+                    className="absolute right-1 top-1 p-1 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 ease-in-out transform hover:scale-110"
+                    aria-label={t("attachments.clearSearchAria")}
+                  >
+                    <X className="h-3.5 w-3.5 transition-transform duration-200" />
+                  </button>
+                )}
               </div>
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder={t("attachments.searchPlaceholder")}
-                className="pl-10 pr-9 py-2 w-full rounded-md border bg-white dark:bg-gray-700 text-sm sm:text-base text-gray-900 dark:text-white min-w-0 transition-all duration-300 ease-in-out focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transform hover:shadow-md"
-                aria-label={t("attachments.searchAria")}
-              />
-              {searchTerm && (
-                <button 
-                  onClick={() => setSearchTerm("")} 
-                  className="absolute right-1 top-1.5 p-1.5 rounded text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 ease-in-out transform hover:scale-110"
-                  aria-label={t("attachments.clearSearchAria")}
-                >
-                  <X className="h-4 w-4 transition-transform duration-200" />
-                </button>
-              )}
             </div>
-          </div>
 
-          {error && (
-            <div className="text-sm text-red-700 dark:text-red-300 transition-all duration-300 ease-in-out animate-pulse">
-              {error}
-            </div>
-          )}
-        </header>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden transition-all duration-500 ease-in-out transform hover:shadow-lg">
+        {/* Main Content Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-500 ease-in-out hover:shadow-md">
           {loading ? (
-            <div className="p-8 flex flex-col items-center justify-center transition-all duration-300">
-              <Loader2 className="animate-spin h-10 w-10 text-indigo-600 dark:text-indigo-400 mb-4 transition-colors duration-300" />
-              <p className="text-gray-500 dark:text-gray-400 transition-colors duration-300">{t("attachments.loading")}</p>
+            <div className="p-6 flex flex-col items-center justify-center">
+              <Loader2 className="animate-spin h-8 w-8 text-indigo-600 dark:text-indigo-400 mb-3 transition-colors duration-300" />
+              <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">{t("attachments.loading")}</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="p-8 text-center transition-all duration-300 animate-fade-in">
-              <File className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-3 transition-all duration-300 ease-in-out transform hover:scale-110" />
-              <div className="text-lg font-medium text-gray-700 dark:text-gray-200 transition-colors duration-300">
+            <div className="p-6 text-center transition-all duration-300 animate-fade-in">
+              <File className="h-10 w-10 text-gray-400 dark:text-gray-500 mx-auto mb-2 transition-all duration-300 ease-in-out transform hover:scale-110" />
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-200 transition-colors duration-300">
                 {t("attachments.noAttachmentsTitle")}
               </div>
-              <div className="text-sm text-gray-400 dark:text-gray-500 mt-1 transition-colors duration-300">
+              <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 transition-colors duration-300">
                 {t("attachments.noAttachmentsSubtitle")}
               </div>
             </div>
           ) : (
             <>
               {/* TABLE for large screens */}
-              <div className="hidden lg:block overflow-hidden transition-all duration-300">
-                <table className="min-w-full table-auto transition-all duration-300">
-                  <thead className="bg-gray-50 dark:bg-gray-700 text-left transition-colors duration-300">
-                    <tr className="transition-colors duration-300">
-                      <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider transition-colors duration-300">
+              <div className="hidden lg:block overflow-hidden">
+                <table className="min-w-full table-auto text-xs">
+                  <thead className="bg-gray-50 dark:bg-gray-700 text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {t("attachments.table.file")}
                       </th>
-                      <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider transition-colors duration-300">
+                      <th className="px-3 py-2 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {t("attachments.table.type")}
                       </th>
-                      <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider transition-colors duration-300">
+                      <th className="px-3 py-2 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {t("attachments.table.context") || "Context"}
                       </th>
-                      <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider transition-colors duration-300">
+                      <th className="px-3 py-2 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {t("attachments.table.uploaded")}
                       </th>
-                      <th className="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-right transition-colors duration-300">
+                      <th className="px-3 py-2 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider text-right">
                         {t("attachments.table.actions")}
                       </th>
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700 transition-colors duration-300">
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                     {filtered.map((at, index) => {
                       const expanded = expandedIds.includes(at.id);
                       return (
@@ -440,71 +438,70 @@ export default function AttachmentsPage({ reportId }) {
                           }`}
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
-                          <td className="px-4 py-4 align-top transition-all duration-300">
-                            <div className="flex items-center gap-3 min-w-0 transition-all duration-300">
-                              <div className="flex-shrink-0 h-10 w-10 text-indigo-600 dark:text-indigo-400 transition-colors duration-300">
+                          <td className="px-3 py-3 align-top">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="flex-shrink-0 h-8 w-8 text-indigo-600 dark:text-indigo-400">
                                 <IconForType fileType={at.fileType} />
                               </div>
-                              <div className="min-w-0 flex-1 transition-all duration-300">
-                                <div className="flex items-center justify-between gap-3 transition-all duration-300">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between gap-2">
                                   <div 
-                                    className="text-sm font-medium text-gray-900 dark:text-white truncate transition-colors duration-300 hover:text-indigo-600 dark:hover:text-indigo-300" 
+                                    className="font-medium text-gray-900 dark:text-white truncate hover:text-indigo-600 dark:hover:text-indigo-300" 
                                     title={at.fileName}
                                   >
                                     {at.fileName}
                                   </div>
                                   <button 
                                     onClick={() => toggleExpand(at.id)} 
-                                    className="ml-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-all duration-200 ease-in-out transform hover:scale-110" 
+                                    className="ml-1 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-all duration-200 ease-in-out transform hover:scale-110" 
                                     aria-expanded={expanded}
                                   >
                                     {expanded ? (
-                                      <ChevronUp className="h-4 w-4 transition-transform duration-300" />
+                                      <ChevronUp className="h-3.5 w-3.5 transition-transform duration-300" />
                                     ) : (
-                                      <ChevronDown className="h-4 w-4 transition-transform duration-300" />
+                                      <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300" />
                                     )}
                                   </button>
                                 </div>
-                                {/* only show breadcrumb when expanded (keeps row compact) */}
                                 {expanded && <BreadcrumbRow at={at} />}
                               </div>
                             </div>
                           </td>
 
-                          <td className="px-4 py-4 align-top transition-all duration-300">
+                          <td className="px-3 py-3 align-top">
                             <div 
-                              className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 truncate max-w-[22ch] transition-all duration-300 ease-in-out transform hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-600" 
+                              className="inline-block px-1.5 py-0.5 font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 truncate max-w-[18ch] transition-all duration-300 ease-in-out transform hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-600" 
                               title={at.fileType}
                             >
                               {at.fileType || t("attachments.empty")}
                             </div>
                           </td>
 
-                          <td className="px-4 py-4 align-top transition-all duration-300">
+                          <td className="px-3 py-3 align-top">
                             <div 
-                              className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-[28ch] transition-colors duration-300 hover:text-gray-900 dark:hover:text-white" 
+                              className="text-gray-600 dark:text-gray-300 max-w-[25ch] hover:text-gray-900 dark:hover:text-white" 
                               title={shortContext(at)}
                             >
                               {shortContext(at)}
                             </div>
                           </td>
 
-                          <td className="px-4 py-4 align-top text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
+                          <td className="px-3 py-3 align-top text-gray-500 dark:text-gray-400">
                             {formatDate(at.createdAt)}
                           </td>
 
-                          <td className="px-4 py-4 align-top text-right transition-all duration-300">
-                            <div className="flex items-center justify-end gap-2 transition-all duration-300">
+                          <td className="px-3 py-3 align-top text-right">
+                            <div className="flex items-center justify-end gap-1">
                               <button 
                                 onClick={() => handleDownload(at)} 
                                 disabled={downloading === at.id} 
                                 title={t("attachments.download")} 
-                                className="inline-flex items-center px-2.5 py-1.5 rounded-md text-sm bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/50 disabled:opacity-50 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                                className="inline-flex items-center px-2 py-1 rounded text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800/50 disabled:opacity-50 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                               >
                                 {downloading === at.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin transition-transform duration-300" />
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin transition-transform duration-300" />
                                 ) : (
-                                  <Download className="h-4 w-4 transition-transform duration-200" />
+                                  <Download className="h-3.5 w-3.5 transition-transform duration-200" />
                                 )}
                               </button>
 
@@ -512,9 +509,9 @@ export default function AttachmentsPage({ reportId }) {
                                 <button 
                                   onClick={() => openPreview(at)} 
                                   title={t("attachments.preview")} 
-                                  className="inline-flex items-center px-2.5 py-1.5 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                                  className="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                                 >
-                                  <Eye className="h-4 w-4 transition-transform duration-200" />
+                                  <Eye className="h-3.5 w-3.5 transition-transform duration-200" />
                                 </button>
                               )}
 
@@ -522,12 +519,12 @@ export default function AttachmentsPage({ reportId }) {
                                 onClick={() => requestDelete(at.id)} 
                                 disabled={deleting === at.id} 
                                 title={t("attachments.delete")} 
-                                className="inline-flex items-center px-2.5 py-1.5 rounded-md text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/50 disabled:opacity-50 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                                className="inline-flex items-center px-2 py-1 rounded text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/50 disabled:opacity-50 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                               >
                                 {deleting === at.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin transition-transform duration-300" />
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin transition-transform duration-300" />
                                 ) : (
-                                  <Trash2 className="h-4 w-4 transition-transform duration-200" />
+                                  <Trash2 className="h-3.5 w-3.5 transition-transform duration-200" />
                                 )}
                               </button>
                             </div>
@@ -539,42 +536,42 @@ export default function AttachmentsPage({ reportId }) {
                 </table>
               </div>
 
-              {/* MEDIUM / SMALL: compact cards with minimal info; breadcrumb only when expanded */}
- <div className="hidden md:grid md:grid-cols-2 lg:hidden gap-4 p-4 transition-all duration-300">
+              {/* MEDIUM / SMALL: compact cards */}
+              <div className="hidden md:grid md:grid-cols-2 lg:hidden gap-3 p-3">
                 {filtered.map((at, index) => {
                   const expanded = expandedIds.includes(at.id);
                   return (
                     <div 
                       key={at.id} 
-                      className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg p-3 shadow-sm flex flex-col justify-between transition-all duration-500 ease-in-out transform hover:scale-[1.02] hover:shadow-lg"
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-sm flex flex-col justify-between transition-all duration-500 ease-in-out transform hover:scale-[1.02] hover:shadow-md"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <div className="flex items-start gap-3 transition-all duration-300">
-                        <div className="flex-shrink-0 text-indigo-600 dark:text-indigo-300 transition-colors duration-300">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-shrink-0 text-indigo-600 dark:text-indigo-300">
                           <IconForType fileType={at.fileType} />
                         </div>
-                        <div className="min-w-0 flex-1 transition-all duration-300">
-                          <div className="flex items-center justify-between transition-all duration-300">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between">
                             <div 
-                              className="text-sm font-semibold text-gray-900 dark:text-white truncate transition-colors duration-300 hover:text-indigo-600 dark:hover:text-indigo-300" 
+                              className="text-xs font-semibold text-gray-900 dark:text-white truncate hover:text-indigo-600 dark:hover:text-indigo-300" 
                               title={at.fileName}
                             >
                               {at.fileName}
                             </div>
                             <button 
                               onClick={() => toggleExpand(at.id)} 
-                              className="ml-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-all duration-200 ease-in-out transform hover:scale-110"
+                              className="ml-1 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-all duration-200 ease-in-out transform hover:scale-110"
                             >
                               {expanded ? (
-                                <ChevronUp className="h-4 w-4 transition-transform duration-300" />
+                                <ChevronUp className="h-3.5 w-3.5 transition-transform duration-300" />
                               ) : (
-                                <ChevronDown className="h-4 w-4 transition-transform duration-300" />
+                                <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300" />
                               )}
                             </button>
                           </div>
 
                           <div 
-                            className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate max-w-[36ch] transition-colors duration-300 hover:text-gray-700 dark:hover:text-gray-300" 
+                            className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-[30ch] hover:text-gray-700 dark:hover:text-gray-300" 
                             title={shortContext(at)}
                           >
                             {shortContext(at)}
@@ -584,39 +581,39 @@ export default function AttachmentsPage({ reportId }) {
                         </div>
                       </div>
 
-                      <div className="mt-3 flex items-center gap-2 transition-all duration-300">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           {formatDate(at.createdAt)}
                         </div>
-                        <div className="ml-auto flex items-center gap-2 transition-all duration-300">
+                        <div className="ml-auto flex items-center gap-1">
                           <button 
                             onClick={() => handleDownload(at)} 
                             disabled={downloading === at.id} 
-                            className="px-3 py-2 rounded-md text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                            className="px-2 py-1 rounded text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                           >
                             {downloading === at.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin transition-transform duration-300" />
+                              <Loader2 className="h-3.5 w-3.5 animate-spin transition-transform duration-300" />
                             ) : (
-                              <Download className="h-4 w-4 transition-transform duration-200" />
+                              <Download className="h-3.5 w-3.5 transition-transform duration-200" />
                             )}
                           </button>
                           {String(at.fileType || "").includes("image") && (
                             <button 
                               onClick={() => openPreview(at)} 
-                              className="px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                              className="px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                             >
-                              <Eye className="h-4 w-4 transition-transform duration-200" />
+                              <Eye className="h-3.5 w-3.5 transition-transform duration-200" />
                             </button>
                           )}
                           <button 
                             onClick={() => requestDelete(at.id)} 
                             disabled={deleting === at.id} 
-                            className="px-3 py-2 rounded-md text-sm bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                            className="px-2 py-1 rounded text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                           >
                             {deleting === at.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin transition-transform duration-300" />
+                              <Loader2 className="h-3.5 w-3.5 animate-spin transition-transform duration-300" />
                             ) : (
-                              <Trash2 className="h-4 w-4 transition-transform duration-200" />
+                              <Trash2 className="h-3.5 w-3.5 transition-transform duration-200" />
                             )}
                           </button>
                         </div>
@@ -626,42 +623,42 @@ export default function AttachmentsPage({ reportId }) {
                 })}
               </div>
 
-              {/* MOBILE stacked list (very compact) */}
-              <div className="md:hidden p-4 space-y-3 transition-all duration-300">
+              {/* MOBILE stacked list */}
+              <div className="md:hidden p-3 space-y-2">
                 {filtered.map((at, index) => {
                   const expanded = expandedIds.includes(at.id);
                   return (
                     <div 
                       key={at.id} 
-                      className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg p-3 shadow-sm transition-all duration-500 ease-in-out transform hover:scale-[1.01] hover:shadow-md"
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-sm transition-all duration-500 ease-in-out transform hover:scale-[1.01] hover:shadow-sm"
                       style={{ animationDelay: `${index * 50}ms` }}
                     >
-                      <div className="flex items-center gap-3 transition-all duration-300">
-                        <div className="text-indigo-600 dark:text-indigo-300 transition-colors duration-300">
+                      <div className="flex items-center gap-2">
+                        <div className="text-indigo-600 dark:text-indigo-300">
                           <IconForType fileType={at.fileType} />
                         </div>
-                        <div className="flex-1 min-w-0 transition-all duration-300">
-                          <div className="flex items-center justify-between transition-all duration-300">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
                             <div 
-                              className="text-sm font-medium text-gray-900 dark:text-white truncate transition-colors duration-300 hover:text-indigo-600 dark:hover:text-indigo-300" 
+                              className="text-xs font-medium text-gray-900 dark:text-white truncate hover:text-indigo-600 dark:hover:text-indigo-300" 
                               title={at.fileName}
                             >
                               {at.fileName}
                             </div>
                             <button 
                               onClick={() => toggleExpand(at.id)} 
-                              className="ml-2 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-all duration-200 ease-in-out transform hover:scale-110"
+                              className="ml-1 p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-all duration-200 ease-in-out transform hover:scale-110"
                             >
                               {expanded ? (
-                                <ChevronUp className="h-4 w-4 transition-transform duration-300" />
+                                <ChevronUp className="h-3.5 w-3.5 transition-transform duration-300" />
                               ) : (
-                                <ChevronDown className="h-4 w-4 transition-transform duration-300" />
+                                <ChevronDown className="h-3.5 w-3.5 transition-transform duration-300" />
                               )}
                             </button>
                           </div>
 
                           <div 
-                            className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate transition-colors duration-300 hover:text-gray-700 dark:hover:text-gray-300" 
+                            className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 hover:text-gray-700 dark:hover:text-gray-300" 
                             title={shortContext(at)}
                           >
                             {shortContext(at)}
@@ -669,39 +666,39 @@ export default function AttachmentsPage({ reportId }) {
 
                           {expanded && <BreadcrumbRow at={at} />}
 
-                          <div className="mt-2 flex items-center justify-between transition-all duration-300">
-                            <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
+                          <div className="mt-1.5 flex items-center justify-between">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
                               {formatDate(at.createdAt)}
                             </div>
-                            <div className="flex items-center gap-2 transition-all duration-300">
+                            <div className="flex items-center gap-1">
                               <button 
                                 onClick={() => handleDownload(at)} 
                                 disabled={downloading === at.id} 
-                                className="px-3 py-2 rounded-md text-sm bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                                className="px-2 py-1 rounded text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                               >
                                 {downloading === at.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin transition-transform duration-300" />
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin transition-transform duration-300" />
                                 ) : (
-                                  <Download className="h-4 w-4 transition-transform duration-200" />
+                                  <Download className="h-3.5 w-3.5 transition-transform duration-200" />
                                 )}
                               </button>
                               {String(at.fileType || "").includes("image") && (
                                 <button 
                                   onClick={() => openPreview(at)} 
-                                  className="px-3 py-2 rounded-md text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                                  className="px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                                 >
-                                  <Eye className="h-4 w-4 transition-transform duration-200" />
+                                  <Eye className="h-3.5 w-3.5 transition-transform duration-200" />
                                 </button>
                               )}
                               <button 
                                 onClick={() => requestDelete(at.id)} 
                                 disabled={deleting === at.id} 
-                                className="px-3 py-2 rounded-md text-sm bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
+                                className="px-2 py-1 rounded text-xs bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 transition-all duration-200 ease-in-out transform hover:scale-110 active:scale-95"
                               >
                                 {deleting === at.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin transition-transform duration-300" />
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin transition-transform duration-300" />
                                 ) : (
-                                  <Trash2 className="h-4 w-4 transition-transform duration-200" />
+                                  <Trash2 className="h-3.5 w-3.5 transition-transform duration-200" />
                                 )}
                               </button>
                             </div>
@@ -732,7 +729,7 @@ export default function AttachmentsPage({ reportId }) {
         />
 
         {toast && (
-          <div className="fixed z-50 right-5 bottom-5 transition-all duration-500 ease-in-out animate-bounce">
+          <div className="fixed z-50 right-4 bottom-4 transition-all duration-500 ease-in-out animate-bounce">
             <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />
           </div>
         )}

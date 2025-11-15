@@ -17,7 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import useProjectApi from "../hooks/useProjectApi";
 
 /* small helpers */
-const LoadingSkeleton = ({ className = "h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" }) => (
+const LoadingSkeleton = ({ className = "h-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" }) => (
   <div className={`${className} transition-all duration-500 ease-out`} aria-hidden />
 );
 
@@ -54,7 +54,7 @@ const Modal = ({ open, onClose, children, title }) => {
     <div 
       role="dialog" 
       aria-modal="true" 
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-3 transition-all duration-300 ease-out ${
         open ? 'opacity-100' : 'opacity-0'
       }`}
     >
@@ -65,12 +65,12 @@ const Modal = ({ open, onClose, children, title }) => {
         onClick={onClose} 
       />
       <div 
-        className={`relative z-10 w-full max-w-4xl max-h-[90vh] overflow-auto bg-white dark:bg-gray-900 rounded-lg shadow-2xl p-4 sm:p-6 transform transition-all duration-500 ease-out ${
+        className={`relative z-10 w-full max-w-4xl max-h-[90vh] overflow-auto bg-white dark:bg-gray-900 rounded-lg shadow-xl p-3 sm:p-4 transform transition-all duration-500 ease-out ${
           open && !isAnimating ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-8'
         }`}
       >
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 transition-all duration-300">{title}</h3>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 transition-all duration-300">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Close"
@@ -112,18 +112,18 @@ const Card = ({ title, children, onClick, className = "", ariaLabel, headerActio
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       aria-label={ariaLabel || title}
-      className={`text-left p-4 rounded-2xl bg-white dark:bg-gray-800 shadow-sm transition-all duration-500 ease-out transform ${
-        clickable ? `hover:shadow-xl cursor-pointer focus:outline-none focus:ring-4 focus:ring-sky-400/30 ${
-          isHovered ? '-translate-y-2 scale-105' : 'translate-y-0 scale-100'
+      className={`text-left p-3 rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-all duration-500 ease-out transform ${
+        clickable ? `hover:shadow-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-400/30 ${
+          isHovered ? '-translate-y-1 scale-105' : 'translate-y-0 scale-100'
         } ${isPressed ? 'scale-95' : ''}` : ""
       } ${className}`}
       style={{
-        transform: `translateY(${isHovered && clickable ? '-8px' : '0px'}) scale(${isPressed ? 0.95 : isHovered && clickable ? 1.05 : 1})`,
+        transform: `translateY(${isHovered && clickable ? '-4px' : '0px'}) scale(${isPressed ? 0.95 : isHovered && clickable ? 1.05 : 1})`,
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
       }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 transition-all duration-300 transform hover:translate-x-1">
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-xs text-gray-500 dark:text-gray-400 transition-all duration-300 transform ">
           {title}
         </div>
         {headerActions}
@@ -140,7 +140,7 @@ function formatDate(d) {
 }
 
 /* --- Charts (enhanced with animations) --- */
-const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, gap = 12 }) => {
+const GroupBarChart = ({ data = [], height = 100, limit = null, thinWidth = 50, gap = 10 }) => {
   const [animated, setAnimated] = useState(false);
 
   useEffect(() => {
@@ -149,31 +149,31 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
     return () => clearTimeout(timer);
   }, [data]);
 
-  if (!Array.isArray(data) || data.length === 0) return <div className="text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">No chart data</div>;
+  if (!Array.isArray(data) || data.length === 0) return <div className="text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">No chart data</div>;
   const display = limit ? data.slice(0, limit) : data;
   const values = display.map((d) => Number(d.value ?? d.progress ?? 0));
   const max = Math.max(1, ...values);
   const itemCount = display.length;
   const barW = thinWidth;
   const spacing = barW + gap;
-  const padding = Math.max(8, Math.floor(gap / 2));
-  const svgWidth = Math.max(itemCount * spacing + padding * 2, 240);
+  const padding = Math.max(6, Math.floor(gap / 2));
+  const svgWidth = Math.max(itemCount * spacing + padding * 2, 200);
   const singleOffset = itemCount === 1 ? Math.floor((svgWidth - barW) / 2) : padding;
 
   return (
     <div className="w-full overflow-x-auto transition-all duration-500">
-      <svg viewBox={`0 0 ${svgWidth} ${height + 50}`} className="w-full h-[200px] transition-all duration-1000" preserveAspectRatio="xMidYMid meet" role="img">
+      <svg viewBox={`0 0 ${svgWidth} ${height + 40}`} className="w-full h-[160px] transition-all duration-1000" preserveAspectRatio="xMidYMid meet" role="img">
         <line x1="0" y1={height} x2={svgWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700 transition-all duration-500" strokeWidth="1" />
         {display.map((d, i) => {
           const val = Number(d.value ?? d.progress ?? 0);
-          const barH = Math.max(2, (val / max) * (height - 16));
+          const barH = Math.max(2, (val / max) * (height - 12));
           const x = singleOffset + i * spacing;
           const w = barW;
           const y = height - barH;
           const color = d.color || `hsl(${(i * 45) % 360}, 70%, 50%)`;
           const label = d.name ?? d.label ?? `#${i + 1}`;
           const availableTextWidth = barW + gap - 4;
-          const charWidth = 6;
+          const charWidth = 5;
           const maxChars = Math.floor(availableTextWidth / charWidth);
           let displayLabel = label;
           if (label.length > maxChars) {
@@ -185,8 +185,8 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
                 x={0} 
                 y={height} 
                 width={w} 
-                height={animated ? barH : 0} 
-                rx="6" 
+                height={animated ? barH : 4} 
+                rx="4" 
                 fill={color}
                 className="transition-all duration-1000 ease-out"
                 style={{
@@ -196,8 +196,8 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
               />
               <text
                 x={w / 2}
-                y={height + 20}
-                fontSize="11"
+                y={height + 16}
+                fontSize="10"
                 textAnchor="middle"
                 fill="#6B7280"
                 className="dark:fill-gray-400 transition-all duration-500"
@@ -208,8 +208,8 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
               {val > 0 && (
                 <text
                   x={w / 2}
-                  y={y - 5}
-                  fontSize="10"
+                  y={y - 4}
+                  fontSize="9"
                   textAnchor="middle"
                   fill={color}
                   className="transition-all duration-500"
@@ -222,13 +222,13 @@ const GroupBarChart = ({ data = [], height = 120, limit = null, thinWidth = 60, 
           );
         })}
       </svg>
-      {limit && data.length > limit && <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center transition-all duration-500">+{data.length - limit} more</div>}
+      {limit && data.length > limit && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 text-center transition-all duration-500">+{data.length - limit} more</div>}
     </div>
   );
 };
 
 /* TaskBarChart */
-const TaskBarChart = ({ items = [], maxItems = 8 }) => {
+const TaskBarChart = ({ items = [], maxItems = 6 }) => {
   const [animated, setAnimated] = useState(false);
 
   useEffect(() => {
@@ -237,17 +237,17 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
     return () => clearTimeout(timer);
   }, [items]);
 
-  if (!items || !items.length) return <div className="text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">No tasks</div>;
+  if (!items || !items.length) return <div className="text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">No tasks</div>;
   const display = items.slice(0, maxItems);
   return (
-    <div className="space-y-3 transition-all duration-500">
+    <div className="space-y-2 transition-all duration-500">
       {display.map((it, idx) => {
         const value = Math.max(0, Math.min(100, Math.round(Number(it.progress ?? it.value ?? 0))));
         const color = it.color || `hsl(${(idx * 50) % 360},70%,50%)`;
         return (
           <div 
             key={idx} 
-            className="flex items-center gap-3 transition-all duration-500 ease-out transform hover:translate-x-2"
+            className="flex items-center gap-2 transition-all duration-500 ease-out transform hover:translate-x-1.5"
             style={{
               animationDelay: `${idx * 100}ms`,
               transitionDelay: `${idx * 50}ms`
@@ -255,16 +255,16 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
           >
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate transition-all duration-300 hover:scale-105">
+                <div className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate transition-all duration-300 hover:scale-105">
                   {it.label}
                 </div>
-                <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-2 transition-all duration-500 transform hover:scale-125">
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-300 ml-1.5 transition-all duration-500 transform hover:scale-125">
                   {value}%
                 </div>
               </div>
 
               <div
-                className="mt-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden transition-all duration-500"
+                className="mt-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden transition-all duration-500"
                 role="progressbar"
                 aria-valuenow={value}
                 aria-valuemin={0}
@@ -277,7 +277,7 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
                     width: animated ? `${value}%` : '0%', 
                     background: color 
                   }} 
-                  className="h-3 rounded-full transition-all duration-1000 ease-out" 
+                  className="h-2 rounded-full transition-all duration-1000 ease-out" 
                 />
               </div>
             </div>
@@ -290,8 +290,9 @@ const TaskBarChart = ({ items = [], maxItems = 8 }) => {
 };
 
 /* PieChart */
-const PieChart = ({ slices = [], size = 220 }) => {
+const PieChart = ({ slices = [], size = 180 }) => {
   const [animated, setAnimated] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setAnimated(true);
@@ -313,8 +314,8 @@ const PieChart = ({ slices = [], size = 220 }) => {
 
   if (total === 0) {
     return (
-      <div className="flex items-center justify-center h-40 transition-all duration-500">
-        <div className="text-sm text-gray-500 dark:text-gray-400">No report</div>
+      <div className="flex items-center justify-center h-32 transition-all duration-500">
+        <div className="text-xs text-gray-500 dark:text-gray-400">{t("reports.noReports3")}</div>
       </div>
     );
   }
@@ -322,34 +323,34 @@ const PieChart = ({ slices = [], size = 220 }) => {
   const nonZero = items.filter((x) => Number(x.value ?? x.count ?? 0) > 0);
   const cx = size / 2;
   const cy = size / 2;
-  const r = Math.min(60, size / 2 - 8);
-  const innerR = Math.max(4, r - 18);
+  const r = Math.min(50, size / 2 - 6);
+  const innerR = Math.max(3, r - 14);
 
   if (nonZero.length === 1) {
     const s = nonZero[0];
     const fill = getColorFor(s, items.indexOf(s));
     return (
-      <div className="flex md:flex-col flex-row items-center gap-4 transition-all duration-500">
+      <div className="flex md:flex-col flex-row items-center gap-3 transition-all duration-500">
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="transition-all duration-1000 transform hover:scale-110">
           <circle cx={cx} cy={cy} r={r} fill={fill} stroke="#fff" strokeWidth="1" className="dark:stroke-gray-800 transition-all duration-500" />
           <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800 transition-all duration-500" />
-          <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold transition-all duration-500">
+          <text x={cx} y={cy} textAnchor="middle" dy="5" fontSize="12" className="fill-current text-gray-900 dark:text-gray-100 font-semibold transition-all duration-500">
             {total}
           </text>
         </svg>
 
         <div className="flex-1 min-w-0 transition-all duration-500">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-1">
             {items.map((it, i) => {
               const val = Number(it.value ?? it.count ?? 0);
               const pct = Math.round((val / total) * 100);
               return (
-                <div key={i} className="flex items-center gap-3 text-sm transition-all duration-500 transform hover:translate-x-2">
-                  <span style={{ background: getColorFor(it, i) }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0 transition-all duration-300 transform hover:scale-125" />
+                <div key={i} className="flex items-center gap-2 text-xs transition-all duration-500 transform hover:translate-x-1.5">
+                  <span style={{ background: getColorFor(it, i) }} className="w-2.5 h-2.5 rounded-sm inline-block flex-shrink-0 transition-all duration-300 transform hover:scale-125" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div className="truncate text-gray-700 dark:text-gray-300 transition-all duration-300 hover:scale-105">{it.label}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 ml-2 transition-all duration-500 transform hover:scale-125">({pct}%)</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 ml-1.5 transition-all duration-500 transform hover:scale-125">({pct}%)</div>
                     </div>
                   </div>
                 </div>
@@ -363,7 +364,7 @@ const PieChart = ({ slices = [], size = 220 }) => {
 
   let angle = 0;
   return (
-    <div className="flex md:flex-col flex-row items-center gap-4 transition-all duration-500">
+    <div className="flex md:flex-col flex-row items-center gap-3 transition-all duration-500">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="transition-all duration-1000 transform hover:scale-110">
         {items.map((s, i) => {
           const val = Number(s.value ?? s.count ?? 0);
@@ -387,30 +388,30 @@ const PieChart = ({ slices = [], size = 220 }) => {
               strokeWidth="1"
               style={{
                 transformOrigin: `${cx}px ${cy}px`,
-                transform: animated ? 'scale(1)' : 'scale(0)',
+                transform: animated ? 'scale(0)' : 'scale(1)',
                 transition: `transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 200}ms`
               }}
             />
           );
         })}
         <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-gray-800 transition-all duration-500" />
-        <text x={cx} y={cy} textAnchor="middle" dy="6" fontSize="14" className="fill-current text-gray-900 dark:text-gray-100 font-semibold transition-all duration-500">
+        <text x={cx} y={cy} textAnchor="middle" dy="5" fontSize="12" className="fill-current text-gray-900 dark:text-gray-100 font-semibold transition-all duration-500">
           {total}
         </text>
       </svg>
 
       <div className="flex-1 min-w-0 transition-all duration-500">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-1">
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-1">
           {items.map((it, i) => {
             const val = Number(it.value ?? it.count ?? 0);
             const pct = Math.round((val / total) * 100);
             return (
-              <div key={i} className="flex items-center gap-3 text-sm transition-all duration-500 transform hover:translate-x-2">
-                <span style={{ background: getColorFor(it, i) }} className="w-3 h-3 rounded-sm inline-block flex-shrink-0 transition-all duration-300 transform hover:scale-125" />
+              <div key={i} className="flex items-center gap-2 text-xs transition-all duration-500 transform hover:translate-x-1.5">
+                <span style={{ background: getColorFor(it, i) }} className="w-2.5 h-2.5 rounded-sm inline-block flex-shrink-0 transition-all duration-300 transform hover:scale-125" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <div className="truncate text-gray-700 dark:text-gray-300 transition-all duration-300 hover:scale-105">{it.label}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 ml-2 transition-all duration-500 transform hover:scale-125">({pct}%)</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 ml-1.5 transition-all duration-500 transform hover:scale-125">({pct}%)</div>
                   </div>
                 </div>
               </div>
@@ -424,18 +425,18 @@ const PieChart = ({ slices = [], size = 220 }) => {
 
 /* Overdue / Notifications / Audit panels (enhanced) */
 const OverdueTable = ({ rows = [], loading, t }) => {
-  if (loading) return <LoadingSkeleton className="h-48 w-full transition-all duration-500" />;
-  if (!rows.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.noOverdue")}</div>;
+  if (loading) return <LoadingSkeleton className="h-40 w-full transition-all duration-500" />;
+  if (!rows.length) return <div className="p-3 text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.noOverdue")}</div>;
   return (
     <div className="overflow-auto transition-all duration-500">
-      <table className="w-full text-sm transition-all duration-500">
+      <table className="w-full text-xs transition-all duration-500">
         <thead className="text-left text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 transition-all duration-500">
           <tr>
-            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.task")}</th>
-            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.due")}</th>
-            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.daysOverdue")}</th>
-            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.goal")}</th>
-            <th className="p-2 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.group")}</th>
+            <th className="p-1.5 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.task")}</th>
+            <th className="p-1.5 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.due")}</th>
+            <th className="p-1.5 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.daysOverdue")}</th>
+            <th className="p-1.5 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.goal")}</th>
+            <th className="p-1.5 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-600">{t("dashboard.table.group")}</th>
           </tr>
         </thead>
         <tbody>
@@ -448,15 +449,15 @@ const OverdueTable = ({ rows = [], loading, t }) => {
                 transitionDelay: `${index * 30}ms`
               }}
             >
-              <td className="p-2 dark:text-gray-300 transition-all duration-300">{r.taskTitle}</td>
-              <td className="p-2 dark:text-gray-300 transition-all duration-300">{formatDate(r.dueDate)}</td>
-              <td className="p-2 transition-all duration-300">
-                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs transition-all duration-500 transform hover:scale-110">
+              <td className="p-1.5 dark:text-gray-300 transition-all duration-300">{r.taskTitle}</td>
+              <td className="p-1.5 dark:text-gray-300 transition-all duration-300">{formatDate(r.dueDate)}</td>
+              <td className="p-1.5 transition-all duration-300">
+                <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-full text-xs transition-all duration-500 transform hover:scale-110">
                   {r.days_overdue ?? r.daysOverdue ?? 0}
                 </span>
               </td>
-              <td className="p-2 dark:text-gray-300 transition-all duration-300">{r.goalTitle}</td>
-              <td className="p-2 dark:text-gray-300 transition-all duration-300">{r.groupName}</td>
+              <td className="p-1.5 dark:text-gray-300 transition-all duration-300">{r.goalTitle}</td>
+              <td className="p-1.5 dark:text-gray-300 transition-all duration-300">{r.groupName}</td>
             </tr>
           ))}
         </tbody>
@@ -466,13 +467,13 @@ const OverdueTable = ({ rows = [], loading, t }) => {
 };
 
 const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsRead, marking, t, navigate }) => {
-  if (loading) return <LoadingSkeleton className="h-40 w-full transition-all duration-500" />;
-  if (!notifications.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.noNotifications")}</div>;
+  if (loading) return <LoadingSkeleton className="h-32 w-full transition-all duration-500" />;
+  if (!notifications.length) return <div className="p-3 text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.noNotifications")}</div>;
   return (
     <div className="transition-all duration-500">
-      <div className="flex items-center justify-between mb-3 transition-all duration-500">
-        <div className="flex items-center gap-2 transition-all duration-500">
-          <span className="text-xs text-white bg-red-500 px-2 py-0.5 rounded-full transition-all duration-500 transform hover:scale-125">
+      <div className="flex items-center justify-between mb-2 transition-all duration-500">
+        <div className="flex items-center gap-1.5 transition-all duration-500">
+          <span className="text-xs text-white bg-red-500 px-1.5 py-0.5 rounded-full transition-all duration-500 transform hover:scale-125">
             {unread}
           </span>
           {unread > 0 && (
@@ -489,7 +490,7 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
           )}
         </div>
       </div>
-      <ul className="space-y-2 transition-all duration-500">
+      <ul className="space-y-1.5 transition-all duration-500">
         {notifications.map((n, index) => (
           <li key={n.id} className="transition-all duration-500 ease-out transform hover:scale-105">
             <button
@@ -501,15 +502,15 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
                   navigate("/notification");
                 }
               }}
-              className={`w-full text-left p-3 rounded-lg border transition-all duration-500 transform hover:-translate-y-1 ${
+              className={`w-full text-left p-2 rounded border transition-all duration-500 transform hover:-translate-y-0.5 ${
                 n.isRead ? "border-gray-200 dark:border-gray-700" : "border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30"
-              } hover:shadow-lg`}
+              } hover:shadow`}
               style={{
                 animationDelay: `${index * 100}ms`,
                 transitionDelay: `${index * 50}ms`
               }}
             >
-              <div className="text-sm mb-1 dark:text-gray-300 transition-all duration-300">{n.message || n.type}</div>
+              <div className="text-xs mb-0.5 dark:text-gray-300 transition-all duration-300">{n.message || n.type}</div>
               <div className="text-xs text-gray-400 dark:text-gray-500 transition-all duration-500">{new Date(n.createdAt || n.time || n._raw?.createdAt).toLocaleString()}</div>
             </button>
           </li>
@@ -520,16 +521,16 @@ const NotificationsPanel = ({ notifications = [], unread = 0, loading, onMarkAsR
 };
 
 const AuditPanel = ({ logs = [], loading, auditPermDenied = false, t }) => {
-  if (loading) return <LoadingSkeleton className="h-40 w-full transition-all duration-500" />;
-  if (auditPermDenied) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.audit.noPermission")}</div>;
-  if (!logs.length) return <div className="p-4 text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.audit.noLogs")}</div>;
+  if (loading) return <LoadingSkeleton className="h-32 w-full transition-all duration-500" />;
+  if (auditPermDenied) return <div className="p-3 text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.audit.noPermission")}</div>;
+  if (!logs.length) return <div className="p-3 text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">{t("dashboard.audit.noLogs")}</div>;
   return (
     <div className="transition-all duration-500">
-      <ul className="space-y-2 transition-all duration-500">
+      <ul className="space-y-1.5 transition-all duration-500">
         {logs.map((l, index) => (
           <li 
             key={l.id} 
-            className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 transition-all duration-500 ease-out transform hover:scale-100 hover:-translate-y-1 hover:shadow-md"
+            className="p-2 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 transition-all duration-500 ease-out transform hover:scale-100 hover:-translate-y-0.5 hover:shadow"
             style={{
               animationDelay: `${index * 80}ms`,
               transitionDelay: `${index * 40}ms`
@@ -786,68 +787,90 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 bg-gray-200 dark:bg-gray-900 min-h-screen transition-all duration-500 ease-out">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4 mb-6 transition-all duration-500">
-        <div className="flex items-center min-w-0 gap-4 transition-all duration-500">
-          <div className="p-3 rounded-lg bg-white dark:bg-gray-800 transition-all duration-500 transform hover:scale-110 hover:rotate-6">
-            <Home className="h-6 w-6 text-sky-600 dark:text-sky-300 transition-all duration-500" />
-          </div>
-          <div className="transition-all duration-500">
-            <h1 className="flex text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white truncate transition-all duration-500 transform ">
-              {t("dashboard.title")}
-            </h1>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 transition-all duration-700">{t("dashboard.subtitle")}</p>
-          </div>
-        </div>
+    <div className="p-3 md:p-4 bg-gray-200 dark:bg-gray-900 min-h-screen transition-all duration-500 ease-out">
+      {/* Card-style Header */}
+      <div className="mb-4 md:mb-5">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 py-2 px-3 transition-all duration-200">
+          <div className="flex flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-900 border border-sky-100 dark:border-sky-800/30">
+                <Home className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-row items-center sm:gap-3">
+                  <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
+                    {t("dashboard.title")}
+                  </h1>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                  {t("dashboard.subtitle")}
+                </p>
+              </div>
+            </div>
 
-        <div className="flex items-center gap-3 transition-all duration-500">
-          <button
-            onClick={handleRefresh}
-            className={`px-3 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 transition-all duration-500 transform hover:scale-110 active:scale-95 ${
-              refreshing ? 'animate-pulse' : ''
-            }`}
-            aria-label={t("dashboard.aria.refresh")}
-            disabled={loading}
-          >
-            <svg className={`w-4 h-4 transition-all duration-500 ${loading || refreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span className="hidden sm:inline transition-all duration-300">{t("dashboard.refresh")}</span>
-          </button>
+            <div className="flex items-center justify-between md:justify-end gap-3">
+              <button
+                onClick={handleRefresh}
+                className={`px-2.5 py-1.5 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-1.5 transition-all duration-500 transform hover:scale-105 active:scale-95 ${
+                  refreshing ? 'animate-pulse' : ''
+                }`}
+                aria-label={t("dashboard.aria.refresh")}
+                disabled={loading}
+              >
+                <svg 
+                  className={`w-3.5 h-3.5 transition-all duration-500 ${loading || refreshing ? "animate-spin" : ""}`} 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                  />
+                </svg>
+                <span className="text-xs transition-all duration-300">
+                  {t("dashboard.refresh")}
+                </span>
+              </button>
 
-          <div className="flex items-center transition-all duration-500 transform hover:scale-105"><TopBar /></div>
+              <div className="flex-shrink-0">
+                <TopBar />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 rounded-lg mb-4 transition-all duration-500 transform hover:scale-105 animate-pulse">
+        <div className="p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 rounded mb-3 transition-all duration-500 transform hover:scale-105 animate-pulse text-xs">
           {error}
         </div>
       )}
 
       {/* BENTO GRID */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 transition-all duration-500">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 transition-all duration-500">
         {/* KPI cards */}
-        <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 transition-all duration-500">
+        <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 transition-all duration-500">
           {/* Goals Card */}
           <Card title={t("dashboard.cards.goals.title")} onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}>
             {loading ? (
-              <LoadingSkeleton className="h-8 w-24 transition-all duration-500" />
+              <LoadingSkeleton className="h-6 w-20 transition-all duration-500" />
             ) : (
               <div className="transition-all duration-500">
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform ">
+                <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform ">
                   {hasGoalPercent ? `${overall_goal_progress.toFixed(2)}%` : goalsTotal > 0 ? `${goalsFinished} of ${goalsTotal}` : "-"}
-                  <sub className="text-[10px] transition-all duration-300">{t("dashboard.percentage")}</sub>
+                  <sub className="text-[9px] transition-all duration-300">{t("dashboard.percentage")}</sub>
                 </div>
 
                 {goalsTotal > 0 && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-all duration-500">
                     {`${goalsFinished} ${t("dashboard.cards.goals.outOf")} ${goalsTotal} ${t("dashboard.cards.goals.title").toLowerCase()} ${t("dashboard.cards.goals.haveBeenDone")}`}
                   </div>
                 )}
 
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-all duration-500">
                   {goalDelta ? (
                     <span className={`transition-all duration-500 transform hover:scale-110 ${
                       goalDelta.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
@@ -865,17 +888,17 @@ export default function DashboardPage() {
           {/* Tasks Card */}
           <Card title={t("dashboard.cards.tasks.title")} onClick={goToTasks} ariaLabel={t("dashboard.cards.tasks.aria")}>
             {loading ? (
-              <LoadingSkeleton className="h-8 w-24 transition-all duration-500" />
+              <LoadingSkeleton className="h-6 w-20 transition-all duration-500" />
             ) : (
               <div className="transition-all duration-500">
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
+                <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
                   {hasTaskPercent ? `${overall_task_progress.toFixed(2)}%` : tasksTotal > 0 ? `${tasksFinished} of ${tasksTotal}` : "-"}
-                  <sub className="text-[10px] transition-all duration-300">{t("dashboard.percentage")}</sub>
+                  <sub className="text-[9px] transition-all duration-300">{t("dashboard.percentage")}</sub>
                 </div>
 
-                {tasksTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{`${tasksFinished} ${t("dashboard.cards.tasks.outOf")} ${tasksTotal} ${t("dashboard.cards.tasks.title").toLowerCase()} ${t("dashboard.cards.tasks.haveBeenDone")}`}</div>}
+                {tasksTotal > 0 && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-all duration-500">{`${tasksFinished} ${t("dashboard.cards.tasks.outOf")} ${tasksTotal} ${t("dashboard.cards.tasks.title").toLowerCase()} ${t("dashboard.cards.tasks.haveBeenDone")}`}</div>}
 
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{t("dashboard.cards.tasks.subtitle")}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-all duration-500">{t("dashboard.cards.tasks.subtitle")}</div>
               </div>
             )}
           </Card>
@@ -883,17 +906,17 @@ export default function DashboardPage() {
           {/* Activities Card */}
           <Card title={t("dashboard.cards.activities.title")} onClick={goToActivities} ariaLabel={t("dashboard.cards.activities.aria")}>
             {loading ? (
-              <LoadingSkeleton className="h-8 w-24 transition-all duration-500" />
+              <LoadingSkeleton className="h-6 w-20 transition-all duration-500" />
             ) : (
               <div className="transition-all duration-500">
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
+                <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
                   {hasActivityPercent ? `${overall_activity_progress.toFixed(2)}%` : activitiesTotal > 0 ? `${activitiesFinished} of ${activitiesTotal}` : "-"}
-                  <sub className="text-[10px] transition-all duration-300">{t("dashboard.percentage")}</sub>
+                  <sub className="text-[9px] transition-all duration-300">{t("dashboard.percentage")}</sub>
                 </div>
 
-                {activitiesTotal > 0 && <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{`${activitiesFinished} ${t("dashboard.cards.activities.outOf")} ${activitiesTotal} ${t("dashboard.cards.activities.title").toLowerCase()} ${t("dashboard.cards.activities.haveBeenDone")}`}</div>}
+                {activitiesTotal > 0 && <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-all duration-500">{`${activitiesFinished} ${t("dashboard.cards.activities.outOf")} ${activitiesTotal} ${t("dashboard.cards.activities.title").toLowerCase()} ${t("dashboard.cards.activities.haveBeenDone")}`}</div>}
 
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{t("dashboard.cards.activities.subtitle")}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-all duration-500">{t("dashboard.cards.activities.subtitle")}</div>
               </div>
             )}
           </Card>
@@ -901,30 +924,30 @@ export default function DashboardPage() {
           {/* Pending Reports Card */}
           <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports} ariaLabel={t("dashboard.cards.pendingReports.aria")}>
             {loading ? (
-              <LoadingSkeleton className="h-8 w-24 transition-all duration-500" />
+              <LoadingSkeleton className="h-6 w-20 transition-all duration-500" />
             ) : (
               <div className="transition-all duration-500">
-                <div className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
+                <div className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white transition-all duration-500 transform">
                   {pending_reports ?? 0}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500">{t("dashboard.cards.pendingReports.subtitle")}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-all duration-500">{t("dashboard.cards.pendingReports.subtitle")}</div>
               </div>
             )}
           </Card>
         </div>
 
         {/* Charts */}
-        <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500">
-          <Card title={t("dashboard.groupProgress")} onClick={() => setShowGroupModal(true)} className="p-4 flex flex-col justify-between h-full">
-            {loading ? (<LoadingSkeleton className="h-28 transition-all duration-500" />) : (<div className="mt-3 transition-all duration-500"><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} /></div>)}
+        <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4 transition-all duration-500">
+          <Card title={t("dashboard.groupProgress")} onClick={() => setShowGroupModal(true)} className="p-3 flex flex-col justify-between h-full">
+            {loading ? (<LoadingSkeleton className="h-24 transition-all duration-500" />) : (<div className="mt-2 transition-all duration-500"><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} /></div>)}
           </Card>
 
-          <Card title={t("dashboard.topTasks")} onClick={() => setShowTasksModal(true)} className="p-4">
-            {loading ? (<LoadingSkeleton className="h-28 transition-all duration-500" />) : (<TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />)}
+          <Card title={t("dashboard.topTasks")} onClick={() => setShowTasksModal(true)} className="p-3">
+            {loading ? (<LoadingSkeleton className="h-24 transition-all duration-500" />) : (<TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />)}
           </Card>
 
-          <Card title={t("dashboard.reportsDistribution1")} onClick={() => navigate("/report")} className="p-4" ariaLabel={t("dashboard.reportsDistribution.aria")}>
-            {loading ? <LoadingSkeleton className="h-28 transition-all duration-500" /> : <div className="flex justify-center transition-all duration-500"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
+          <Card title={t("dashboard.reportsDistribution1")} onClick={() => navigate("/report")} className="p-3" ariaLabel={t("dashboard.reportsDistribution.aria")}>
+            {loading ? <LoadingSkeleton className="h-24 transition-all duration-500" /> : <div className="flex justify-center transition-all duration-500"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
           </Card>
         </div>
 
@@ -935,20 +958,20 @@ export default function DashboardPage() {
         ) : null}
 
         {/* Overdue + Notifications */}
-        <div className="lg:col-span-8 transition-all duration-500">
+        <div className="lg:col-span-8 transition-all duration-500 transform hover:scale-[1.02]">
           <Card
             title={
-              <div className="flex items-center justify-between h-6 min-w-0 transition-all duration-500">
-                <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate transition-all duration-300 hover:translate-x-1">
+              <div className="flex items-center justify-between h-5 min-w-0 transition-all duration-500">
+                <span className="text-xs text-gray-500 dark:text-gray-400 truncate transition-all duration-300 ">
                   {t("dashboard.overdueTitle")}
                 </span>
-                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full transition-all duration-500 transform hover:scale-125">
+                <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 ml-1.5 px-1.5 py-0.5 rounded-full transition-all duration-500 transform ">
                   {(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}
                 </span>
               </div>
             }
             headerActions={
-              <div className="flex items-center gap-2 transition-all duration-500">
+              <div className="flex items-center gap-1.5 transition-all duration-500">
                 <button 
                   onClick={(e) => { e.stopPropagation(); goToTasks(); }} 
                   className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline transition-all duration-300 transform hover:scale-110"
@@ -980,11 +1003,11 @@ export default function DashboardPage() {
 
       {/* Modals */}
       <Modal open={showGroupModal} onClose={() => setShowGroupModal(false)} title={t("dashboard.groupProgress")}>
-        {loading ? <LoadingSkeleton className="h-40 transition-all duration-500" /> : <div className="overflow-x-auto transition-all duration-500"><div className="flex gap-6 items-end pb-4 transition-all duration-500">{(dashboardData.groups || []).map((g, idx) => (<div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[84px] transition-all duration-500 transform hover:scale-95"><div className="w-12 h-32 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end transition-all duration-1000"><div style={{ height: `${Math.max(6, Math.round((Number(g.value ?? g.progress ?? 0) / Math.max(1, ...((dashboardData.groups || []).map(x=>Number(x.value ?? x.progress ?? 0)))))*100))}%`, background: g.color }} className="w-full transition-all duration-1000 ease-out" /></div><div className="text-sm text-center text-gray-700 dark:text-gray-300 mt-2 break-words max-w-[120px] min-h-[2.5rem] flex items-center justify-center transition-all duration-300">{g.name}</div><div className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-all duration-500 transform hover:scale-125">{Math.round(Number(g.value ?? g.progress ?? 0))}%</div></div>))}</div></div>}
+        {loading ? <LoadingSkeleton className="h-32 transition-all duration-500" /> : <div className="overflow-x-auto transition-all duration-500"><div className="flex gap-4 items-end pb-3 transition-all duration-500">{(dashboardData.groups || []).map((g, idx) => (<div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[70px] transition-all duration-500 transform hover:scale-95"><div className="w-10 h-24 bg-gray-100 dark:bg-gray-700 rounded-md overflow-hidden flex items-end transition-all duration-1000"><div style={{ height: `${Math.max(6, Math.round((Number(g.value ?? g.progress ?? 0) / Math.max(1, ...((dashboardData.groups || []).map(x=>Number(x.value ?? x.progress ?? 0)))))*100))}%`, background: g.color }} className="w-full transition-all duration-1000 ease-out" /></div><div className="text-xs text-center text-gray-700 dark:text-gray-300 mt-1.5 break-words max-w-[100px] min-h-[2rem] flex items-center justify-center transition-all duration-300">{g.name}</div><div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 transition-all duration-500 transform hover:scale-125">{Math.round(Number(g.value ?? g.progress ?? 0))}%</div></div>))}</div></div>}
       </Modal>
 
       <Modal open={showTasksModal} onClose={() => setShowTasksModal(false)} title={t("dashboard.topTasks")}>
-        {loading ? (<LoadingSkeleton className="h-40 transition-all duration-500" />) : (<div className="space-y-4 transition-all duration-500"><TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={dashboardData.taskBars.length || 1000} /></div>)}
+        {loading ? (<LoadingSkeleton className="h-32 transition-all duration-500" />) : (<div className="space-y-3 transition-all duration-500"><TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={dashboardData.taskBars.length || 1000} /></div>)}
       </Modal>
 
       <div aria-live="polite" className="sr-only transition-all duration-500">{loading ? t("dashboard.aria.loading") : t("dashboard.aria.loaded")}</div>

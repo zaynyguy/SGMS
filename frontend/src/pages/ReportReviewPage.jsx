@@ -28,17 +28,17 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
 
   if (segments.length <= 3) {
     return (
-      <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 min-w-0 flex-wrap transition-all duration-150">
+      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 min-w-0 flex-wrap transition-all duration-150">
         {segments.map((s, i) => (
           <React.Fragment key={s.key}>
             <span
-              className="font-medium truncate max-w-[180px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
+              className="font-medium truncate max-w-[140px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
               title={s.label}
             >
               {s.label}
             </span>
             {i < segments.length - 1 && (
-              <ChevronRight className="h-4 w-4 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
+              <ChevronRight className="h-3 w-3 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
             )}
           </React.Fragment>
         ))}
@@ -51,27 +51,27 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
   const middle = segments.slice(1, segments.length - 1);
 
   return (
-    <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 min-w-0 flex-wrap transition-all duration-150">
+    <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 min-w-0 flex-wrap transition-all duration-150">
       {/* Always render first segment */}
       <span
-        className="font-medium truncate max-w-[160px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
+        className="font-medium truncate max-w-[120px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
         title={first.label}
       >
         {first.label}
       </span>
-      <ChevronRight className="h-4 w-4 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
+      <ChevronRight className="h-3 w-3 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
 
       {!expanded ? (
         <>
           <button
             onClick={() => setExpanded(true)}
             aria-expanded={expanded}
-            className="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
+            className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
             title="Show full path"
           >
             …
           </button>
-          <ChevronRight className="h-4 w-4 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
+          <ChevronRight className="h-3 w-3 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
         </>
       ) : (
         <>
@@ -79,12 +79,12 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
           {middle.map((s) => (
             <React.Fragment key={s.key}>
               <span
-                className="font-medium truncate max-w-[180px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
+                className="font-medium truncate max-w-[140px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
                 title={s.label}
               >
                 {s.label}
               </span>
-              <ChevronRight className="h-4 w-4 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
+              <ChevronRight className="h-3 w-3 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
             </React.Fragment>
           ))}
         </>
@@ -93,7 +93,7 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
       {/* Always render last segment (if different from first) */}
       {segments.length > 1 && (
         <span
-          className="font-medium truncate max-w-[160px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
+          className="font-medium truncate max-w-[120px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
           title={last.label}
         >
           {last.label}
@@ -104,7 +104,7 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
       {expanded && (
         <button
           onClick={() => setExpanded(false)}
-          className="ml-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
+          className="ml-1 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
           title="Collapse path"
         >
           &lt;
@@ -366,7 +366,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-150">
+    <div className="bg-white dark:bg-gray-800 p-3 md:p-4 lg:p-5 rounded-lg shadow border border-gray-200 dark:border-gray-700 transition-all duration-150">
       {/* Enhanced Toast with subtle animations */}
       {toast && (
         <div className="fixed z-50 right-5 bottom-5 animate-slide-in-right">
@@ -457,12 +457,12 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
         }
       `}</style>
 
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5 animate-fade-in">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4 animate-fade-in">
         <div className="transition-all duration-150 transform origin-left">
-          <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-gray-100 transition-colors duration-150">
+          <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-150">
             {readonly ? t("reports.myReports.title", "My Reports") : t("reports.review.title")}
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1 transition-colors duration-150">
+          <p className="text-xs text-gray-500 dark:text-gray-300 mt-1 transition-colors duration-150">
             {readonly ? t("reports.myReports.subtitle", "Your submitted reports and their review status.") : t("reports.review.subtitle")}
           </p>
         </div>
@@ -474,7 +474,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={onSearchKeyDown}
               placeholder={t("reports.search.placeholder")}
-              className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 min-w-0 focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500"
+              className="w-full px-3 py-1.5 rounded border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 min-w-0 focus:ring-1 focus:ring-sky-500 focus:border-transparent transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500"
             />
           </div>
 
@@ -483,18 +483,18 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
               setPage(1);
               loadReports({ page: 1, q: search });
             }}
-            className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 flex items-center justify-center gap-2"
+            className="px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 dark:text-white text-xs whitespace-nowrap hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 flex items-center justify-center gap-1"
           >
-            <svg className="w-4 h-4 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             {t("reports.search.button")}
           </button>
           <button
             onClick={handleRefresh}
-            className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 dark:text-white text-sm whitespace-nowrap flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
+            className="px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 dark:text-white text-xs whitespace-nowrap flex items-center justify-center gap-1 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="opacity-80 transition-transform duration-150 hover:rotate-180">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="opacity-80 transition-transform duration-150 hover:rotate-180">
               <path d="M21 12A9 9 0 1 0 6 20.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -503,8 +503,8 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 animate-fade-in">
-        <div className="flex flex-wrap gap-2 items-center transition-all duration-150">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 animate-fade-in">
+        <div className="flex flex-wrap gap-1 items-center transition-all duration-150">
           {statusOptions.map((s, index) => (
             <button
               key={s.id}
@@ -512,7 +512,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                 setPage(1);
                 setStatusFilter(s.id);
               }}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-150 transform ${
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-150 transform ${
                 statusFilter === s.id 
                   ? "bg-sky-600 text-white shadow-sm animate-pulse-custom" 
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -530,7 +530,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
               setPage(1);
               setGroupFilter(e.target.value);
             }}
-            className="ml-2 px-3 py-1.5 rounded-lg text-sm bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01]"
+            className="ml-1 px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01]"
             aria-label={t("reports.filters.groupLabel", "Group")}
           >
             {groups && groups.length > 0
@@ -548,29 +548,29 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
         </div>
       </div>
 
-      <div className="space-y-4 transition-all duration-150">
+      <div className="space-y-3 transition-all duration-150">
         {loading ? (
           Array.from({ length: Math.min(5, pageSize) }).map((_, i) => (
             <div 
               key={`skeleton-${i}`} 
-              className="border rounded-lg overflow-hidden animate-pulse transition-all duration-150 transform hover:scale-[1.01]"
+              className="border rounded overflow-hidden animate-pulse transition-all duration-150 transform hover:scale-[1.01]"
               style={{ animationDelay: `${i * 80}ms` }}
             >
-              <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900">
+              <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-900">
                 <div className="min-w-0 w-full">
-                  <div className="flex items-center gap-4">
-                    <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-24 transition-colors duration-150"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 transition-colors duration-150"></div>
+                  <div className="flex items-center gap-3">
+                    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-20 transition-colors duration-150"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16 transition-colors duration-150"></div>
                   </div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-40 mt-3 transition-colors duration-150"></div>
+                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-32 mt-2 transition-colors duration-150"></div>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded transition-colors duration-150"></div>
+                <div className="flex gap-1 items-center">
+                  <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded transition-colors duration-150"></div>
                 </div>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-800">
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2 transition-colors duration-150"></div>
-                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full transition-colors duration-150"></div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800">
+                <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1.5 transition-colors duration-150"></div>
+                <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-full transition-colors duration-150"></div>
               </div>
             </div>
           ))
@@ -586,23 +586,23 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
               return (
                 <div 
                   key={r.id} 
-                  className="report-item-enter border rounded-lg overflow-hidden transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm group relative"
+                  className="report-item-enter border rounded overflow-hidden transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm group relative"
                   style={{ animationDelay: `${index * 80}ms` }}
                 >
                   {isDone && (
-                    <div className="absolute top-3 left-0 -translate-x-4 -rotate-12 bg-green-600 text-white text-xs font-bold px-3 py-0.5 rounded shadow-sm animate-bounce-custom" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized)")}>
+                    <div className="absolute top-2 left-0 -translate-x-3 -rotate-12 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm animate-bounce-custom" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized)")}>
                       DONE
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 transition-colors duration-150 group-hover:bg-gray-50 dark:group-hover:bg-gray-800/50">
+                  <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 transition-colors duration-150 group-hover:bg-gray-50 dark:group-hover:bg-gray-800/50">
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 md:gap-4">
-                        <div className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-150 group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                      <div className="flex flex-wrap items-center gap-1 md:gap-2">
+                        <div className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-150 group-hover:text-sky-600 dark:group-hover:text-sky-400">
                           Report #{r.id}
                         </div>
                         <div
-                          className={`px-2 py-1 md:px-3 md:py-1.5 rounded-full text-xs md:text-sm font-medium transition-all duration-150 transform hover:scale-[1.01] ${
+                          className={`px-1.5 py-0.5 md:px-2 md:py-1 rounded-full text-xs font-medium transition-all duration-150 transform hover:scale-[1.01] ${
                             r.status === "Approved"
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50"
                               : r.status === "Rejected"
@@ -614,8 +614,8 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                         </div>
                       </div>
 
-                      <div className="flex flex-col sm:flex-row sm:justify-between gap-x-4 gap-y-1 mt-2">
-                        <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center flex-wrap min-w-0 transition-colors duration-150 group-hover:text-gray-600 dark:group-hover:text-gray-300">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-x-3 gap-y-1 mt-1.5">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center flex-wrap min-w-0 transition-colors duration-150 group-hover:text-gray-600 dark:group-hover:text-gray-300">
                           {r.group_name ? (
                             <BreadcrumbsCompact
                               group_name={r.group_name}
@@ -630,13 +630,13 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full whitespace-nowrap self-start sm:self-center transition-all duration-150 transform hover:scale-[1.01]">
-                          <User className="h-3.5 w-3.5 transition-transform duration-150" />
+                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded whitespace-nowrap self-start sm:self-center transition-all duration-150 transform hover:scale-[1.01]">
+                          <User className="h-3 w-3 transition-transform duration-150" />
                           <span>{r.user_name || "Unknown User"}</span>
 
                           {isDone && (
-                            <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs transition-all duration-150 transform hover:scale-[1.01]" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized). Approving this runs progress calculations across the system.")}>
-                              <CheckCircle className="h-3.5 w-3.5 transition-transform duration-150" />
+                            <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs transition-all duration-150 transform hover:scale-[1.01]" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized). Approving this runs progress calculations across the system.")}>
+                              <CheckCircle className="h-3 w-3 transition-transform duration-150" />
                               <span className="font-semibold">{t("reports.done", "Done")}</span>
                             </span>
                           )}
@@ -644,16 +644,16 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 items-center pl-4">
+                    <div className="flex gap-1 items-center pl-2">
                       <button
                         onClick={() => setExpanded(expanded === r.id ? null : r.id)}
                         aria-expanded={expanded === r.id}
-                        className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.02] active:scale-100"
+                        className="flex items-center gap-1 p-1.5 rounded bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.02] active:scale-100"
                       >
                         <svg 
                           className={`transition-transform duration-150 ${expanded === r.id ? "rotate-180" : "rotate-0"}`} 
-                          width="18" 
-                          height="18" 
+                          width="16" 
+                          height="16" 
                           viewBox="0 0 24 24" 
                           fill="none"
                         >
@@ -664,31 +664,31 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                   </div>
 
                   {expanded === r.id && (
-                    <div className="p-4 bg-gray-50 dark:bg-gray-800 space-y-4 animate-slide-in-up">
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800 space-y-3 animate-slide-in-up">
                       {/* Enhanced Activity Context Section */}
                       {!readonly && (
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg transition-all duration-150 transform hover:scale-[1.01]">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Info className="h-5 w-5 text-blue-600 dark:text-blue-300 transition-transform duration-150 hover:scale-[1.02]" />
-                            <h4 className="text-base font-semibold text-blue-800 dark:text-blue-200 transition-colors duration-150">
+                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded transition-all duration-150 transform hover:scale-[1.01]">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Info className="h-4 w-4 text-blue-600 dark:text-blue-300 transition-transform duration-150 hover:scale-[1.02]" />
+                            <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 transition-colors duration-150">
                               {t("reports.activityContext.title", "Activity Context")}
                             </h4>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
-                              <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
+                              <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
                                 {t("reports.activityContext.target", "Activity Target")}
                               </div>
-                              <div className="mt-2">{renderMetricsList(r.activity_target_metric)}</div>
+                              <div className="mt-1">{renderMetricsList(r.activity_target_metric)}</div>
                             </div>
                             <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
-                              <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
+                              <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
                                 {t("reports.activityContext.current", "Activity Current (Before Report)")}
                               </div>
-                              <div className="mt-2">{renderMetricsList(r.activity_current_metric)}</div>
+                              <div className="mt-1">{renderMetricsList(r.activity_current_metric)}</div>
                             </div>
                           </div>
-                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-3 transition-colors duration-150">
+                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 transition-colors duration-150">
                             {t("reports.activityContext.help", "This shows the activity's metrics *before* this report is applied. Approving the report will add the new metrics to the 'Current' values.")}
                           </p>
                         </div>
@@ -696,11 +696,11 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                       {/* --- END NEW SECTION --- */}
 
                       <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
-                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
+                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
                           {t("reports.narrative")}
                         </div>
                         <div
-                          className="text-sm md:text-base text-gray-700 dark:text-gray-200 mt-1 p-2 bg-white dark:bg-gray-900/30 rounded border border-gray-200 dark:border-gray-700 transition-all duration-150 hover:border-gray-300 dark:hover:border-gray-600 break-words max-w-full"
+                          className="text-xs md:text-sm text-gray-700 dark:text-gray-200 mt-0.5 p-1.5 bg-white dark:bg-gray-900/30 rounded border border-gray-200 dark:border-gray-700 transition-all duration-150 hover:border-gray-300 dark:hover:border-gray-600 break-words max-w-full"
                           style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}
                         >
                           {r.narrative || <em className="text-gray-400 transition-colors duration-150">{t("reports.noNarrative")}</em>}
@@ -709,22 +709,22 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
 
                       <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
                         {/* MODIFIED: Label clarifies these are the report's metrics */}
-                        <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
+                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
                           {t("reports.reportMetrics", "Metrics in this Report")}
                         </div>
-                        <div className="mt-2">{renderMetricsList(r.metrics_data)}</div>
+                        <div className="mt-1">{renderMetricsList(r.metrics_data)}</div>
                       </div>
 
                       {((attachmentsMap[r.id] && attachmentsMap[r.id].length) || (Array.isArray(r.attachments) && r.attachments.length)) && (
                         <div className="transition-all duration-150">
-                          <div className="text-sm font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
+                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
                             {t("reports.attachments")}
                           </div>
-                          <ul className="mt-2 space-y-2">
+                          <ul className="mt-1 space-y-1.5">
                             {((attachmentsMap[r.id] && attachmentsMap[r.id].length ? attachmentsMap[r.id] : r.attachments) || []).map((a, idx) => (
                               <li 
                                 key={a.id} 
-                                className="attachment-item-enter flex items-center justify-between gap-3 p-2 bg-white dark:bg-gray-900/30 rounded border border-gray-200 dark:border-gray-700 transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm"
+                                className="attachment-item-enter flex items-center justify-between gap-2 p-1.5 bg-white dark:bg-gray-900/30 rounded border border-gray-200 dark:border-gray-700 transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm"
                                 style={{ animationDelay: `${idx * 40}ms` }}
                               >
                                 <button
@@ -732,14 +732,14 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                                     e.preventDefault();
                                     handleDownloadAttachment(a); // This button can still be the filename
                                   }}
-                                  className="text-left text-sky-600 dark:text-sky-400 hover:underline text-sm flex-1 break-words overflow-hidden transition-all duration-150"
+                                  className="text-left text-sky-600 dark:text-sky-400 hover:underline text-xs flex-1 break-words overflow-hidden transition-all duration-150"
                                   title={a.fileName || a.attachment_name || `attachment-${a.id}`}
                                   style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}
                                 >
                                   {a.fileName || a.attachment_name || `attachment-${a.id}`}
                                 </button>
 
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                   {a.size && <div className="text-xs text-gray-400 hidden sm:inline transition-colors duration-150">{(a.size / 1024).toFixed(1)} KB</div>}
                                   {a.mimeType && <div className="text-xs text-gray-400 hidden sm:inline transition-colors duration-150">{a.mimeType}</div>}
                                   {/* ENHANCED PREVIEW BUTTON */}
@@ -748,11 +748,11 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                                       e.preventDefault();
                                       handlePreviewAttachment(a);
                                     }}
-                                    className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs text-gray-700 dark:text-gray-300 transition-all duration-150 transform hover:scale-[1.02] active:scale-100"
+                                    className="p-1.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs text-gray-700 dark:text-gray-300 transition-all duration-150 transform hover:scale-[1.02] active:scale-100"
                                     aria-label={`Preview ${a.fileName || a.attachment_name || a.id}`}
                                     title={t("reports.attachments.preview", "Preview")}
                                   >
-                                    {attachmentPreviewing[a.id] ? <Loader className="h-4 w-4 animate-spin transition-transform duration-150" /> : <Eye className="h-4 w-4 transition-transform duration-150" />}
+                                    {attachmentPreviewing[a.id] ? <Loader className="h-3.5 w-3.5 animate-spin transition-transform duration-150" /> : <Eye className="h-3.5 w-3.5 transition-transform duration-150" />}
                                   </button>
 
                                   {/* ENHANCED DOWNLOAD BUTTON */}
@@ -761,11 +761,11 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                                       e.preventDefault();
                                       handleDownloadAttachment(a);
                                     }}
-                                    className="px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs flex items-center gap-1 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
+                                    className="px-1.5 py-0.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs flex items-center gap-0.5 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
                                     aria-label={`Download ${a.fileName || a.attachment_name || a.id}`}
                                     title={t("reports.attachments.download", "Download")}
                                   >
-                                    {attachmentDownloading[a.id] ? <Loader className="h-4 w-4 animate-spin transition-transform duration-150" /> : t("reports.attachmentsDownload.download", "Download")}
+                                    {attachmentDownloading[a.id] ? <Loader className="h-3.5 w-3.5 animate-spin transition-transform duration-150" /> : t("reports.attachmentsDownload.download", "Download")}
                                   </button>
                                 </div>
                               </li>
@@ -775,10 +775,10 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                       )}
 
                       {!readonly ? (
-                        <div className="pt-2 transition-all duration-150">
-                          <div className="flex flex-col md:flex-row md:items-start gap-3">
+                        <div className="pt-1 transition-all duration-150">
+                          <div className="flex flex-col md:flex-row md:items-start gap-2">
                             <textarea
-                              rows={3}
+                              rows={2}
                               placeholder={t("reports.adminComment_placeholder.placeholder")}
                               value={actionState[r.id]?.comment || ""}
                               onChange={(e) =>
@@ -787,12 +787,12 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                                   [r.id]: { ...(s[r.id] || {}), comment: e.target.value },
                                 }))
                               }
-                              className="flex-1 px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent resize-y transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500 break-words max-h-[40vh] overflow-auto min-w-0"
+                              className="flex-1 px-2 py-1.5 rounded border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sky-500 focus:border-transparent resize-y transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500 break-words max-h-[30vh] overflow-auto min-w-0 text-xs"
                               disabled={isLoading}
                               aria-label={t("reports.adminComment_placeholder.placeholder")}
                             />
 
-                            <div className="w-full md:w-56 flex flex-col gap-2 transition-all duration-150">
+                            <div className="w-full md:w-48 flex flex-col gap-1.5 transition-all duration-150">
                               <input
                                 type="date"
                                 value={actionState[r.id]?.deadline || ""}
@@ -802,41 +802,41 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                                     [r.id]: { ...(s[r.id] || {}), deadline: e.target.value },
                                   }))
                                 }
-                                className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent w-full transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500"
+                                className="px-2 py-1.5 rounded border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sky-500 focus:border-transparent w-full transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500 text-xs"
                                 disabled={isLoading}
                                 aria-label={t("reports.deadline")}
                               />
 
-                              <div className="flex gap-2">
+                              <div className="flex gap-1.5">
                                 <button
                                   onClick={() => handleReview(r.id, "Approved")}
-                                  className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-60 disabled:transform-none"
+                                  className="flex-1 bg-green-600 text-white px-2 py-1.5 rounded flex items-center justify-center gap-1 hover:bg-green-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-60 disabled:transform-none text-xs"
                                   disabled={isLoading}
                                   aria-busy={approving}
                                 >
-                                  {approving ? <Loader className="h-4 w-4 animate-spin transition-transform duration-150" /> : t("reports.actions.approve")}
+                                  {approving ? <Loader className="h-3.5 w-3.5 animate-spin transition-transform duration-150" /> : t("reports.actions.approve")}
                                 </button>
 
                                 <button
                                   onClick={() => handleReview(r.id, "Rejected")}
-                                  className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-red-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-60 disabled:transform-none"
+                                  className="flex-1 bg-red-600 text-white px-2 py-1.5 rounded flex items-center justify-center gap-1 hover:bg-red-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-60 disabled:transform-none text-xs"
                                   disabled={isLoading}
                                   aria-busy={rejecting}
                                 >
-                                  {rejecting ? <Loader className="h-4 w-4 animate-spin transition-transform duration-150" /> : t("reports.actions.reject")}
+                                  {rejecting ? <Loader className="h-3.5 w-3.5 animate-spin transition-transform duration-150" /> : t("reports.actions.reject")}
                                 </button>
                               </div>
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="space-y-2 pt-2 transition-all duration-150">
+                        <div className="space-y-1.5 pt-1 transition-all duration-150">
                           {r.adminComment && (
                             <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
                               <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 transition-colors duration-150">
                                 {t("reports.adminComment")}
                               </div>
-                              <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900/50 p-2 rounded transition-colors duration-150 break-words">
+                              <div className="mt-0.5 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900/50 p-1.5 rounded transition-colors duration-150 break-words">
                                 {r.adminComment}
                               </div>
                             </div>
@@ -851,12 +851,12 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
                       )}
 
                       {actionState[r.id]?._lastResult && (
-                        <div className="text-sm text-green-700 dark:text-green-300 transition-all duration-150 animate-slide-in-up">
+                        <div className="text-xs text-green-700 dark:text-green-300 transition-all duration-150 animate-slide-in-up">
                           {actionState[r.id]._lastResult}
                         </div>
                       )}
                       {actionState[r.id]?._lastError && (
-                        <div className="text-sm text-red-600 dark:text-red-400 transition-all duration-150 animate-shake">
+                        <div className="text-xs text-red-600 dark:text-red-400 transition-all duration-150 animate-shake">
                           {actionState[r.id]._lastError}
                         </div>
                       )}
@@ -867,7 +867,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
             })}
 
             {reports.length === 0 && !loading && (
-              <div className="text-center text-gray-500 dark:text-gray-400 py-6 transition-all duration-150 transform hover:scale-[1.01]">
+              <div className="text-center text-gray-500 dark:text-gray-400 py-4 transition-all duration-150 transform hover:scale-[1.01] text-sm">
                 {t("reports.noReports")}
               </div>
             )}
@@ -875,15 +875,15 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
         )}
       </div>
 
-      <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-gray-900 dark:text-gray-300 transition-all duration-150">
-        <div className="flex flex-wrap items-center gap-2 transition-all duration-150">
+      <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-3 text-gray-900 dark:text-gray-300 transition-all duration-150">
+        <div className="flex flex-wrap items-center gap-1.5 transition-all duration-150">
           <button
             disabled={page <= 1}
             onClick={() => {
               setPage(1);
               loadReports({ page: 1 });
             }}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {t("reports.pagination.first")}
           </button>
@@ -894,11 +894,11 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
               setPage(next);
               loadReports({ page: next });
             }}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {t("reports.pagination.prev")}
           </button>
-          <div className="px-3 py-1.5 text-sm transition-colors duration-150">
+          <div className="px-2 py-1 text-xs transition-colors duration-150">
             {page} / {totalPages}
           </div>
           <button
@@ -908,7 +908,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
               setPage(next);
               loadReports({ page: next });
             }}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {t("reports.pagination.next")}
           </button>
@@ -918,14 +918,14 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
               setPage(totalPages);
               loadReports({ page: totalPages });
             }}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             {t("reports.pagination.last")}
           </button>
         </div>
 
-        <div className="flex items-center gap-2 transition-all duration-150">
-          <label className="text-sm text-gray-500 dark:text-gray-400 transition-colors duration-150">
+        <div className="flex items-center gap-1.5 transition-all duration-150">
+          <label className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-150">
             {t("reports.pageSize")}
           </label>
           <select
@@ -934,7 +934,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
               setPageSize(Number(e.target.value));
               setPage(1);
             }}
-            className="px-2 py-1.5 rounded-lg bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all duration-150 transform hover:scale-[1.01]"
+            className="px-1.5 py-1 rounded bg-white dark:bg-gray-700 text-xs focus:ring-1 focus:ring-sky-500 focus:border-transparent transition-all duration-150 transform hover:scale-[1.01]"
           >
             {[10, 20, 50, 100].map((n) => (
               <option key={n} value={n}>
@@ -964,7 +964,7 @@ function renderMetricsList(metrics) {
   } catch (err) {
     const s = String(metrics);
     return (
-      <div className="text-xs font-mono break-words p-2 bg-white dark:bg-gray-900 rounded border text-gray-800 dark:text-gray-100 transition-all duration-150 transform hover:scale-[1.01]">
+      <div className="text-xs font-mono break-words p-1.5 bg-white dark:bg-gray-900 rounded border text-gray-800 dark:text-gray-100 transition-all duration-150 transform hover:scale-[1.01]">
         {s}
       </div>
     );
@@ -977,7 +977,7 @@ function renderMetricsList(metrics) {
   if (keys.length === 0) return <div className="text-xs text-gray-400 transition-colors duration-150">—</div>;
 
   return (
-    <div className="space-y-1 transition-all duration-150">
+    <div className="space-y-0.5 transition-all duration-150">
       {keys.map((k, index) => {
         const value = obj[k];
         const displayValue =
@@ -985,7 +985,7 @@ function renderMetricsList(metrics) {
         return (
           <div
             key={k}
-            className="flex items-start justify-between bg-white dark:bg-gray-900 rounded px-2 py-1 border dark:border-gray-700 gap-4 transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm"
+            className="flex items-start justify-between bg-white dark:bg-gray-900 rounded px-1.5 py-0.5 border dark:border-gray-700 gap-3 transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm"
             style={{ animationDelay: `${index * 40}ms` }}
           >
             <div className="text-xs text-gray-600 dark:text-gray-300 pt-px transition-colors duration-150">{k}</div>

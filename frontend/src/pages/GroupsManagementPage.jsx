@@ -8,12 +8,14 @@ import {
   Search,
   Users,
   Layers,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { fetchGroups, createGroup, updateGroup, deleteGroup } from "../api/groups";
 import { addUserToGroup, removeUserFromGroup, fetchGroupUsers } from "../api/userGroups";
 import { fetchUsers } from "../api/admin";
 import Toast from "../components/common/Toast";
-import { rawFetch } from "../api/auth"; // used for FormData upload
+import { rawFetch } from "../api/auth";
 import AuthenticatedImage from "../components/common/AuthenticatedImage"; 
 
 /* Helpers for avatar fallback (Unchanged) */
@@ -39,7 +41,6 @@ const gradientFromString = (s) => {
 
 /* -------------------------
 ### 1. Modal Transition Wrapper (Unchanged)
-Handles the fade and scale transition for any modal content.
 --------------------------*/
 const ModalTransitionWrapper = ({ children, onClose }) => {
   const [shouldRender, setShouldRender] = useState(false);
@@ -65,7 +66,7 @@ const ModalTransitionWrapper = ({ children, onClose }) => {
 
   return (
     <div 
-      className={`fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ${
+      className={`fixed inset-0 bg-black/50 dark:bg-black/60 z-50 flex items-center justify-center p-3 transition-opacity duration-300 ${
         isAnimating ? "opacity-100" : "opacity-0"
       }`}
       onClick={handleClose} 
@@ -84,10 +85,8 @@ const ModalTransitionWrapper = ({ children, onClose }) => {
   );
 };
 
-
 /* -------------------------
-### 2. Group Form Modal (Refactored)
-Component logic remains inside, but is now clearly separated.
+### 2. Group Form Modal (Smaller Text)
 --------------------------*/
 const GroupFormModal = ({ group, onSave, onClose, t }) => {
   const [name, setName] = useState(group?.name || "");
@@ -185,8 +184,8 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
 
   return (
     <>
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
           {group ? t("groups.form.title.edit") : t("groups.form.title.create")}
         </h2>
         <button
@@ -194,19 +193,19 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
           className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-transform duration-300 hover:rotate-90"
           aria-label={t("groups.form.close")}
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
+      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
           <div className="col-span-1 flex flex-col items-center">
             
             {profilePicturePreview ? (
               <img
                 src={profilePicturePreview}
                 alt="preview"
-                className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
+                className="w-20 h-20 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-2"
               />
             ) : (
               <AuthenticatedImage
@@ -214,16 +213,16 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
                 alt={name || group?.name || ""}
                 fallbackName={name || group?.name}
                 fallbackSeed={name || group?.name || "group"}
-                className="w-28 h-28 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-3"
-                fallbackClassName="w-28 h-28 rounded-full flex items-center justify-center text-white font-semibold text-xl mb-3"
+                className="w-20 h-20 rounded-full object-cover border-2 border-gray-100 dark:border-gray-700 mb-2"
+                fallbackClassName="w-20 h-20 rounded-full flex items-center justify-center text-white font-semibold text-base mb-2"
               />
             )}
 
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-2 flex items-center gap-2">
               <input id="group-picture-input" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
               <label
                 htmlFor="group-picture-input"
-                className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 text-sm transition-transform duration-200 hover:scale-[1.02]"
+                className="inline-flex items-center px-2 py-1 text-xs border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-transform duration-200 hover:scale-[1.02]"
               >
                 {t("groups.form.buttons.uploadPicture") || "Upload picture"}
               </label>
@@ -231,63 +230,63 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
                 <button 
                   type="button" 
                   onClick={removePreview} 
-                  className="text-sm text-red-600 dark:text-red-400 transition-colors hover:text-red-700 dark:hover:text-red-300"
+                  className="text-xs text-red-600 dark:text-red-400 transition-colors hover:text-red-700 dark:hover:text-red-300"
                 >
                   {t("groups.form.buttons.remove")}
                 </button>
               )}
             </div>
 
-            {errors.file && <p className="text-xs text-red-500 mt-2">{errors.file}</p>}
+            {errors.file && <p className="text-xs text-red-500 mt-1">{errors.file}</p>}
           </div>
 
-          <div className="col-span-2 space-y-4">
+          <div className="col-span-2 space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("groups.form.labels.name")}</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("groups.form.labels.name")}</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 transition-shadow ${
+                className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 transition-shadow ${
                   errors.name ? "border-red-500" : "border-gray-300"
                 }`}
                 aria-invalid={!!errors.name}
                 aria-describedby={errors.name ? "name-error" : undefined}
               />
-              {errors.name && <p id="name-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>}
+              {errors.name && <p id="name-error" className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.name}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t("groups.form.labels.description")}</label>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t("groups.form.labels.description")}</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                rows="4"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 transition-shadow ${
+                rows="3"
+                className={`w-full px-2 py-1.5 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 transition-shadow ${
                   errors.description ? "border-red-500" : "border-gray-300"
                 }`}
                 aria-invalid={!!errors.description}
                 aria-describedby={errors.description ? "description-error" : undefined}
               />
-              {errors.description && <p id="description-error" className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description}</p>}
+              {errors.description && <p id="description-error" className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.description}</p>}
             </div>
           </div>
         </div>
 
-        {errors.submit && <p className="text-sm text-red-600">{errors.submit}</p>}
+        {errors.submit && <p className="text-xs text-red-600">{errors.submit}</p>}
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 pt-1">
           <button 
             type="button" 
             onClick={onClose} 
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hover:shadow-sm"
+            className="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hover:shadow-sm"
           >
             {t("groups.form.buttons.cancel")}
           </button>
           <button 
             type="submit" 
             disabled={isLoading} 
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm disabled:opacity-60 transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
+            className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm disabled:opacity-60 transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
           >
             {isLoading ? t("groups.form.buttons.saving") : group ? t("groups.form.buttons.save") : t("groups.form.buttons.create")}
           </button>
@@ -297,10 +296,8 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
   );
 };
 
-
 /* -------------------------
-### 3. Group Members Modal (Refactored)
-Component logic remains inside, but is now clearly separated.
+### 3. Group Members Modal (Smaller Text)
 --------------------------*/
 const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
   const [members, setMembers] = useState([]);
@@ -363,27 +360,27 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
 
   return (
     <>
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
-          {t("groups.members.title.manage")} — <span className="font-medium text-gray-700 dark:text-gray-300 ml-2">{group.name}</span>
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+          {t("groups.members.title.manage")} — <span className="font-medium text-gray-700 dark:text-gray-300 ml-1">{group.name}</span>
         </h2>
         <button 
           onClick={onClose} 
           className="p-1 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-transform duration-300 hover:rotate-90" 
           aria-label={t("groups.form.close")}
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="p-6 space-y-6">
-        <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t("groups.members.add.title")}</h3>
-          <div className="flex flex-col sm:flex-row gap-3">
+      <div className="p-4 space-y-4">
+        <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t("groups.members.add.title")}</h3>
+          <div className="flex flex-col sm:flex-row gap-2">
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="flex-1 px-3 py-2 border rounded-lg bg-white dark:bg-gray-600 dark:text-white border-gray-300 dark:border-gray-600 transition-shadow focus:shadow-md"
+              className="flex-1 px-2 py-1.5 text-sm border rounded-lg bg-white dark:bg-gray-600 dark:text-white border-gray-300 dark:border-gray-600 transition-shadow focus:shadow-md"
               disabled={availableUsers.length === 0}
             >
               <option value="">{t("groups.members.add.selectUser")}</option>
@@ -396,56 +393,56 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
             <button
               onClick={handleAddMember}
               disabled={!selectedUser || isAdding}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm flex items-center gap-2 disabled:opacity-60 transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
+              className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm flex items-center gap-1.5 disabled:opacity-60 transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
               aria-label={t("groups.members.add.button")}
             >
-              <Users className="h-4 w-4" />
-              <span className="text-sm">{isAdding ? t("groups.members.add.adding") : t("groups.members.add.button")}</span>
+              <Users className="h-3.5 w-3.5" />
+              <span>{isAdding ? t("groups.members.add.adding") : t("groups.members.add.button")}</span>
             </button>
           </div>
-          {availableUsers.length === 0 && <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("groups.members.add.noAvailable")}</p>}
+          {availableUsers.length === 0 && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t("groups.members.add.noAvailable")}</p>}
         </div>
 
         <div>
-          <h3 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t("groups.members.current.title", { count: members.length })}</h3>
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t("groups.members.current.title", { count: members.length })}</h3>
 
           {isLoading ? (
-            <div className="flex justify-center py-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
             </div>
           ) : members.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-4">{t("groups.members.current.empty")}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-3">{t("groups.members.current.empty")}</p>
           ) : (
             <ul className="divide-y divide-gray-200 dark:divide-gray-700 rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-800">
               {members.map((member) => (
                 <li 
                   key={member.id} 
-                  className="p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm hover:translate-x-0.5"
+                  className="p-2 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-sm hover:translate-x-0.5"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <AuthenticatedImage
                       src={member.profilePicture}
                       alt={member.name}
                       fallbackName={member.name}
                       fallbackUsername={member.username}
                       fallbackSeed={member.name || member.username}
-                      className="w-8 h-8 rounded-full object-cover"
-                      fallbackClassName="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-xs"
+                      className="w-7 h-7 rounded-full object-cover"
+                      fallbackClassName="w-7 h-7 rounded-full flex items-center justify-center text-white font-semibold text-xs"
                     />
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-white">{member.name}</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{member.username}</p>
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">{member.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{member.username}</p>
                     </div>
                   </div>
                   <div>
                     <button
                       onClick={() => handleRemoveMember(member.id)}
                       disabled={isRemoving === member.id}
-                      className="p-2 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-60 transition-transform duration-200 hover:scale-110"
+                      className="p-1.5 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-60 transition-transform duration-200 hover:scale-110"
                       title={t("groups.members.remove.title")}
                       aria-label={t("groups.members.remove.title")}
                     >
-                      {isRemoving === member.id ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600" /> : <Users className="h-5 w-5" />}
+                      {isRemoving === member.id ? <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-red-600" /> : <Users className="h-4 w-4" />}
                     </button>
                   </div>
                 </li>
@@ -458,24 +455,23 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
   );
 };
 
-
 /* -------------------------
-### 4. Delete Confirmation Modal (Refactored)
-A simple component to pass to the ModalTransitionWrapper.
+### 4. Delete Confirmation Modal (Smaller Text)
 --------------------------*/
 const DeleteConfirmModal = ({ group, onConfirm, onClose, submitting, t }) => (
-    <div className="p-6 space-y-4 ">
-<div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
-                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>        <h3 className="text-lg font-semibold text-gray-900 dark:text-white text-center">{t("groups.confirmDeleteTitle")}</h3>
-        <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
+    <div className="p-4 space-y-3">
+        <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30">
+            <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+        </div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white text-center">{t("groups.confirmDeleteTitle")}</h3>
+        <p className="text-xs text-gray-700 dark:text-gray-300 text-center">
           {t("groups.confirmDeleteMessage", { groupName: group?.name })}
         </p>
-        <div className="flex justify-center gap-3 w-full">
+        <div className="flex justify-center gap-2 w-full">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors w-full"
+            className="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors w-full"
           >
             {t("admin.actions.cancel")}
           </button>
@@ -483,19 +479,17 @@ const DeleteConfirmModal = ({ group, onConfirm, onClose, submitting, t }) => (
             type="button"
             onClick={onConfirm}
             disabled={submitting}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm disabled:opacity-60 flex items-center gap-2 transition-transform duration-200 hover:scale-[1.02] w-full justify-center"
+            className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg shadow-sm disabled:opacity-60 flex items-center gap-1.5 transition-transform duration-200 hover:scale-[1.02] w-full justify-center"
           >
-            {submitting ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Trash2 className="h-4 w-4" />}
+            {submitting ? <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" /> : <Trash2 className="h-3.5 w-3.5" />}
             <span>{t("admin.actions2.delete")}</span>
           </button>
         </div>
     </div>
 );
 
-
 /* -------------------------
-### 5. Main GroupsManager (Refactored)
-All modal rendering logic is replaced with the extracted components and wrapper.
+### 5. Main GroupsManager (Smaller Text)
 --------------------------*/
 function GroupsManager() {
   const { t, i18n } = useTranslation();
@@ -505,7 +499,7 @@ function GroupsManager() {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [currentGroup, setCurrentGroup] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [toast, setToast] = useState(null); // Unchanged
+  const [toast, setToast] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: "createdAt", direction: "desc" });
   const [expandedGroup, setExpandedGroup] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
@@ -513,7 +507,6 @@ function GroupsManager() {
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Unchanged Toast logic
   const showToast = useCallback((text, semanticType = "success") => {
     const map = {
       success: "create",
@@ -547,8 +540,6 @@ function GroupsManager() {
   const handleToastClose = useCallback(() => {
     setToast(null);
   }, []);
-
-  // --- Modal Handlers ---
 
   const openCreateModal = useCallback(() => {
     setCurrentGroup(null);
@@ -642,12 +633,10 @@ function GroupsManager() {
     }
   }, [groupToDelete, loadData, showToast, t, cancelDelete]);
 
-
   const handleUpdateMemberCount = useCallback((groupId, newCount) => {
     setGroups((prevGroups) => prevGroups.map((g) => (g.id === groupId ? { ...g, memberCount: newCount } : g)));
   }, []);
 
-  // --- Filtering/Sorting Logic (Unchanged) ---
   const requestSort = useCallback(
     (key) => {
       let direction = "asc";
@@ -702,23 +691,21 @@ function GroupsManager() {
     return result;
   }, [groups, searchTerm, sortConfig]);
 
-  // --- Main Render ---
-
   return (
     <>
-      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-        <header className="pt-6 pb-4">
+      <div className="max-w-8xl mx-auto px-3 sm:px-4 lg:px-6">
+        <header className="pt-4 pb-3">
           <div className="">
             <div className="flex items-center justify-between">
-              <div className="flex items-center min-w-0 gap-4">
-                <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-900">
-                  <Layers className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+              <div className="flex items-center min-w-0 gap-3">
+                <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-900">
+                  <Layers className="h-5 w-5 text-sky-600 dark:text-sky-300" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-white leading-tight truncate">
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight truncate">
                     {t("groups.title")}
                   </h1>
-                  <p className="mt-1 text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl">
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 max-w-2xl">
                     {t("groups.subtitle")}
                   </p>
                 </div>
@@ -726,27 +713,27 @@ function GroupsManager() {
               <div>
                 <button
                   onClick={openCreateModal}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base shadow-sm transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-transform duration-200 hover:scale-[1.02] focus:ring-4 focus:ring-blue-500/50"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                   <span>{t("groups.newGroup")}</span>
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="mt-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="mt-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div className="relative w-full sm:max-w-md">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
+                  <Search className="h-4 w-4 text-gray-400" />
                 </div>
                 <input
                   type="text"
                   placeholder={t("groups.searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-shadow focus:shadow-md"
+                  className="block w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 transition-shadow focus:shadow-md"
                   aria-label={t("groups.searchAria")}
                 />
               </div>
@@ -755,25 +742,25 @@ function GroupsManager() {
         </header>
 
         <main>
-          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 sm:p-6">
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 sm:p-4">
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">{t("groups.loading")}</p>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3" />
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t("groups.loading")}</p>
               </div>
             ) : (
               <>
                 {/* Desktop wide table (lg+) */}
                 <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-xs">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th onClick={() => requestSort("name")} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.name")}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.description")}</th>
-                        <th onClick={() => requestSort("memberCount")} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.members")}</th>
-                        <th onClick={() => requestSort("createdAt")} className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.created")}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.updated")}</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.actions")}</th>
+                        <th onClick={() => requestSort("name")} className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.name")}</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.description")}</th>
+                        <th onClick={() => requestSort("memberCount")} className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.members")}</th>
+                        <th onClick={() => requestSort("createdAt")} className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer">{t("groups.table.created")}</th>
+                        <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.updated")}</th>
+                        <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">{t("groups.table.actions")}</th>
                       </tr>
                     </thead>
 
@@ -781,45 +768,45 @@ function GroupsManager() {
                       {filteredGroups.length > 0 ? (
                         filteredGroups.map((g) => (
                           <tr key={g.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 group"> 
-                            <td className="px-4 py-4 font-medium text-gray-900 dark:text-white flex items-center gap-3">
+                            <td className="px-3 py-3 font-medium text-gray-900 dark:text-white flex items-center gap-2">
                               <AuthenticatedImage
                                 src={g.profilePicture}
                                 alt={g.name}
                                 fallbackName={g.name}
                                 fallbackSeed={g.name || "group"}
-                                className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700"
-                                fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                                className="w-8 h-8 rounded-full object-cover border border-gray-100 dark:border-gray-700"
+                                fallbackClassName="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-xs"
                               />
                               <span className="truncate max-w-xs">{g.name}</span>
                             </td>
 
-                            <td className="px-4 py-4 text-gray-500 dark:text-gray-400 max-w-sm truncate">{g.description || t("groups.noDescription")}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{g.memberCount || 0}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(g.createdAt)}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(g.updatedAt)}</td>
+                            <td className="px-3 py-3 text-gray-500 dark:text-gray-400 max-w-sm truncate">{g.description || t("groups.noDescription")}</td>
+                            <td className="px-3 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">{g.memberCount || 0}</td>
+                            <td className="px-3 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">{formatDate(g.createdAt)}</td>
+                            <td className="px-3 py-3 whitespace-nowrap text-gray-500 dark:text-gray-400">{formatDate(g.updatedAt)}</td>
 
-                            <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <div className="flex justify-end gap-2">
+                            <td className="px-3 py-3 whitespace-nowrap text-right font-medium">
+                              <div className="flex justify-end gap-1.5">
                                 <button
                                   onClick={() => openMembersModal(g)}
-                                  className="p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-transform duration-200 hover:scale-110"
+                                  className="p-1.5 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-transform duration-200 hover:scale-110"
                                   title={t("groups.actions.members")}
                                 >
-                                  <Users className="h-5 w-5" />
+                                  <Users className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => openEditModal(g)}
-                                  className="p-2 rounded-full text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-transform duration-200 hover:scale-110"
+                                  className="p-1.5 rounded-full text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-transform duration-200 hover:scale-110"
                                   title={t("groups.actions.edit")}
                                 >
-                                  <Edit className="h-5 w-5" />
+                                  <Edit className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteClick(g)}
-                                  className="p-2 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-transform duration-200 hover:scale-110"
+                                  className="p-1.5 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-transform duration-200 hover:scale-110"
                                   title={t("groups.actions.delete")}
                                 >
-                                  <Trash2 className="h-5 w-5" />
+                                  <Trash2 className="h-4 w-4" />
                                 </button>
                               </div>
                             </td>
@@ -827,7 +814,7 @@ function GroupsManager() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="6" className="px-4 py-10 text-center text-gray-500 dark:text-gray-400">
+                          <td colSpan="6" className="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
                             {t("groups.noResults")}
                           </td>
                         </tr>
@@ -837,7 +824,7 @@ function GroupsManager() {
                 </div>
 
                 {/* Mobile/Tablet Card View (lg-) */}
-                <div className="lg:hidden space-y-4">
+                <div className="lg:hidden space-y-3">
                   {filteredGroups.length > 0 ? (
                     filteredGroups.map((g) => (
                       <div 
@@ -845,66 +832,91 @@ function GroupsManager() {
                         className="bg-white dark:bg-gray-800 rounded-lg shadow transition-all duration-200 hover:shadow-lg hover:translate-y-[-2px] overflow-hidden" 
                       >
                         <div
-                          className="p-4 flex justify-between items-start cursor-pointer"
+                          className="p-3 flex justify-between items-start cursor-pointer"
                           onClick={() => toggleGroupExpand(g.id)}
                         >
-                          <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
                             <AuthenticatedImage
                               src={g.profilePicture}
                               alt={g.name}
                               fallbackName={g.name}
                               fallbackSeed={g.name || "group"}
-                              className="w-12 h-12 rounded-full object-cover"
-                              fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg"
+                              className="w-10 h-10 rounded-full object-cover"
+                              fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm"
                             />
                             <div className="min-w-0 flex-1">
-                              <p className="font-medium text-gray-900 dark:text-white truncate">{g.name}</p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                              <p className="font-medium text-gray-900 dark:text-white text-sm">{g.name}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {g.memberCount || 0} {t("groups.membersCount")}
                               </p>
                             </div>
                           </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {expandedGroup === g.id ? t("groups.actions.collapse") : t("groups.actions.expand")}
+                          <div className="text-xs text-gray-500 dark:text-gray-400 transition-all duration-300">
+                            <ChevronDown className={`h-4 w-4 transition-all duration-300 ease-in-out ${
+                              expandedGroup === g.id 
+                                ? "transform rotate-180 scale-110 text-blue-500" 
+                                : "transform rotate-0 scale-100"
+                            }`} />
                           </div>
                         </div>
 
                         <div 
-                            className={`px-4 pb-4 pt-0 transition-[max-height] ease-in-out duration-300 overflow-hidden ${
+                            className={`px-3 pb-3 pt-0 transition-[max-height] ease-in-out duration-300 overflow-hidden ${
                                 expandedGroup === g.id ? "max-h-[1000px]" : "max-h-0"
                             }`}
                         >
-                            <p className="text-sm text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-2">
                               <span className="font-medium">{t("groups.table.description")}:</span> {g.description || t("groups.noDescription")}
                             </p>
-                            <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700 mt-3">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); openMembersModal(g); }}
-                                className="p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-transform duration-200 hover:scale-110"
-                                title={t("groups.actions.members")}
-                              >
-                                <Users className="h-5 w-5" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); openEditModal(g); }}
-                                className="p-2 rounded-full text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-transform duration-200 hover:scale-110"
-                                title={t("groups.actions.edit")}
-                              >
-                                <Edit className="h-5 w-5" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDeleteClick(g); }}
-                                className="p-2 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-transform duration-200 hover:scale-110"
-                                title={t("groups.actions.delete")}
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </button>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-3 border-t border-gray-100 dark:border-gray-700 mt-2">
+                              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 text-xs">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                    {t("groups.table.created")}:
+                                  </span>
+                                  <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    {formatDate(g.createdAt)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                    {t("groups.table.updated")}:
+                                  </span>
+                                  <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                    {formatDate(g.updatedAt)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex gap-1.5">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openMembersModal(g); }}
+                                  className="p-1.5 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-300 transform hover:scale-110 hover:shadow-md"
+                                  title={t("groups.actions.members")}
+                                >
+                                  <Users className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openEditModal(g); }}
+                                  className="p-1.5 rounded-full text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-all duration-300 transform hover:scale-110 hover:shadow-md"
+                                  title={t("groups.actions.edit")}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteClick(g); }}
+                                  className="p-1.5 rounded-full text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-300 transform hover:scale-110 hover:shadow-md"
+                                  title={t("groups.actions.delete")}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="py-10 text-center text-gray-500 dark:text-gray-400">
+                    <div className="py-8 text-center text-xs text-gray-500 dark:text-gray-400">
                       {t("groups.noResults")}
                     </div>
                   )}

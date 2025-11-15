@@ -8,9 +8,9 @@ import {
   deleteUser,
   fetchRoles,
 } from "../api/admin";
-import { api as apiAuth } from "../api/auth"; // used for multipart upload to new backend route
+import { api as apiAuth } from "../api/auth";
 import Toast from "../components/common/Toast";
-import AuthenticatedImage from "../components/common/AuthenticatedImage"; // <-- IMPORT THE NEW COMPONENT
+import AuthenticatedImage from "../components/common/AuthenticatedImage";
 
 /* ---------- Helpers ---------- */
 const initialsFromName = (name, fallback) => {
@@ -34,7 +34,6 @@ const gradientFromString = (s) => {
   return `linear-gradient(135deg, hsl(${h1} 70% 60%), hsl(${h2} 70% 40%))`;
 };
 
-// Convert data: URL to File
 const dataURLToFile = (dataURL, filename = "upload.png") => {
   const arr = dataURL.split(",");
   const match = arr[0].match(/:(.*?);/);
@@ -66,14 +65,12 @@ const UsersManagementPage = () => {
   const [userToDelete, setUserToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState(null); // { text, type }
+  const [toast, setToast] = useState(null);
 
-  // For profile picture selection (file or URL)
   const [profilePictureFile, setProfilePictureFile] = useState(null);
-  const [profilePicturePreview, setProfilePicturePreview] = useState(null); // objectURL or URL or data:
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
   const previewRef = useRef(null);
 
-  // Toast helpers: map semantic types to Toast component types
   const showToast = (message, semanticType = "info") => {
     const map = {
       success: "create",
@@ -111,7 +108,6 @@ const UsersManagementPage = () => {
     loadData();
   }, [t]);
 
-  // cleanup object URL
   React.useEffect(() => {
     return () => {
       if (previewRef.current) {
@@ -144,8 +140,6 @@ const UsersManagementPage = () => {
         roleId: user.role?.id || user.roleId || "",
       });
       setUserToEdit(user);
-      // We set the *secure URL* to the preview state.
-      // The local file preview will override this if a new file is chosen.
       setProfilePicturePreview(user.profilePicture || null);
       setProfilePictureFile(null);
     } else {
@@ -165,7 +159,7 @@ const UsersManagementPage = () => {
       previewRef.current = null;
     }
     setProfilePictureFile(null);
-    setProfilePicturePreview(null); // Clear preview on close
+    setProfilePicturePreview(null);
   };
 
   const handleFormChange = (e) => {
@@ -174,7 +168,6 @@ const UsersManagementPage = () => {
     if (formErrors[name]) setFormErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // file -> objectURL preview
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -198,7 +191,7 @@ const UsersManagementPage = () => {
     }
     const url = URL.createObjectURL(file);
     previewRef.current = url;
-    setProfilePicturePreview(url); // This preview is an object URL
+    setProfilePicturePreview(url);
     setProfilePictureFile(file);
   };
 
@@ -210,17 +203,11 @@ const UsersManagementPage = () => {
     setProfilePicturePreview(null);
     setProfilePictureFile(null);
 
-    // If we were editing, restore the original picture to the preview
     if (userToEdit) {
       setProfilePicturePreview(userToEdit.profilePicture || null);
     }
   };
 
-  /**
-   * Upload file for given userId using new admin route:
-   * PUT /api/users/:id/profile-picture (field name: 'file')
-   * Uses apiAuth helper so cookies/auth are handled.
-   */
   const uploadProfileFileForUser = async (userId, file) => {
     if (!userId || !file) return null;
     const fd = new FormData();
@@ -251,16 +238,9 @@ const UsersManagementPage = () => {
         ...(formData.password ? { password: formData.password } : {}),
       };
 
-      // --- UPDATED LOGIC ---
-      // Only set profilePicture in the *initial* payload if:
-      // 1. There is no new file upload.
-      // 2. The preview is null (user clicked "remove" on an existing pic).
-      // We no longer send http URLs in the payload. The file upload
-      // after creation/update handles the image.
       if (!profilePictureFile && !profilePicturePreview) {
-        payload.profilePicture = null; // Explicitly set to null
+        payload.profilePicture = null;
       }
-      // --- END UPDATE ---
 
       let savedUser = null;
       if (userToEdit) {
@@ -269,9 +249,6 @@ const UsersManagementPage = () => {
         savedUser = await createUser(payload);
       }
 
-      // --- UPDATED LOGIC ---
-      // Always run file upload logic *after* user is created/updated
-      // if a file is present.
       if (profilePictureFile) {
         try {
           const idForUpload = savedUser?.id;
@@ -286,7 +263,6 @@ const UsersManagementPage = () => {
           );
         }
       }
-      // This logic for data: URLs is fine
       else if (
         profilePicturePreview &&
         profilePicturePreview.startsWith("data:") &&
@@ -307,7 +283,6 @@ const UsersManagementPage = () => {
           );
         }
       }
-      // --- END UPDATE ---
 
       const updatedUsers = await fetchUsers();
       setUsers(updatedUsers || []);
@@ -371,18 +346,16 @@ const UsersManagementPage = () => {
         id="users"
         role="tabpanel"
         aria-labelledby="users-tab"
-        className="p-4 sm:p-6 min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"
+        className="p-3 sm:p-4 min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"
       >
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500" />
       </section>
     );
   }
 
   return (
     <>
-      {/* ===== Animation / Transition Styles (local to component) ===== */}
       <style>{`
-        /* entrance: fade + up */
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
@@ -391,7 +364,6 @@ const UsersManagementPage = () => {
         @keyframes popIn { from { opacity: 0; transform: scale(.98); } to { opacity:1; transform: scale(1); } }
         @keyframes slideUpToast { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* table row entrance & hover lift */
         .user-row {
           opacity: 0;
           transform: translateY(6px);
@@ -404,7 +376,6 @@ const UsersManagementPage = () => {
           box-shadow: 0 6px 18px rgba(2,6,23,0.06);
         }
 
-        /* mobile card entrance */
         .user-card {
           opacity: 0;
           transform: translateY(6px);
@@ -417,7 +388,6 @@ const UsersManagementPage = () => {
           box-shadow: 0 10px 30px rgba(2,6,23,0.06);
         }
 
-        /* modal overlay and dialog */
         .modal-overlay {
           opacity: 0;
           animation: fadeIn .18s ease forwards;
@@ -428,14 +398,12 @@ const UsersManagementPage = () => {
           animation: popIn .18s cubic-bezier(.2,.9,.2,1) forwards;
         }
 
-        /* toast slide-in */
         .toast-anim {
           opacity: 0;
           transform: translateY(8px);
           animation: slideUpToast .22s cubic-bezier(.2,.9,.2,1) forwards;
         }
 
-        /* small avatar interaction */
         .avatar-hover {
           transition: transform .18s ease;
           will-change: transform;
@@ -444,7 +412,6 @@ const UsersManagementPage = () => {
           transform: rotate(-6deg) scale(1.03);
         }
 
-        /* button press micro-feedback */
         .btn-press {
           transition: transform .12s ease, box-shadow .12s ease;
           will-change: transform;
@@ -453,7 +420,6 @@ const UsersManagementPage = () => {
           transform: translateY(1px) scale(.995);
         }
 
-        /* file label hover */
         .file-label-anim {
           transition: transform .12s ease, box-shadow .12s ease;
         }
@@ -462,9 +428,8 @@ const UsersManagementPage = () => {
         }
       `}</style>
 
-      {/* Toast (fixed bottom-right) */}
       {toast && (
-        <div className="fixed z-50 right-5 bottom-5">
+        <div className="fixed z-50 right-4 bottom-4">
           <div className="toast-anim">
             <Toast
               message={toast.text}
@@ -475,31 +440,31 @@ const UsersManagementPage = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="p-3 rounded-lg bg-gray-200 dark:bg-gray-900 flex-shrink-0">
-            <Users className="h-6 w-6 text-sky-600 dark:text-sky-300" />
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-900 flex-shrink-0">
+            <Users className="h-5 w-5 text-sky-600 dark:text-sky-300" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white truncate">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">
               {t("admin.users.title")}
             </h1>
-            <p className="mt-1 text-sm md:text-base text-gray-600 dark:text-gray-300">
+            <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300">
               {t("admin.users.subtitle")}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => handleOpenUserModal(null)}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors text-sm md:text-base btn-press"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors btn-press"
             disabled={submitting}
             aria-label={t("admin.users.addUser")}
           >
-            <UserPlus size={16} />{" "}
-            <span className=" sm:inline">{t("admin.users.addUser")}</span>
+            <UserPlus size={14} />{" "}
+            <span className="sm:inline">{t("admin.users.addUser")}</span>
           </button>
         </div>
       </div>
@@ -508,21 +473,21 @@ const UsersManagementPage = () => {
         id="users"
         role="tabpanel"
         aria-labelledby="users-tab"
-        className="space-y-6 p-0 sm:p-0"
+        className="space-y-4 p-0 sm:p-0"
       >
         {/* Desktop Table */}
-        <div className="hidden md:block  rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+        <div className="hidden md:block rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           {users.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-xs">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t("admin.users.table.user")}
                   </th>
-                  <th className="px-4 py-3 text-left text-xs md:text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t("admin.users.table.role")}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs md:text-sm font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-right font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     {t("admin.users.table.actions")}
                   </th>
                 </tr>
@@ -540,19 +505,17 @@ const UsersManagementPage = () => {
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 user-row"
                       style={{ ["--delay"]: `${idx * 40}ms` }}
                     >
-                      <td className="px-4 py-3 whitespace-nowrap align-top">
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* --- UPDATED --- */}
+                      <td className="px-3 py-2 whitespace-nowrap align-middle">
+                        <div className="flex items-center gap-2 min-w-0">
                           <AuthenticatedImage
                             src={u.profilePicture}
                             alt={u.name || u.username}
                             fallbackName={u.name}
                             fallbackUsername={u.username}
                             fallbackSeed={u.name || u.username}
-                            className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0 avatar-hover"
-                            fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
+                            className="w-8 h-8 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0 avatar-hover"
+                            fallbackClassName="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-xs"
                           />
-                          {/* --- END UPDATE --- */}
                           <div className="min-w-0">
                             <div
                               className="font-medium text-gray-900 dark:text-white truncate"
@@ -567,34 +530,34 @@ const UsersManagementPage = () => {
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 whitespace-nowrap align-top">
-                        <div className="inline-flex items-center px-2 py-1 text-xs md:text-sm font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                      <td className="px-3 py-2 whitespace-nowrap align-middle">
+                        <div className="inline-flex items-center px-1.5 py-0.5 font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                           {roleLabel}
                         </div>
                       </td>
 
-                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium align-top">
-                        <div className="inline-flex items-center justify-end gap-2">
+                      <td className="px-3 py-2 whitespace-nowrap text-right font-medium align-middle">
+                        <div className="inline-flex items-center justify-end gap-1">
                           <button
                             type="button"
                             onClick={() => handleOpenUserModal(u)}
-                            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300 btn-press"
+                            className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300 btn-press"
                             title={t("admin.actions.edit")}
                             disabled={submitting}
                             aria-label={t("admin.actions.edit")}
                           >
-                            <Edit size={18} />
+                            <Edit size={16} />
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handleDeleteClick(u)}
-                            className="p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400 btn-press"
+                            className="p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400 btn-press"
                             title={t("admin.actions.delete")}
                             disabled={submitting}
                             aria-label={t("admin.actions.delete")}
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -604,31 +567,31 @@ const UsersManagementPage = () => {
               </tbody>
             </table>
           ) : (
-            <div className="flex flex-col items-center justify-center p-8 text-center bg-white dark:bg-gray-800">
-              <div className="text-gray-500 dark:text-gray-400 mb-4">
-                <UserPlus size={48} className="opacity-50" />
+            <div className="flex flex-col items-center justify-center p-6 text-center bg-white dark:bg-gray-800">
+              <div className="text-gray-500 dark:text-gray-400 mb-3">
+                <UserPlus size={40} className="opacity-50" />
               </div>
-              <h3 className="text-lg md:text-xl font-medium text-gray-900 dark:text-white mb-2">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                 {t("admin.users.noUsers")}
               </h3>
-              <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 mb-6 max-w-md">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 max-w-md">
                 {t("admin.users.noUsersDescription")}
               </p>
               <button
                 type="button"
                 onClick={() => handleOpenUserModal(null)}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
                 disabled={submitting}
                 aria-label={t("admin.users.addUser")}
               >
-                <UserPlus size={18} /> {t("admin.users.addUser")}
+                <UserPlus size={14} /> {t("admin.users.addUser")}
               </button>
             </div>
           )}
         </div>
 
         {/* Mobile Card View */}
-        <div className="md:hidden space-y-4">
+        <div className="md:hidden space-y-3">
           {users.length > 0 ? (
             users.map((u, idx) => {
               const roleLabel =
@@ -638,58 +601,56 @@ const UsersManagementPage = () => {
               return (
                 <article
                   key={u.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 user-card"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 user-card"
                   style={{ ["--delay"]: `${idx * 40}ms` }}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* --- UPDATED --- */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <AuthenticatedImage
                         src={u.profilePicture}
                         alt={u.name || u.username}
                         fallbackName={u.name}
                         fallbackUsername={u.username}
                         fallbackSeed={u.name || u.username}
-                        className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0 avatar-hover"
-                        fallbackClassName="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
+                        className="w-10 h-10 rounded-full object-cover border border-gray-100 dark:border-gray-700 flex-shrink-0 avatar-hover"
+                        fallbackClassName="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 text-xs"
                       />
-                      {/* --- END UPDATE --- */}
                       <div className="min-w-0">
-                        <div className="font-semibold text-gray-900 dark:text-white truncate">
+                        <div className="font-semibold text-gray-900 dark:text-white truncate text-sm">
                           {u.name || u.username}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
                           @{u.username}
                         </div>
-                        <div className="mt-2">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                        <div className="mt-1">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                             {roleLabel}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
+                    <div className="flex items-start gap-1">
                       <button
                         type="button"
                         onClick={() => handleOpenUserModal(u)}
-                        className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400 btn-press"
+                        className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-blue-600 dark:text-blue-400 btn-press"
                         disabled={submitting}
                         aria-label={t("admin.actions.edit")}
                         title={t("admin.actions.edit")}
                       >
-                        <Edit size={18} />
+                        <Edit size={16} />
                       </button>
 
                       <button
                         type="button"
                         onClick={() => handleDeleteClick(u)}
-                        className="p-2 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400 btn-press"
+                        className="p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-red-600 dark:text-red-400 btn-press"
                         disabled={submitting}
                         aria-label={t("admin.actions.delete")}
                         title={t("admin.actions.delete")}
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
@@ -697,27 +658,27 @@ const UsersManagementPage = () => {
               );
             })
           ) : (
-            <div className="flex flex-col items-center justify-center text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="text-gray-400 dark:text-gray-500 mb-4">
-                <UserPlus size={48} />
+            <div className="flex flex-col items-center justify-center text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="text-gray-400 dark:text-gray-500 mb-3">
+                <UserPlus size={40} />
               </div>
 
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
                 {t("admin.users.noUsers")}
               </h3>
 
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 max-w-md">
                 {t("admin.users.noUsersDescription")}
               </p>
 
               <button
                 type="button"
                 onClick={() => handleOpenUserModal(null)}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors"
                 disabled={submitting}
                 aria-label={t("admin.users.addUser")}
               >
-                <UserPlus size={18} /> {t("admin.users.addUser")}
+                <UserPlus size={14} /> {t("admin.users.addUser")}
               </button>
             </div>
           )}
@@ -726,16 +687,16 @@ const UsersManagementPage = () => {
         {/* User Form Modal */}
         {showUserModal && (
           <div
-            className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50 modal-overlay"
+            className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-3 z-50 modal-overlay"
             role="dialog"
             aria-modal="true"
             aria-labelledby="user-modal-title"
           >
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-dialog">
-              <div className="flex items-start justify-between mb-6 gap-4">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-dialog text-sm">
+              <div className="flex items-start justify-between mb-4 gap-3">
                 <h3
                   id="user-modal-title"
-                  className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-white"
+                  className="text-lg font-semibold text-gray-900 dark:text-white"
                 >
                   {userToEdit
                     ? t("admin.users.editUserTitle")
@@ -744,46 +705,42 @@ const UsersManagementPage = () => {
                 <button
                   type="button"
                   onClick={handleCloseUserModal}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors btn-press"
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors btn-press"
                   disabled={submitting}
                   aria-label={t("admin.actions.close")}
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
 
-              <form onSubmit={handleSaveUser} className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <form onSubmit={handleSaveUser} className="space-y-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                   <div className="flex-shrink-0">
-                    {/* --- UPDATED --- */}
-                    {/* Show local objectURL preview if it exists */}
                     {profilePicturePreview &&
                     profilePicturePreview.startsWith("blob:") ? (
                       <img
                         src={profilePicturePreview}
                         alt="preview"
-                        className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700 avatar-hover"
+                        className="w-20 h-20 rounded-full object-cover border border-gray-100 dark:border-gray-700 avatar-hover"
                       />
                     ) : (
-                      // Otherwise, use AuthenticatedImage to show the persistent URL or fallback
                       <AuthenticatedImage
-                        src={profilePicturePreview} // This will be the secure URL or null
+                        src={profilePicturePreview}
                         alt={t("admin.users.form.picture")}
                         fallbackName={formData.name}
                         fallbackUsername={formData.username}
                         fallbackSeed={formData.name || formData.username}
-                        className="w-24 h-24 rounded-full object-cover border border-gray-100 dark:border-gray-700 avatar-hover"
-                        fallbackClassName="w-24 h-24 rounded-full flex items-center justify-center text-white font-semibold"
+                        className="w-20 h-20 rounded-full object-cover border border-gray-100 dark:border-gray-700 avatar-hover"
+                        fallbackClassName="w-20 h-20 rounded-full flex items-center justify-center text-white font-semibold text-sm"
                       />
                     )}
-                    {/* --- END UPDATE --- */}
                   </div>
 
                   <div className="flex-1 w-full">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {t("admin.users.form.picture")}
                     </label>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <input
                         id="user-picture"
                         type="file"
@@ -793,7 +750,7 @@ const UsersManagementPage = () => {
                       />
                       <label
                         htmlFor="user-picture"
-                        className="inline-flex items-center px-3 py-2 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-sm file-label-anim"
+                        className="inline-flex items-center px-2.5 py-1.5 text-xs border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors file-label-anim"
                       >
                         {t("admin.users.form.upload")}
                       </label>
@@ -801,13 +758,13 @@ const UsersManagementPage = () => {
                         <button
                           type="button"
                           onClick={removeProfilePreview}
-                          className="text-sm text-red-600 dark:text-red-400 btn-press"
+                          className="text-xs text-red-600 dark:text-red-400 btn-press"
                         >
                           {t("admin.users.form.remove")}
                         </button>
                       )}
                     </div>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                       {t("admin.users.form.pictureHint")}
                     </p>
                   </div>
@@ -816,7 +773,7 @@ const UsersManagementPage = () => {
                 <div>
                   <label
                     htmlFor="username"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     {t("admin.users.form.username")} *
                   </label>
@@ -824,7 +781,7 @@ const UsersManagementPage = () => {
                     id="username"
                     name="username"
                     type="text"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
                       formErrors.username
                         ? "border-red-500 ring-2 ring-red-500"
                         : "border-gray-300 dark:border-gray-600"
@@ -836,7 +793,7 @@ const UsersManagementPage = () => {
                     aria-invalid={!!formErrors.username}
                   />
                   {formErrors.username && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                       {formErrors.username}
                     </p>
                   )}
@@ -845,7 +802,7 @@ const UsersManagementPage = () => {
                 <div>
                   <label
                     htmlFor="name"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     {t("admin.users.form.name")} *
                   </label>
@@ -853,7 +810,7 @@ const UsersManagementPage = () => {
                     id="name"
                     name="name"
                     type="text"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
                       formErrors.name
                         ? "border-red-500 ring-2 ring-red-500"
                         : "border-gray-300 dark:border-gray-600"
@@ -865,7 +822,7 @@ const UsersManagementPage = () => {
                     aria-invalid={!!formErrors.name}
                   />
                   {formErrors.name && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                       {formErrors.name}
                     </p>
                   )}
@@ -874,7 +831,7 @@ const UsersManagementPage = () => {
                 <div>
                   <label
                     htmlFor="password"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     {userToEdit
                       ? t("admin.users.form.newPassword")
@@ -885,7 +842,7 @@ const UsersManagementPage = () => {
                     id="password"
                     name="password"
                     type="password"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
                       formErrors.password
                         ? "border-red-500 ring-2 ring-red-500"
                         : "border-gray-300 dark:border-gray-600"
@@ -897,7 +854,7 @@ const UsersManagementPage = () => {
                     aria-invalid={!!formErrors.password}
                   />
                   {formErrors.password && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                       {formErrors.password}
                     </p>
                   )}
@@ -906,14 +863,14 @@ const UsersManagementPage = () => {
                 <div>
                   <label
                     htmlFor="roleId"
-                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
                     {t("admin.users.form.role")} *
                   </label>
                   <select
                     id="roleId"
                     name="roleId"
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
+                    className={`w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${
                       formErrors.roleId
                         ? "border-red-500 ring-2 ring-red-500"
                         : "border-gray-300 dark:border-gray-600"
@@ -931,29 +888,29 @@ const UsersManagementPage = () => {
                     ))}
                   </select>
                   {formErrors.roleId && (
-                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
                       {formErrors.roleId}
                     </p>
                   )}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-2 pt-3">
                   <button
                     type="button"
                     onClick={handleCloseUserModal}
-                    className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    className="flex-1 px-4 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     disabled={submitting}
                   >
                     {t("admin.actions.cancel")}
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors disabled:opacity-60"
+                    className="flex-1 px-4 py-2 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm transition-colors disabled:opacity-60"
                     disabled={submitting}
                   >
                     {submitting ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      <div className="flex items-center justify-center gap-1.5">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
                         <span>{t("admin.actions.processing")}</span>
                       </div>
                     ) : userToEdit ? (
@@ -971,26 +928,26 @@ const UsersManagementPage = () => {
         {/* Delete Confirmation Modal */}
         {showDeleteConfirmModal && userToDelete && (
           <div
-            className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-4 z-50 modal-overlay"
+            className="fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-3 z-50 modal-overlay"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="delete-title"
             aria-describedby="delete-desc"
           >
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl w-full max-w-md modal-dialog">
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-2xl w-full max-w-sm modal-dialog text-sm">
               <div className="text-center">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30">
-                  <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+                <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30">
+                  <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
                 </div>
                 <h3
                   id="delete-title"
-                  className="mt-4 text-lg font-semibold text-gray-900 dark:text-white"
+                  className="mt-3 text-base font-semibold text-gray-900 dark:text-white"
                 >
                   {t("admin.users.deleteConfirm.title")}
                 </h3>
                 <p
                   id="delete-desc"
-                  className="mt-2 text-gray-600 dark:text-gray-400"
+                  className="mt-1 text-gray-600 dark:text-gray-400"
                 >
                   {t("admin.users.deleteConfirm.message", {
                     name: userToDelete.name,
@@ -998,11 +955,11 @@ const UsersManagementPage = () => {
                 </p>
               </div>
 
-              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <div className="mt-4 flex flex-col sm:flex-row gap-2">
                 <button
                   type="button"
                   onClick={cancelDelete}
-                  className="flex-1 px-6 py-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="flex-1 px-4 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   disabled={submitting}
                 >
                   {t("admin.actions.cancel")}
@@ -1010,12 +967,12 @@ const UsersManagementPage = () => {
                 <button
                   type="button"
                   onClick={confirmDelete}
-                  className="flex-1 px-6 py-3 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-colors disabled:opacity-60"
+                  className="flex-1 px-4 py-2 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm transition-colors disabled:opacity-60"
                   disabled={submitting}
                 >
                   {submitting ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    <div className="flex items-center justify-center gap-1.5">
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
                       <span>{t("admin.actions.deleting")}</span>
                     </div>
                   ) : (

@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
 import { useTranslation } from "react-i18next";
-import { Edit, Trash2, Calendar, FileText, Check, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Edit,
+  Trash2,
+  Calendar,
+  FileText,
+  Check,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { formatDate } from "../../uites/projectUtils"; // <-- fixed path from user file
 
 // ----------------------------------------------------------------
 // MODIFICATION: Created a new collapsible ActivityCard component
+// (typography reduced: text-sm -> text-xs, text-xs -> text-[11px])
 // ----------------------------------------------------------------
 function ActivityCard({
   activity,
@@ -67,7 +76,7 @@ function ActivityCard({
     const m = normalizeMetric(rawMetric);
     if (!m || (typeof m === "object" && Object.keys(m).length === 0)) {
       return (
-        <div className="text-xs">
+        <div className="text-[11px]">
           <span className="font-semibold mr-1 bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded">
             {label}:
           </span>
@@ -82,84 +91,106 @@ function ActivityCard({
       let summary = pairs.join(", ");
       if (Object.keys(m).length > 3)
         summary += ` …(+${Object.keys(m).length - 3})`;
-      
+
       return (
-         <div className="text-xs">
-          <span className={`font-semibold mr-1 px-1.5 py-0.5 rounded ${
-            label === tr("project.fields.previous", "Previous") ? "bg-purple-50 dark:bg-purple-900/20" :
-            label === tr("project.fields.target", "Target") ? "bg-orange-50 dark:bg-orange-900/20" :
-            "bg-green-50 dark:bg-green-900/20"
-          }`}>
+        <div className="text-[11px]">
+          <span
+            className={`font-semibold mr-1 px-1.5 py-0.5 rounded ${
+              label === tr("project.fields.previous", "Previous")
+                ? "bg-purple-50 dark:bg-purple-900/20"
+                : label === tr("project.fields.target", "Target")
+                ? "bg-orange-50 dark:bg-orange-900/20"
+                : "bg-green-50 dark:bg-green-900/20"
+            }`}
+          >
             {label}:
           </span>
           <span className="truncate">{summary}</span>
         </div>
-      )
+      );
     } catch {
       const s = JSON.stringify(m);
       return (
-         <div className="text-xs">
+        <div className="text-[11px]">
           <span className="font-semibold mr-1 bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded">
             {label}:
           </span>
-          <span className="truncate">{s.length > 80 ? s.slice(0, 77) + "…" : s}</span>
+          <span className="truncate">
+            {s.length > 80 ? s.slice(0, 77) + "…" : s}
+          </span>
         </div>
-      )
+      );
     }
   };
 
   const renderQuarterlyGoals = (goals) => {
     const qGoals = goals || {};
-    const hasGoals = ['q1', 'q2', 'q3', 'q4'].some(q => qGoals[q] != null && qGoals[q] !== '');
-    
+    const hasGoals = ["q1", "q2", "q3", "q4"].some(
+      (q) => qGoals[q] != null && qGoals[q] !== ""
+    );
+
     if (!hasGoals) {
-      return <div className="text-xs text-gray-400 dark:text-gray-500 italic">{tr("project.empty.noQuarterlyGoals", "No quarterly goals defined.")}</div>
+      return (
+        <div className="text-[11px] text-gray-400 dark:text-gray-500 italic">
+          {tr("project.empty.noQuarterlyGoals", "No quarterly goals defined.")}
+        </div>
+      );
     }
-    
+
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {['q1', 'q2', 'q3', 'q4'].map(q => (
+        {["q1", "q2", "q3", "q4"].map((q) => (
           <div key={q} className="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg">
-            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">{q}</div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white mt-0.5">
-              {qGoals[q] ?? <span className="text-gray-400 dark:text-gray-500">—</span>}
+            <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase">
+              {q}
+            </div>
+            <div className="text-xs font-medium text-gray-900 dark:text-white mt-0.5">
+              {qGoals[q] ?? (
+                <span className="text-gray-400 dark:text-gray-500">—</span>
+              )}
             </div>
           </div>
         ))}
       </div>
     );
   };
-  
+
   return (
-    <div
-      className="relative bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 group"
-    >
+    <div className="relative bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 group">
       {/* Activity Header Row */}
       <div className="flex items-start justify-between gap-2 p-3">
         <div className="flex items-start gap-2 min-w-0 flex-1">
-           <button
+          <button
             type="button"
-            onClick={() => setIsExpanded(e => !e)}
+            onClick={() => setIsExpanded((e) => !e)}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 flex-shrink-0"
-            title={isExpanded ? tr("project.actions.collapse", "Collapse") : tr("project.actions.expand", "Expand")}
+            title={
+              isExpanded
+                ? tr("project.actions.collapse", "Collapse")
+                : tr("project.actions.expand", "Expand")
+            }
             aria-expanded={isExpanded}
           >
-            {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+            {isExpanded ? (
+              <ChevronDown className="h-5 w-5" />
+            ) : (
+              <ChevronRight className="h-5 w-5" />
+            )}
           </button>
-        
+
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-sm text-gray-900 dark:text-white break-words flex items-center gap-2">
+            <div className="font-medium text-xs text-gray-900 dark:text-white break-words flex items-center gap-2">
               {compositeRoll && (
-                <span className="text-sky-600 dark:text-sky-400 font-semibold bg-sky-50 dark:bg-sky-900/20 px-2 py-1 rounded-full text-xs">
+                <span className="text-sky-600 dark:text-sky-400 font-semibold bg-sky-50 dark:bg-sky-900/20 px-2 py-1 rounded-full text-[11px]">
                   {compositeRoll}.
                 </span>
               )}
               <span>{activity.title}</span>
             </div>
-            
+
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-               <span
-                className={`text-xs font-medium px-2 py-1 rounded-full transition-all duration-300 transform ${
+              <span
+                className={`text-[11px] font-medium px-2 py-1 rounded-full transition-all duration-300 transform ${
                   isDone
                     ? "status-completed bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                     : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
@@ -167,15 +198,15 @@ function ActivityCard({
               >
                 {getStatusText(activity.status)}
               </span>
-              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              <span className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
                 <Calendar className="h-3 w-3" />
                 {formatDate(activity.dueDate) || tr("project.na")}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                {tr("project.fields.weight") || "Weight"}: <strong>{activity.weight ?? "-"}</strong>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                {tr("project.fields.weight") || "Weight"}:{" "}
+                <strong>{activity.weight ?? "-"}</strong>
               </span>
             </div>
-
           </div>
         </div>
 
@@ -192,7 +223,9 @@ function ActivityCard({
               </button>
               <button
                 type="button"
-                onClick={() => onDeleteActivity && onDeleteActivity(activity.id)}
+                onClick={() =>
+                  onDeleteActivity && onDeleteActivity(activity.id)
+                }
                 className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200"
                 title={tr("project.actions.delete") || "Delete activity"}
               >
@@ -205,44 +238,72 @@ function ActivityCard({
               type="button"
               onClick={() => openSubmitModal && openSubmitModal(activity.id)}
               disabled={!canSubmitReport}
-              className="flex items-center gap-1 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs hover:bg-indigo-600 disabled:opacity-50 transition-all duration-300"
+              className="flex items-center gap-1 px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-[11px] hover:bg-indigo-600 disabled:opacity-50 transition-all duration-300"
             >
               <FileText className="h-3 w-3" />
-              <span className="hidden sm:inline">{tr("project.actions.submitReport") || "Submit Report"}</span>
-              {canSubmitReport && <div className="ml-1 h-1 w-1 bg-white rounded-full animate-pulse" />}
+              <span className="hidden sm:inline">
+                {tr("project.actions.submitReport") || "Submit Report"}
+              </span>
+              {canSubmitReport && (
+                <div className="ml-1 h-1 w-1 bg-white rounded-full animate-pulse" />
+              )}
             </button>
           )}
         </div>
       </div>
-      
+
       {/* Collapsible Content */}
-      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isExpanded ? 'max-h-[1000px]' : 'max-h-0'}`}>
+      <div
+        className={`transition-all duration-300 ease-in-out overflow-hidden ${
+          isExpanded ? "max-h-[1000px]" : "max-h-0"
+        }`}
+      >
         <div className="px-3 pb-3 pt-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
-          
           {/* Description */}
           <div>
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{tr("project.fields.description", "Description")}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-300 break-words">
-              {activity.description || <span className="italic text-gray-400 dark:text-gray-500">{tr("project.empty.noDescription", "No description provided.")}</span>}
+            <h4 className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+              {tr("project.fields.description", "Description")}
+            </h4>
+            <p className="text-xs text-gray-600 dark:text-gray-300 break-words">
+              {activity.description || (
+                <span className="italic text-gray-400 dark:text-gray-500">
+                  {tr(
+                    "project.empty.noDescription",
+                    "No description provided."
+                  )}
+                </span>
+              )}
             </p>
           </div>
-          
+
           {/* Metrics Grid */}
           <div>
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{tr("project.fields.metrics", "Metrics")}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-              {renderMetricSummary(activity.previousMetric, tr("project.fields.previous", "Previous"))}
-              {renderMetricSummary(activity.targetMetric, tr("project.fields.target", "Target"))}
-              {renderMetricSummary(activity.currentMetric, tr("project.fields.current", "Current"))}
+            <h4 className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              {tr("project.fields.metrics", "Metrics")}
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 p-4 md:p-6 bg-gray-50 dark:bg-gray-900/50 text-gray-700 dark:text-gray-400 rounded-lg border border-gray-200 dark:border-gray-700">
+              {renderMetricSummary(
+                activity.previousMetric,
+                tr("project.fields.previous", "Previous")
+              )}
+              {renderMetricSummary(
+                activity.targetMetric,
+                tr("project.fields.target", "Target")
+              )}
+              {renderMetricSummary(
+                activity.currentMetric,
+                tr("project.fields.current", "Current")
+              )}
             </div>
           </div>
-          
+
           {/* Quarterly Goals */}
           <div>
-            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{tr("project.fields.quarterlyGoals", "Quarterly Goals")}</h4>
+            <h4 className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              {tr("project.fields.quarterlyGoals", "Quarterly Goals")}
+            </h4>
             {renderQuarterlyGoals(activity.quarterlyGoals)}
           </div>
-
         </div>
       </div>
 
@@ -257,7 +318,6 @@ function ActivityCard({
 // ----------------------------------------------------------------
 // MODIFICATION END
 // ----------------------------------------------------------------
-
 
 function ActivityList({
   goal,
@@ -306,13 +366,12 @@ function ActivityList({
     setVisibleActivities(activities);
   }, [activities, activitiesLoading, isInitialLoad]);
 
-
   if (activitiesLoading) {
     return (
       <div
         role="status"
         aria-live="polite"
-        className="p-2 text-xs text-gray-500 transition-all duration-300"
+        className="p-2 text-[11px] text-gray-500 transition-all duration-300"
       >
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
@@ -332,7 +391,7 @@ function ActivityList({
 
   if (!activities || activities.length === 0) {
     return (
-      <div className="p-4 text-xs text-gray-500 text-center transition-all duration-300 transform hover:scale-105">
+      <div className="p-4 text-[11px] text-gray-500 text-center transition-all duration-300 transform hover:scale-105">
         <div className="opacity-60 transition-opacity duration-300">
           {t("project.empty.noActivities") || "No activities for this task."}
         </div>
@@ -359,7 +418,7 @@ function ActivityList({
         <div
           key={activity.id}
           className="activity-enter"
-           style={{
+          style={{
             animationDelay: `${index * 80}ms`,
             animationFillMode: "both",
           }}
@@ -381,7 +440,6 @@ function ActivityList({
       {/* ---------------------------------------------------------------- */}
       {/* MODIFICATION END */}
       {/* ---------------------------------------------------------------- */}
-
     </div>
   );
 }

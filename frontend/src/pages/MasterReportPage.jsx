@@ -154,10 +154,10 @@ export default function MasterReportPageWrapper() {
         .map((p) => {
           const label = fmtQuarterKey(p);
           return [
-            `<th style="padding:8px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qGoal", "Goal"))} (${escapeHtml(label)})</th>`,
-            `<th style="padding:8px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qRecord", "Record"))} (${escapeHtml(label)})</th>`,
+            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qGoal", "Goal"))} (${escapeHtml(label)})</th>`,
+            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qRecord", "Record"))} (${escapeHtml(label)})</th>`,
             // MODIFIED: Header label changed to "Progress %"
-            `<th style="padding:8px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qProgress", "Progress %"))} (${escapeHtml(label)})</th>`,
+            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qProgress", "Progress %"))} (${escapeHtml(label)})</th>`,
           ].join("");
         })
         .join("");
@@ -167,7 +167,7 @@ export default function MasterReportPageWrapper() {
       .map((p) => {
         let label = p;
         if (granularity === "monthly") label = fmtMonthKey(p);
-        return `<th style="padding:8px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(
+        return `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(
           label
         )}</th>`;
       })
@@ -176,7 +176,7 @@ export default function MasterReportPageWrapper() {
 
   // Generate table cells for print/export
   const periodCellsHtml = (row) => {
-    const emptyCell = `<td style="padding:8px;border:1px solid #ddd">—</td>`;
+    const emptyCell = `<td style="padding:6px;border:1px solid #ddd">—</td>`;
 
     if (row.type === "goal" || row.type === "task") {
       const numCols = granularity === "quarterly" ? periodColumns.length * 3 : periodColumns.length;
@@ -200,7 +200,7 @@ export default function MasterReportPageWrapper() {
       }
     }
     const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(2)}%`;
-    const yearlyProgressCell = `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
+    const yearlyProgressCell = `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
     // --- End Yearly ---
 
 
@@ -212,10 +212,10 @@ export default function MasterReportPageWrapper() {
         const displayProgress = progress === null ? '-' : `${progress.toFixed(2)}%`;
 
         return [
-          `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(goal ?? "-"))}</td>`,
-          `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(record ?? "-"))}</td>`,
+          `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(goal ?? "-"))}</td>`,
+          `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(record ?? "-"))}</td>`,
           // MODIFIED: Display the formatted percentage
-          `<td style="padding:8px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
+          `<td style="padding:6px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
         ].join("");
       }).join("");
       return yearlyProgressCell + quarterlyCells;
@@ -239,7 +239,7 @@ export default function MasterReportPageWrapper() {
             else dv = JSON.stringify(dv);
           } catch (e) { dv = JSON.stringify(dv); }
         }
-        return `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
+        return `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
       })
       .join("");
     
@@ -253,19 +253,19 @@ export default function MasterReportPageWrapper() {
     const rowsHtml = tableRows
       .map((row) => {
         const titleWithNumber = `${row.number}. ${row.title}`;
-        const padding = row.type === "goal" ? '8px' : (row.type === "task" ? '20px' : '34px');
+        const padding = row.type === "goal" ? '6px' : (row.type === "task" ? '16px' : '28px');
         const weight = row.type === 'goal' ? '700' : '400';
         
         // Non-activity rows
         if (row.type !== "activity") {
           const emptyQuarterlyCells = granularity === "quarterly" ? periodColumns.length * 3 : periodColumns.length;
-          const emptyCells = Array(emptyQuarterlyCells + 1).fill(0).map(() => `<td style="padding:8px;border:1px solid #ddd">—</td>`).join(""); // +1 for yearly progress
+          const emptyCells = Array(emptyQuarterlyCells + 1).fill(0).map(() => `<td style="padding:6px;border:1px solid #ddd">—</td>`).join(""); // +1 for yearly progress
 
-          return `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:${weight};padding-left:${padding}">${escapeHtml(
+          return `<tr><td style="padding:6px;border:1px solid #ddd;font-weight:${weight};padding-left:${padding}">${escapeHtml(
             titleWithNumber
-          )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+          )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
             String(row.weight)
-          )}</td><td style="padding:8px;border:1px solid #ddd">—</td><td style="padding:8px;border:1px solid #ddd">—</td><td style="padding:8px;border:1px solid #ddd">—</td>${emptyCells}</tr>`;
+          )}</td><td style="padding:6px;border:1px solid #ddd">—</td><td style="padding:6px;border:1px solid #ddd">—</td><td style="padding:6px;border:1px solid #ddd">—</td>${emptyCells}</tr>`;
         }
 
         // Activity row
@@ -285,7 +285,7 @@ export default function MasterReportPageWrapper() {
         const quarterlyCellsHtml = periodCellsHtml(row); // This already includes the yearly cell, let's fix that.
         
         // --- Recalculate periodCellsHtml just for this function ---
-        const yearlyProgressCell = `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
+        const yearlyProgressCell = `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
         let periodCells = "";
 
         if (granularity === "quarterly") {
@@ -293,16 +293,16 @@ export default function MasterReportPageWrapper() {
             const { goal, record, progress } = getQuarterlyStats(row.activity, p, mk);
             const displayProgress = progress === null ? '-' : `${progress.toFixed(2)}%`;
             return [
-              `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(goal ?? "-"))}</td>`,
-              `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(record ?? "-"))}</td>`,
-              `<td style="padding:8px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
+              `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(goal ?? "-"))}</td>`,
+              `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(record ?? "-"))}</td>`,
+              `<td style="padding:6px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
             ].join("");
           }).join("");
         } else {
           // Monthly or Annual
           periodCells = periodColumns.map((p) => {
               const v = getLatestMetricValueInPeriod(row.activity, p, granularity, mk);
-              if (v === null || v === undefined) return `<td style="padding:8px;border:1px solid #ddd">—</td>`;
+              if (v === null || v === undefined) return `<td style="padding:6px;border:1px solid #ddd">—</td>`;
               let dv = v;
               if (typeof dv === "object") {
                 try {
@@ -310,21 +310,21 @@ export default function MasterReportPageWrapper() {
                   if (k) dv = dv[k]; else dv = JSON.stringify(dv);
                 } catch (e) { dv = JSON.stringify(dv); }
               }
-              return `<td style="padding:8px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
+              return `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
             }).join("");
         }
         // --- End recalculation ---
 
 
-        return `<tr><td style="padding:8px;border:1px solid #ddd;padding-left:${padding}">${escapeHtml(
+        return `<tr><td style="padding:6px;border:1px solid #ddd;padding-left:${padding}">${escapeHtml(
           titleWithNumber
-        )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+        )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
           String(row.weight)
-        )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+        )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
           mk ?? "-"
-        )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+        )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
           String(targetVal ?? "-")
-        )}</td><td style="padding:8px;border:1px solid #ddd">${escapeHtml(
+        )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
           String(prevVal ?? "-")
         )}</td>${yearlyProgressCell}${periodCells}</tr>`;
       })
@@ -344,20 +344,20 @@ export default function MasterReportPageWrapper() {
       .map((g, goalIndex) => {
         const goalNum = `${goalIndex + 1}`;
         return `
-<div style="margin-bottom:12px;padding:10px;border:1px solid #eee;border-radius:6px;background:#fbfbfb" class="print-goal-narrative">
-<div style="font-weight:700;font-size:15px">${escapeHtml(
+<div style="margin-bottom:10px;padding:8px;border:1px solid #eee;border-radius:4px;background:#fbfbfb" class="print-goal-narrative">
+<div style="font-weight:700;font-size:13px">${escapeHtml(
           `${goalNum}. ${g.title}`
         )} <span style="font-weight:400;color:#6b7280">• ${escapeHtml(
           String(g.status || "—")
         )} • ${escapeHtml(String(g.progress ?? 0))}% • weight: ${escapeHtml(
           String(g.weight ?? "-")
         )}</span></div>
-<div style="margin-top:8px;padding-left:8px">
+<div style="margin-top:6px;padding-left:6px">
 ${(g.tasks || [])
           .map((task, taskIndex) => {
             const taskNum = `${goalNum}.${taskIndex + 1}`;
             return `
-<div style="margin-bottom:8px">
+<div style="margin-bottom:6px">
 <div style="font-weight:600">${escapeHtml(
               `${taskNum}. ${task.title}`
             )} <span style="color:#6b7280">(${escapeHtml(
@@ -367,11 +367,11 @@ ${(task.activities || [])
               .map((activity, activityIndex) => {
                 const activityNum = `${taskNum}.${activityIndex + 1}`;
                 return `
-<div style="margin-left:16px;margin-top:6px;padding:8px;border:1px solid #f1f5f9;border-radius:4px;background:#fff">
+<div style="margin-left:12px;margin-top:4px;padding:6px;border:1px solid #f1f5f9;border-radius:3px;background:#fff">
 <div style="font-weight:600">${escapeHtml(
                   `${activityNum}. ${activity.title}`
                 )}</div>
-<div style="color:#6b7280;margin-top:6px;font-size:12px;"><strong>${escapeHtml(
+<div style="color:#6b7280;margin-top:4px;font-size:11px;"><strong>${escapeHtml(
                   t("reports.master.targetLabel")
                 )}:</strong> ${
                   activity.targetMetric
@@ -380,7 +380,7 @@ ${(task.activities || [])
                 }</div>
 
 {/* --- ADDED CURRENT METRIC --- */}
-<div style="color:#6b7280;margin-top:4px;font-size:12px;"><strong>${escapeHtml(
+<div style="color:#6b7280;margin-top:3px;font-size:11px;"><strong>${escapeHtml(
                   t("reports.master.currentLabel", "Current")
                 )}:</strong> ${
                   activity.currentMetric
@@ -388,7 +388,7 @@ ${(task.activities || [])
                     : "-"
                 }</div>
 
-<div style="color:#6b7280;margin-top:4px;font-size:12px;"><strong>${escapeHtml(
+<div style="color:#6b7280;margin-top:3px;font-size:11px;"><strong>${escapeHtml(
                   t("reports.master.previousLabel", "Previous")
                 )}:</strong> ${
                   activity.previousMetric
@@ -396,23 +396,23 @@ ${(task.activities || [])
                     : "-"
                 }</div>
 
-<div style="color:#6b7280;margin-top:4px;font-size:12px;"><strong>${escapeHtml(
+<div style="color:#6b7280;margin-top:3px;font-size:11px;"><strong>${escapeHtml(
                   t("reports.master.quarterlyGoals", "Quarterly Goals")
                 )}:</strong> ${
                   activity.quarterlyGoals
                     ? escapeHtml(JSON.stringify(activity.quarterlyGoals))
                     : "-"
                 }</div>
-<div style="margin-top:8px">${(activity.reports || [])
+<div style="margin-top:6px">${(activity.reports || [])
                   .map(
                     (r) =>
-                      `<div style="padding:6px;border-top:1px dashed #eee"><strong>#${escapeHtml(
+                      `<div style="padding:4px;border-top:1px dashed #eee"><strong>#${escapeHtml(
                         String(r.id)
                       )}</strong> • ${escapeHtml(String(r.status || "—"))} • ${
                         r.createdAt
                           ? escapeHtml(new Date(r.createdAt).toLocaleString())
                           : ""
-                      }<div class="narrative" style="margin-top:6px">${escapeHtml(
+                      }<div class="narrative" style="margin-top:4px">${escapeHtml(
                         r.narrative || ""
                       )}</div></div>`
                   )
@@ -437,15 +437,15 @@ ${(task.activities || [])
 <meta charset="utf-8">
 <title>${escapeHtml(title)}</title>
 <style>
-body{font-family:Inter,Arial,Helvetica,sans-serif;padding:20px;color:#111;background:#fff}
-h1{font-size:24px;margin-bottom:4px}
-h2{font-size:16px;color:#374151}
-table{width:100%;border-collapse:collapse;margin-top:12px}
-th,td{border:1px solid #ddd;padding:8px;font-size:13px;vertical-align:top}
+body{font-family:Inter,Arial,Helvetica,sans-serif;padding:16px;color:#111;background:#fff}
+h1{font-size:20px;margin-bottom:3px}
+h2{font-size:14px;color:#374151}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ddd;padding:6px;font-size:12px;vertical-align:top}
 th{background:#f3f4f6}
 .goal-row td{background:#eef2ff}
 .task-row td{background:#f8fafc}
-.narrative { white-space: pre-wrap; line-height:1.45; padding:10px; background:#fff; border-radius:6px; border:1px solid #eee; }
+.narrative { white-space: pre-wrap; line-height:1.4; padding:8px; background:#fff; border-radius:4px; border:1px solid #eee; }
 
 {/* --- POLISHED PRINT STYLES (WITH PAGE BREAKS) --- */}
 @media print {
@@ -491,14 +491,14 @@ page-break-inside: avoid;
 /* Differentiate goal narrative sections with a solid border */
 .print-goal-narrative {
 border: 2px solid #000 !important;
-padding: 10px;
-margin-top: 12px;
+padding: 8px;
+margin-top: 10px;
 }
 }
 </style>
 </head>
 <body>
-<p style="margin-top:2px;margin-bottom:8px">${escapeHtml(
+<p style="margin-top:2px;margin-bottom:6px">${escapeHtml(
       groupLabel
     )}: ${escapeHtml(String(groupSearchTerm || "All"))} • ${escapeHtml(
       generated
@@ -509,7 +509,7 @@ margin-top: 12px;
 ${narrativesHtml}
 </section>
 
-<section style="margin-top:18px">
+<section style="margin-top:14px">
 <h2>${escapeHtml(dataTable)}</h2>
 <table>
 <thead><tr><th>${escapeHtml(t("reports.table.title"))}</th><th>${escapeHtml(
@@ -673,12 +673,12 @@ ${narrativesHtml}
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 md:p-6 lg:p-7 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 transition-all duration-500 ease-out">
-      <div className="flex items-center gap-4 mb-5 transition-all duration-500">
-        <div className="text-sky-600 dark:text-sky-300 bg-gray-200 dark:bg-gray-900 p-3 rounded-lg transition-all duration-500 transform hover:scale-110 hover:rotate-6">
+    <div className="bg-white dark:bg-gray-800 p-3 md:p-4 lg:p-5 rounded-lg shadow border border-gray-200 dark:border-gray-700 transition-all duration-500 ease-out">
+      <div className="flex items-center gap-3 mb-4 transition-all duration-500">
+        <div className="text-sky-600 dark:text-sky-300 bg-gray-200 dark:bg-gray-900 p-2 rounded transition-all duration-500 transform hover:scale-110 hover:rotate-6">
           <svg
-            width="22"
-            height="22"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             aria-hidden
@@ -695,25 +695,25 @@ ${narrativesHtml}
         </div>
 
         <div className="transition-all duration-500">
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-gray-900 dark:text-gray-100 transition-all duration-500 transform hover:translate-x-2">
+          <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 transition-all duration-500 transform">
             {t("reports.master.title")}
           </h2>
-          <div className="text-sm text-gray-500 dark:text-gray-300 transition-all duration-700">
+          <div className="text-xs text-gray-500 dark:text-gray-300 transition-all duration-700">
             {t("reports.master.subtitle")}
           </div>
         </div>
       </div>
 
       {/* --- UPDATED GROUP <select> DROPDOWN --- */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5 transition-all duration-500">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4 transition-all duration-500">
         <div className="md:col-span-3 transition-all duration-500">
-          <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1 transition-all duration-300">
+          <label className="block text-xs text-gray-600 dark:text-gray-300 mb-1 transition-all duration-300">
             {t("reports.master.groupSearchLabel", "Select Group")}
           </label>
           <select
             value={groupId}
             onChange={handleGroupSelectChange}
-            className="w-full px-3 py-2 rounded-lg border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all duration-300 transform hover:scale-105"
+            className="w-full px-2 py-1.5 rounded border bg-white dark:bg-gray-700 text-xs text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sky-500 focus:border-transparent transition-all duration-300 transform hover:scale-105"
           >
             <option value="">
               {t("reports.master.allGroups", "All Groups")}
@@ -725,26 +725,26 @@ ${narrativesHtml}
             ))}
           </select>
           {error && (
-            <div className="text-sm text-red-600 dark:text-red-400 mt-2 transition-all duration-500 transform hover:scale-105 animate-pulse">
+            <div className="text-xs text-red-600 dark:text-red-400 mt-1.5 transition-all duration-500 transform hover:scale-105 animate-pulse">
               {error}
             </div>
           )}
           {groupLoadError && (
-            <div className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 transition-all duration-500 transform hover:scale-105">
+            <div className="text-xs text-yellow-600 dark:text-yellow-400 mt-1.5 transition-all duration-500 transform hover:scale-105">
               {groupLoadError}
             </div>
           )}
         </div>
 
-        <div className="md:col-span-2 flex flex-col sm:flex-row gap-2 items-stretch sm:items-end transition-all duration-500">
+        <div className="md:col-span-2 flex flex-col sm:flex-row gap-1.5 items-stretch sm:items-end transition-all duration-500">
           <button
             onClick={handleFetch}
             disabled={loading}
-            className="px-4 py-2 bg-sky-600 text-white rounded-lg shadow flex items-center justify-center gap-2 hover:bg-sky-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
+            className="px-3 py-1.5 bg-sky-600 text-white rounded shadow flex items-center justify-center gap-1.5 hover:bg-sky-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg text-xs"
           >
             {loading ? (
               <Loader
-                className={`h-4 w-4 animate-spin transition-all duration-500 ${isRefreshing ? "scale-125" : "scale-100"
+                className={`h-3.5 w-3.5 animate-spin transition-all duration-500 ${isRefreshing ? "scale-125" : "scale-100"
                   }`}
               />
             ) : (
@@ -753,32 +753,32 @@ ${narrativesHtml}
           </button>
           <button
             onClick={exportPDF}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg text-xs"
           >
             {t("reports.master.exportPDF")}
           </button>
           <button
             onClick={exportCSV}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg"
+            className="px-3 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-lg text-xs"
           >
             {t("reports.master.exportCSV")}
           </button>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4 transition-all duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3 transition-all duration-500">
         <div className="transition-all duration-500">
-          <label className="text-sm text-gray-600 dark:text-gray-300 transition-all duration-300">
+          <label className="text-xs text-gray-600 dark:text-gray-300 transition-all duration-300">
             {t("reports.master.granularityLabel")}
           </label>
-          <div className="flex gap-2 mt-1 transition-all duration-500">
+          <div className="flex gap-1.5 mt-1 transition-all duration-500">
             {["monthly", "quarterly", "annual"].map((g) => (
               <button
                 key={g}
                 onClick={() => setGranularity(g)}
-                className={`px-3 py-1.5 rounded-lg transition-all duration-300 transform hover:scale-110 active:scale-95 ${granularity === g
-                    ? "bg-sky-600 text-white shadow-lg scale-105"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-md"
+                className={`px-2 py-1 rounded transition-all duration-300 transform hover:scale-110 active:scale-95 text-xs ${granularity === g
+                    ? "bg-sky-600 text-white shadow scale-105"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow"
                   }`}
               >
                 {t(`reports.master.granularities.${g}`)}
@@ -787,7 +787,7 @@ ${narrativesHtml}
           </div>
         </div>
 
-        <div className="ml-auto text-sm text-gray-500 dark:text-gray-400 transition-all duration-500 transform hover:scale-105">
+        <div className="ml-auto text-xs text-gray-500 dark:text-gray-400 transition-all duration-500 transform hover:scale-105">
           {t("reports.master.periodColumns", {
             count: periodColumns.length,
             granularity,
@@ -795,28 +795,28 @@ ${narrativesHtml}
         </div>
       </div>
 
-      <div className="mb-6 transition-all duration-500">
-        <h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100 transition-all duration-500 transform hover:translate-x-2">
+      <div className="mb-4 transition-all duration-500">
+        <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100 transition-all duration-500 transform">
           {t("reports.master.narrativesTitle")}
         </h3>
         {!master && (
-          <div className="text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">
             {t("reports.master.noData")}
           </div>
         )}
         {master && master.goals && master.goals.length === 0 && (
-          <div className="text-sm text-gray-500 dark:text-gray-400 transition-all duration-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">
             {t("reports.master.noGoals")}
           </div>
         )}
         {master && master.goals && master.goals.length > 0 && (
-          <div className="space-y-4 transition-all duration-500">
+          <div className="space-y-3 transition-all duration-500">
             {master.goals.map((g, goalIndex) => {
               const goalNum = `${goalIndex + 1}`;
               return (
                 <div
                   key={g.id}
-                  className="p-4 border rounded bg-gray-50 dark:bg-gray-900 transition-all duration-500 ease-out transform"
+                  className="p-3 border rounded bg-gray-50 dark:bg-gray-900 transition-all duration-500 ease-out transform"
                   style={{
                     animationDelay: `${goalIndex * 100}ms`,
                     transitionDelay: `${goalIndex * 50}ms`,
@@ -824,14 +824,14 @@ ${narrativesHtml}
                 >
                   <div className="flex items-center justify-between transition-all duration-300">
                     <div className="transition-all duration-500">
-                      <div className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 transition-all duration-300">{`${goalNum}. ${g.title}`}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-1 transition-all duration-500">
+                      <div className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 transition-all duration-300">{`${goalNum}. ${g.title}`}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-300 mt-0.5 transition-all duration-500">
                         {g.status} • {g.progress ?? 0}%
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-4 pl-3 space-y-3 transition-all duration-500">
+                  <div className="mt-3 pl-2 space-y-2 transition-all duration-500">
                     {(g.tasks || []).map((task, taskIndex) => {
                       const taskNum = `${goalNum}.${taskIndex + 1}`;
                       return (
@@ -839,55 +839,55 @@ ${narrativesHtml}
                           key={task.id}
                           className="transition-all duration-500 transform"
                         >
-                          <div className="text-lg font-semibold text-gray-800 dark:text-gray-100 transition-all duration-300">
+                          <div className="text-base font-semibold text-gray-800 dark:text-gray-100 transition-all duration-300">
                             {`${taskNum}. ${task.title}`}{" "}
-                            <span className="text-sm text-gray-400 transition-all duration-500">
+                            <span className="text-xs text-gray-400 transition-all duration-500">
                               ({task.progress ?? 0}%)
                             </span>
                           </div>
-                          <div className="pl-3 mt-3 space-y-3 transition-all duration-500">
+                          <div className="pl-2 mt-2 space-y-2 transition-all duration-500">
                             {(task.activities || []).map((a, activityIndex) => {
                               const activityNum = `${taskNum}.${activityIndex + 1
                                 }`;
                               return (
                                 <div
                                   key={a.id}
-                                  className="p-3 bg-white dark:bg-gray-800 rounded border transition-all duration-500 ease-out transform"
+                                  className="p-2 bg-white dark:bg-gray-800 rounded border transition-all duration-500 ease-out transform"
                                   style={{
                                     animationDelay: `${activityIndex * 80}ms`,
                                     transitionDelay: `${activityIndex * 40}ms`,
                                   }}
                                 >
-                                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 transition-all duration-300">
+                                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-1.5 transition-all duration-300">
                                     <div className="transition-all duration-500">
-                                      <div className="text-base md:text-lg font-medium text-gray-800 dark:text-gray-100 transition-all duration-300">{`${activityNum}. ${a.title}`}</div>
-                                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-1 transition-all duration-500">
+                                      <div className="text-xs md:text-base font-medium text-gray-800 dark:text-gray-100 transition-all duration-300">{`${activityNum}. ${a.title}`}</div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-300 mt-0.5 transition-all duration-500">
                                         {t("reports.master.targetText")}:{" "}
                                         <span className="font-medium text-gray-800 dark:text-gray-100 transition-all duration-300">
                                           {a.targetMetric ? "" : "-"}
                                         </span>
                                       </div>
-                                      <div className="mt-2 transition-all duration-500">
+                                      <div className="mt-1.5 transition-all duration-500">
                                         {a.targetMetric
                                           ? renderMetricsList(a.targetMetric)
                                           : null}
                                       </div>
 
                                       {/* --- ADDED CURRENT METRIC --- */}
-                                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-2 transition-all duration-500">
+                                      <div className="text-xs text-gray-500 dark:text-gray-300 mt-1.5 transition-all duration-500">
                                         {t("reports.master.currentLabel", "Current")}:{" "}
                                         <span className="font-medium text-gray-800 dark:text-gray-100 transition-all duration-300">
                                           {a.currentMetric ? "" : "-"}
                                         </span>
                                       </div>
-                                      <div className="mt-2 transition-all duration-500">
+                                      <div className="mt-1.5 transition-all duration-500">
                                         {a.currentMetric
                                           ? renderMetricsList(a.currentMetric)
                                           : null}
                                       </div>
 
                                       {/* --- ADDED PREVIOUS METRIC --- */}
-                                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-2 transition-all duration-500">
+                                      <div className="text-xs text-gray-500 dark:text-gray-300 mt-1.5 transition-all duration-500">
                                         {t(
                                           "reports.master.previousText",
                                           "Previous"
@@ -897,13 +897,13 @@ ${narrativesHtml}
                                           {a.previousMetric ? "" : "-"}
                                         </span>
                                       </div>
-                                      <div className="mt-2 transition-all duration-500">
+                                      <div className="mt-1.5 transition-all duration-500">
                                         {a.previousMetric
                                           ? renderMetricsList(a.previousMetric)
                                           : null}
                                       </div>
                                       {/* --- ADDED QUARTERLY GOALS --- */}
-                                      <div className="text-sm text-gray-500 dark:text-gray-300 mt-2 transition-all duration-500">
+                                      <div className="text-xs text-gray-500 dark:text-gray-300 mt-1.5 transition-all duration-500">
                                         {t(
                                           "reports.master.quarterlyGoals",
                                           "Quarterly Goals"
@@ -913,14 +913,14 @@ ${narrativesHtml}
                                           {a.quarterlyGoals ? "" : "-"}
                                         </span>
                                       </div>
-                                      <div className="mt-2 transition-all duration-500">
+                                      <div className="mt-1.5 transition-all duration-500">
                                         {a.quarterlyGoals
                                           ? renderMetricsList(a.quarterlyGoals)
                                           : null}
                                       </div>
                                       {/* --- END QUARTERLY GOALS --- */}
                                     </div>
-                                    <div className="text-sm text-gray-400 transition-all duration-500 transform">
+                                    <div className="text-xs text-gray-400 transition-all duration-500 transform">
                                       {a.status} •{" "}
                                       {a.isDone
                                         ? t("reports.master.done")
@@ -928,7 +928,7 @@ ${narrativesHtml}
                                     </div>
                                   </div>
 
-                                  <div className="mt-3 space-y-2 transition-all duration-500">
+                                  <div className="mt-2 space-y-1.5 transition-all duration-500">
                                     {(a.reports || []).length === 0 ? (
                                       <div className="text-xs text-gray-400 transition-all duration-500">
                                         {t("reports.master.noReports")}
@@ -938,7 +938,7 @@ ${narrativesHtml}
                                         (r, reportIndex) => (
                                           <div
                                             key={r.id}
-                                            className="text-sm border rounded p-2 bg-gray-50 dark:bg-gray-900 transition-all duration-500 ease-out transform"
+                                            className="text-xs border rounded p-1.5 bg-gray-50 dark:bg-gray-900 transition-all duration-500 ease-out transform"
                                             style={{
                                               animationDelay: `${reportIndex * 60
                                                 }ms`,
@@ -946,8 +946,8 @@ ${narrativesHtml}
                                                 }ms`,
                                             }}
                                           >
-                                            <div className="flex flex-col sm:flex-row sm:justify-between gap-1 transition-all duration-300">
-                                              <div className="text-sm font-medium transition-all duration-500 transform">
+                                            <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 transition-all duration-300">
+                                              <div className="text-xs font-medium text-gray-800 dark:text-gray-100 transition-all duration-500 transform">
                                                 #{r.id} •{" "}
                                                 <span className="text-gray-600 dark:text-gray-300 transition-all duration-500">
                                                   {r.status}
@@ -961,7 +961,7 @@ ${narrativesHtml}
                                                   : ""}
                                               </div>
                                             </div>
-                                            <div className="mt-1 text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap transition-all duration-500">
+                                            <div className="mt-0.5 text-xs text-gray-700 dark:text-gray-200 whitespace-pre-wrap transition-all duration-500">
                                               {r.narrative || (
                                                 <em className="text-gray-400 transition-all duration-500">
                                                   {t("reports.noNarrative")}
@@ -969,14 +969,14 @@ ${narrativesHtml}
                                               )}
                                             </div>
                                             {r.metrics && (
-                                              <div className="mt-2 transition-all duration-500">
+                                              <div className="mt-1.5 transition-all duration-500">
                                                 <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 transition-all duration-300">
                                                   {t(
                                                     "reports.metrics.title",
                                                     "Metrics"
                                                   )}
                                                 </div>
-                                                <div className="mt-1 transition-all duration-500">
+                                                <div className="mt-0.5 transition-all duration-500">
                                                   {renderMetricsList(r.metrics)}
                                                 </div>
                                               </div>
@@ -1003,7 +1003,7 @@ ${narrativesHtml}
 
       {/* --- THIS SECTION HANDLES THE ON-SCREEN HORIZONTAL SCROLLING --- */}
       <div className="transition-all duration-500">
-        <h3 className="text-xl md:text-2xl font-semibold mb-3 text-gray-900 dark:text-gray-100 transition-all duration-500 transform">
+        <h3 className="text-lg md:text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100 transition-all duration-500 transform">
           {t("reports.table.titleFull")}
         </h3>
 
@@ -1011,23 +1011,23 @@ ${narrativesHtml}
           <table className="min-w-full transition-all duration-500">
             <thead className="transition-all duration-500">
               <tr className="transition-all duration-500">
-                <th className="border px-3 py-3 text-left text-base text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <th className="border px-2 py-2 text-left text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   {t("reports.table.title")}
                 </th>
-                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <th className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   {t("reports.table.weight")}
                 </th>
-                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <th className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   {t("reports.table.metric")}
                 </th>
-                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <th className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   {t("reports.table.target")}
                 </th>
-                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <th className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   {t("reports.table.previous", "Previous")}
                 </th>
                 {/* ADDED: Yearly Progress % Header */}
-                <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <th className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                   {t("reports.table.yearlyProgress", "Yearly Progress %")}
                 </th>
                 {/* --- NEW: Dynamic Headers for Quarterly --- */}
@@ -1035,14 +1035,14 @@ ${narrativesHtml}
                   const label = fmtQuarterKey(p);
                   return (
                     <React.Fragment key={p}>
-                      <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <th className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                         {t("reports.table.qGoal", "Goal")} ({label})
                       </th>
-                      <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <th className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                         {t("reports.table.qRecord", "Record")} ({label})
                       </th>
                       {/* MODIFIED: Header Label */}
-                      <th className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <th className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                         {t("reports.table.qProgress", "Progress %")} ({label})
                       </th>
                     </React.Fragment>
@@ -1050,7 +1050,7 @@ ${narrativesHtml}
                 }) : periodColumns.map((p) => (
                   <th
                     key={p}
-                    className="border px-3 py-3 text-sm text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="border px-2 py-2 text-xs text-gray-900 dark:text-gray-100 transition-all duration-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
                     {granularity === "monthly" ? fmtMonthKey(p) : p}
                   </th>
@@ -1071,27 +1071,27 @@ ${narrativesHtml}
                         transitionDelay: `${index * 30}ms`,
                       }}
                     >
-                      <td className={`border px-3 py-3 font-semibold text-gray-900 dark:text-gray-100 transition-all duration-300 ${row.type === 'task' ? 'pl-6' : ''}`}>{`${row.number}. ${row.title}`}</td>
-                      <td className="border px-3 py-3 text-gray-700 dark:text-gray-200 transition-all duration-300">
+                      <td className={`border px-2 py-2 font-semibold text-gray-900 dark:text-gray-100 transition-all duration-300 ${row.type === 'task' ? 'pl-4' : ''} text-xs`}>{`${row.number}. ${row.title}`}</td>
+                      <td className="border px-2 py-2 text-gray-700 dark:text-gray-200 transition-all duration-300 text-xs">
                         {row.weight}
                       </td>
-                      <td className="border px-3 py-3 transition-all duration-300">
+                      <td className="border px-2 py-2 transition-all duration-300 text-xs">
                         —
                       </td>
-                      <td className="border px-3 py-3 transition-all duration-300">
+                      <td className="border px-2 py-2 transition-all duration-300 text-xs">
                         —
                       </td>
-                      <td className="border px-3 py-3 transition-all duration-300">
+                      <td className="border px-2 py-2 transition-all duration-300 text-xs">
                         —
                       </td>
                       {/* ADDED: Empty cell for Yearly Progress */}
-                      <td className="border px-3 py-3 transition-all duration-300">
+                      <td className="border px-2 py-2 transition-all duration-300 text-xs">
                         —
                       </td>
                       {Array(numEmptyCols).fill(0).map((_, i) => (
                         <td
                           key={i}
-                          className="border px-3 py-3 transition-all duration-300"
+                          className="border px-2 py-2 transition-all duration-300 text-xs"
                         >
                           —
                         </td>
@@ -1115,7 +1115,7 @@ ${narrativesHtml}
               {tableRows.length === 0 && (
                 <tr className="transition-all duration-500">
                   <td
-                    className="p-6 text-center text-gray-500 dark:text-gray-400 transition-all duration-500"
+                    className="p-4 text-center text-gray-500 dark:text-gray-400 transition-all duration-500 text-xs"
                     // MODIFIED: Colspan from 5 to 6
                     colSpan={6 + (granularity === 'quarterly' ? periodColumns.length * 3 : periodColumns.length)}
                   >
@@ -1501,37 +1501,37 @@ function ActivityRow({
         transitionDelay: `${index * 40}ms`,
       }}
     >
-      <td className="border px-3 py-3 text-base font-medium text-gray-900 dark:text-gray-100 pl-4 min-w-[240px] max-w-[420px] transition-all duration-300">
-        <div className="truncate transition-all duration-300">{`${number} ${activity.title}`}</div>
+      <td className="border px-2 py-2 text-xs font-medium text-gray-900 dark:text-gray-100 pl-3 min-w-[200px] max-w-[320px] transition-all duration-300">
+        <div className="transition-all duration-300">{`${number} ${activity.title}`}</div>
       </td>
 
-      <td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-20 text-center transition-all duration-300">
-        <div className="truncate transition-all duration-500">
+      <td className="border px-2 py-2 text-xs text-gray-700 dark:text-gray-200 w-16 text-center transition-all duration-300">
+        <div className=" transition-all duration-500">
           {activity.weight ?? "-"}
         </div>
       </td>
 
-      <td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-28 text-center transition-all duration-300">
-        <div className="truncate transition-all duration-500">
+      <td className="border px-2 py-2 text-xs text-gray-700 dark:text-gray-200 w-24 text-center transition-all duration-300">
+        <div className=" transition-all duration-500">
           {metricKey ?? "-"}
         </div>
       </td>
 
-      <td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono transition-all duration-300">
-        <div className="truncate transition-all duration-500 transform">
+      <td className="border px-2 py-2 text-xs text-gray-700 dark:text-gray-200 w-28 text-right font-mono transition-all duration-300">
+        <div className=" transition-all duration-500 transform">
           {targetVal ?? "-"}
         </div>
       </td>
 
-      <td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono transition-all duration-300">
-        <div className="truncate transition-all duration-500 transform">
+      <td className="border px-2 py-2 text-xs text-gray-700 dark:text-gray-200 w-28 text-right font-mono transition-all duration-300">
+        <div className=" transition-all duration-500 transform">
           {prevVal ?? "-"}
         </div>
       </td>
 
       {/* ADDED: Yearly Progress % Cell */}
-      <td className="border px-3 py-3 text-sm text-gray-700 dark:text-gray-200 w-32 text-right font-mono transition-all duration-300">
-        <div className="truncate transition-all duration-500 transform">
+      <td className="border px-2 py-2 text-xs text-gray-700 dark:text-gray-200 w-28 text-right font-mono transition-all duration-300">
+        <div className=" transition-all duration-500 transform">
           {displayYearlyProgress}
         </div>
       </td>
@@ -1546,15 +1546,15 @@ function ActivityRow({
 
         return (
           <React.Fragment key={p}>
-            <td className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-right w-[88px] font-mono transition-all duration-300">
-              <div className="truncate">{goal ?? '-'}</div>
+            <td className="border px-1.5 py-1.5 text-xs text-gray-700 dark:text-gray-200 text-right w-[80px] font-mono transition-all duration-300">
+              <div className="">{goal ?? '-'}</div>
             </td>
-            <td className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-right w-[88px] font-mono transition-all duration-300">
-              <div className="truncate">{record ?? '-'}</div>
+            <td className="border px-1.5 py-1.5 text-xs text-gray-700 dark:text-gray-200 text-right w-[80px] font-mono transition-all duration-300">
+              <div className="">{record ?? '-'}</div>
             </td>
             {/* MODIFIED: Display formatted percentage, removed color */}
-            <td className={`border px-2 py-2 text-sm text-right w-[88px] font-mono font-medium text-gray-700 dark:text-gray-200 transition-all duration-300`}>
-              <div className="truncate">{displayProgress}</div>
+            <td className={`border px-1.5 py-1.5 text-xs text-right w-[80px] font-mono font-medium text-gray-700 dark:text-gray-200 transition-all duration-300`}>
+              <div className="">{displayProgress}</div>
             </td>
           </React.Fragment>
         );
@@ -1570,10 +1570,10 @@ function ActivityRow({
         return (
           <td
             key={p}
-            className="border px-2 py-2 text-sm text-gray-700 dark:text-gray-200 text-right w-[88px] transition-all duration-300"
+            className="border px-1.5 py-1.5 text-xs text-gray-700 dark:text-gray-200 text-right w-[80px] transition-all duration-300"
           >
             <div className="min-w-0 transition-all duration-500">
-              <div className="text-sm font-mono truncate transition-all duration-500 transform">
+              <div className="text-xs font-mono  transition-all duration-500 transform">
                 {display}
               </div>
             </div>
@@ -1603,7 +1603,7 @@ function renderMetricsList(metrics) {
   } catch (err) {
     const s = String(metrics);
     return (
-      <div className="text-xs font-mono break-words p-2 bg-white dark:bg-gray-900 rounded border text-gray-800 dark:text-gray-100 transition-all duration-500 transform">
+      <div className="text-xs font-mono break-words p-1.5 bg-white dark:bg-gray-900 rounded border text-gray-800 dark:text-gray-100 transition-all duration-500 transform">
         {s}
       </div>
     );
@@ -1621,7 +1621,7 @@ function renderMetricsList(metrics) {
     );
 
   return (
-    <div className="space-y-1 transition-all duration-500">
+    <div className="space-y-0.5 transition-all duration-500">
       {keys.map((k, index) => {
         const value = obj[k];
         const displayValue =
@@ -1631,7 +1631,7 @@ function renderMetricsList(metrics) {
         return (
           <div
             key={k}
-            className="flex items-start justify-between bg-white dark:bg-gray-900 rounded px-2 py-1 border dark:border-gray-700 gap-4 transition-all duration-500 ease-out transform"
+            className="flex items-start justify-between bg-white dark:bg-gray-900 rounded px-1.5 py-0.5 border dark:border-gray-700 gap-3 transition-all duration-500 ease-out transform"
             style={{
               animationDelay: `${index * 50}ms`,
               transitionDelay: `${index * 25}ms`,

@@ -133,6 +133,7 @@
     "searchPlaceholder": "Garee maqaa ykn ibsaan barbaadi...",
     "confirmDeleteTitle": "Garee Haquu",
     "confirmDeleteMessage": "Garee kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{name}}\"",
+    "membersCount": "miseensota",
     "search": {
       "placeholder": "Garee maqaa ykn ibsaan barbaadi...",
       "aria": "Gareewwan barbaadi"
@@ -254,7 +255,7 @@
     },
     "narrative": "Barreeffama taatee tokkoo",
     "noNarrative": "Seenaan hin kennamne",
-    "metrics_narrative": "Meetirikii",
+    "metrics_narrative": "Safartuuwwan",
     "attachments": "Dabalata",
     "attachments_download": {
       "download": "Buusuu"
@@ -319,6 +320,9 @@
       "generatedAt": "Maddisiifame irratti {{date}}",
       "allGroups": "Garee hunda",
       "granularityLabel": "granularity jedhamuun beekama",
+      "currentLabel": "Amma", 
+      "previousText": "Duraa", 
+      "quarterlyGoals": "Galmoota Kurmaana Kurmaana",
       "granularities": {
         "monthly": "Ji'a ji'aan",
         "quarterly": "Kurmaana kurmaanaan",
@@ -329,7 +333,7 @@
     "table": {
       "title": "Mata-duree",
       "weight": "Ulfaatina",
-      "metric": "Meetirikii",
+      "metric": "Safartuuwwan",
       "target": "Xiyyeeffaanoo",
       "type": "Akaakuu",
       "goal": "Galma",
@@ -337,11 +341,16 @@
       "activity": "Hojii",
       "titleFull": "Gabatee deetaa guutuu",
       "previous": "Kan duraa",
-      "noData": "Daataan hin jiru"
+      "noData": "Daataan hin jiru",
+      "yearlyProgress": "Adeemsa Waggaa %",
+      "qGoal": "Galma",
+      "qRecord": "Galmee",
+      "qProgress": "Guddina %"
     },
     "metrics": {
       "empty": "—",
-      "invalid": "Meetirikii sirrii hin taane"
+      "invalid": "Safartuuwwan sirrii hin taane",
+      "title": "Safartuuwwan"
     },
     "errors": {
       "loadReports": "Gabaasa fe'uu hin dandeenye",
@@ -625,7 +634,9 @@
       "status": "Haala",
       "previous": "Kana dura",
       "target": "Xiyyeeffannoo",
-      "current":"Amma"
+      "current":"Amma",
+      "metrics": "Safartuuwwan",
+      "quarterlyGoals": "Galmoota Kurmaana Kurmaanaa"
     },
 
     "sections": {
@@ -659,13 +670,15 @@
       "attachments": "Faayilota guddaa: daangaa gama sarvarii ni hojjeta.",
       "hint": "Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada.",
       "metricRemaining": "Amma: {{current}} / {{target}} (Hafe: {{remaining}})",
-      "maxAttachments": "Dabalata baay'inaan 5."
+      "maxAttachments": "Dabalata baay'inaan 5.",
+      "overallHint": "Kaayyoo Waliigalaa: {{target}}. Adeemsa waliigalaa: {{used}}. Hafe: {{remaining}}."
     },
     "empty": {
       "noGoals": "Kaayyoon hin argamne. Galma kee isa jalqabaa uumi.",
       "noMatch": "Gooliin barbaacha kee wajjin walsimu hin jiru.",
       "noTasks": "Kaayyoo kanaaf hojiin hin jiru.",
-      "noActivities": "Hojii kanaaf sochiiwwan hin jiran."
+      "noActivities": "Hojii kanaaf sochiiwwan hin jiran.",
+      "noDescription": "Ibsi hin kennamne"
     },
 
     "errors": {
@@ -850,6 +863,7 @@
     "title": "Beeksisa",
     "subtitle": "Akeekkachiisa, ergaawwanii fi beeksisa sirnaa ilaaluu fi bulchuu — akka dubbisaatti mallatteessi, calaluu, fi wantoota barbaachisoo ta'an irratti tarkaanfii fudhadhu.",
     "unreadCount": "{{count}} hin dubbifamne",
+    "unread": "beeksisa hin dubbifamne",
     "markAll": "Hunda akka dubbifameetti mallatteessi",
     "toasts": {
     "markedRead": "Beeksisni akka milkaa'inaan dubbifameetti mallatteeffameera!",
