@@ -745,7 +745,7 @@ const openSubmitModal = useCallback(
           <header className="mb-3 ">
             <div className="flex items-center md:items-center justify-between gap-3 rounded-2xl bg-white dark:bg-gray-800 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/40 shadow-sm px-4 py-3 transition-all duration-300">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-800 project-header-icon">
+                <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-900 project-header-icon">
                   <Target className="h-5 w-5 text-sky-600 dark:text-sky-300" />
                 </div>
 

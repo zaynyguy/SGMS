@@ -1089,7 +1089,7 @@ transform: translateY(0);
                 <button
                   type="button"
                   onClick={addPreviousMetricRow}
-                  className="mt-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center gap-1"
+                  className="w-full mt-2 px-3 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded text-sm transition-all duration-200 transform hover:scale-100 active:scale-95 flex items-center justify-center gap-1"
                 >
                   <svg
                     className="w-3 h-3"
@@ -1155,7 +1155,7 @@ transform: translateY(0);
                 <button
                   type="button"
                   onClick={addMetricRow}
-                  className="mt-2 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center gap-1"
+                  className="w-full mt-2 px-3 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded text-sm transition-all duration-200 transform hover:scale-100 active:scale-95 flex items-center justify-center gap-1"
                 >
                   <svg
                     className="w-3 h-3"

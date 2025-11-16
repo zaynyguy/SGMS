@@ -140,89 +140,190 @@ function formatDate(d) {
 }
 
 /* --- Charts (enhanced with animations) --- */
-const GroupBarChart = ({ data = [], height = 100, limit = null, thinWidth = 50, gap = 10 }) => {
+/* GroupBarChart - large rounded bars, gridlines, compact ticks, drop-in */
+const GroupBarChart = ({ data = [], height = 320, limit = null, barWidth = 72, gap = 28, yLabel = "Population" }) => {
   const [animated, setAnimated] = useState(false);
 
   useEffect(() => {
-    setAnimated(true);
-    const timer = setTimeout(() => setAnimated(false), 1000);
-    return () => clearTimeout(timer);
+    // trigger animation on data change
+    setAnimated(false);
+    const t = setTimeout(() => setAnimated(true), 40);
+    return () => clearTimeout(t);
   }, [data]);
 
-  if (!Array.isArray(data) || data.length === 0) return <div className="text-xs text-gray-500 dark:text-gray-400 transition-all duration-500">No chart data</div>;
+  if (!Array.isArray(data) || data.length === 0) {
+    return <div className="text-xs text-gray-500 dark:text-gray-400">No chart data</div>;
+  }
+
   const display = limit ? data.slice(0, limit) : data;
-  const values = display.map((d) => Number(d.value ?? d.progress ?? 0));
-  const max = Math.max(1, ...values);
+  const values = display.map((d) => Math.max(0, Number(d.value ?? d.progress ?? d.count ?? 0)));
+  const maxValue = Math.max(1, ...values);
+
   const itemCount = display.length;
-  const barW = thinWidth;
-  const spacing = barW + gap;
-  const padding = Math.max(6, Math.floor(gap / 2));
-  const svgWidth = Math.max(itemCount * spacing + padding * 2, 200);
-  const singleOffset = itemCount === 1 ? Math.floor((svgWidth - barW) / 2) : padding;
+  const chartPadding = { top: 28, right: 20, bottom: 56, left: 64 }; // left gives room for y axis labels
+  const chartWidth = itemCount * (barWidth + gap) - gap; // total bars width
+  const svgWidth = Math.max(chartPadding.left + chartWidth + chartPadding.right, 300);
+  const svgHeight = chartPadding.top + height + chartPadding.bottom;
+
+  const innerHeight = height; // usable vertical area for bars
+  const maxBarRectH = innerHeight; // we'll draw full-height rect and scaleY
+
+  // y-axis ticks (5 ticks including 0)
+  const ticks = 5;
+  const tickValues = new Array(ticks).fill(0).map((_, i) => Math.round((maxValue * (ticks - 1 - i)) / (ticks - 1)));
+  const formatCompact = (n) => {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}K`;
+    return String(n);
+  };
+
+  // a single cohesive color like your screenshot
+  const barColor = "#4F7AE6";
+  const bg = "#F3F7FB"; // light band for chart area (body) if wanted
 
   return (
-    <div className="w-full overflow-x-auto transition-all duration-500">
-      <svg viewBox={`0 0 ${svgWidth} ${height + 40}`} className="w-full h-[160px] transition-all duration-1000" preserveAspectRatio="xMidYMid meet" role="img">
-        <line x1="0" y1={height} x2={svgWidth} y2={height} stroke="#E5E7EB" className="dark:stroke-gray-700 transition-all duration-500" strokeWidth="1" />
-        {display.map((d, i) => {
-          const val = Number(d.value ?? d.progress ?? 0);
-          const barH = Math.max(2, (val / max) * (height - 12));
-          const x = singleOffset + i * spacing;
-          const w = barW;
-          const y = height - barH;
-          const color = d.color || `hsl(${(i * 45) % 360}, 70%, 50%)`;
-          const label = d.name ?? d.label ?? `#${i + 1}`;
-          const availableTextWidth = barW + gap - 4;
-          const charWidth = 5;
-          const maxChars = Math.floor(availableTextWidth / charWidth);
-          let displayLabel = label;
-          if (label.length > maxChars) {
-            displayLabel = label.slice(0, Math.max(3, maxChars - 1)) + "…";
-          }
+    <div className="w-full overflow-x-auto" role="img" aria-label={`${yLabel} bar chart`}>
+      <svg
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        preserveAspectRatio="xMidYMid meet"
+        className="w-full"
+        aria-hidden={false}
+      >
+        <defs>
+          {/* subtle drop shadow */}
+          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="#0b3bff" floodOpacity="0.08" />
+          </filter>
+        </defs>
+
+        {/* background behind chart area */}
+        <rect
+          x={chartPadding.left - 8}
+          y={chartPadding.top - 12}
+          width={svgWidth - chartPadding.left - chartPadding.right + 16}
+          height={innerHeight + 24}
+          rx="8"
+          fill={bg}
+          className="dark:fill-gray-800/20"
+        />
+
+        {/* horizontal gridlines and y-axis labels */}
+        {tickValues.map((tv, i) => {
+          const y = chartPadding.top + (innerHeight * i) / (ticks - 1);
+          const isZero = tv === 0;
           return (
-            <g key={i} transform={`translate(${x},0)`} className="transition-all duration-1000 ease-out">
-              <rect 
-                x={0} 
-                y={height} 
-                width={w} 
-                height={animated ? barH : 4} 
-                rx="4" 
-                fill={color}
-                className="transition-all duration-1000 ease-out"
-                style={{
-                  transitionDelay: `${i * 100}ms`,
-                  transformOrigin: 'bottom'
-                }}
+            <g key={i}>
+              <line
+                x1={chartPadding.left}
+                x2={svgWidth - chartPadding.right}
+                y1={y}
+                y2={y}
+                stroke={isZero ? "#D1D5DB" : "#E6EEF8"}
+                className="dark:stroke-gray-700"
+                strokeWidth={isZero ? 1.2 : 1}
               />
               <text
-                x={w / 2}
-                y={height + 16}
-                fontSize="10"
-                textAnchor="middle"
+                x={chartPadding.left - 12}
+                y={y + 4}
+                fontSize="12"
+                textAnchor="end"
                 fill="#6B7280"
-                className="dark:fill-gray-400 transition-all duration-500"
-                style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 400, letterSpacing: "0.025em" }}
+                className="dark:fill-gray-400"
+                style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
               >
-                {displayLabel}
+                {formatCompact(tv)}
               </text>
-              {val > 0 && (
-                <text
-                  x={w / 2}
-                  y={y - 4}
-                  fontSize="9"
-                  textAnchor="middle"
-                  fill={color}
-                  className="transition-all duration-500"
-                  style={{ fontFamily: "system-ui, -apple-system, sans-serif", fontWeight: 600 }}
-                >
-                  {val}
-                </text>
-              )}
             </g>
           );
         })}
+
+        {/* left vertical axis label rotated */}
+        <text
+          x={12}
+          y={chartPadding.top + innerHeight / 2}
+          textAnchor="middle"
+          transform={`rotate(-90 12 ${chartPadding.top + innerHeight / 2})`}
+          fontSize="12"
+          fill="#374151"
+          className="dark:fill-gray-300"
+          style={{ fontWeight: 600 }}
+        >
+          {yLabel}
+        </text>
+
+        {/* bars group */}
+        <g transform={`translate(${chartPadding.left}, ${chartPadding.top})`}>
+          {display.map((d, i) => {
+            const val = values[i];
+            const x = i * (barWidth + gap);
+            // scale value to [0..1]
+            const proportion = val / maxValue;
+            // we will use transform: scaleY to animate
+            const scaleY = Math.max(0.004, proportion); // avoid zero to keep transform origin working
+            const rectHeight = maxBarRectH;
+            const rectY = innerHeight - rectHeight; // rect drawn from top of full-height box
+            const rx = Math.min(14, Math.floor(barWidth / 6));
+            const label = d.name ?? d.label ?? d.title ?? `#${i + 1}`;
+
+            return (
+              <g key={i} transform={`translate(${x},0)`}>
+                {/* shadowed rounded rect (we draw full box and scaleY from bottom) */}
+                <rect
+                  x={0}
+                  y={rectY}
+                  width={barWidth}
+                  height={rectHeight}
+                  rx={rx}
+                  fill={barColor}
+                  filter="url(#shadow)"
+                  style={{
+                    transformOrigin: `center ${rectY + rectHeight}px`, // origin at bottom of the rect
+                    transform: animated ? `scaleY(${scaleY})` : "scaleY(0.01)",
+                    transition: `transform 900ms cubic-bezier(.2,.9,.2,1) ${i * 90}ms`,
+                  }}
+                />
+
+                {/* value label above bar */}
+                <text
+                  x={barWidth / 2}
+                  y={Math.max(8, rectY + rectHeight - rectHeight * scaleY - 10)}
+                  fontSize="12"
+                  textAnchor="middle"
+                  fill="#1F2937"
+                  className="dark:fill-gray-200"
+                  style={{ fontWeight: 700 }}
+                >
+                  {formatCompact(val)}
+                </text>
+
+                {/* x-axis labels */}
+                <text
+                  x={barWidth / 2}
+                  y={innerHeight + 20}
+                  fontSize="12"
+                  textAnchor="middle"
+                  fill="#374151"
+                  className="dark:fill-gray-300"
+                  style={{ transformOrigin: "center", whiteSpace: "pre-line" }}
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+
+        {/* x-axis baseline */}
+        {/* <line
+          x1={chartPadding.left}
+          x2={svgWidth - chartPadding.right}
+          y1={chartPadding.top + innerHeight + 6}
+          y2={chartPadding.top + innerHeight + 6}
+          stroke="#E5E7EB"
+          className="dark:stroke-gray-700"
+          strokeWidth={1}
+        /> */}
       </svg>
-      {limit && data.length > limit && <div className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 text-center transition-all duration-500">+{data.length - limit} more</div>}
     </div>
   );
 };
@@ -844,7 +945,7 @@ export default function DashboardPage() {
       </div>
 
       {error && (
-        <div className="p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 rounded mb-3 transition-all duration-500 transform hover:scale-105 animate-pulse text-xs">
+        <div className="p-2.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 rounded mb-3 transition-all duration-500 transform hover:scale-105 text-xs">
           {error}
         </div>
       )}
@@ -939,7 +1040,7 @@ export default function DashboardPage() {
         {/* Charts */}
         <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4 transition-all duration-500">
           <Card title={t("dashboard.groupProgress")} onClick={() => setShowGroupModal(true)} className="p-3 flex flex-col justify-between h-full">
-            {loading ? (<LoadingSkeleton className="h-24 transition-all duration-500" />) : (<div className="mt-2 transition-all duration-500"><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={4} /></div>)}
+            {loading ? (<LoadingSkeleton className="h-24 transition-all duration-500" />) : (<div className="mt-2 transition-all duration-500"><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={5} barWidth={80} gap={30} yLabel="Office progress" height={320}/></div>)}
           </Card>
 
           <Card title={t("dashboard.topTasks")} onClick={() => setShowTasksModal(true)} className="p-3">

@@ -105,13 +105,13 @@ export default function ReportsUI() {
   const isAdmin = Array.isArray(user?.permissions) && user.permissions.includes("manage_reports");
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-3 md:p-4 lg:p-5 max-w-8xl mx-auto transition-colors duration-200">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-3 md:p-4 lg:p-5 max-w-8xl mx-auto transition-colors duration-200">
       {/* Card-style Header */}
       <div className="mb-4 md:mb-5">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 py-3 px-3 transition-all duration-200">
           <div className="flex flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="p-2.5 rounded-lg bg-sky-50 dark:bg-sky-900/20 border border-sky-100 dark:border-sky-800/30">
+              <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-900 border border-sky-100 dark:border-sky-800/30">
                 <FileText className="h-5 w-5 text-sky-600 dark:text-sky-400" />
               </div>
               <div className="min-w-0 flex-1">
