@@ -145,6 +145,9 @@ async function run() {
       );
     }
 
+    // const dataSql = await findData();
+    // await client.query(dataSql);
+
     await client.query("COMMIT");
     console.log("Seeding completed successfully!");
   } catch (err) {

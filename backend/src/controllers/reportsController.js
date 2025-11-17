@@ -684,15 +684,13 @@ LIMIT $1 OFFSET $2
   }
 };
 
-// PATCH: Revised generateMasterReport handler to ensure activity previous/current/target metrics
-// are returned in the master JSON. Also adds safe aliases in SQL and maps activity-level
-// metric columns into the generated master JSON so the frontend can read previousMetric.
+
 exports.generateMasterReport = async (req, res) => {
   const groupId = req.query.groupId ? Number(req.query.groupId) : null;
   const format = (req.query.format || "").toLowerCase();
 
   try {
-    // MODIFIED: Added a."quarterlyGoals" to the SELECT statement
+
     const rows = await db.query(
       `
 SELECT g.id as goal_id,
@@ -739,7 +737,7 @@ ORDER BY g.id, t.id, a.id, r.id
 
     const raw = rows.rows || [];
 
-    // progress history snapshots (unchanged)
+    
     const phRowsQ = await db.query(
       `
 SELECT entity_id::int as activity_id, snapshot_month, progress, metrics, recorded_at
