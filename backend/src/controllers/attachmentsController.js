@@ -1,3 +1,4 @@
+// src/controllers/attachmentsController.js
 const db = require("../db");
 const path = require("path");
 const fs = require("fs");
@@ -8,174 +9,210 @@ const http = require("http");
 const https = require("https");
 const { URL } = require("url");
 
+function encodeRFC5987(value) {
+ 
+  return encodeURIComponent(value)
+    .replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+}
+
 exports.downloadAttachment = async (req, res) => {
-const { attachmentId } = req.params;
-try {
-const { rows } = await db.query(
-`SELECT at.*, r."activityId", a."taskId", t."goalId", g."groupId"
-FROM "Attachments" at
-JOIN "Reports" r ON r.id = at."reportId"
-JOIN "Activities" a ON a.id = r."activityId"
-JOIN "Tasks" t ON t.id = a."taskId"
-JOIN "Goals" g ON g.id = t."goalId"
-WHERE at.id = $1`,
-[attachmentId]
-);
+  const { attachmentId } = req.params;
+  try {
+    const { rows } = await db.query(
+      `SELECT at.*, r."activityId", a."taskId", t."goalId", g."groupId"
+       FROM "Attachments" at
+       JOIN "Reports" r ON r.id = at."reportId"
+       JOIN "Activities" a ON a.id = r."activityId"
+       JOIN "Tasks" t ON t.id = a."taskId"
+       JOIN "Goals" g ON g.id = t."goalId"
+       WHERE at.id = $1`,
+      [attachmentId]
+    );
 
-if (!rows[0])
-return res.status(404).json({ error: "Attachment not found." });
-const at = rows[0];
+    if (!rows[0])
+      return res.status(404).json({ error: "Attachment not found." });
+    const at = rows[0];
 
-const userPerms = req.user.permissions || [];
-const isAdmin =
-userPerms.includes("manage_reports") ||
-userPerms.includes("manage_attachments");
+    const userPerms = req.user.permissions || [];
+    const isAdmin =
+      userPerms.includes("manage_reports") ||
+      userPerms.includes("manage_attachments");
 
-if (!isAdmin) {
-const gcheck = await db.query(
-`SELECT 1 FROM "UserGroups" WHERE "userId" = $1 AND "groupId" = $2 LIMIT 1`,
-[req.user.id, at.groupId]
-);
-if (!gcheck.rows.length)
-return res.status(403).json({ error: "Forbidden" });
-}
+    if (!isAdmin) {
+      const gcheck = await db.query(
+        `SELECT 1 FROM "UserGroups" WHERE "userId" = $1 AND "groupId" = $2 LIMIT 1`,
+        [req.user.id, at.groupId]
+      );
+      if (!gcheck.rows.length)
+        return res.status(403).json({ error: "Forbidden" });
+    }
 
-try {
-await logAudit({
-userId: req.user.id,
-action: "ATTACHMENT_DOWNLOADED",
-entity: "Attachment",
-entityId: attachmentId,
-details: { fileName: at.fileName },
-req,
-});
-} catch (e) {
-console.error("ATTACHMENT_DOWNLOADED audit failed:", e);
-}
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "ATTACHMENT_DOWNLOADED",
+        entity: "Attachment",
+        entityId: attachmentId,
+        details: { fileName: at.fileName },
+        req,
+      });
+    } catch (e) {
+      console.error("ATTACHMENT_DOWNLOADED audit failed:", e);
+    }
 
-if (at.provider === "cloudinary" || /^https?:\/\//i.test(at.filePath)) {
-let fileUrl = at.filePath;
-if (!/^https?:\/\//i.test(fileUrl)) {
-fileUrl = null;
-}
+    if (at.provider === "cloudinary" || /^https?:\/\//i.test(at.filePath)) {
+      let fileUrl = at.filePath;
+      if (!/^https?:\/\//i.test(fileUrl)) {
+        fileUrl = null;
+      }
 
-if (fileUrl) {
-try {
-const parsed = new URL(fileUrl);
-const lib = parsed.protocol === "https:" ? https : http;
-const requestOptions = {
-headers: {
-accept: req.headers.accept || "*/*",
-},
-};
+      if (fileUrl) {
+        try {
+          const parsed = new URL(fileUrl);
+          const lib = parsed.protocol === "https:" ? https : http;
+          const requestOptions = {
+            headers: {
+              accept: req.headers.accept || "*/*",
+            },
+          };
 
-lib.get(fileUrl, requestOptions, (proxRes) => {
-if (proxRes.statusCode >= 400) {
-return res.status(proxRes.statusCode).send("Failed to fetch remote file");
-}
-const ct = proxRes.headers["content-type"];
-const cl = proxRes.headers["content-length"];
-if (ct) res.setHeader("Content-Type", ct);
-if (cl) res.setHeader("Content-Length", cl);
-const safeName = String(at.fileName || `attachment-${attachmentId}`).replace(/["\\]/g, "");
-res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
-proxRes.pipe(res);
-proxRes.on("error", (err) => {
-console.error("Error piping remote file:", err);
-try { res.end(); } catch (e) {}
-});
-}).on("error", (err) => {
-console.error("Remote request failed:", err);
-res.status(502).json({ error: "Failed fetching remote file." });
-});
+          lib.get(fileUrl, requestOptions, (proxRes) => {
+            if (proxRes.statusCode >= 400) {
+              return res.status(proxRes.statusCode).send("Failed to fetch remote file");
+            }
+            const ct = proxRes.headers["content-type"];
+            const cl = proxRes.headers["content-length"];
+            if (ct) res.setHeader("Content-Type", ct);
+            if (cl) res.setHeader("Content-Length", cl);
 
-return;
-} catch (err) {
-console.error("Error proxying remote file:", err);
-}
-}
-}
+            // ✅ RFC 5987 with fallback
+            const fileName = at.fileName || `attachment-${attachmentId}`;
+            const asciiFallback = fileName
+              .replace(/[^\x20-\x7E]/g, "_") // strip non-ASCII
+              .replace(/"/g, "'");
+            const encoded = encodeRFC5987(fileName);
 
-const fullPath = path.join(UPLOAD_DIR, path.basename(at.filePath));
-if (!fs.existsSync(fullPath)) {
-return res.status(404).json({ error: "File not found on server." });
-}
-return res.download(fullPath, at.fileName);
-} catch (err) {
-console.error("Error downloading attachment:", err);
-res.status(500).json({ error: err.message });
-}
+            res.setHeader(
+              "Content-Disposition",
+              `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`
+            );
+
+            proxRes.pipe(res);
+            proxRes.on("error", (err) => {
+              console.error("Error piping remote file:", err);
+              try { res.end(); } catch {}
+            });
+          }).on("error", (err) => {
+            console.error("Remote request failed:", err);
+            res.status(502).json({ error: "Failed fetching remote file." });
+          });
+
+          return;
+        } catch (err) {
+          console.error("Error proxying remote file:", err);
+        }
+      }
+    }
+
+    const fullPath = path.join(UPLOAD_DIR, path.basename(at.filePath));
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ error: "File not found on server." });
+    }
+
+    // ✅ Local file — use streaming + correct header
+    const fileName = at.fileName || `attachment-${attachmentId}`;
+    const asciiFallback = fileName
+      .replace(/[^\x20-\x7E]/g, "_")
+      .replace(/"/g, "'");
+    const encoded = encodeRFC5987(fileName);
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`
+    );
+    res.setHeader("Content-Length", fs.statSync(fullPath).size);
+
+    const stream = fs.createReadStream(fullPath);
+    stream.pipe(res);
+    stream.on("error", (err) => {
+      console.error("Local file stream error:", err);
+      res.status(500).end();
+    });
+  } catch (err) {
+    console.error("Error downloading attachment:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 exports.deleteAttachment = async (req, res) => {
-const { attachmentId } = req.params;
-const client = await db.connect();
-try {
-await client.query("BEGIN");
-const q = await client.query(
-`SELECT at.*, r."userId" as reportUserId, r.status as reportStatus
-FROM "Attachments" at
-JOIN "Reports" r ON r.id = at."reportId"
-WHERE at.id = $1 FOR UPDATE`,
-[attachmentId]
-);
-if (!q.rows[0]) {
-await client.query("ROLLBACK");
-return res.status(404).json({ error: "Attachment not found." });
-}
-const row = q.rows[0];
+  const { attachmentId } = req.params;
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const q = await client.query(
+      `SELECT at.*, r."userId" as reportUserId, r.status as reportStatus
+       FROM "Attachments" at
+       JOIN "Reports" r ON r.id = at."reportId"
+       WHERE at.id = $1 FOR UPDATE`,
+      [attachmentId]
+    );
+    if (!q.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Attachment not found." });
+    }
+    const row = q.rows[0];
 
-const userPerms = req.user.permissions || [];
-const isAdmin =
-userPerms.includes("manage_reports") ||
-userPerms.includes("manage_attachments");
+    const userPerms = req.user.permissions || [];
+    const isAdmin =
+      userPerms.includes("manage_reports") ||
+      userPerms.includes("manage_attachments");
 
-if (
-!isAdmin &&
-(row.reportUserId !== req.user.id || row.reportStatus !== "Pending")
-) {
-await client.query("ROLLBACK");
-return res.status(403).json({ error: "Forbidden" });
-}
+    if (
+      !isAdmin &&
+      (row.reportUserId !== req.user.id || row.reportStatus !== "Pending")
+    ) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
-await client.query('DELETE FROM "Attachments" WHERE id = $1', [
-attachmentId,
-]);
+    await client.query('DELETE FROM "Attachments" WHERE id = $1', [
+      attachmentId,
+    ]);
 
-if (row.provider === "cloudinary") {
-await deleteFile(row.filePath, { publicId: row.publicId || null });
-} else {
-const fullPath = path.join(UPLOAD_DIR, path.basename(row.filePath));
-try {
-fs.unlinkSync(fullPath);
-} catch (e) {}
-}
+    if (row.provider === "cloudinary") {
+      await deleteFile(row.filePath, { publicId: row.publicId || null });
+    } else {
+      const fullPath = path.join(UPLOAD_DIR, path.basename(row.filePath));
+      try {
+        fs.unlinkSync(fullPath);
+      } catch (e) {}
+    }
 
-try {
-await logAudit({
-userId: req.user.id,
-action: "ATTACHMENT_DELETED",
-entity: "Attachment",
-entityId: attachmentId,
-before: row,
-client,
-req,
-});
-} catch (e) {
-console.error("ATTACHMENT_DELETED audit failed (in-tx):", e);
-}
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "ATTACHMENT_DELETED",
+        entity: "Attachment",
+        entityId: attachmentId,
+        before: row,
+        client,
+        req,
+      });
+    } catch (e) {
+      console.error("ATTACHMENT_DELETED audit failed (in-tx):", e);
+    }
 
-await client.query("COMMIT");
-res.json({ message: "Attachment deleted." });
-} catch (err) {
-await client.query("ROLLBACK");
-console.error("Error deleting attachment:", err);
-res.status(500).json({ error: err.message });
-} finally {
-client.release();
-}
+    await client.query("COMMIT");
+    res.json({ message: "Attachment deleted." });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting attachment:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
 };
-
 
 exports.listAttachments = async (req, res) => {
   const { reportId } = req.query;
@@ -189,11 +226,9 @@ exports.listAttachments = async (req, res) => {
         at.*,
         r."activityId",
         r."userId" as "reportUserId",
-        -- Use 'title' for Activities/Tasks/Goals per schema
         COALESCE(a.title, '') as "activityTitle",
         COALESCE(t.title, '') as "taskTitle",
         COALESCE(g.title, '') as "goalTitle",
-        -- Groups use 'name' in your schema
         COALESCE(gr.name, '') as "groupName"
       FROM "Attachments" at
       JOIN "Reports" r ON r.id = at."reportId"
@@ -214,39 +249,38 @@ exports.listAttachments = async (req, res) => {
   }
 };
 
-
 exports.uploadAttachment = async (req, res) => {
-try {
-const { file } = req;
-const { reportId } = req.body;
-if (!file || !reportId)
-return res.status(400).json({ error: "File and reportId required." });
+  try {
+    const { file } = req;
+    const { reportId } = req.body;
+    if (!file || !reportId)
+      return res.status(400).json({ error: "File and reportId required." });
 
-const uploaded = await uploadFile(file);
+    const uploaded = await uploadFile(file);
 
-const { url, provider, fileName, fileType, publicId } = uploaded;
-const { rows } = await db.query(
-`INSERT INTO "Attachments" ("reportId","fileName","filePath","fileType","provider","createdAt", "publicId")
-VALUES ($1,$2,$3,$4,$5,NOW(), $6) RETURNING *`,
-[reportId, fileName, url, fileType, provider, publicId || null]
-);
+    const { url, provider, fileName, fileType, publicId } = uploaded;
+    const { rows } = await db.query(
+      `INSERT INTO "Attachments" ("reportId","fileName","filePath","fileType","provider","createdAt", "publicId")
+       VALUES ($1,$2,$3,$4,$5,NOW(), $6) RETURNING *`,
+      [reportId, fileName, url, fileType, provider, publicId || null]
+    );
 
-try {
-await logAudit({
-userId: req.user.id,
-action: "ATTACHMENT_UPLOADED",
-entity: "Attachment",
-entityId: rows[0].id,
-details: { fileName: uploaded.fileName },
-req,
-});
-} catch (e) {
-console.error("ATTACHMENT_UPLOADED audit failed:", e);
-}
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "ATTACHMENT_UPLOADED",
+        entity: "Attachment",
+        entityId: rows[0].id,
+        details: { fileName: uploaded.fileName },
+        req,
+      });
+    } catch (e) {
+      console.error("ATTACHMENT_UPLOADED audit failed:", e);
+    }
 
-res.status(201).json({ message: "File uploaded", attachment: rows[0] });
-} catch (err) {
-console.error("Error uploading attachment:", err);
-res.status(500).json({ error: err.message });
-}
+    res.status(201).json({ message: "File uploaded", attachment: rows[0] });
+  } catch (err) {
+    console.error("Error uploading attachment:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
