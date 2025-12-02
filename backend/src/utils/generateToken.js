@@ -37,7 +37,7 @@ tokenVersion: user.tokenVersion ?? 0,
 
 const jwtOptions = {
 expiresIn: opts.expiresIn || process.env.JWT_EXPIRES_IN || '1d',
-issuer: process.env.JWT_ISSUER || undefined,
+issuer: process.env.JWT_ISSUER || "my-app",
 };
 
 const token = jwt.sign(payload, process.env.JWT_SECRET, jwtOptions);

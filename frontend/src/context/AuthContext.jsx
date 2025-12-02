@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }) => {
       if (refreshing) return false;
       setRefreshing(true);
       try {
-        const r = await fetch("/api/auth/refresh", {
+        const r = await fetch(`${API_URL}/api/auth/refresh`, {
           method: "POST",
           credentials: "include",
           headers: { Accept: "application/json" },

@@ -5,7 +5,12 @@ export default defineConfig({
   plugins: [react()],
   server:{
     proxy:{
-      '/api': 'https://localhost:5000' // Redirects all /api requests to your backend
-    }
+      '/api': 'http://10.10.35.248:5000/' // Redirects all /api requests to your backend
+    },
+    
+    host: true, // bind to 0.0.0.0
+    watch: {
+      usePolling: true, // necessary for Docker on Windows/macOS
+    },
   }
 });
