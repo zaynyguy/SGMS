@@ -1,16 +1,42 @@
--- Drop existing objects (dev only)
-DROP SCHEMA public CASCADE;
-CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO postgres;
-GRANT ALL ON SCHEMA public TO public;
+-- ./docker/initdb/01_schema.sql
+-- Idempotent schema initialization for SGMS (safe for re-run)
+
+SET client_min_messages TO WARNING;
 SET search_path = public;
 
-CREATE TYPE goal_status AS ENUM ('Not Started', 'In Progress', 'Completed', 'On Hold');
-CREATE TYPE task_status AS ENUM ('To Do', 'In Progress', 'Done', 'Blocked');
-CREATE TYPE activity_status AS ENUM ('To Do', 'In Progress', 'Done');
-CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 'Rejected');
+-- safe type creation (modern Postgres supports IF NOT EXISTS)
+-- Safe enum creation (works on all Postgres versions)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'goal_status') THEN
+    CREATE TYPE goal_status AS ENUM ('Not Started', 'In Progress', 'Completed', 'On Hold');
+  END IF;
+END$$;
 
-CREATE TABLE "Roles" (
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_status') THEN
+    CREATE TYPE task_status AS ENUM ('To Do', 'In Progress', 'Done', 'Blocked');
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'activity_status') THEN
+    CREATE TYPE activity_status AS ENUM ('To Do', 'In Progress', 'Done');
+  END IF;
+END$$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'report_status') THEN
+    CREATE TYPE report_status AS ENUM ('Pending', 'Approved', 'Rejected');
+  END IF;
+END$$;
+
+
+-- Roles & permissions
+CREATE TABLE IF NOT EXISTS "Roles" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
   "description" VARCHAR(255),
@@ -18,7 +44,7 @@ CREATE TABLE "Roles" (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE "Permissions" (
+CREATE TABLE IF NOT EXISTS "Permissions" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
   "description" VARCHAR(255),
@@ -26,7 +52,7 @@ CREATE TABLE "Permissions" (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE "Users" (
+CREATE TABLE IF NOT EXISTS "Users" (
   "id" SERIAL PRIMARY KEY,
   "username" VARCHAR(255) NOT NULL UNIQUE,
   "name" VARCHAR(255),
@@ -39,7 +65,7 @@ CREATE TABLE "Users" (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE "RolePermissions" (
+CREATE TABLE IF NOT EXISTS "RolePermissions" (
   "id" SERIAL PRIMARY KEY,
   "roleId" INTEGER NOT NULL REFERENCES "Roles"("id") ON DELETE CASCADE,
   "permissionId" INTEGER NOT NULL REFERENCES "Permissions"("id") ON DELETE CASCADE,
@@ -48,7 +74,7 @@ CREATE TABLE "RolePermissions" (
   UNIQUE("roleId","permissionId")
 );
 
-CREATE TABLE "Groups" (
+CREATE TABLE IF NOT EXISTS "Groups" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
   "description" TEXT,
@@ -57,7 +83,7 @@ CREATE TABLE "Groups" (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE "UserGroups" (
+CREATE TABLE IF NOT EXISTS "UserGroups" (
   "id" SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
   "groupId" INTEGER NOT NULL REFERENCES "Groups"("id") ON DELETE CASCADE,
@@ -66,9 +92,9 @@ CREATE TABLE "UserGroups" (
   UNIQUE("userId","groupId")
 );
 
-CREATE SEQUENCE goals_rollno_seq START 1;
+CREATE SEQUENCE IF NOT EXISTS goals_rollno_seq START 1;
 
-CREATE TABLE "Goals" (
+CREATE TABLE IF NOT EXISTS "Goals" (
   "id" SERIAL PRIMARY KEY,
   "rollNo" INTEGER DEFAULT nextval('goals_rollno_seq'),
   "title" VARCHAR(255) NOT NULL,
@@ -82,11 +108,21 @@ CREATE TABLE "Goals" (
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE "Goals" ADD CONSTRAINT chk_goals_rollno_positive CHECK ("rollNo" > 0);
-CREATE UNIQUE INDEX IF NOT EXISTS ux_goals_rollno ON "Goals" ("rollNo");
-CREATE INDEX idx_goals_group_status ON "Goals" ("groupId","status");
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_goals_rollno_positive'
+  ) THEN
+    ALTER TABLE "Goals" ADD CONSTRAINT chk_goals_rollno_positive CHECK ("rollNo" > 0);
+  END IF;
+EXCEPTION WHEN duplicate_object THEN
+  -- ignore
+END$$;
 
-CREATE TABLE "Tasks" (
+CREATE UNIQUE INDEX IF NOT EXISTS ux_goals_rollno ON "Goals" ("rollNo");
+CREATE INDEX IF NOT EXISTS idx_goals_group_status ON "Goals" ("groupId","status");
+
+CREATE TABLE IF NOT EXISTS "Tasks" (
   "id" SERIAL PRIMARY KEY,
   "goalId" INTEGER NOT NULL REFERENCES "Goals"("id") ON DELETE CASCADE,
   "rollNo" INTEGER,
@@ -100,12 +136,20 @@ CREATE TABLE "Tasks" (
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE "Tasks" ADD CONSTRAINT chk_tasks_rollno_positive CHECK ("rollNo" IS NULL OR "rollNo" > 0);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_tasks_rollno_positive'
+  ) THEN
+    ALTER TABLE "Tasks" ADD CONSTRAINT chk_tasks_rollno_positive CHECK ("rollNo" IS NULL OR "rollNo" > 0);
+  END IF;
+EXCEPTION WHEN duplicate_object THEN
+END$$;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_tasks_goal_roll ON "Tasks" ("goalId","rollNo");
-CREATE INDEX idx_tasks_goal_id ON "Tasks" ("goalId");
-CREATE INDEX idx_tasks_assignee_id ON "Tasks" ("assigneeId");
+CREATE INDEX IF NOT EXISTS idx_tasks_goal_id ON "Tasks" ("goalId");
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee_id ON "Tasks" ("assigneeId");
 
-CREATE TABLE "Activities" (
+CREATE TABLE IF NOT EXISTS "Activities" (
   "id" SERIAL PRIMARY KEY,
   "taskId" INTEGER NOT NULL REFERENCES "Tasks"("id") ON DELETE CASCADE,
   "parentId" INTEGER REFERENCES "Activities"("id") ON DELETE CASCADE,
@@ -124,12 +168,20 @@ CREATE TABLE "Activities" (
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE "Activities" ADD CONSTRAINT chk_activities_rollno_positive CHECK ("rollNo" IS NULL OR "rollNo" > 0);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_activities_rollno_positive'
+  ) THEN
+    ALTER TABLE "Activities" ADD CONSTRAINT chk_activities_rollno_positive CHECK ("rollNo" IS NULL OR "rollNo" > 0);
+  END IF;
+EXCEPTION WHEN duplicate_object THEN
+END$$;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_activities_task_roll ON "Activities" ("taskId","rollNo");
-CREATE INDEX idx_activities_task_id ON "Activities" ("taskId");
-CREATE INDEX idx_activities_parent_id ON "Activities" ("parentId");
+CREATE INDEX IF NOT EXISTS idx_activities_task_id ON "Activities" ("taskId");
+CREATE INDEX IF NOT EXISTS idx_activities_parent_id ON "Activities" ("parentId");
 
-CREATE TABLE "SystemSettings" (
+CREATE TABLE IF NOT EXISTS "SystemSettings" (
   key VARCHAR(255) PRIMARY KEY,
   value JSONB,
   description TEXT,
@@ -137,7 +189,7 @@ CREATE TABLE "SystemSettings" (
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE "Reports" (
+CREATE TABLE IF NOT EXISTS "Reports" (
   "id" SERIAL PRIMARY KEY,
   "activityId" INT NOT NULL REFERENCES "Activities"(id) ON DELETE CASCADE,
   "userId" INT REFERENCES "Users"(id) ON DELETE SET NULL,
@@ -153,11 +205,11 @@ CREATE TABLE "Reports" (
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_reports_userId ON "Reports" ("userId");
-CREATE INDEX idx_reports_activityId ON "Reports" ("activityId");
-CREATE INDEX idx_reports_applied ON "Reports" ("applied");
+CREATE INDEX IF NOT EXISTS idx_reports_userId ON "Reports" ("userId");
+CREATE INDEX IF NOT EXISTS idx_reports_activityId ON "Reports" ("activityId");
+CREATE INDEX IF NOT EXISTS idx_reports_applied ON "Reports" ("applied");
 
-CREATE TABLE "Attachments" (
+CREATE TABLE IF NOT EXISTS "Attachments" (
   "id" SERIAL PRIMARY KEY,
   "reportId" INT NOT NULL REFERENCES "Reports"(id) ON DELETE CASCADE,
   "publicId" VARCHAR(255),
@@ -167,9 +219,9 @@ CREATE TABLE "Attachments" (
   "provider" VARCHAR(20) DEFAULT 'local',
   "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_attachments_reportId ON "Attachments" ("reportId");
+CREATE INDEX IF NOT EXISTS idx_attachments_reportId ON "Attachments" ("reportId");
 
-CREATE TABLE "Notifications" (
+CREATE TABLE IF NOT EXISTS "Notifications" (
   "id" SERIAL PRIMARY KEY,
   "userId" INT NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
   "type" VARCHAR(50) NOT NULL,
@@ -179,9 +231,9 @@ CREATE TABLE "Notifications" (
   "isRead" BOOLEAN DEFAULT false,
   "createdAt" TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX idx_notifications_userid_createdAt ON "Notifications" ("userId","createdAt");
+CREATE INDEX IF NOT EXISTS idx_notifications_userid_createdAt ON "Notifications" ("userId","createdAt");
 
-CREATE TABLE "AuditLogs" (
+CREATE TABLE IF NOT EXISTS "AuditLogs" (
   "id" SERIAL PRIMARY KEY,
   "userId" INT REFERENCES "Users"("id") ON DELETE SET NULL,
   "action" VARCHAR(100) NOT NULL,
@@ -194,9 +246,9 @@ CREATE TABLE "AuditLogs" (
   "after" JSONB,
   "createdAt" TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX idx_auditlogs_createdAt ON "AuditLogs" ("createdAt");
+CREATE INDEX IF NOT EXISTS idx_auditlogs_createdAt ON "AuditLogs" ("createdAt");
 
-CREATE TABLE "RefreshTokens" (
+CREATE TABLE IF NOT EXISTS "RefreshTokens" (
   id SERIAL PRIMARY KEY,
   "userId" INTEGER NOT NULL REFERENCES "Users"(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL,
@@ -204,9 +256,9 @@ CREATE TABLE "RefreshTokens" (
   revoked BOOLEAN DEFAULT false,
   createdAt TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX idx_refresh_tokens_userid ON "RefreshTokens"("userId");
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_userid ON "RefreshTokens"("userId");
 
-CREATE TABLE "ProgressHistory" (
+CREATE TABLE IF NOT EXISTS "ProgressHistory" (
   id SERIAL PRIMARY KEY,
   entity_type VARCHAR(20) NOT NULL,
   entity_id INTEGER NOT NULL,
@@ -222,24 +274,51 @@ CREATE INDEX IF NOT EXISTS idx_progresshistory_snapshot_month ON "ProgressHistor
 CREATE UNIQUE INDEX IF NOT EXISTS ux_progresshistory_entity_month
   ON "ProgressHistory"(entity_type, entity_id, snapshot_month);
 
+-- Update trigger helper
 CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
 BEGIN
   NEW."updatedAt" = NOW();
   RETURN NEW;
 END; $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER set_updatedAt_Roles BEFORE UPDATE ON "Roles" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_Permissions BEFORE UPDATE ON "Permissions" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_Users BEFORE UPDATE ON "Users" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_RolePermissions BEFORE UPDATE ON "RolePermissions" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_Groups BEFORE UPDATE ON "Groups" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_UserGroups BEFORE UPDATE ON "UserGroups" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_Goals BEFORE UPDATE ON "Goals" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_Tasks BEFORE UPDATE ON "Tasks" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_Activities BEFORE UPDATE ON "Activities" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_SystemSettings BEFORE UPDATE ON "SystemSettings" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
-CREATE TRIGGER set_updatedAt_Reports BEFORE UPDATE ON "Reports" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_Roles') THEN
+    CREATE TRIGGER set_updatedAt_Roles BEFORE UPDATE ON "Roles" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_Permissions') THEN
+    CREATE TRIGGER set_updatedAt_Permissions BEFORE UPDATE ON "Permissions" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_Users') THEN
+    CREATE TRIGGER set_updatedAt_Users BEFORE UPDATE ON "Users" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_RolePermissions') THEN
+    CREATE TRIGGER set_updatedAt_RolePermissions BEFORE UPDATE ON "RolePermissions" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_Groups') THEN
+    CREATE TRIGGER set_updatedAt_Groups BEFORE UPDATE ON "Groups" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_UserGroups') THEN
+    CREATE TRIGGER set_updatedAt_UserGroups BEFORE UPDATE ON "UserGroups" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_Goals') THEN
+    CREATE TRIGGER set_updatedAt_Goals BEFORE UPDATE ON "Goals" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_Tasks') THEN
+    CREATE TRIGGER set_updatedAt_Tasks BEFORE UPDATE ON "Tasks" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_Activities') THEN
+    CREATE TRIGGER set_updatedAt_Activities BEFORE UPDATE ON "Activities" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_SystemSettings') THEN
+    CREATE TRIGGER set_updatedAt_SystemSettings BEFORE UPDATE ON "SystemSettings" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_Reports') THEN
+    CREATE TRIGGER set_updatedAt_Reports BEFORE UPDATE ON "Reports" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+END$$;
 
+-- Triggers and functions for roll numbers and progress recalculation
 CREATE OR REPLACE FUNCTION trg_assign_task_rollno() RETURNS TRIGGER AS $$
 DECLARE v_max INT;
 BEGIN
@@ -252,7 +331,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS before_tasks_insert_assign_rollno ON "Tasks";
+DROP TRIGGER IF EXISTS before_tasks_insert_assign_rollno ON "Tasks" CASCADE;
 CREATE TRIGGER before_tasks_insert_assign_rollno
   BEFORE INSERT ON "Tasks"
   FOR EACH ROW
@@ -270,7 +349,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS before_activities_insert_assign_rollno ON "Activities";
+DROP TRIGGER IF EXISTS before_activities_insert_assign_rollno ON "Activities" CASCADE;
 CREATE TRIGGER before_activities_insert_assign_rollno
   BEFORE INSERT ON "Activities"
   FOR EACH ROW
@@ -304,7 +383,7 @@ BEGIN
   IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
 END;
 $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS after_activities_change ON "Activities";
+DROP TRIGGER IF EXISTS after_activities_change ON "Activities" CASCADE;
 CREATE TRIGGER after_activities_change
   AFTER INSERT OR UPDATE OR DELETE ON "Activities"
   FOR EACH ROW EXECUTE FUNCTION trg_recalc_task_progress();
@@ -349,12 +428,12 @@ BEGIN
   IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
 END;
 $$ LANGUAGE plpgsql;
-DROP TRIGGER IF EXISTS after_tasks_change ON "Tasks";
+DROP TRIGGER IF EXISTS after_tasks_change ON "Tasks" CASCADE;
 CREATE TRIGGER after_tasks_change
   AFTER INSERT OR UPDATE OR DELETE ON "Tasks"
   FOR EACH ROW EXECUTE FUNCTION trg_recalc_goal_progress();
 
--- Replace behavior: incoming metrics replace currentMetric (no accumulation)
+-- accumulate_metrics and sp_SubmitReport (kept as-is, idempotent via CREATE OR REPLACE)
 CREATE OR REPLACE FUNCTION accumulate_metrics(
   p_activity_id INT,
   p_metrics JSONB,
@@ -383,10 +462,8 @@ BEGIN
   END IF;
 
   v_target := COALESCE(v_act."targetMetric", '{}'::jsonb);
-  -- Replacement: set current metric directly to the provided metrics
   v_current := p_metrics;
 
-  -- compute numeric sums for progress
   FOR k IN SELECT jsonb_object_keys(v_current) LOOP
     BEGIN
       key_val := (v_current ->> k)::numeric;
@@ -418,7 +495,7 @@ BEGIN
   INSERT INTO "ProgressHistory"
     (entity_type, entity_id, group_id, progress, metrics, recorded_at, snapshot_month)
   VALUES
-    ('activity', p_activity_id,
+    ('Activity', p_activity_id,
      (SELECT gl."groupId" FROM "Activities" a JOIN "Tasks" t ON a."taskId" = t.id JOIN "Goals" gl ON t."goalId" = gl.id WHERE a.id = p_activity_id),
      COALESCE(v_new_progress, 0),
      v_current, NOW(), snap_month)
@@ -429,7 +506,6 @@ BEGIN
 END;
 $$;
 
--- Report submission: REPLACE currentMetric with submitted metrics, set status/isDone accordingly
 CREATE OR REPLACE FUNCTION sp_SubmitReport(
     p_activity_id INT,
     p_user_id INT,
