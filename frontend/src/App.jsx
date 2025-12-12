@@ -13,8 +13,11 @@ import AccessDeniedPage from "./pages/AccessDeniedPage";
 import UserSettingsPage from "./pages/SettingsPage";
 import SystemSettingsPage from "./pages/SystemSettingsPage";
 import AuditLogPage from "./pages/AuditLogPage";
-import ReportPage from "./pages/ReportPage";
-import AccessManagementPage from "./pages/AccessManagementPage";
+import UserManagementPage from "./pages/UsersManagementPage";
+import RoleManagementPage from "./pages/RolesManagementPage";
+import GroupManagementPage from "./pages/GroupsManagementPage";
+import ReportReviewPage from "./pages/ReportReviewPage";
+import MasterReportPage from "./pages/MasterReportPage";
 import ProjectManagement from "./pages/ProjectManagementPage";
 import AttachmentManager from "./pages/AttachmentPage";
 import NotificationsPanel from "./pages/NotificationPage";
@@ -60,22 +63,48 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/accessmanagement"
-                  element={
-                    <ProtectedRoute requiredPermission="manage_access">
-                      <AccessManagementPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/report"
-                  element={
-                    <ProtectedRoute requiredPermission="view_reports">
-                      <ReportPage />
-                    </ProtectedRoute>
-                  }
-                />
+<Route
+  path="/accessmanagement/usermanagement"
+  element={
+    <ProtectedRoute requiredPermission="manage_access">
+      <UserManagementPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/accessmanagement/rolemanagement"
+  element={
+    <ProtectedRoute requiredPermission="manage_access">
+      <RoleManagementPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/accessmanagement/groupmanagement"
+  element={
+    <ProtectedRoute requiredPermission="manage_access">
+      <GroupManagementPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/report/review"
+  element={
+    <ProtectedRoute requiredPermission="view_reports">
+      <ReportReviewPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/report/master"
+  element={
+    <ProtectedRoute requiredPermission="view_reports">
+      <MasterReportPage />
+    </ProtectedRoute>
+  }
+/>
+
                 <Route
                   path="/project"
                   element={

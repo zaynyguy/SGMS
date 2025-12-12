@@ -57,6 +57,89 @@ const SettingsPage = () => {
   const { t } = useTranslation();
   const { updateUser } = useAuth();
   const { dark } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(dark);
+
+  // Material Design 3 color system - light theme
+  const lightColors = {
+    primary: "#00684A", // Deep green (MD3 primary)
+    onPrimary: "#FFFFFF",
+    primaryContainer: "#94F4C6", // Light green container
+    onPrimaryContainer: "#002015", // Dark green text on container
+    secondary: "#4F616E",
+    onSecondary: "#FFFFFF",
+    secondaryContainer: "#D2E4F2",
+    onSecondaryContainer: "#0D1E2A",
+    tertiary: "#7A5571",
+    onTertiary: "#FFFFFF",
+    tertiaryContainer: "#FFD8F1",
+    onTertiaryContainer: "#2F1328",
+    error: "#BA1A1A",
+    onError: "#FFFFFF",
+    errorContainer: "#FFDAD6",
+    onErrorContainer: "#410002",
+    background: "#FCFDF7",
+    onBackground: "#1A1C19",
+    surface: "#FCFDF7",
+    onSurface: "#1A1C19",
+    surfaceVariant: "#DDE4D9",
+    onSurfaceVariant: "#414941",
+    outline: "#717970",
+    outlineVariant: "#C1C9C0",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#2E312E",
+    inverseOnSurface: "#F0F2EC",
+    inversePrimary: "#77D8B8",
+    surfaceContainerLowest: "#FFFFFF",
+    surfaceContainerLow: "#F8F9F4",
+    surfaceContainer: "#F2F4EF",
+    surfaceContainerHigh: "#ECF0E8",
+    surfaceContainerHighest: "#E6EAE2",
+  };
+
+  // Material Design 3 color system - dark theme
+  const darkColors = {
+    primary: "#4ADE80", // Lighter green for dark mode
+    onPrimary: "#002115",
+    primaryContainer: "#003925",
+    onPrimaryContainer: "#BBF7D0",
+    secondary: "#B6C9FF",
+    onSecondary: "#1E307D",
+    secondaryContainer: "#354796",
+    onSecondaryContainer: "#DBE6FD",
+    tertiary: "#D0BCFF",
+    onTertiary: "#4F308B",
+    tertiaryContainer: "#6745A3",
+    onTertiaryContainer: "#E9D7FD",
+    error: "#FFB4AB",
+    onError: "#690005",
+    errorContainer: "#93000A",
+    onErrorContainer: "#FFDAD6",
+    background: "#1A1C19",
+    onBackground: "#E1E3DD",
+    surface: "#1A1C19",
+    onSurface: "#E1E3DD",
+    surfaceVariant: "#444C45",
+    onSurfaceVariant: "#C2C9C2",
+    outline: "#8C948D",
+    outlineVariant: "#444C45",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#E1E3DD",
+    inverseOnSurface: "#1A1C19",
+    inversePrimary: "#006D5B",
+    surfaceContainerLowest: "#222421",
+    surfaceContainerLow: "#2D2F2C",
+    surfaceContainer: "#313330",
+    surfaceContainerHigh: "#3B3D3A",
+    surfaceContainerHighest: "#454744",
+  };
+
+  // Select colors based on dark mode
+  const m3Colors = darkMode ? darkColors : lightColors;
 
   const [settings, setSettings] = useState({
     username: "",
@@ -78,6 +161,11 @@ const SettingsPage = () => {
 
   const previewObjectUrlRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -295,12 +383,45 @@ const SettingsPage = () => {
     }
   };
 
+  // Button style helpers with MD3 styling
+  const primaryBtn = "px-4 py-2.5 text-sm font-medium rounded-xl bg-green-700 hover:bg-[color-mix(in_srgb,var(--primary),white_10%)] text-white transition-all duration-200 shadow-md hover:shadow-lg";
+  const ghostBtn = "px-4 py-2.5 text-sm font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-800 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200";
+  const outlineBtn = "px-4 py-2.5 text-sm font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[color-mix(in_srgb,var(--surface),black_4%)] dark:hover:bg-gray-700 transition-all duration-200";
+  const errorBtn = "px-4 py-2.5 text-sm font-medium rounded-xl bg-[var(--error)] hover:bg-[color-mix(in_srgb,var(--error),white_10%)] text-[var(--on-error)] transition-all duration-200 shadow-md hover:shadow-lg";
+  
+  // Input style helpers
+  const inputClass = "w-full md3-input text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400";
+  const labelClass = "block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1";
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-200 dark:bg-gray-900 flex items-center justify-center p-6 transition-all duration-500">
-        <div className="flex flex-col items-center animate-fade-in-up">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-500 mb-4 transition-all duration-700" />
-          <p className="text-gray-500 dark:text-gray-400 transition-colors duration-300 text-xs">
+      <div 
+        className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 bg-gray-50 dark:bg-gray-900 ${
+          mounted ? 'opacity-100 animate-fade-in' : 'opacity-0'
+        }`}
+        style={{
+          "--background": m3Colors.background,
+          "--on-background": m3Colors.onBackground,
+        }}
+      >
+        <style>{`
+          @keyframes fade-in {
+            from {
+              opacity: 0;
+              transform: translateY(8px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .animate-fade-in {
+            animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          }
+        `}</style>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--primary)] mb-4" />
+          <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
             {t("settings.loading") || "Loading..."}
           </p>
         </div>
@@ -318,333 +439,56 @@ const SettingsPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-all duration-500 ease-in-out text-xs">
-      {/* Full-width header */}
-      <header className="w-full transition-all duration-500">
-        <div className="w-full px-4 sm:px-6 py-3">
-          <div className="bg-white dark:bg-gray-800 backdrop-blur-xs rounded-2xl shadow-sm px-4 py-3 flex justify-between items-center animate-fade-in-down transition-all duration-500 w-full">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="flex items-center gap-3 header-actions">
-                <div className="p-2 rounded-xl bg-gray-200 dark:bg-gray-900 shadow hover:shadow-md hover:scale-105 transition-all duration-300">
-                  <Settings className="h-5 w-5 text-sky-600 dark:text-sky-300" />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="text-lg sm:text-xl font-semibold truncate">
-                    {t("settings.title") || "Settings"}
-                  </h1>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
-                    {t("settings.subtitle")}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <TopBar className="flex transition-transform duration-300 hover:scale-105" />
-          </div>
-        </div>
-      </header>
-
-      {/* Full-width main content */}
-      <main className="w-full px-4 sm:px-6 py-5 animate-fade-in-up">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xs overflow-hidden divide-y divide-gray-100 dark:divide-gray-700 transition-all duration-500 ease-in-out transform hover:shadow-lg w-full">
-          <form onSubmit={handleSubmit} className="w-full">
-            {/* Profile Picture - Full width */}
-            <section className="p-4 sm:p-6 section transition-all duration-300 ease-in-out w-full">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 transition-all duration-300 hover:scale-110">
-                  <User size={16} />
-                </div>
-                <h2 className="text-base font-medium transition-colors duration-300">
-                  {t("settings.profilePicture") || "Profile picture"}
-                </h2>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full">
-                <div className="relative responsive-avatar transition-all duration-500 flex-shrink-0">
-                  {profilePicturePreview ? (
-                    <img
-                      src={profilePicturePreview}
-                      alt="Profile Preview"
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-xs transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-md"
-                    />
-                  ) : (
-                    <AuthenticatedImage
-                      src={settings.profilePicture}
-                      alt={t("settings.profilePicture") || "Profile picture"}
-                      fallbackName={settings.name}
-                      fallbackUsername={settings.username}
-                      fallbackSeed={settings.name || settings.username}
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 shadow-xs transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-md"
-                      fallbackClassName="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center text-white text-xl font-semibold shadow-xs transition-all duration-500 ease-in-out transform hover:scale-105"
-                    />
-                  )}
-
-                  {profilePicturePreview && (
-                    <button
-                      type="button"
-                      onClick={removeProfilePicturePreview}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 shadow-md transition-all duration-300 ease-in-out transform hover:scale-110 hover:bg-red-600 active:scale-95"
-                      aria-label="Remove preview"
-                    >
-                      <X className="w-3 h-3 sm:w-4 sm:h-4 transition-transform duration-300" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-3 flex-1 min-w-0 w-full">
-                  <div className="flex flex-col sm:flex-row gap-3 items-center">
-                    <div className="flex-shrink-0">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        id="profile-picture"
-                        accept="image/*"
-                        onChange={handleProfilePictureChange}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="profile-picture"
-                        className="inline-flex items-center px-3 py-1.5 border rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-md active:scale-95 text-xs w-full sm:w-auto justify-center"
-                      >
-                        <Upload className="w-4 h-4 mr-2 transition-transform duration-300" />
-                        {t("settings.chooseImage") || "Choose image"}
-                      </label>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 flex-1 min-w-0">
-                      {profilePictureFile ? (
-                        <div className="text-xs text-gray-600 dark:text-gray-300 transition-colors duration-300 truncate flex-1 min-w-0">
-                          {profilePictureFile.name} •{" "}
-                          {formatBytes(profilePictureFile.size)}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
-                          {t("settings.pictureHint") ||
-                            "Square image works best (max 5 MB)"}
-                        </div>
-                      )}
-
-                      {profilePictureFile && (
-                        <button
-                          type="button"
-                          onClick={uploadProfilePicture}
-                          disabled={uploadingPicture}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg transition-all duration-500 ease-in-out transform hover:scale-105 hover:bg-blue-700 hover:shadow-lg disabled:opacity-60 disabled:transform-none active:scale-95 text-xs w-full sm:w-auto justify-center"
-                        >
-                          {uploadingPicture ? (
-                            <>
-                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white transition-transform duration-700" />
-                              <span className="transition-colors duration-300 text-xs">
-                                {t("settings.uploading") || "Uploading..."}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <Save className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
-                              <span className="transition-colors duration-300 text-xs">
-                                {t("settings.upload") || "Upload"}
-                              </span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Personal Info - Full width */}
-            <section className="p-4 sm:p-6 section transition-all duration-300 ease-in-out w-full">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-full bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 transition-all duration-300 hover:scale-110">
-                  <UserCircle size={16} />
-                </div>
-                <h2 className="text-base font-medium transition-colors duration-300">
-                  {t("settings.personalInfo") || "Personal info"}
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-                <div className="transition-all duration-300 transform hover:scale-[1.02]">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                    {t("settings.username") || "Username"}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.username}
-                    readOnly
-                    className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 transition-all duration-300 ease-in-out transform hover:border-gray-400 text-xs"
-                  />
-                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 transition-colors duration-300">
-                    {t("settings.usernameHelp")}
-                  </p>
-                </div>
-
-                <div className="transition-all duration-300 transform hover:scale-[1.02]">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                    {t("settings.name") || "Full name"}
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.name}
-                    onChange={(e) =>
-                      setSettings({ ...settings, name: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400 focus:scale-[1.02] text-xs"
-                    placeholder={
-                      t("settings.namePlaceholder") || "Your display name"
-                    }
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Appearance - Full width */}
-            <section className="p-4 sm:p-6 section transition-all duration-300 ease-in-out w-full">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300 transition-all duration-300 hover:scale-110">
-                  <Palette size={16} />
-                </div>
-                <h2 className="text-base font-medium transition-colors duration-300">
-                  {t("settings.appearance") || "Appearance"}
-                </h2>
-              </div>
-
-              <div className="w-full max-w-md">
-                <div className="transition-all duration-300 transform hover:scale-[1.02]">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                    {t("settings.language") || "Language"}
-                  </label>
-                  <LanguageSwitcher
-                    compact
-                    value={settings.language}
-                    onChange={(lang) =>
-                      setSettings({ ...settings, language: lang })
-                    }
-                  />
-                </div>
-              </div>
-            </section>
-
-            {/* Password - Full width */}
-            <section className="p-4 sm:p-6 section transition-all duration-300 ease-in-out w-full">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="p-2 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 transition-all duration-300 hover:scale-110">
-                  <Shield size={16} />
-                </div>
-                <h2 className="text-base font-medium transition-colors duration-300">
-                  {t("settings.changePassword") || "Change password"}
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
-                <div className="transition-all duration-300 transform hover:scale-[1.02]">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                    {t("settings.oldPassword") || "Old password"}
-                  </label>
-                  <input
-                    type="password"
-                    value={oldPassword}
-                    onChange={(e) => {
-                      setOldPassword(e.target.value);
-                      if (e.target.value && oldPasswordError)
-                        setOldPasswordError("");
-                    }}
-                    placeholder={
-                      t("settings.passwordPlaceholder") || "••••••••"
-                    }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400 focus:scale-[1.02] ${
-                      oldPasswordError
-                        ? "border-red-500 animate-shake"
-                        : "border-gray-300"
-                    } bg-white dark:bg-gray-700 text-xs`}
-                  />
-                  {oldPasswordError && (
-                    <p className="mt-1 text-[11px] text-red-500 transition-all duration-300 animate-fade-in">
-                      {oldPasswordError}
-                    </p>
-                  )}
-                </div>
-
-                <div className="transition-all duration-300 transform hover:scale-[1.02]">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                    {t("settings.newPassword") || "New password"}
-                  </label>
-                  <input
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => {
-                      setNewPassword(e.target.value);
-                      if (e.target.value && e.target.value.length < 8)
-                        setPasswordError(
-                          t("settings.errors.passwordTooShort") ||
-                            "Password too short"
-                        );
-                      else setPasswordError("");
-                    }}
-                    placeholder={
-                      t("settings.passwordPlaceholder") || "••••••••"
-                    }
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400 focus:scale-[1.02] ${
-                      passwordError
-                        ? "border-red-500 animate-shake"
-                        : "border-gray-300"
-                    } bg-white dark:bg-gray-700 text-xs`}
-                  />
-                  {passwordError && (
-                    <p className="mt-1 text-[11px] text-red-500 transition-all duration-300 animate-fade-in">
-                      {passwordError}
-                    </p>
-                  )}
-                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400 transition-colors duration-300">
-                    {t("settings.passwordRequirements") ||
-                      "Minimum 8 characters."}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* Submit - Full width */}
-            <section className="p-4 sm:p-6 bg-gray-50 dark:bg-gray-700/50 flex justify-end section transition-all duration-300 w-full">
-              <button
-                type="submit"
-                disabled={
-                  saving ||
-                  (newPassword && newPassword.length < 8) ||
-                  (newPassword && !oldPassword)
-                }
-                className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-xs disabled:opacity-50 transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-lg active:scale-95 text-xs w-full sm:w-auto justify-center"
-              >
-                {saving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white transition-transform duration-700" />
-                    <span className="transition-colors duration-300 text-xs">
-                      {t("settings.saving") || "Saving..."}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 transition-transform duration-300 group-hover:scale-110" />
-                    <span className="transition-colors duration-300 text-xs">
-                      {t("settings.saveChanges") || "Save changes"}
-                    </span>
-                  </>
-                )}
-              </button>
-            </section>
-          </form>
-        </div>
-      </main>
-
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={handleToastClose}
-        />
-      )}
-
-      <style jsx>{`
+    <div 
+      className={`min-h-screen font-sans transition-colors duration-300 bg-gray-50 dark:bg-gray-900 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+      style={{
+        "--primary": m3Colors.primary,
+        "--on-primary": m3Colors.onPrimary,
+        "--primary-container": m3Colors.primaryContainer,
+        "--on-primary-container": m3Colors.onPrimaryContainer,
+        "--secondary": m3Colors.secondary,
+        "--on-secondary": m3Colors.onSecondary,
+        "--secondary-container": m3Colors.secondaryContainer,
+        "--on-secondary-container": m3Colors.onSecondaryContainer,
+        "--tertiary": m3Colors.tertiary,
+        "--on-tertiary": m3Colors.onTertiary,
+        "--tertiary-container": m3Colors.tertiaryContainer,
+        "--on-tertiary-container": m3Colors.onTertiaryContainer,
+        "--error": m3Colors.error,
+        "--on-error": m3Colors.onError,
+        "--error-container": m3Colors.errorContainer,
+        "--on-error-container": m3Colors.onErrorContainer,
+        "--background": m3Colors.background,
+        "--on-background": m3Colors.onBackground,
+        "--surface": m3Colors.surface,
+        "--on-surface": m3Colors.onSurface,
+        "--surface-variant": m3Colors.surfaceVariant,
+        "--on-surface-variant": m3Colors.onSurfaceVariant,
+        "--outline": m3Colors.outline,
+        "--outline-variant": m3Colors.outlineVariant,
+        "--shadow": m3Colors.shadow,
+        "--scrim": m3Colors.scrim,
+        "--inverse-surface": m3Colors.inverseSurface,
+        "--inverse-on-surface": m3Colors.inverseOnSurface,
+        "--inverse-primary": m3Colors.inversePrimary,
+        "--surface-container-lowest": m3Colors.surfaceContainerLowest,
+        "--surface-container-low": m3Colors.surfaceContainerLow,
+        "--surface-container": m3Colors.surfaceContainer,
+        "--surface-container-high": m3Colors.surfaceContainerHigh,
+        "--surface-container-highest": m3Colors.surfaceContainerHighest,
+      }}
+    >
+      <style>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
         @keyframes fade-in-up {
           from {
             opacity: 0;
@@ -665,25 +509,13 @@ const SettingsPage = () => {
             transform: translateY(0);
           }
         }
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
         @keyframes shake {
-          0%,
-          100% {
-            transform: translateX(0);
-          }
-          25% {
-            transform: translateX(-5px);
-          }
-          75% {
-            transform: translateX(5px);
-          }
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-fade-in {
+          animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         .animate-fade-in-up {
           animation: fade-in-up 0.6s ease-out;
@@ -691,13 +523,392 @@ const SettingsPage = () => {
         .animate-fade-in-down {
           animation: fade-in-down 0.6s ease-out;
         }
-        .animate-fade-in {
-          animation: fade-in 0.4s ease-out;
-        }
         .animate-shake {
           animation: shake 0.4s ease-in-out;
         }
+        .surface-elevation-0 { 
+          box-shadow: none;
+        }
+        .surface-elevation-1 { 
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04); 
+          border: none;
+        }
+        .surface-elevation-2 { 
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06); 
+          border: none;
+        }
+        .surface-elevation-3 { 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08); 
+          border: none;
+        }
+        .md3-container {
+          border-radius: 28px;
+          overflow: hidden;
+        }
+        .md3-card {
+          border-radius: 20px;
+          overflow: hidden;
+        }
+        .md3-input {
+          border-radius: 16px;
+          padding: 10px 16px;
+          border: 1px solid var(--outline-variant);
+          background: var(--surface-container-lowest);
+          transition: all 0.2s ease;
+        }
+        .md3-input:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 2px var(--primary-container);
+        }
+        .md3-button {
+          border-radius: 20px;
+          padding: 8px 16px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+        }
+        .md3-icon-container {
+          border-radius: 16px;
+          padding: 10px;
+        }
+        .section-title {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        .section-label {
+          font-size: 20px;
+          font-weight: 600;
+          color: var(--on-surface);
+        }
+        .section-subtitle {
+          color: var(--on-surface-variant);
+          font-size: 14px;
+        }
+        .setting-item {
+          transition: all 0.2s ease;
+        }
+        .setting-item:hover {
+          transform: translateY(-2px);
+        }
+        .responsive-avatar {
+          transition: all 0.3s ease;
+        }
+        .responsive-avatar:hover {
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
       `}</style>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Header container with MD3 container styling */}
+        <div className="mb-6 animate-fade-in" style={{ animationDelay: "0ms" }}>
+          <div className="md3-container surface-elevation-3 overflow-hidden">
+            <div className=" dark:bg-gray-800 px-5 py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex min-w-0 gap-4 items-center">
+                  <div className="md3-icon-container bg-[var(--primary-container)] bg-green-200 dark:bg-indigo-900 surface-elevation-1">
+                    <Settings className="h-6 w-6 text-green-800 dark:text-indigo-200 transition-transform duration-300 hover:scale-110" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-2xl font-bold  dark:text-white truncate">
+                      {t("settings.title") || "Settings"}
+                    </h1>
+                    <p className="mt-1 dark:text-gray-400 max-w-2xl">
+                      {t("settings.subtitle")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <TopBar /> 
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main content container with MD3 card styling */}
+        <div className="md3-card bg-[var(--surface-container-low)] bg-gray-50 dark:bg-gray-800 surface-elevation-3">
+          <div className="p-4 sm:p-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Profile Picture Section */}
+              <section className="pb-6 border-b border-[var(--outline-variant)] dark:border-gray-700">
+                <div className="section-title">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--primary-container)] bg-green-300 dark:bg-green-900 flex items-center justify-center">
+                    <User className="h-5 w-5 text-[var(--on-primary-container)] text-black dark:text-green-200" />
+                  </div>
+                  <div>
+                    <h2 className="text-[var(--on-surface)] text-xl font-semibold text-black dark:text-white">{t("settings.profilePicture") || "Profile picture"}</h2>
+                    <p className="text-[var(--on-surface-variant)] text-sm text-gray-700 dark:text-gray-400">{t("settings.pictureHint") || "Square image works best (max 5 MB)"}</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-6 mt-4">
+                  <div className="relative responsive-avatar">
+                    {profilePicturePreview ? (
+                      <img
+                        src={profilePicturePreview}
+                        alt="Profile Preview"
+                        className="w-24 h-24 rounded-full object-cover border-2 border-[var(--outline-variant)] border-gray-100 dark:border-gray-600"
+                      />
+                    ) : (
+                      <AuthenticatedImage
+                        src={settings.profilePicture}
+                        alt={t("settings.profilePicture") || "Profile picture"}
+                        fallbackName={settings.name}
+                        fallbackUsername={settings.username}
+                        fallbackSeed={settings.name || settings.username}
+                        className="w-24 h-24 rounded-full object-cover border-2 border-[var(--outline-variant)] border-gray-100 dark:border-gray-600"
+                        fallbackClassName="w-24 h-24 rounded-full flex items-center justify-center text-white text-xl font-semibold bg-[var(--primary-container)] dark:bg-green-600"
+                      />
+                    )}
+
+                    {profilePicturePreview && (
+                      <button
+                        type="button"
+                        onClick={removeProfilePicturePreview}
+                        className="absolute -top-2 -right-2 bg-[var(--error-container)] dark:bg-red-900 text-[var(--on-error-container)] dark:text-red-200 rounded-full p-1 shadow-md hover:bg-[var(--error)] dark:hover:bg-red-700 transition-all"
+                        aria-label="Remove preview"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex-1 w-full space-y-4">
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        id="profile-picture"
+                        accept="image/*"
+                        onChange={handleProfilePictureChange}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="profile-picture"
+                        className="inline-flex items-center px-4 py-2 border border-gray-400 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-black dark:text-white cursor-pointer hover:bg-[var(--surface-container)] hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                      >
+                        <Upload className="w-4 h-4 mr-2 text-[var(--on-surface)] text-black dark:text-white" />
+                        {t("settings.chooseImage") || "Choose image"}
+                      </label>
+                    </div>
+
+                    {profilePictureFile && (
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {profilePictureFile.name} • {formatBytes(profilePictureFile.size)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={uploadProfilePicture}
+                          disabled={uploadingPicture}
+                          className={`inline-flex items-center gap-2 ${primaryBtn} w-full sm:w-auto justify-center`}
+                        >
+                          {uploadingPicture ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-transparent border-t-[var(--on-primary)]"></div>
+                              <span>{t("settings.uploading") || "Uploading..."}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4 text-white" />
+                              <span>{t("settings.upload") || "Upload"}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* Personal Info Section */}
+              <section className="pb-6 border-b border-[var(--outline-variant)] dark:border-gray-700">
+                <div className="section-title">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--tertiary-container)] bg-purple-300 dark:bg-purple-900 flex items-center justify-center">
+                    <UserCircle className="h-5 w-5 text-[var(--on-tertiary-container)] text-black dark:text-purple-200" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold dark:text-white">{t("settings.personalInfo") || "Personal info"}</h2>
+                    <p className="text-sm dark:text-gray-400">{t("settings.personalInfoDesc")}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="setting-item">
+                    <label className={labelClass}>
+                      {t("settings.username") || "Username"}
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.username}
+                      readOnly
+                      className="w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 cursor-not-allowed"
+                    />
+                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                      {t("settings.usernameHelp")}
+                    </p>
+                  </div>
+
+                  <div className="setting-item">
+                    <label className={labelClass}>
+                      {t("settings.name") || "Full name"}
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.name}
+                      onChange={(e) =>
+                        setSettings({ ...settings, name: e.target.value })
+                      }
+                      className="w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                      placeholder={
+                        t("settings.namePlaceholder") || "Your display name"
+                      }
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Appearance Section */}
+              {/* <section className="pb-6 border-b border-[var(--outline-variant)] dark:border-gray-700">
+                <div className="section-title">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--secondary-container)] dark:bg-blue-900 flex items-center justify-center">
+                    <Palette className="h-5 w-5 text-[var(--on-secondary-container)] dark:text-blue-200" />
+                  </div>
+                  <div>
+                    <h2 className="section-label text-[var(--on-surface)] dark:text-white">{t("settings.appearance") || "Appearance"}</h2>
+                    <p className="section-subtitle text-[var(--on-surface-variant)] dark:text-gray-400">{t("settings.appearanceDesc")}</p>
+                  </div>
+                </div>
+
+                <div className="max-w-md mt-4 setting-item">
+                  <label className={labelClass}>
+                    {t("settings.language") || "Language"}
+                  </label>
+                  <div className="bg-[var(--surface-container-lowest)] dark:bg-gray-700 rounded-xl p-1 surface-elevation-1">
+                    <LanguageSwitcher
+                      value={settings.language}
+                      onChange={(lang) =>
+                        setSettings({ ...settings, language: lang })
+                      }
+                    />
+                  </div>
+                </div>
+              </section> */}
+
+              {/* Password Section */}
+              <section className="pb-6 border-b border-[var(--outline-variant)] dark:border-gray-700">
+                <div className="section-title">
+                  <div className="w-10 h-10 rounded-xl bg-red-300 dark:bg-red-900 flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-black dark:text-red-200" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold dark:text-white">{t("settings.changePassword") || "Change password"}</h2>
+                    <p className="text-sm dark:text-gray-400">{t("settings.passwordRequirements") || "Minimum 8 characters."}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="setting-item">
+                    <label className={labelClass}>
+                      {t("settings.oldPassword") || "Old password"}
+                    </label>
+                    <input
+                      type="password"
+                      value={oldPassword}
+                      onChange={(e) => {
+                        setOldPassword(e.target.value);
+                        if (e.target.value && oldPasswordError)
+                          setOldPasswordError("");
+                      }}
+                      placeholder={
+                        t("settings.passwordPlaceholder") || "••••••••"
+                      }
+                      className={`w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ${
+                        oldPasswordError ? "border-[var(--error)] ring-2 ring-[var(--error-container)]" : ""
+                      }`}
+                    />
+                    {oldPasswordError && (
+                      <p className="mt-1 text-sm text-[var(--error)] dark:text-red-400 animate-shake">
+                        {oldPasswordError}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="setting-item">
+                    <label className={labelClass}>
+                      {t("settings.newPassword") || "New password"}
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        if (e.target.value && e.target.value.length < 8)
+                          setPasswordError(
+                            t("settings.errors.passwordTooShort") ||
+                              "Password too short"
+                          );
+                        else setPasswordError("");
+                      }}
+                      placeholder={
+                        t("settings.passwordPlaceholder") || "••••••••"
+                      }
+                      className={`w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ${
+                        passwordError ? "border-[var(--error)] ring-2 ring-[var(--error-container)]" : ""
+                      }`}
+                    />
+                    {passwordError && (
+                      <p className="mt-1 text-sm text-[var(--error)] dark:text-red-400 animate-shake">
+                        {passwordError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              {/* Submit Section */}
+              <section className="pt-6 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={
+                    saving ||
+                    (newPassword && newPassword.length < 8) ||
+                    (newPassword && !oldPassword)
+                  }
+                  className={`inline-flex items-center gap-2 ${primaryBtn} dark:bg-indigo-800 w-full md:w-auto justify-center`}
+                >
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-transparent border-t-[var(--on-primary)]"></div>
+                      <span>{t("settings.saving") || "Saving..."}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 text-white" />
+                      <span>{t("settings.saveChanges") || "Save changes"}</span>
+                    </>
+                  )}
+                </button>
+              </section>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {toast && (
+        <div className="fixed z-50 right-4 bottom-4 animate-fade-in">
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={handleToastClose}
+          />
+        </div>
+      )}
     </div>
   );
 };

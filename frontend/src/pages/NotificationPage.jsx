@@ -1,4 +1,3 @@
-// src/pages/NotificationsPage.jsx
 import React, { useEffect, useState } from "react";
 import {
   CheckCircle,
@@ -20,6 +19,88 @@ import Toast from "../components/common/Toast";
 
 export default function NotificationsPage() {
   const { t } = useTranslation();
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Material Design 3 color system - light theme
+  const lightColors = {
+    primary: "#10B981", // Green 40
+    onPrimary: "#FFFFFF",
+    primaryContainer: "#BBF7D0", // Light green container
+    onPrimaryContainer: "#047857", // Dark green text on container
+    secondary: "#4F7AE6",
+    onSecondary: "#FFFFFF",
+    secondaryContainer: "#DBE6FD",
+    onSecondaryContainer: "#0B2962",
+    tertiary: "#9333EA",
+    onTertiary: "#FFFFFF",
+    tertiaryContainer: "#E9D7FD",
+    onTertiaryContainer: "#381E72",
+    error: "#B3261E",
+    onError: "#FFFFFF",
+    errorContainer: "#F9DEDC",
+    onErrorContainer: "#410E0B",
+    background: "#F8FAF5",
+    onBackground: "#1C1B1F",
+    surface: "#F8FAF5",
+    onSurface: "#1C1B1F",
+    surfaceVariant: "#D8E8D9",
+    onSurfaceVariant: "#444C45",
+    outline: "#737B73",
+    outlineVariant: "#C2C9C2",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#313033",
+    inverseOnSurface: "#F4EFF4",
+    inversePrimary: "#99F6E4",
+    surfaceContainerLowest: "#FFFFFF",
+    surfaceContainerLow: "#F5F9F2",
+    surfaceContainer: "#F0F5ED",
+    surfaceContainerHigh: "#EBF1E9",
+    surfaceContainerHighest: "#E5ECE3",
+  };
+
+  // Material Design 3 color system - dark theme
+  const darkColors = {
+    primary: "#4ADE80", // Lighter green for dark mode
+    onPrimary: "#002115",
+    primaryContainer: "#003925",
+    onPrimaryContainer: "#BBF7D0",
+    secondary: "#B6C9FF",
+    onSecondary: "#1E307D",
+    secondaryContainer: "#354796",
+    onSecondaryContainer: "#DBE6FD",
+    tertiary: "#D0BCFF",
+    onTertiary: "#4F308B",
+    tertiaryContainer: "#6745A3",
+    onTertiaryContainer: "#E9D7FD",
+    error: "#FFB4AB",
+    onError: "#690005",
+    errorContainer: "#93000A",
+    onErrorContainer: "#FFDAD6",
+    background: "#1A1C19",
+    onBackground: "#E1E3DD",
+    surface: "#1A1C19",
+    onSurface: "#E1E3DD",
+    surfaceVariant: "#444C45",
+    onSurfaceVariant: "#C2C9C2",
+    outline: "#8C948D",
+    outlineVariant: "#444C45",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#E1E3DD",
+    inverseOnSurface: "#1A1C19",
+    inversePrimary: "#006D5B",
+    surfaceContainerLowest: "#222421",
+    surfaceContainerLow: "#2D2F2C",
+    surfaceContainer: "#313330",
+    surfaceContainerHigh: "#3B3D3A",
+    surfaceContainerHighest: "#454744",
+  };
+
+  // Select colors based on dark mode
+  const m3Colors = darkMode ? darkColors : lightColors;
 
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -174,13 +255,13 @@ export default function NotificationsPage() {
   const iconFor = (level) => {
     switch (level) {
       case "success":
-        return <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 transition-all duration-300 hover:scale-110" />;
+        return <CheckCircle className="w-5 h-5 text-[#1a9e75] dark:text-green-400 flex-shrink-0" />;
       case "warning":
-        return <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 transition-all duration-300 hover:scale-110" />;
+        return <AlertTriangle className="w-5 h-5 text-[#944f01] dark:text-yellow-400 flex-shrink-0" />;
       case "error":
-        return <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 transition-all duration-300 hover:scale-110" />;
+        return <AlertTriangle className="w-5 h-5 text-[#b3261e] dark:text-red-400 flex-shrink-0" />;
       default:
-        return <Info className="w-4 h-4 text-blue-500 flex-shrink-0 transition-all duration-300 hover:scale-110" />;
+        return <Info className="w-5 h-5 text-[#4a4458] dark:text-gray-400 flex-shrink-0" />;
     }
   };
 
@@ -192,70 +273,141 @@ export default function NotificationsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 transition-all duration-500 ease-in-out">
-      <div className="max-w-8xl mx-auto p-3 md:p-4">
-        {/* Card-style Header */}
-        <div className="mb-4 md:mb-5">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 md:p-5 transition-all duration-200">
-            <div className="flex flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-900 border border-sky-100 dark:border-sky-800/30">
-                  <Bell className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+    <div className={`min-h-screen bg-[var(--background)] dark:bg-gray-900 font-sans`} style={{
+      "--primary": m3Colors.primary,
+      "--on-primary": m3Colors.onPrimary,
+      "--primary-container": m3Colors.primaryContainer,
+      "--on-primary-container": m3Colors.onPrimaryContainer,
+      "--secondary": m3Colors.secondary,
+      "--on-secondary": m3Colors.onSecondary,
+      "--secondary-container": m3Colors.secondaryContainer,
+      "--on-secondary-container": m3Colors.onSecondaryContainer,
+      "--tertiary": m3Colors.tertiary,
+      "--on-tertiary": m3Colors.onTertiary,
+      "--tertiary-container": m3Colors.tertiaryContainer,
+      "--on-tertiary-container": m3Colors.onTertiaryContainer,
+      "--error": m3Colors.error,
+      "--on-error": m3Colors.onError,
+      "--error-container": m3Colors.errorContainer,
+      "--on-error-container": m3Colors.onErrorContainer,
+      "--background": m3Colors.background,
+      "--on-background": m3Colors.onBackground,
+      "--surface": m3Colors.surface,
+      "--on-surface": m3Colors.onSurface,
+      "--surface-variant": m3Colors.surfaceVariant,
+      "--on-surface-variant": m3Colors.onSurfaceVariant,
+      "--outline": m3Colors.outline,
+      "--outline-variant": m3Colors.outlineVariant,
+      "--shadow": m3Colors.shadow,
+      "--scrim": m3Colors.scrim,
+      "--inverse-surface": m3Colors.inverseSurface,
+      "--inverse-on-surface": m3Colors.inverseOnSurface,
+      "--inverse-primary": m3Colors.inversePrimary,
+      "--surface-container-lowest": m3Colors.surfaceContainerLowest,
+      "--surface-container-low": m3Colors.surfaceContainerLow,
+      "--surface-container": m3Colors.surfaceContainer,
+      "--surface-container-high": m3Colors.surfaceContainerHigh,
+      "--surface-container-highest": m3Colors.surfaceContainerHighest,
+    }}>
+      <style>{`
+        :root {
+          --primary: ${m3Colors.primary};
+          --on-primary: ${m3Colors.onPrimary};
+          --primary-container: ${m3Colors.primaryContainer};
+          --on-primary-container: ${m3Colors.onPrimaryContainer};
+          --secondary: ${m3Colors.secondary};
+          --on-secondary: ${m3Colors.onSecondary};
+          --secondary-container: ${m3Colors.secondaryContainer};
+          --on-secondary-container: ${m3Colors.onSecondaryContainer};
+          --tertiary: ${m3Colors.tertiary};
+          --on-tertiary: ${m3Colors.onTertiary};
+          --tertiary-container: ${m3Colors.tertiaryContainer};
+          --on-tertiary-container: ${m3Colors.onTertiaryContainer};
+          --error: ${m3Colors.error};
+          --on-error: ${m3Colors.onError};
+          --error-container: ${m3Colors.errorContainer};
+          --on-error-container: ${m3Colors.onErrorContainer};
+          --background: ${m3Colors.background};
+          --on-background: ${m3Colors.onBackground};
+          --surface: ${m3Colors.surface};
+          --on-surface: ${m3Colors.onSurface};
+          --surface-variant: ${m3Colors.surfaceVariant};
+          --on-surface-variant: ${m3Colors.onSurfaceVariant};
+          --outline: ${m3Colors.outline};
+          --outline-variant: ${m3Colors.outlineVariant};
+          --shadow: ${m3Colors.shadow};
+          --scrim: ${m3Colors.scrim};
+          --inverse-surface: ${m3Colors.inverseSurface};
+          --inverse-on-surface: ${m3Colors.inverseOnSurface};
+          --inverse-primary: ${m3Colors.inversePrimary};
+          --surface-container-lowest: ${m3Colors.surfaceContainerLowest};
+          --surface-container-low: ${m3Colors.surfaceContainerLow};
+          --surface-container: ${m3Colors.surfaceContainer};
+          "--surface-container-high": ${m3Colors.surfaceContainerHigh};
+          "--surface-container-highest": ${m3Colors.surfaceContainerHighest};
+        }
+        
+        @keyframes material-in {
+          from {
+            opacity: 0;
+            transform: translateY(16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+      
+      <div className="max-w-7xl mx-auto p-4">
+        {/* Card-style Header with Material 3 elevation */}
+        <div className="mb-6">
+          <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 shadow-xl p-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center justify-center gap-4 min-w-0 flex-1">
+                <div className="p-3 rounded-xl bg-[var(--primary-container)] dark:bg-green-900">
+                  <Bell className="h-6 w-6 text-[var(--on-primary-container)] dark:text-green-200" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
-                    <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 truncate">
+                  <div className="flex flex-row gap-2">
+                    <h1 className="text-2xl font-bold text-[var(--on-surface)] dark:text-white">
                       {t("notifications.title")}
                     </h1>
-                    <div className="flex items-center gap-2 mt-1 sm:mt-0">
-                      <span className="hidden sm:inline text-gray-400 dark:text-gray-500">•</span>
-                      <span className="text-xs text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/20 px-2 py-1 rounded-full font-medium">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">•</span>
+                      <span className="text-sm text-[var(--primary)] dark:text-green-400 bg-[var(--primary-container)] dark:bg-green-900 px-3 py-1 rounded-full font-medium">
                         {unread} {t("notifications.unread", { count: unread })}
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed">
-                    {t("settings.subtitle")}
-                  </p>
                 </div>
               </div>
 
-              <div className="flex-shrink-0">
-                <TopBar />
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <TopBar />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Filters with enhanced interactions */}
-        <div className="flex flex-wrap gap-2 mb-4 justify-between">
-          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mr-2">
-            <div
-              className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mr-2 transform transition-all duration-300 hover:scale-105"
-              aria-hidden
-            >
-              <Filter size={14} className="transition-all duration-300 hover:rotate-12" />
-              <span className="transition-all duration-300">{t("notifications.filter.label")}</span>
+        {/* Filters with Material 3 design */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 mb-2 md:mb-0">
+              <Filter size={18} className="text-[var(--on-surface-variant)] dark:text-gray-400" />
+              <span>{t("notifications.filter.label")}</span>
             </div>
             {["all", "unread", "read"].map((f) => (
               <button
                 key={f}
-                onClick={() => {
-                  setFilter(f);
-                  // Add filter change animation
-                  document.documentElement.style.setProperty('--filter-scale', '0.95');
-                  setTimeout(() => {
-                    document.documentElement.style.setProperty('--filter-scale', '1');
-                  }, 150);
-                }}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   filter === f
-                    ? "bg-blue-600 text-white shadow scale-105"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow"
+                    ? "bg-[var(--primary)] dark:bg-green-700 text-[var(--on-primary)] dark:text-white shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.4)] scale-105"
+                    : "bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 hover:text-[var(--on-surface)] dark:hover:text-white"
                 }`}
-                style={{
-                  transform: `scale(var(--filter-scale, 1))`
-                }}
                 aria-pressed={filter === f}
                 aria-label={t("notifications.filter." + f)}
               >
@@ -263,11 +415,11 @@ export default function NotificationsPage() {
               </button>
             ))}
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end">
             {unread > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="w-full sm:w-auto px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-xs transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow"
+                className="px-4 py-2.5 rounded-full bg-[var(--primary)] dark:bg-green-700 hover:bg-[var(--primary-container)] dark:hover:bg-green-600 transition-all duration-200 text-[var(--on-primary)] dark:text-white font-medium shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.4)] hover:shadow-[0_3px_8px_rgba(16,185,129,0.4)] dark:hover:shadow-[0_3px_8px_rgba(16,185,129,0.5)]"
                 aria-label={t("notifications.aria.markAll")}
               >
                 {t("notifications.markAll")}
@@ -276,77 +428,82 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {/* Body with enhanced animations */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 transition-all duration-500 ease-in-out transform hover:shadow">
+        {/* Body with Material 3 elevation and containers */}
+        <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 shadow-xl overflow-hidden">
           {loading && notifications.length === 0 ? (
-            <div className="p-4 flex flex-col items-center justify-center text-center text-gray-500 dark:text-gray-400 min-h-[80px] transform transition-all duration-500">
-              <Loader className="h-4 w-4 animate-spin transition-all duration-1000" />
-              <p className="mt-1.5 text-xs transform transition-all duration-700 ease-in-out">{t("notifications.loading")}</p>
+            <div className="p-6 flex flex-col items-center justify-center text-center text-[var(--on-surface-variant)] dark:text-gray-400 min-h-[120px]">
+              <Loader className="h-6 w-6 animate-spin text-[var(--primary)] dark:text-green-400" />
+              <p className="mt-2 text-base font-medium">{t("notifications.loading")}</p>
             </div>
           ) : visible.length === 0 ? (
-            <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-xs transform transition-all duration-700 ease-out">
+            <div className="p-6 text-center text-[var(--on-surface-variant)] dark:text-gray-400 text-base">
               {t("notifications.noNotifications")}
             </div>
           ) : (
-            visible.map((n, index) => (
-              <div
-                key={n.id}
-                className={`flex items-start gap-3 p-3 transition-all duration-500 ease-in-out transform ${
-                  n.isRead
-                    ? "bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750"
-                    : "bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                } ${
-                  animatingNotifications.has(n.id) 
-                    ? "scale-105 bg-green-50 dark:bg-green-900/20 shadow" 
-                    : "hover:scale-[1.02] hover:shadow-sm"
-                }`}
-                style={{
-                  animationDelay: isFirstLoad ? `${index * 0.1}s` : '0s',
-                  transform: `translateY(${animatingNotifications.has(n.id) ? '-2px' : '0px'})`
-                }}
-              >
-                {iconFor(n.level)}
+            <div className="divide-y divide-[var(--outline-variant)] dark:divide-gray-700">
+              {visible.map((n, index) => (
+                <div
+                  key={n.id}
+                  className={`flex items-start gap-4 p-5 transition-all duration-300 ${
+                    n.isRead
+                      ? "bg-[var(--surface-container-low)] dark:bg-gray-800 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700"
+                      : "bg-[var(--primary-container)]/[0.15] dark:bg-green-900/[0.3] hover:bg-[var(--primary-container)]/[0.2] dark:hover:bg-green-900/[0.5]"
+                  } ${
+                    animatingNotifications.has(n.id) 
+                      ? "scale-[1.01] bg-[var(--tertiary-container)] dark:bg-purple-900/[0.3] shadow-[0_0_12px_rgba(125,82,96,0.2)] dark:shadow-[0_0_12px_rgba(125,82,96,0.3)]" 
+                      : "hover:shadow-[0_2px_6px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_2px_6px_rgba(0,0,0,0.2)]"
+                  }`}
+                  style={{
+                    animation: isFirstLoad ? `material-in 0.4s ease-out forwards` : 'none',
+                    animationDelay: isFirstLoad ? `${index * 0.05}s` : '0s',
+                  }}
+                >
+                  <div className="mt-0.5 flex-shrink-0">
+                    {iconFor(n.level)}
+                  </div>
 
-                <div className="flex-1 min-w-0 transform transition-all duration-300">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1.5">
-                    <p
-                      className={`text-xs break-words transition-all duration-500 ease-in-out ${
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                      <p className={`text-base break-words transition-colors ${
                         n.isRead
-                          ? "text-gray-600 dark:text-gray-300"
-                          : "text-gray-900 dark:text-white font-medium"
+                          ? "text-[var(--on-surface-variant)] dark:text-gray-400"
+                          : "text-[var(--on-surface)] dark:text-white font-medium"
                       } ${
-                        animatingNotifications.has(n.id) ? "text-green-700 dark:text-green-300" : ""
-                      }`}
-                    >
-                      {n.message}
-                    </p>
+                        animatingNotifications.has(n.id) ? "text-[var(--on-tertiary-container)] dark:text-purple-200" : ""
+                      }`}>
+                        {n.message}
+                      </p>
 
-                    <div className="flex flex-col sm:items-end gap-1.5 transform transition-all duration-300">
-                      {!n.isRead && (
-                        <button
-                          onClick={() => handleMarkRead(n.id)}
-                          className="text-xs px-1.5 py-0.5 rounded text-gray-950 dark:text-white bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow-sm"
-                        >
-                          {t("notifications.markAsRead")}
-                        </button>
-                      )}
-                      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap transition-all duration-500">
-                        {t("notifications.timestamps.formatted", {
-                          date: new Date(n.createdAt).toLocaleString(),
-                        })}
-                      </span>
+                      <div className="flex flex-col md:items-end gap-2 min-w-[140px]">
+                        {!n.isRead && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMarkRead(n.id);
+                            }}
+                            className="px-3 py-1.5 rounded-full text-sm font-medium bg-[var(--surface-container-high)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-highest)] dark:hover:bg-gray-600 transition-colors border border-[var(--outline-variant)] dark:border-gray-600"
+                          >
+                            {t("notifications.markAsRead")}
+                          </button>
+                        )}
+                        <span className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400 whitespace-nowrap min-w-max">
+                          {t("notifications.timestamps.formatted", {
+                            date: new Date(n.createdAt).toLocaleString(),
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
 
-        {/* Load more with enhanced animations */}
-        <div className="mt-4 flex items-center justify-center transform transition-all duration-500">
+        {/* Load more with Material 3 design */}
+        <div className="mt-6 flex items-center justify-center">
           {error && (
-            <div className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded transition-all duration-500 transform hover:scale-105 animate-pulse">
+            <div className="text-sm text-[var(--error)] dark:text-red-400 bg-[var(--error-container)] dark:bg-red-900 px-4 py-2 rounded-full transition-all duration-200">
               {error}
             </div>
           )}
@@ -354,7 +511,7 @@ export default function NotificationsPage() {
           {!loading && !loadingMore && notifications.length >= page * LIMIT && (
             <button
               onClick={handleLoadMore}
-              className="px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 transform hover:scale-105 active:scale-95 hover:shadow text-xs"
+              className="px-5 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-200 font-medium shadow-[0_1px_3px_rgba(0,0,0,0.1)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.2)] hover:shadow-[0_2px_5px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_2px_5px_rgba(0,0,0,0.3)] text-base"
               aria-label={t("notifications.aria.loadMore")}
             >
               {t("notifications.loadMore")}
@@ -362,8 +519,8 @@ export default function NotificationsPage() {
           )}
 
           {loadingMore && (
-            <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 transform transition-all duration-500">
-              <Loader className="h-3.5 w-3.5 animate-spin mr-1.5 transition-all duration-1000" />
+            <div className="flex items-center text-sm text-[var(--on-surface-variant)] dark:text-gray-400">
+              <Loader className="h-5 w-5 animate-spin mr-2 text-[var(--primary)] dark:text-green-400" />
               {t("notifications.loadingMore")}
             </div>
           )}
@@ -372,29 +529,6 @@ export default function NotificationsPage() {
 
       {/* Toast UI */}
       {toast && <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />}
-
-      {/* CSS Variables for animations */}
-      <style jsx>{`
-        :root {
-          --filter-scale: 1;
-        }
-        
-        /* Custom animation for notification items */
-        .notification-item {
-          animation: slideInUp 0.6s ease-out both;
-        }
-        
-        @keyframes slideInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

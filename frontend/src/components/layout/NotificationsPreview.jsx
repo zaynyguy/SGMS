@@ -581,9 +581,9 @@ export default function NotificationPreview({
           aria-label={item?.label || t("notificationsPreview.label")}
           className={`flex items-center p-2 rounded-full transition-all duration-300 ${
             showExpanded ? "justify-normal" : "justify-center"
-          } cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transform hover:scale-110 active:scale-95 group/bell`}
+          } cursor-pointer sm:hover:bg-gray-100 sm:dark:hover:bg-gray-800 hover:bg-green-200 dark:hover:bg-indigo-400 transform hover:scale-110 active:scale-95 group/bell`}
         >
-          <div className="relative flex items-center justify-center w-6 text-gray-700 dark:text-gray-300 transition-colors duration-200 group-hover/bell:text-blue-600 dark:group-hover/bell:text-blue-400">
+          <div className="relative flex items-center justify-center w-6 sm:text-gray-700 sm:dark:text-gray-300 text-green-700 dark:text-indigo-900 transition-colors duration-200">
             <Bell size={24} className="transition-transform duration-300 group-hover/bell:rotate-12" />
             {unread > 0 && (
               <span 

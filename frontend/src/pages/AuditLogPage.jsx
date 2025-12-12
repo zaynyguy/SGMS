@@ -19,36 +19,118 @@ const ROW_HEIGHT_PX = 56;
 const SkeletonRowDesktop = () => (
   <tr className="transition-all duration-500 ease-in-out">
     <td className="px-3 py-2 align-top transition-all duration-300">
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-40 animate-pulse transition-colors duration-300" />
+      <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-40 animate-pulse transition-colors duration-300" />
     </td>
     <td className="px-3 py-2 align-top transition-all duration-300">
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse transition-colors duration-300" />
+      <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-32 animate-pulse transition-colors duration-300" />
     </td>
     <td className="px-3 py-2 hidden lg:table-cell align-top transition-all duration-300">
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse transition-colors duration-300" />
+      <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-24 animate-pulse transition-colors duration-300" />
     </td>
     <td className="px-3 py-2 align-top transition-all duration-300">
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16 animate-pulse transition-colors duration-300" />
+      <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-16 animate-pulse transition-colors duration-300" />
     </td>
     <td className="px-3 py-2 hidden lg:table-cell align-top transition-all duration-300">
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-60 animate-pulse transition-colors duration-300" />
+      <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-60 animate-pulse transition-colors duration-300" />
     </td>
     <td className="px-3 py-2 align-top transition-all duration-300">
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4 animate-pulse transition-colors duration-300" />
+      <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-4 animate-pulse transition-colors duration-300" />
     </td>
   </tr>
 );
 
 const SkeletonCardMobile = () => (
-  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-600 w-full transition-all duration-500 ease-in-out transform hover:scale-[1.02]">
-    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2 animate-pulse transition-colors duration-300" />
-    <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-1.5 animate-pulse transition-colors duration-300" />
-    <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse transition-colors duration-300" />
+  <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl p-3 shadow-sm border border-[var(--outline-variant)] dark:border-gray-700 w-full transition-all duration-500 ease-in-out transform hover:scale-[1.02] surface-elevation-1">
+    <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-1/2 mb-2 animate-pulse transition-colors duration-300" />
+    <div className="h-2.5 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-3/4 mb-1.5 animate-pulse transition-colors duration-300" />
+    <div className="h-2.5 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-1/3 animate-pulse transition-colors duration-300" />
   </div>
 );
 
-const AuditLogPage = ({ showToast: propShowToast }) => {
+const App = ({ showToast: propShowToast }) => {
   const { t } = useTranslation();
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Material Design 3 color system - light theme
+  const lightColors = {
+    primary: "#10B981", // Green 40
+    onPrimary: "#FFFFFF",
+    primaryContainer: "#BBF7D0", // Light green container
+    onPrimaryContainer: "#047857", // Dark green text on container
+    secondary: "#4F7AE6",
+    onSecondary: "#FFFFFF",
+    secondaryContainer: "#DBE6FD",
+    onSecondaryContainer: "#0B2962",
+    tertiary: "#9333EA",
+    onTertiary: "#FFFFFF",
+    tertiaryContainer: "#E9D7FD",
+    onTertiaryContainer: "#381E72",
+    error: "#B3261E",
+    onError: "#FFFFFF",
+    errorContainer: "#F9DEDC",
+    onErrorContainer: "#410E0B",
+    background: "#F8FAF5",
+    onBackground: "#1C1B1F",
+    surface: "#F8FAF5",
+    onSurface: "#1C1B1F",
+    surfaceVariant: "#D8E8D9",
+    onSurfaceVariant: "#444C45",
+    outline: "#737B73",
+    outlineVariant: "#C2C9C2",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#313033",
+    inverseOnSurface: "#F4EFF4",
+    inversePrimary: "#99F6E4",
+    surfaceContainerLowest: "#FFFFFF",
+    surfaceContainerLow: "#F5F9F2",
+    surfaceContainer: "#F0F5ED",
+    surfaceContainerHigh: "#EBF1E9",
+    surfaceContainerHighest: "#E5ECE3",
+  };
+
+  // Material Design 3 color system - dark theme
+  const darkColors = {
+    primary: "#4ADE80", // Lighter green for dark mode
+    onPrimary: "#002115",
+    primaryContainer: "#003925",
+    onPrimaryContainer: "#BBF7D0",
+    secondary: "#B6C9FF",
+    onSecondary: "#1E307D",
+    secondaryContainer: "#354796",
+    onSecondaryContainer: "#DBE6FD",
+    tertiary: "#D0BCFF",
+    onTertiary: "#4F308B",
+    tertiaryContainer: "#6745A3",
+    onTertiaryContainer: "#E9D7FD",
+    error: "#FFB4AB",
+    onError: "#690005",
+    errorContainer: "#93000A",
+    onErrorContainer: "#FFDAD6",
+    background: "#1A1C19",
+    onBackground: "#E1E3DD",
+    surface: "#1A1C19",
+    onSurface: "#E1E3DD",
+    surfaceVariant: "#444C45",
+    onSurfaceVariant: "#C2C9C2",
+    outline: "#8C948D",
+    outlineVariant: "#444C45",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#E1E3DD",
+    inverseOnSurface: "#1A1C19",
+    inversePrimary: "#006D5B",
+    surfaceContainerLowest: "#222421",
+    surfaceContainerLow: "#2D2F2C",
+    surfaceContainer: "#313330",
+    surfaceContainerHigh: "#3B3D3A",
+    surfaceContainerHighest: "#454744",
+  };
+
+  // Select colors based on dark mode
+  const m3Colors = darkMode ? darkColors : lightColors;
 
   const [logs, setLogs] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
@@ -66,6 +148,12 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
 
   // local single-toast state (simple fallback / local toast system)
   const [toast, setToast] = useState(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+    return () => setMounted(false);
+  }, []);
 
   // toggle row expand with smooth animation
   const toggleRow = (id) => {
@@ -133,11 +221,9 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
         limit: usePageSize,
         offset,
       });
-
       // backend returns { rows, total }
       const dataRows = (resp && resp.rows) || [];
       const dataTotal = (resp && typeof resp.total === "number") ? resp.total : dataRows.length;
-
       setLogs(dataRows);
       setFilteredLogs(dataRows);
       setTotal(dataTotal);
@@ -212,7 +298,6 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
           ].join(",")
         )
         .join("\n");
-
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -220,7 +305,6 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
     showToast && showToast(t("audit.export.success"), "success");
   };
 
@@ -229,245 +313,309 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
   const endIndex = startIndex + logs.length - 1;
 
   // Enhanced Button style helpers with smooth animations (kept compact)
-  const compactBtn = "text-xs sm:text-xs px-2 sm:px-3 py-1 sm:py-1 rounded-md transition-all duration-500 ease-in-out transform hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none";
-  const primaryBtn = `${compactBtn} bg-sky-600 hover:bg-sky-700 text-white shadow-sm hover:shadow-md`;
-  const ghostBtn = `${compactBtn} border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600 hover:shadow-sm`;
+  const primaryBtn = "px-4 py-2.5 text-sm rounded-full bg-[var(--primary)] hover:bg-[var(--primary-container)] text-[var(--on-primary)] transition-all duration-300 ease-in-out shadow-sm hover:shadow-md";
+  const ghostBtn = "px-4 py-2.5 text-sm rounded-full border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-800 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-300 ease-in-out";
+  const outlineBtn = "px-4 py-2.5 text-sm rounded-full border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container-low)] dark:hover:bg-gray-700 transition-all duration-300 ease-in-out";
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 transition-all duration-500 ease-in-out text-xs">
-      <div className="p-3 sm:p-5 max-w-8xl mx-auto animate-fade-in">
+    <div className={`min-h-screen bg-[var(--background)] dark:bg-gray-900 font-sans transition-colors duration-300 ${mounted ? 'animate-fade-in' : ''}`} 
+      style={{
+        "--primary": m3Colors.primary,
+        "--on-primary": m3Colors.onPrimary,
+        "--primary-container": m3Colors.primaryContainer,
+        "--on-primary-container": m3Colors.onPrimaryContainer,
+        "--secondary": m3Colors.secondary,
+        "--on-secondary": m3Colors.onSecondary,
+        "--secondary-container": m3Colors.secondaryContainer,
+        "--on-secondary-container": m3Colors.onSecondaryContainer,
+        "--tertiary": m3Colors.tertiary,
+        "--on-tertiary": m3Colors.onTertiary,
+        "--tertiary-container": m3Colors.tertiaryContainer,
+        "--on-tertiary-container": m3Colors.onTertiaryContainer,
+        "--error": m3Colors.error,
+        "--on-error": m3Colors.onError,
+        "--error-container": m3Colors.errorContainer,
+        "--on-error-container": m3Colors.onErrorContainer,
+        "--background": m3Colors.background,
+        "--on-background": m3Colors.onBackground,
+        "--surface": m3Colors.surface,
+        "--on-surface": m3Colors.onSurface,
+        "--surface-variant": m3Colors.surfaceVariant,
+        "--on-surface-variant": m3Colors.onSurfaceVariant,
+        "--outline": m3Colors.outline,
+        "--outline-variant": m3Colors.outlineVariant,
+        "--shadow": m3Colors.shadow,
+        "--scrim": m3Colors.scrim,
+        "--inverse-surface": m3Colors.inverseSurface,
+        "--inverse-on-surface": m3Colors.inverseOnSurface,
+        "--inverse-primary": m3Colors.inversePrimary,
+        "--surface-container-lowest": m3Colors.surfaceContainerLowest,
+        "--surface-container-low": m3Colors.surfaceContainerLow,
+        "--surface-container": m3Colors.surfaceContainer,
+        "--surface-container-high": m3Colors.surfaceContainerHigh,
+        "--surface-container-highest": m3Colors.surfaceContainerHighest,
+      }}
+    >
+      <style>{`
+        :root {
+          --primary: ${m3Colors.primary};
+          --on-primary: ${m3Colors.onPrimary};
+          --primary-container: ${m3Colors.primaryContainer};
+          --on-primary-container: ${m3Colors.onPrimaryContainer};
+          --secondary: ${m3Colors.secondary};
+          --on-secondary: ${m3Colors.onSecondary};
+          --secondary-container: ${m3Colors.secondaryContainer};
+          --on-secondary-container: ${m3Colors.onSecondaryContainer};
+          --tertiary: ${m3Colors.tertiary};
+          --on-tertiary: ${m3Colors.onTertiary};
+          --tertiary-container: ${m3Colors.tertiaryContainer};
+          --on-tertiary-container: ${m3Colors.onTertiaryContainer};
+          --error: ${m3Colors.error};
+          --on-error: ${m3Colors.onError};
+          --error-container: ${m3Colors.errorContainer};
+          --on-error-container: ${m3Colors.onErrorContainer};
+          --background: ${m3Colors.background};
+          --on-background: ${m3Colors.onBackground};
+          --surface: ${m3Colors.surface};
+          --on-surface: ${m3Colors.onSurface};
+          --surface-variant: ${m3Colors.surfaceVariant};
+          --on-surface-variant: ${m3Colors.onSurfaceVariant};
+          --outline: ${m3Colors.outline};
+          --outline-variant: ${m3Colors.outlineVariant};
+          --shadow: ${m3Colors.shadow};
+          --scrim: ${m3Colors.scrim};
+          --inverse-surface: ${m3Colors.inverseSurface};
+          --inverse-on-surface: ${m3Colors.inverseOnSurface};
+          --inverse-primary: ${m3Colors.inversePrimary};
+          --surface-container-lowest: ${m3Colors.surfaceContainerLowest};
+          "--surface-container-low": ${m3Colors.surfaceContainerLow};
+          "--surface-container": ${m3Colors.surfaceContainer};
+          "--surface-container-high": ${m3Colors.surfaceContainerHigh};
+          "--surface-container-highest": ${m3Colors.surfaceContainerHighest};
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes material-in {
+          from {
+            opacity: 0;
+            transform: translateY(16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .surface-elevation-1 { 
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04); 
+          border: 1px solid var(--outline-variant);
+        }
+        .surface-elevation-2 { 
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06); 
+          border: 1px solid var(--outline-variant);
+        }
+        .surface-elevation-3 { 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08); 
+          border: 1px solid var(--outline-variant);
+        }
+      `}</style>
+      <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header card */}
-        <div className="mb-4 transition-all duration-500 ease-in-out">
-          <div className="rounded-2xl bg-white dark:bg-gray-800 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/40 shadow-sm px-4 py-3 transition-all duration-500 animate-fade-in-down">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 gap-3 items-center">
-                <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-900 transition-all duration-500 ease-in-out transform hover:scale-105 hover:shadow-lg">
-                  <ClipboardCheck className="h-5 w-5 text-sky-600 dark:text-sky-300 transition-all duration-500 ease-in-out transform hover:rotate-12" />
+        <div className="mb-6">
+          <div className="rounded-2xl bg-[var(--surface-container-low)] dark:bg-gray-800 dark:border-gray-800 surface-elevation-3 px-4 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 gap-4 items-center">
+                <div className="p-3 rounded-xl bg-[var(--primary-container)] dark:bg-indigo-900">
+                  <ClipboardCheck className="h-6 w-6 text-[var(--on-primary-container)] dark:text-indigo-200 transition-all duration-300 ease-in-out transform hover:rotate-12" />
                 </div>
                 <div className="min-w-0">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100 truncate transition-colors duration-500 ease-in-out">
+                  <h2 className="text-2xl font-bold text-[var(--on-surface)] dark:text-white truncate transition-colors duration-300">
                     {t("audit.title")}
                   </h2>
-                  <p className="mt-0.5 text-xs sm:text-xs text-gray-600 dark:text-gray-300 max-w-2xl transition-colors duration-500 ease-in-out">
+                  <p className="mt-0.5 text-base text-[var(--on-surface-variant)] dark:text-gray-400 max-w-2xl transition-colors duration-300">
                     {t("audit.subtitle")}
                   </p>
                 </div>
               </div>
-              <div className="flex-shrink-0 transition-all duration-500 ease-in-out">
+              <div className="flex-shrink-0">
                 <TopBar />
               </div>
             </div>
           </div>
         </div>
-
         {/* Card container */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 transition-all duration-500 ease-in-out transform hover:shadow-lg">
+        <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-2xl dark:border-gray-800 surface-elevation-3 p-4 sm:p-6">
           {/* Actions + Search */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3 transition-all duration-500 ease-in-out">
-            <div className="flex flex-col sm:flex-col md:flex-row gap-2 w-full md:w-auto transition-all duration-500 ease-in-out">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 aria-pressed={showFilters}
-                className={`${ghostBtn} flex items-center gap-2 justify-center w-full md:w-auto transition-all duration-500 ease-in-out`}
+                className={`${outlineBtn} flex items-center gap-2 justify-center w-full md:w-auto`}
               >
-                <Filter size={14} className="transition-all duration-500 ease-in-out transform hover:scale-110" />
-                <span className="select-none transition-colors duration-500 ease-in-out text-xs">
+                <Filter size={18} />
+                <span className="select-none text-sm">
                   {showFilters ? t("audit.filters.hide") : t("audit.filters.show")}
                 </span>
               </button>
-
               <button
                 onClick={handleExportCSV}
-                className={`${ghostBtn} flex items-center gap-2 justify-center w-full md:w-auto transition-all duration-500 ease-in-out`}
+                className={`${outlineBtn} flex items-center gap-2 justify-center w-full md:w-auto`}
               >
-                <Download size={14} className="transition-all duration-500 ease-in-out transform hover:scale-110" />
-                <span className="select-none transition-colors duration-500 ease-in-out text-xs">{t("audit.exportCsv")}</span>
+                <Download size={18} />
+                <span className="select-none text-sm">{t("audit.exportCsv")}</span>
               </button>
             </div>
-
-            <div className="relative w-full md:w-1/3 transition-all duration-500 ease-in-out">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none transition-all duration-500 ease-in-out">
-                <Search className="h-4 w-4 text-gray-400 dark:text-gray-500 transition-all duration-500 ease-in-out transform hover:scale-110" />
+            <div className="relative w-full md:w-[790px]">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-[var(--on-surface-variant)] dark:text-gray-400" />
               </div>
               <input
                 type="text"
                 placeholder={t("audit.searchPlaceholder")}
-                className="block w-full pl-9 pr-3 py-2 text-xs sm:text-xs border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all duration-500 ease-in-out transform hover:scale-105 focus:scale-105"
+                className="block w-full pl-10 pr-3.5 py-2.5 text-sm border border-[var(--outline-variant)] dark:border-gray-600 rounded-xl leading-5 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-all duration-300"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label={t("audit.searchAria")}
               />
             </div>
           </div>
-
           {/* Filters panel */}
           {showFilters && (
-            <div className="mb-5 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg transition-all duration-500 ease-in-out animate-fade-in">
-              <h3 className="text-xs font-medium text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-500 ease-in-out">
+            <div className="mb-6 p-4 bg-[var(--surface-container)] dark:bg-gray-700 rounded-xl surface-elevation-1 animate-fade-in">
+              <h3 className="text-base font-medium text-[var(--on-surface)] dark:text-white mb-3">
                 {t("audit.filters.title")}
               </h3>
-              <div className="flex flex-col sm:flex-row gap-3 transition-all duration-500 ease-in-out">
-                <div className="w-full sm:w-auto transition-all duration-500 ease-in-out">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-500 ease-in-out">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="w-full sm:w-1/2">
+                  <label className="block text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-2">
                     {t("audit.filters.fromDate")}
                   </label>
                   <input
                     type="date"
                     value={fromDate}
                     onChange={(e) => setFromDate(e.target.value)}
-                    className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all duration-500 ease-in-out transform hover:scale-105"
+                    className="w-full text-base border border-[var(--outline-variant)] dark:border-gray-600 rounded-xl p-2.5 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
                   />
                 </div>
-                <div className="w-full sm:w-auto transition-all duration-500 ease-in-out">
-                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-500 ease-in-out">
+                <div className="w-full sm:w-1/2">
+                  <label className="block text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-2">
                     {t("audit.filters.toDate")}
                   </label>
                   <input
                     type="date"
                     value={toDate}
                     onChange={(e) => setToDate(e.target.value)}
-                    className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all duration-500 ease-in-out transform hover:scale-105"
+                    className="w-full text-base border border-[var(--outline-variant)] dark:border-gray-600 rounded-xl p-2.5 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
                   />
                 </div>
-                <div className="flex items-end gap-2 mt-2 sm:mt-0 transition-all duration-500 ease-in-out">
+                <div className="flex items-end gap-3 mt-4 sm:mt-0 sm:w-auto">
                   <button
                     onClick={handleApplyFilters}
-                    className={`${primaryBtn}`}
+                    className={`${primaryBtn} w-full sm:w-auto dark:bg-indigo-800 hover:dark:bg-indigo-700`}
                   >
-                    <span className="text-xs">{t("audit.filters.apply")}</span>
+                    <span className="text-base">{t("audit.filters.apply")}</span>
                   </button>
                   <button
                     onClick={handleClearFilters}
-                    className={`${ghostBtn}`}
+                    className={`${ghostBtn} w-full sm:w-auto`}
                   >
-                    <span className="text-xs">{t("audit.filters.clear")}</span>
+                    <span className="text-base">{t("audit.filters.clear")}</span>
                   </button>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Results count & paging info */}
-          <div className="mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 transition-all duration-500 ease-in-out">
-            <div>
-              <p className="text-xs text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                {total > 0
-                  ? t("audit.results.showing", { start: startIndex, end: endIndex, total })
-                  : t("audit.results.none")}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 transition-all duration-500 ease-in-out">
-              <div className="text-xs text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                {t("audit.pageInfo", { page, totalPages })}
-              </div>
-
-              <div className="flex items-center gap-2 transition-all duration-500 ease-in-out">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1 || loading}
-                  className={`${compactBtn || ""} ${ghostBtn}`}
-                  aria-label={t("audit.prev")}
-                >
-                  {t("audit.prev")}
-                </button>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page >= totalPages || loading}
-                  className={`${compactBtn || ""} ${ghostBtn}`}
-                  aria-label={t("audit.next")}
-                >
-                  {t("audit.next")}
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Mobile stacked list */}
-          <div className="sm:hidden space-y-3 transition-all duration-500 ease-in-out">
+          <div className="md:hidden space-y-4">
             {loading ? (
               Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-                <div key={i} className="w-full transition-all duration-500 ease-in-out" style={{ animationDelay: `${i * 100}ms` }}>
+                <div key={i} className="w-full" style={{ animationDelay: `${i * 100}ms` }}>
                   <SkeletonCardMobile />
                 </div>
               ))
             ) : filteredLogs.length > 0 ? (
               filteredLogs.map((log, index) => {
                 const expanded = expandedRows.has(log.id);
+                const actionColor = {
+                  create: "bg-[var(--primary-container)] dark:bg-green-900 text-[var(--on-primary-container)] dark:text-green-200",
+                  update: "bg-[var(--secondary-container)] dark:bg-blue-900 text-[var(--on-secondary-container)] dark:text-blue-200",
+                  delete: "bg-[var(--error-container)] dark:bg-red-900 text-[var(--on-error-container)] dark:text-red-200",
+                }[log.action] || "bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white";
                 return (
                   <div
                     key={log.id}
-                    className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-600 transition-all duration-500 ease-in-out transform hover:scale-[1.02] hover:shadow-lg"
+                    className="bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-xl p-4 surface-elevation-1 transition-all duration-300 hover:surface-elevation-2"
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <div className="flex justify-between items-center mb-2 transition-all duration-500 ease-in-out">
-                      <span className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-500 ease-in-out">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">
                         {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
                       </span>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-500 ease-in-out transform hover:scale-110 ${
-                          log.action === "create"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : log.action === "update"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                            : log.action === "delete"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${actionColor}`}
                       >
                         {safeString(log.action)}
                       </span>
                     </div>
-                    <p className="text-xs font-medium text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
+                    <p className="text-base font-medium text-[var(--on-surface)] dark:text-white">
                       {safeString(log.username) || safeString(log.name)}
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
+                    <p className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">
                       {safeString(log.entity)}
                     </p>
-
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleRow(log.id); }}
-                      className="mt-2 text-xs text-blue-600 dark:text-blue-300 flex items-center gap-1 transition-all duration-500 ease-in-out transform hover:scale-105"
+                      className="mt-3 text-base text-[var(--primary)] dark:text-green-400 flex items-center gap-1.5 font-medium"
                       aria-expanded={expanded}
                     >
                       {expanded ? (
                         <>
                           {t("audit.expanded.hide")}
-                          <ChevronUp size={12} className="transition-all duration-500 ease-in-out transform rotate-0 hover:scale-125" />
+                          <ChevronUp size={16} className="transition-transform duration-300" />
                         </>
                       ) : (
                         <>
                           {t("audit.expanded.show")}
-                          <ChevronDown size={12} className="transition-all duration-500 ease-in-out transform rotate-0 hover:scale-125" />
+                          <ChevronDown size={16} className="transition-transform duration-300" />
                         </>
                       )}
                     </button>
-
                     <div className={`
-                      transition-all duration-500 ease-in-out overflow-hidden
-                      ${expanded ? 'max-h-96 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'}
+                      transition-all duration-300 ease-in-out overflow-hidden
+                      ${expanded ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}
                     `}>
-                      <div className="text-xs text-gray-700 dark:text-gray-200 space-y-1">
-                        <p className="text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                          <span className="font-medium text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
+                      <div className="text-sm text-[var(--on-surface)] dark:text-white space-y-2">
+                        <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                          <span className="font-medium text-[var(--on-surface)] dark:text-white">
                             {t("audit.expanded.fullDetails")}:
                           </span>{" "}
                           {safeString(log.details)}
                         </p>
-                        <p className="text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                          <span className="font-medium text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
+                        <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                          <span className="font-medium text-[var(--on-surface)] dark:text-white">
                             {t('audit.expanded.idLabel')}
                           </span>{" "}
                           {log.id}
                         </p>
-                        <p className="text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                          <span className="font-medium text-gray-950 dark:text-gray-100 transition-colors duration-500 ease-in-out">
+                        <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                          <span className="font-medium text-[var(--on-surface)] dark:text-white">
                             {t('audit.expanded.ipLabel')}
                           </span>{" "}
                           {log.ipAddress || t("audit.na")}
                         </p>
-                        <p className="text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                          <span className="font-medium text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
+                        <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                          <span className="font-medium text-[var(--on-surface)] dark:text-white">
                             {t('audit.expanded.userAgentLabel')}
                           </span>{" "}
                           {log.userAgent || t("audit.na")}
@@ -478,46 +626,44 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
                 );
               })
             ) : (
-              <div className="text-center py-10 transition-all duration-500 ease-in-out animate-pulse">
-                <Search className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto transition-all duration-500 ease-in-out transform hover:scale-110" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1 transition-colors duration-500 ease-in-out">
+              <div className="text-center py-12 animate-fade-in">
+                <Search className="h-12 w-12 text-[var(--on-surface-variant)] dark:text-gray-400 mx-auto" />
+                <h3 className="text-xl font-medium text-[var(--on-surface)] dark:text-white mt-2 mb-1">
                   {t("audit.noLogs.title")}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 px-2 mx-auto max-w-md transition-colors duration-500 ease-in-out">
+                <p className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 px-2 mx-auto max-w-md">
                   {searchQuery || fromDate || toDate ? t("audit.noLogs.tryAdjust") : t("audit.noLogs.none")}
                 </p>
               </div>
             )}
           </div>
-
           {/* Desktop/table view */}
-          <div className="hidden sm:block transition-all duration-500 ease-in-out">
-            <div className="border border-gray-200 dark:border-gray-600 rounded-lg shadow-sm overflow-hidden transition-all duration-500 ease-in-out transform hover:shadow-lg">
+          <div className="hidden md:block">
+            <div className="border border-[var(--outline-variant)] dark:border-gray-700 rounded-xl surface-elevation-1 overflow-hidden">
               {loading ? (
-                <div className="transition-all duration-500 ease-in-out" style={{ minHeight: `${SKELETON_ROWS * ROW_HEIGHT_PX}px` }}>
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600 transition-all duration-500 ease-in-out">
-                    <thead className="bg-gray-50 dark:bg-gray-700 transition-all duration-500 ease-in-out">
+                <div className="" style={{ minHeight: `${SKELETON_ROWS * ROW_HEIGHT_PX}px` }}>
+                  <table className="min-w-full divide-y divide-[var(--outline-variant)] dark:divide-gray-700">
+                    <thead className="bg-[var(--surface-container)] dark:bg-gray-700">
                       <tr>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-56 transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider w-60">
                           {t("audit.table.timestamp")}
                         </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider">
                           {t("audit.table.user")}
                         </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
                           {t("audit.table.entity")}
                         </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-28 transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider w-32">
                           {t("audit.table.action")}
                         </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
                           {t("audit.table.details")}
                         </th>
-                        <th className="px-3 py-2 w-12 transition-all duration-500 ease-in-out" />
+                        <th className="px-4 py-3 w-12" />
                       </tr>
                     </thead>
-
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700 transition-all duration-500 ease-in-out">
+                    <tbody className="bg-[var(--surface-container-lowest)] dark:bg-gray-800 divide-y divide-[var(--outline-variant)] dark:divide-gray-700">
                       {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
                         <SkeletonRowDesktop key={i} />
                       ))}
@@ -525,156 +671,145 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
                   </table>
                 </div>
               ) : filteredLogs.length > 0 ? (
-                <div className="transition-all duration-500 ease-in-out">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600 transition-all duration-500 ease-in-out">
-                    <thead className="bg-gray-50 dark:bg-gray-700 transition-all duration-500 ease-in-out">
+                <div className="">
+                  <table className="min-w-full divide-y divide-[var(--outline-variant)] dark:divide-gray-700">
+                    <thead className="bg-[var(--surface-container)] dark:bg-gray-700">
                       <tr>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-56 transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider w-60">
                           {t("audit.table.timestamp")}
                         </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider">
                           {t("audit.table.user")}
                         </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
                           {t("audit.table.entity")}
                         </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-28 transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider w-32">
                           {t("audit.table.action")}
                         </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell transition-all duration-500 ease-in-out">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
                           {t("audit.table.details")}
                         </th>
-                        <th className="px-3 py-2 w-12 transition-all duration-500 ease-in-out" />
+                        <th className="px-4 py-3 w-12" />
                       </tr>
                     </thead>
-
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700 transition-all duration-500 ease-in-out">
-                      {filteredLogs.map((log, index) => (
-                        <React.Fragment key={log.id}>
-                          <tr
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-all duration-500 ease-in-out transform hover:scale-[1.01]"
-                            onClick={() => toggleRow(log.id)}
-                            style={{ animationDelay: `${index * 30}ms` }}
-                          >
-                            <td className="px-3 py-4 text-[12px] text-gray-800 dark:text-gray-200 align-top truncate transition-all duration-500 ease-in-out">
-                              {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
-                            </td>
-
-                            <td className="px-3 py-4 text-[12px] text-gray-800 dark:text-gray-200 align-top truncate transition-all duration-500 ease-in-out">
-                              {safeString(log.username) || safeString(log.name)}
-                            </td>
-
-                            <td className="px-3 py-4 text-[12px] text-gray-800 dark:text-gray-200 hidden lg:table-cell align-top truncate max-w-[10rem] transition-all duration-500 ease-in-out">
-                              {safeString(log.entity) || t("audit.na")}
-                            </td>
-
-                            <td className="px-3 py-4 text-[12px] align-top transition-all duration-500 ease-in-out">
-                              <span
-                                className={`px-2 py-1 rounded-full text-[11px] font-medium transition-all duration-500 ease-in-out transform hover:scale-110 ${
-                                  log.action === "create"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                    : log.action === "update"
-                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                                    : log.action === "delete"
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200"
-                                }`}
-                              >
-                                {safeString(log.action)}
-                              </span>
-                            </td>
-
-                            <td className="px-3 py-4 text-[12px] text-gray-800 dark:text-gray-200 hidden lg:table-cell align-top truncate max-w-[14rem] transition-all duration-500 ease-in-out">
-                              {safeString(log.details) || ""}
-                            </td>
-
-                            <td className="px-3 text-[12px] text-gray-500 dark:text-gray-400 align-top transition-all duration-500 ease-in-out">
-                              <div className="transform transition-all duration-500 ease-in-out">
-                                {/* Make the chevron an actual button and stop propagation so click doesn't bubble to the row */}
+                    <tbody className="bg-[var(--surface-container-lowest)] dark:bg-gray-800 divide-y divide-[var(--outline-variant)] dark:divide-gray-700">
+                      {filteredLogs.map((log, index) => {
+                        const actionColor = {
+                          create: "bg-[var(--primary-container)] dark:bg-green-900 text-[var(--on-primary-container)] dark:text-green-200",
+                          update: "bg-[var(--secondary-container)] dark:bg-blue-900 text-[var(--on-secondary-container)] dark:text-blue-200",
+                          delete: "bg-[var(--error-container)] dark:bg-red-900 text-[var(--on-error-container)] dark:text-red-200",
+                        }[log.action] || "bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white";
+                        return (
+                          <React.Fragment key={log.id}>
+                            <tr
+                              className="hover:bg-[var(--surface-container-low)] dark:hover:bg-gray-700 cursor-pointer transition-all duration-300"
+                              onClick={() => toggleRow(log.id)}
+                              style={{ animationDelay: `${index * 30}ms` }}
+                            >
+                              <td className="px-4 py-4 text-sm text-[var(--on-surface)] dark:text-white align-top truncate">
+                                {log.createdAt ? new Date(log.createdAt).toLocaleString() : ""}
+                              </td>
+                              <td className="px-4 py-4 text-sm text-[var(--on-surface)] dark:text-white align-top truncate">
+                                {safeString(log.username) || safeString(log.name)}
+                              </td>
+                              <td className="px-4 py-4 text-sm text-[var(--on-surface)] dark:text-white hidden lg:table-cell align-top truncate max-w-[12rem]">
+                                {safeString(log.entity) || t("audit.na")}
+                              </td>
+                              <td className="px-4 py-4 align-top">
+                                <span
+                                  className={`px-3 py-1 rounded-full text-sm font-medium ${actionColor}`}
+                                >
+                                  {safeString(log.action)}
+                                </span>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-[var(--on-surface)] dark:text-white hidden lg:table-cell align-top truncate max-w-[16rem]">
+                                {safeString(log.details) || ""}
+                              </td>
+                              <td className="px-4 text-[var(--on-surface-variant)] dark:text-gray-400 align-top">
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); toggleRow(log.id); }}
                                   aria-expanded={expandedRows.has(log.id)}
-                                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-all duration-200 ease-in-out transform hover:scale-110"
+                                  className="p-2 rounded-full hover:bg-[var(--surface-container-low)] dark:hover:bg-gray-700 text-[var(--on-surface-variant)] dark:text-gray-400 transition-all duration-200"
                                   title={expandedRows.has(log.id) ? t("audit.expanded.hide") : t("audit.expanded.show")}
                                 >
                                   {expandedRows.has(log.id) ? (
-                                    <ChevronUp size={14} className="transition-all duration-500 ease-in-out transform" />
+                                    <ChevronUp size={18} />
                                   ) : (
-                                    <ChevronDown size={14} className="transition-all duration-500 ease-in-out transform" />
+                                    <ChevronDown size={18} />
                                   )}
                                 </button>
-                              </div>
-                            </td>
-                          </tr>
-
-                          <tr className={`
-                            bg-gray-50 dark:bg-gray-700 transition-all duration-500 ease-in-out overflow-hidden
-                            ${expandedRows.has(log.id) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
-                          `}>
-                            <td colSpan="6" className="px-3 py-0 transition-all duration-500 ease-in-out">
-                              <div className={`
-                                transition-all duration-500 ease-in-out overflow-hidden
-                                ${expandedRows.has(log.id) ? 'max-h-96 opacity-100 py-3' : 'max-h-0 opacity-0 py-0'}
-                              `}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 transition-all duration-500 ease-in-out">
-                                  <div>
-                                    <h4 className="font-medium mb-1 text-xs text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
-                                      {t("audit.expanded.fullDetails")}
-                                    </h4>
-                                    <pre className="whitespace-pre-wrap break-words bg-gray-100 dark:bg-gray-600 p-3 rounded text-xs text-gray-700 dark:text-gray-200 transition-all duration-500 ease-in-out transform hover:scale-[1.02]">
-                                      {safeString(log.details)}
-                                    </pre>
-                                  </div>
-                                  <div className="mt-2 md:mt-0 transition-all duration-500 ease-in-out">
-                                    <h4 className="font-medium mb-1 text-xs text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
-                                      {t("audit.expanded.additionalInfo")}
-                                    </h4>
-                                    <div className="text-xs space-y-1 text-gray-700 dark:text-gray-300 transition-all duration-500 ease-in-out">
-                                      <p className="text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                                        <span className="font-medium text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
-                                          {t("audit.expanded.idLabel")}
-                                        </span>{" "}
-                                        {log.id}
-                                      </p>
-                                      <p className="text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                                        <span className="font-medium text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
-                                          {t("audit.expanded.entityLabel")}
-                                        </span>{" "}
-                                        {safeString(log.entity) || t("audit.na")}
-                                      </p>
-                                      <p className="text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                                        <span className="font-medium text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
-                                          {t("audit.expanded.ipLabel")}
-                                        </span>{" "}
-                                        {log.ipAddress || t("audit.na")}
-                                      </p>
-                                      <p className="text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
-                                        <span className="font-medium text-gray-900 dark:text-gray-100 transition-colors duration-500 ease-in-out">
-                                          {t("audit.expanded.userAgentLabel")}
-                                        </span>{" "}
-                                        {log.userAgent || t("audit.na")}
-                                      </p>
+                              </td>
+                            </tr>
+                            <tr className={`
+                              bg-[var(--surface-container-low)] dark:bg-gray-700 transition-all duration-300 overflow-hidden
+                              ${expandedRows.has(log.id) ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}
+                            `}>
+                              <td colSpan="6" className="px-4 py-0">
+                                <div className={`
+                                  transition-all duration-300 overflow-hidden
+                                  ${expandedRows.has(log.id) ? 'max-h-96 opacity-100 py-4' : 'max-h-0 opacity-0 py-0'}
+                                `}>
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    <div>
+                                      <h4 className="font-medium mb-2 text-sm text-[var(--on-surface)] dark:text-white">
+                                        {t("audit.expanded.fullDetails")}
+                                      </h4>
+                                      <pre className="whitespace-pre-wrap break-words bg-[var(--surface-container)] dark:bg-gray-800 p-3 rounded text-sm text-[var(--on-surface)] dark:text-white border border-[var(--outline-variant)] dark:border-gray-600">
+                                        {safeString(log.details)}
+                                      </pre>
+                                    </div>
+                                    <div className="mt-3 lg:mt-0">
+                                      <h4 className="font-medium mb-2 text-sm text-[var(--on-surface)] dark:text-white">
+                                        {t("audit.expanded.additionalInfo")}
+                                      </h4>
+                                      <div className="text-sm space-y-2 text-[var(--on-surface)] dark:text-white">
+                                        <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                                          <span className="font-medium text-[var(--on-surface)] dark:text-white">
+                                            {t("audit.expanded.idLabel")}
+                                          </span>{" "}
+                                          {log.id}
+                                        </p>
+                                        <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                                          <span className="font-medium text-[var(--on-surface)] dark:text-white">
+                                            {t("audit.expanded.entityLabel")}
+                                          </span>{" "}
+                                          {safeString(log.entity) || t("audit.na")}
+                                        </p>
+                                        <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                                          <span className="font-medium text-[var(--on-surface)] dark:text-white">
+                                            {t("audit.expanded.ipLabel")}
+                                          </span>{" "}
+                                          {log.ipAddress || t("audit.na")}
+                                        </p>
+                                        <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                                          <span className="font-medium text-[var(--on-surface)] dark:text-white">
+                                            {t("audit.expanded.userAgentLabel")}
+                                          </span>{" "}
+                                          {log.userAgent || t("audit.na")}
+                                        </p>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            </td>
-                          </tr>
-                        </React.Fragment>
-                      ))}
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               ) : (
-                <div className="text-center py-12 bg-white dark:bg-gray-800 transition-all duration-500 ease-in-out animate-fade-in">
-                  <div className="flex justify-center mb-4 transition-all duration-500 ease-in-out">
-                    <Search className="h-12 w-12 text-gray-400 dark:text-gray-500 transition-all duration-500 ease-in-out transform hover:scale-110" />
+                <div className="text-center py-16 bg-[var(--surface-container-lowest)] dark:bg-gray-800 animate-fade-in">
+                  <div className="flex justify-center mb-4">
+                    <Search className="h-12 w-12 text-[var(--on-surface-variant)] dark:text-gray-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1 transition-colors duration-500 ease-in-out">
+                  <h3 className="text-xl font-medium text-[var(--on-surface)] dark:text-white mb-1">
                     {t("audit.noLogs.title")}
                   </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 px-2 mx-auto max-w-md transition-colors duration-500 ease-in-out">
+                  <p className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 px-4 mx-auto max-w-md">
                     {searchQuery || fromDate || toDate ? t("audit.noLogs.tryAdjust") : t("audit.noLogs.none")}
                   </p>
                 </div>
@@ -682,10 +817,9 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
             </div>
           </div>
         </div>
-
-        {/* Simple bottom pagination (desktop & mobile) */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 transition-all duration-500 ease-in-out">
-          <div className="text-xs text-gray-600 dark:text-gray-300 transition-colors duration-500 ease-in-out">
+        {/* Bottom pagination (desktop & mobile) */}
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400">
             {t("audit.pageFooter", {
               showing: logs.length,
               page,
@@ -693,12 +827,11 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
               total,
             })}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2 transition-all duration-500 ease-in-out">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setPage(1)}
               disabled={page <= 1 || loading}
-              className={`${compactBtn} ${ghostBtn}`}
+              className={`${outlineBtn} disabled:opacity-50`}
               aria-label={t("audit.first")}
             >
               {t("audit.first")}
@@ -706,20 +839,18 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1 || loading}
-              className={`${compactBtn} ${ghostBtn}`}
+              className={`${outlineBtn} disabled:opacity-50`}
               aria-label={t("audit.prev")}
             >
               {t("audit.prev")}
             </button>
-
-            <div className="px-2 py-1 text-xs text-gray-700 dark:text-gray-200 transition-colors duration-500 ease-in-out">
-              {t("audit.gotoPage")} <strong className="mx-1 transition-colors duration-500 ease-in-out">{page}</strong> / <strong className="transition-colors duration-500 ease-in-out">{totalPages}</strong>
+            <div className="px-3 py-1.5 text-base text-[var(--on-surface)] dark:text-white">
+              {t("audit.gotoPage")} <strong className="mx-1">{page}</strong> / <strong>{totalPages}</strong>
             </div>
-
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages || loading}
-              className={`${compactBtn} ${ghostBtn}`}
+              className={`${outlineBtn} disabled:opacity-50`}
               aria-label={t("audit.next")}
             >
               {t("audit.next")}
@@ -727,7 +858,7 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
             <button
               onClick={() => setPage(totalPages)}
               disabled={page >= totalPages || loading}
-              className={`${compactBtn} ${ghostBtn}`}
+              className={`${outlineBtn} disabled:opacity-50`}
               aria-label={t("audit.last")}
             >
               {t("audit.last")}
@@ -735,10 +866,9 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
           </div>
         </div>
       </div>
-
       {/* Render the toast (single at a time). If a parent passed showToast, it will be used instead. */}
       {toast && (
-        <div className="fixed z-50 right-5 bottom-5 transition-all duration-500 ease-in-out animate-bounce">
+        <div className="fixed z-50 right-4 bottom-4 transition-all duration-300 ease-in-out animate-bounce">
           <Toast
             key={toast.id}
             message={toast.message}
@@ -751,4 +881,4 @@ const AuditLogPage = ({ showToast: propShowToast }) => {
   );
 };
 
-export default AuditLogPage;
+export default App;

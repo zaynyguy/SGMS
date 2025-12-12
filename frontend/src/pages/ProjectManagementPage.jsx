@@ -1,23 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-
 import { useAuth } from "../context/AuthContext";
 import TopBar from "../components/layout/TopBar";
-
 import useProjectApi from "../hooks/useProjectApi";
-
 import GoalCard from "../components/project/GoalCard";
 import PaginationFooter from "../components/project/PaginationFooter";
 import GenericModal from "../components/project/GenericModal";
 import SubmitReportModal from "../components/SubmitReportModal";
-import { Target } from "lucide-react";
-
+import { Target, ArrowUpDown, RefreshCcw, Plus, X, Search } from "lucide-react";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import Toast from "../components/common/Toast";
 
-import { ArrowUpDown, RefreshCcw, Plus } from "lucide-react";
-
-/* Confirm modal component (in-file) */
+/* Confirm modal component with MD3 styling */
 function ConfirmModal({
   open,
   title,
@@ -37,11 +31,10 @@ function ConfirmModal({
       setIsMounted(false);
     }
   }, [open]);
-
   if (!open) return null;
   return (
     <div
-      className={`fixed inset-0 bg-black/50 dark:bg-black/60 flex items-center justify-center p-3 z-50 project-overlay ${
+      className={`fixed inset-0 bg-[var(--scrim)]/[.32] dark:bg-gray-900/[.8] flex items-center justify-center p-4 z-50 transition-opacity duration-300 ${
         isMounted ? "opacity-100" : "opacity-0"
       }`}
       role="alertdialog"
@@ -49,11 +42,11 @@ function ConfirmModal({
       aria-labelledby="confirm-modal-title"
       aria-describedby="confirm-modal-desc"
     >
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-2xl w-full max-w-sm project-modal text-sm">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 mb-2 project-pulse">
+      <div className="bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-2xl p-5 w-full max-w-md surface-elevation-3">
+        <div className="flex justify-center mb-4">
+          <div className="w-12 h-12 rounded-full bg-[var(--error-container)] dark:bg-red-900 flex items-center justify-center">
             <svg
-              className="h-5 w-5 text-red-600 dark:text-red-400"
+              className="h-6 w-6 text-[var(--on-error-container)] dark:text-red-200"
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden
@@ -74,41 +67,37 @@ function ConfirmModal({
               ></path>
             </svg>
           </div>
-
-          <h3
-            id="confirm-modal-title"
-            className="mt-2 text-sm font-semibold text-gray-900 dark:text-white project-slide-in"
-          >
-            {title}
-          </h3>
-
-          <p
-            id="confirm-modal-desc"
-            className="mt-2 text-xs text-gray-600 dark:text-gray-400 project-fade-in"
-          >
-            {message}
-          </p>
         </div>
-
-        <div className="mt-4 flex flex-col sm:flex-row gap-2 project-stagger-buttons">
+        <h3
+          id="confirm-modal-title"
+          className="text-xl font-bold text-[var(--on-surface)] dark:text-white text-center mb-2"
+        >
+          {title}
+        </h3>
+        <p
+          id="confirm-modal-desc"
+          className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 text-center mb-6"
+        >
+          {message}
+        </p>
+        <div className="flex gap-3">
           <button
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 px-4 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 project-btn project-slide-in-left"
+            className="flex-1 px-4 py-3 text-base font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-low)] dark:hover:bg-gray-700 transition-colors"
           >
             {cancelLabel}
           </button>
-
           <button
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 px-4 py-2 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium shadow-sm project-btn project-slide-in-right disabled:opacity-60 flex items-center justify-center"
+            className="flex-1 px-4 py-3 text-base font-medium rounded-xl bg-[var(--error)] dark:bg-red-700 text-[var(--on-error)] dark:text-white hover:bg-[color-mix(in_srgb,var(--error),white_10%)] dark:hover:bg-red-600 transition-colors disabled:opacity-60 flex items-center justify-center"
           >
             {loading ? (
               <>
-                <div className="project-spinner-small mr-1.5"></div>
+                <div className="w-5 h-5 border-2 border-transparent border-t-[var(--on-error)] dark:border-t-white rounded-full mr-2 animate-spin"></div>
                 <span>
                   {(t && t("project.actions.deleting")) || "Deleting..."}
                 </span>
@@ -127,6 +116,88 @@ export default function ProjectManagement() {
   const { t } = useTranslation();
   const { user } = useAuth();
 
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Material Design 3 color system - light theme
+  const lightColors = {
+    primary: "#00684A", // Deep green (MD3 primary)
+    onPrimary: "#FFFFFF",
+    primaryContainer: "#94F4C6", // Light green container
+    onPrimaryContainer: "#002015", // Dark green text on container
+    secondary: "#4F616E",
+    onSecondary: "#FFFFFF",
+    secondaryContainer: "#D2E4F2",
+    onSecondaryContainer: "#0D1E2A",
+    tertiary: "#7A5571",
+    onTertiary: "#FFFFFF",
+    tertiaryContainer: "#FFD8F1",
+    onTertiaryContainer: "#2F1328",
+    error: "#BA1A1A",
+    onError: "#FFFFFF",
+    errorContainer: "#FFDAD6",
+    onErrorContainer: "#410002",
+    background: "#FCFDF7",
+    onBackground: "#1A1C19",
+    surface: "#FCFDF7",
+    onSurface: "#1A1C19",
+    surfaceVariant: "#DDE4D9",
+    onSurfaceVariant: "#414941",
+    outline: "#717970",
+    outlineVariant: "#C1C9C0",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#2E312E",
+    inverseOnSurface: "#F0F2EC",
+    inversePrimary: "#77D8B8",
+    surfaceContainerLowest: "#FFFFFF",
+    surfaceContainerLow: "#F8F9F4",
+    surfaceContainer: "#F2F4EF",
+    surfaceContainerHigh: "#ECF0E8",
+    surfaceContainerHighest: "#E6EAE2",
+  };
+
+  // Material Design 3 color system - dark theme
+  const darkColors = {
+    primary: "#4ADE80", // Lighter green for dark mode
+    onPrimary: "#002115",
+    primaryContainer: "#003925",
+    onPrimaryContainer: "#BBF7D0",
+    secondary: "#B6C9FF",
+    onSecondary: "#1E307D",
+    secondaryContainer: "#354796",
+    onSecondaryContainer: "#DBE6FD",
+    tertiary: "#D0BCFF",
+    onTertiary: "#4F308B",
+    tertiaryContainer: "#6745A3",
+    onTertiaryContainer: "#E9D7FD",
+    error: "#FFB4AB",
+    onError: "#690005",
+    errorContainer: "#93000A",
+    onErrorContainer: "#FFDAD6",
+    background: "#1A1C19",
+    onBackground: "#E1E3DD",
+    surface: "#1A1C19",
+    onSurface: "#E1E3DD",
+    surfaceVariant: "#444C45",
+    onSurfaceVariant: "#C2C9C2",
+    outline: "#8C948D",
+    outlineVariant: "#444C45",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#E1E3DD",
+    inverseOnSurface: "#1A1C19",
+    inversePrimary: "#006D5B",
+    surfaceContainerLowest: "#222421",
+    surfaceContainerLow: "#2D2F2C",
+    surfaceContainer: "#313330",
+    surfaceContainerHigh: "#3B3D3A",
+    surfaceContainerHighest: "#454744",
+  };
+
+  // Select colors based on dark mode
+  const m3Colors = darkMode ? darkColors : lightColors;
+
   // page-level UI state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -134,29 +205,23 @@ export default function ProjectManagement() {
   const [expandedGoal, setExpandedGoal] = useState(null);
   const [expandedTask, setExpandedTask] = useState(null);
   const [selectedGoal, setSelectedGoal] = useState(null);
-
   const [currentQuarter, setCurrentQuarter] = useState(0);
-
   const [modal, setModal] = useState({ isOpen: false, type: null, data: null });
   const [submitModal, setSubmitModal] = useState({
     isOpen: false,
     data: null,
   });
-
   const [canManageGTA, setCanManageGTA] = useState(false);
   const [canViewGTA, setCanViewGTA] = useState(false);
   const [canSubmitReport, setCanSubmitReport] = useState(false);
-
   // Animation states
   const [isMounted, setIsMounted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
   // Toast
   const [toast, setToast] = useState(null);
   const showToast = useCallback((message, type = "create") => {
     setToast({ message, type });
   }, []);
-
   // Sorting
   const [sortKey, setSortKey] = useState(() => {
     try {
@@ -172,13 +237,11 @@ export default function ProjectManagement() {
       return "asc";
     }
   });
-
   // --- Use the Project API Hook ---
   const api = useProjectApi({
     initialPage: currentPage,
     initialSize: pageSize,
   });
-
   const {
     groups,
     goals,
@@ -207,12 +270,10 @@ export default function ProjectManagement() {
     setActivities,
     setTasks,
   } = api;
-
   // Mount animation
   useEffect(() => {
     requestAnimationFrame(() => setIsMounted(true));
   }, []);
-
   /* ----------------- Permissions ----------------- */
   useEffect(() => {
     if (!user) {
@@ -224,10 +285,8 @@ export default function ProjectManagement() {
     const perms = Array.isArray(user?.permissions)
       ? user.permissions
       : user?.user?.permissions || [];
-
     setCanManageGTA(perms.includes("manage_gta"));
     setCanViewGTA(perms.includes("view_gta") || perms.includes("manage_gta"));
-
     const submitPermNames = [
       "submit_report",
       "SubmitReport",
@@ -237,7 +296,6 @@ export default function ProjectManagement() {
     const hasSubmit = submitPermNames.some((p) => perms.includes(p));
     setCanSubmitReport(hasSubmit);
   }, [user]);
-
   /* ----------------- Load initial data ----------------- */
   useEffect(() => {
     loadGoals({ page: currentPage, pageSize }).catch((e) => {
@@ -246,20 +304,17 @@ export default function ProjectManagement() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, loadGoals]);
-
   /* ----------------- Show toasts on API success/error ----------------- */
   useEffect(() => {
     if (apiError) {
       showToast(apiError, "error");
     }
   }, [apiError, showToast]);
-
   useEffect(() => {
     if (apiSuccess) {
       showToast(apiSuccess, "create");
     }
   }, [apiSuccess, showToast]);
-
   /* ----------------- Persist sort preferences ----------------- */
   useEffect(() => {
     try {
@@ -269,17 +324,14 @@ export default function ProjectManagement() {
       // ignore
     }
   }, [sortKey, sortOrder]);
-
   // When quarter changes, clear loaded data to force a refetch
   useEffect(() => {
     if (setActivities) setActivities({});
     if (setTasks) setTasks({}); // Also clear tasks
-    
     // And collapse any open items
     setExpandedTask(null);
     setExpandedGoal(null); // Also collapse goals
   }, [currentQuarter, setActivities, setTasks]);
-
   /* ----------------- Toggle UI helpers ----------------- */
   const toggleGoal = useCallback(
     async (goal) => {
@@ -300,7 +352,6 @@ export default function ProjectManagement() {
     },
     [expandedGoal, tasks, loadTasks, currentQuarter] // Add currentQuarter
   );
-
   const toggleTask = useCallback(
     async (goal, task) => {
       if (expandedTask === task.id) {
@@ -319,12 +370,10 @@ export default function ProjectManagement() {
     },
     [expandedTask, activities, loadActivities, currentQuarter] // Add currentQuarter
   );
-
   /* ----------------- Confirm modal state for deletes ----------------- */
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [toDelete, setToDelete] = useState(null); 
   const [deleting, setDeleting] = useState(false);
-
   /* ----------------- CRUD wrappers that call api hook ----------------- */
   const handleCreateGoal = useCallback(
     async (payload) => {
@@ -338,7 +387,6 @@ export default function ProjectManagement() {
     },
     [createGoalItem, loadGoals]
   );
-
   const handleUpdateGoal = useCallback(
     async (goalId, payload) => {
       try {
@@ -351,7 +399,6 @@ export default function ProjectManagement() {
     },
     [updateGoalItem, loadGoals]
   );
-
   const handleDeleteGoal = useCallback(
     (goalId) => {
       const goal = (goals || []).find((g) => String(g.id) === String(goalId)) || null;
@@ -364,7 +411,6 @@ export default function ProjectManagement() {
     },
     [goals]
   );
-
   const handleCreateTask = useCallback(
     async (goalId, payload) => {
       try {
@@ -378,7 +424,6 @@ export default function ProjectManagement() {
     },
     [createTaskItem, loadTasks, loadGoals, currentQuarter] // Add currentQuarter
   );
-
   const handleUpdateTask = useCallback(
     async (goalId, taskId, payload) => {
       try {
@@ -392,7 +437,6 @@ export default function ProjectManagement() {
     },
     [updateTaskItem, loadTasks, loadGoals, currentQuarter] // Add currentQuarter
   );
-
   const handleDeleteTask = useCallback(
     (goalId, taskId) => {
       const tasksForGoal = tasks?.[goalId] || [];
@@ -408,7 +452,6 @@ export default function ProjectManagement() {
     },
     [tasks]
   );
-
   const handleCreateActivity = useCallback(
     async (goalId, taskId, payload) => {
       try {
@@ -423,7 +466,6 @@ export default function ProjectManagement() {
     },
     [createActivityItem, loadActivities, loadTasks, loadGoals, currentQuarter] // Add currentQuarter
   );
-
   const handleUpdateActivity = useCallback(
     async (goalId, taskId, activityId, payload) => {
       try {
@@ -438,7 +480,6 @@ export default function ProjectManagement() {
     },
     [updateActivityItem, loadActivities, loadTasks, loadGoals, currentQuarter] // Add currentQuarter
   );
-
   const handleDeleteActivity = useCallback(
     (goalId, taskId, activityId) => {
       const activitiesForTask = activities?.[taskId] || [];
@@ -456,7 +497,6 @@ export default function ProjectManagement() {
     },
     [activities]
   );
-
   /* Perform the confirmed delete (goal/task/activity) */
   const performDelete = useCallback(async () => {
     if (!toDelete || !toDelete.type) {
@@ -464,7 +504,6 @@ export default function ProjectManagement() {
       setToDelete(null);
       return;
     }
-
     setDeleting(true);
     try {
       if (toDelete.type === "goal") {
@@ -497,13 +536,10 @@ export default function ProjectManagement() {
     loadActivities,
     currentQuarter, // Add currentQuarter
   ]);
-
   /* ----------------- Submit report ----------------- */
-  
 const openSubmitModal = useCallback(
   async (goalId, taskId, activityId) => {
     try {
- 
       const localSafeParse = (v) => {
         if (v === null || v === undefined) return null;
         if (typeof v === "object") return v;
@@ -512,12 +548,9 @@ const openSubmitModal = useCallback(
         }
         return v;
       };
-
       let taskActivities = activities[taskId] || [];
       let activity = taskActivities.find((a) => String(a.id) === String(activityId));
-
       if (!activity) {
-   
         try {
           const list = await loadActivities(taskId, currentQuarter);
           taskActivities = list || activities[taskId] || [];
@@ -526,19 +559,16 @@ const openSubmitModal = useCallback(
           console.error("Failed to load activities inside openSubmitModal:", err);
         }
       }
-
       if (!activity) {
         showToast(t("project.errors.activityNotLoaded", "Activity details not loaded. Please expand the task or refresh and try again."), "error");
         return;
       }
-
       activity = {
         ...activity,
         targetMetric: localSafeParse(activity.targetMetric) ?? {},
         currentMetric: localSafeParse(activity.currentMetric) ?? {},
         quarterlyGoals: localSafeParse(activity.quarterlyGoals) ?? {},
       };
-
       const data = { goalId, taskId, activityId, activity, currentQuarter };
       setSubmitModal({ isOpen: true, data });
     } catch (err) {
@@ -548,12 +578,9 @@ const openSubmitModal = useCallback(
   },
   [activities, loadActivities, currentQuarter, showToast, t]
 );
-
-
   const closeSubmitModal = useCallback(() => {
     setSubmitModal({ isOpen: false, data: null });
   }, []);
-
   const handleSubmitReport = useCallback(
     async (formState) => {
       const {
@@ -566,11 +593,8 @@ const openSubmitModal = useCallback(
         taskId,
         activity,
       } = formState;
-
-      // ... (validation logic remains the same) ...
       const targetMetric = activity?.targetMetric || {};
       const targetKeys = Object.keys(targetMetric);
-
       let allMetricsFilled = true;
       if (targetKeys.length > 0) {
         for (const key of targetKeys) {
@@ -588,13 +612,10 @@ const openSubmitModal = useCallback(
       } else {
         allMetricsFilled = false;
       }
-
       let effectiveStatus = newStatus;
-
       if (allMetricsFilled && newStatus !== "Done") {
         effectiveStatus = "Done";
       }
-
       let metricsObj = null;
       if (Array.isArray(metricsArray) && metricsArray.length > 0) {
         metricsObj = {};
@@ -605,7 +626,6 @@ const openSubmitModal = useCallback(
         });
         if (Object.keys(metricsObj).length === 0) metricsObj = null;
       }
-
       const fd = new FormData();
       if (narrative) fd.append("narrative", narrative);
       if (metricsObj) fd.append("metrics_data", JSON.stringify(metricsObj));
@@ -614,11 +634,9 @@ const openSubmitModal = useCallback(
         for (let i = 0; i < files.length; i += 1)
           fd.append("attachments", files[i]);
       }
-
       try {
         await submitReportForActivity(activityId, fd);
         closeSubmitModal();
-
         if (taskId) await loadActivities(taskId, currentQuarter);
         if (goalId) await loadTasks(goalId, currentQuarter);
         await loadGoals();
@@ -637,7 +655,6 @@ const openSubmitModal = useCallback(
       currentQuarter, // Add currentQuarter
     ]
   );
-
   /* ----------------- Filtered goals ----------------- */
   const filteredGoals = useMemo(() => {
     const q = String(searchTerm || "").trim().toLowerCase();
@@ -649,12 +666,10 @@ const openSubmitModal = useCallback(
       );
     });
   }, [goals, searchTerm]);
-
   /* ----------------- Sorting ----------------- */
   const sortedGoals = useMemo(() => {
     const arr = Array.isArray(filteredGoals) ? [...filteredGoals] : [];
     const order = sortOrder === "asc" ? 1 : -1;
-
     const getVal = (g) => {
       if (sortKey === "created_at" || sortKey === "createdAt") {
         const v = g.created_at ?? g.createdAt ?? g.created ?? null;
@@ -662,7 +677,6 @@ const openSubmitModal = useCallback(
         const d = Date.parse(v);
         return Number.isNaN(d) ? 0 : d;
       }
-
       if (sortKey === "rollNo") {
         const raw = g.rollNo ?? g.roll_no ?? g.roll ?? null;
         if (raw === null || raw === undefined || String(raw).trim() === "")
@@ -672,7 +686,6 @@ const openSubmitModal = useCallback(
       }
       return String(g.title || "").toLowerCase();
     };
-
     arr.sort((a, b) => {
       const va = getVal(a);
       const vb = getVal(b);
@@ -683,10 +696,8 @@ const openSubmitModal = useCallback(
       if (String(va) > String(vb)) return 1 * order;
       return 0;
     });
-
     return arr;
   }, [filteredGoals, sortKey, sortOrder]);
-
   /* ----------------- Refresh with animation ----------------- */
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -702,83 +713,145 @@ const openSubmitModal = useCallback(
       setTimeout(() => setIsRefreshing(false), 600);
     }
   }, [loadGoals, currentPage, pageSize, setActivities, setTasks]);
-
   /* ----------------- Render ----------------- */
   return (
-    <>
+    <div 
+      className={`min-h-screen bg-[var(--background)] dark:bg-gray-900 font-sans transition-colors duration-300 ${
+        isMounted ? 'opacity-100' : 'opacity-0'
+      }`}
+      style={{
+        "--primary": m3Colors.primary,
+        "--on-primary": m3Colors.onPrimary,
+        "--primary-container": m3Colors.primaryContainer,
+        "--on-primary-container": m3Colors.onPrimaryContainer,
+        "--secondary": m3Colors.secondary,
+        "--on-secondary": m3Colors.onSecondary,
+        "--secondary-container": m3Colors.secondaryContainer,
+        "--on-secondary-container": m3Colors.onSecondaryContainer,
+        "--tertiary": m3Colors.tertiary,
+        "--on-tertiary": m3Colors.onTertiary,
+        "--tertiary-container": m3Colors.tertiaryContainer,
+        "--on-tertiary-container": m3Colors.onTertiaryContainer,
+        "--error": m3Colors.error,
+        "--on-error": m3Colors.onError,
+        "--error-container": m3Colors.errorContainer,
+        "--on-error-container": m3Colors.onErrorContainer,
+        "--background": m3Colors.background,
+        "--on-background": m3Colors.onBackground,
+        "--surface": m3Colors.surface,
+        "--on-surface": m3Colors.onSurface,
+        "--surface-variant": m3Colors.surfaceVariant,
+        "--on-surface-variant": m3Colors.onSurfaceVariant,
+        "--outline": m3Colors.outline,
+        "--outline-variant": m3Colors.outlineVariant,
+        "--shadow": m3Colors.shadow,
+        "--scrim": m3Colors.scrim,
+        "--inverse-surface": m3Colors.inverseSurface,
+        "--inverse-on-surface": m3Colors.inverseOnSurface,
+        "--inverse-primary": m3Colors.inversePrimary,
+        "--surface-container-lowest": m3Colors.surfaceContainerLowest,
+        "--surface-container-low": m3Colors.surfaceContainerLow,
+        "--surface-container": m3Colors.surfaceContainer,
+        "--surface-container-high": m3Colors.surfaceContainerHigh,
+        "--surface-container-highest": m3Colors.surfaceContainerHighest,
+      }}
+    >
       <style>{`
-        /* ... (all the keyframes and styles) ... */
-        @keyframes projectFadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes projectSlideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes projectScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        @keyframes projectPulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-        @keyframes projectSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes projectShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-        .project-main-container { animation: projectFadeIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-        .project-overlay { transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .project-modal { animation: projectScaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
-        .project-slide-in { animation: projectSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-        .project-fade-in { animation: projectFadeIn 0.5s ease-out both; }
-        .project-pulse { animation: projectPulse 2s ease-in-out infinite; }
-        .project-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .project-btn:hover { transform: translateY(-2px); }
-        .project-btn:active { transform: translateY(0); }
-        .project-icon-rotate { transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-        .project-refresh-spin { animation: projectSpin 1s linear infinite; }
-        .project-shake { animation: projectShake 0.5s ease-in-out; }
-        .project-header-icon { animation: projectFadeIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-        .project-title { animation: projectSlideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-        .project-controls { animation: projectFadeIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
-        .project-spinner-small { width: 14px; height: 14px; border: 2px solid transparent; border-top: 2px solid currentColor; border-radius: 50%; animation: projectSpin 1s linear infinite; }
-        .project-content-transition { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .project-search-focus:focus { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-        .project-sort-active { transition: all 0.3s ease; }
-        .project-sort-active:hover { transform: scale(1.05); }
+        .surface-elevation-0 { 
+          box-shadow: none;
+        }
+        .surface-elevation-1 { 
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04); 
+          border: none;
+        }
+        .surface-elevation-2 { 
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06); 
+          border: none;
+        }
+        .surface-elevation-3 { 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08); 
+          border: none;
+        }
+        .md3-container {
+          border-radius: 28px;
+          overflow: hidden;
+        }
+        .md3-card {
+          border-radius: 20px;
+          overflow: hidden;
+        }
+        .md3-input {
+          border-radius: 16px;
+          padding: 10px 16px;
+          border: 1px solid var(--outline-variant);
+          background: var(--surface-container-lowest);
+          transition: all 0.2s ease;
+        }
+        .md3-input:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 2px var(--primary-container);
+        }
+        .md3-button {
+          border-radius: 20px;
+          padding: 8px 16px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+        }
+        .md3-icon-container {
+          border-radius: 16px;
+          padding: 10px;
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
       `}</style>
-
-      <div
-        className={`min-h-screen bg-gray-200 dark:bg-gray-900 p-3 md:p-4 transition-colors duration-200 ${
-          isMounted ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <div className="max-w-8xl mx-auto">
-          <header className="mb-3 ">
-            <div className="flex items-center md:items-center justify-between gap-3 rounded-2xl bg-white dark:bg-gray-800 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/40 shadow-sm px-4 py-3 transition-all duration-300">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-gray-200 dark:bg-gray-900 project-header-icon">
-                  <Target className="h-5 w-5 text-sky-600 dark:text-sky-300" />
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <header className="mb-6">
+          {/* Header container with MD3 container styling */}
+          <div className="md3-container dark:border-gray-700 surface-elevation-1">
+            <div className="bg-[var(--surface-container-low)] dark:bg-gray-800">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-5 py-4">
+                <div className="flex min-w-0 gap-4 items-center">
+                  <div className="md3-icon-container bg-green-200 dark:bg-indigo-900">
+                    <Target className="h-6 w-6 text-green-800 dark:text-indigo-200 transition-transform duration-300 hover:scale-110" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-2xl font-bold text-[var(--on-surface)] dark:text-white truncate">
+                      {t("project.title")}
+                    </h1>
+                    <p className="mt-1 text-[var(--on-surface-variant)] dark:text-gray-400 max-w-2xl">
+                      {t("project.subtitle")}
+                    </p>
+                  </div>
                 </div>
-
-                <div className="project-title">
-                  <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white leading-tight">
-                    {t("project.title")}
-                  </h1>
-                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-300 project-fade-in">
-                    {t("project.subtitle")}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <TopBar />
+                  </div>
                 </div>
-              </div>
-
-              <div className="ml-auto flex-shrink-0 project-slide-in">
-                <TopBar />
               </div>
             </div>
-
-            {/* ---------------------------------------------------------------- */}
-            {/* MODIFICATION START: Responsive Header Layout
-            /* ---------------------------------------------------------------- */}
-            <div className="mt-3 w-full project-controls space-y-3">
-              
+          </div>
+          {/* Controls container with MD3 styling */}
+          <div className="mt-4 md3-card bg-[var(--surface-container-low)] dark:bg-gray-800 dark:border-gray-700 surface-elevation-3 p-5">
+            <div className="space-y-4">
               {/* Row 1: Search and Actions */}
-              <div className="flex flex-col sm:flex-row items-center gap-2">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
                 {/* Search Bar */}
                 <div className="flex-1 w-full">
-                  <label htmlFor="project-search" className="sr-only">
-                    {t("project.search") || "Search goals"}
-                  </label>
-                  <div className="relative w-full">
+                  <div className="relative">
                     <input
-                      id="project-search"
                       type="search"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -790,11 +863,12 @@ const openSubmitModal = useCallback(
                           });
                         }
                       }}
-                      placeholder={
-                        t("project.searchPlaceholder") || "Search goals..."
-                      }
-                      className="w-full rounded-md border bg-white dark:bg-gray-800 px-2 py-1.5 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400 project-search-focus transition-all duration-200"
+                      placeholder={t("project.searchPlaceholder") || "Search goals..."}
+                      className="md3-input w-full pl-10 text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 focus:ring-0"
                     />
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-[var(--on-surface-variant)] dark:text-gray-400" />
+                    </div>
                     {searchTerm && (
                       <button
                         type="button"
@@ -806,34 +880,33 @@ const openSubmitModal = useCallback(
                             console.error("loadGoals error:", err);
                           });
                         }}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1.5 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 project-btn hover:scale-110"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-colors"
                       >
-                        ×
+                        <X className="h-4 w-4 text-[var(--on-surface-variant)] dark:text-gray-400" />
                       </button>
                     )}
                   </div>
                 </div>
-                
-                {/* Sort/Refresh/Add Buttons */}
-                <div className="flex-shrink-0 w-full sm:w-auto flex justify-end items-center gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <label className="text-xs text-gray-600 dark:text-gray-300">
+                {/* Actions container */}
+                <div className="flex flex-wrap gap-2">
+                  {/* Sort controls */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 hidden md:block">
                       {t("project.sort.label") || "Sort"}
                     </label>
                     <select
                       aria-label="Sort by"
                       value={sortKey}
                       onChange={(e) => setSortKey(e.target.value)}
-                      className="ml-1 rounded-md border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 px-1.5 py-1 text-xs shadow-sm focus:outline-none project-btn project-sort-active"
-                      title="Choose sort key"
+                      className="md3-input text-base min-w-[120px] md:min-w-[140px] bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white"
                     >
-                      <option value="rollNo">
+                      <option value="rollNo" className="bg-white dark:bg-gray-700">
                         {t("project.sort.rollNo") || "Roll No"}
                       </option>
-                      <option value="title">
+                      <option value="title" className="bg-white dark:bg-gray-700">
                         {t("project.sort.title") || "Title"}
                       </option>
-                      <option value="created_at">
+                      <option value="created_at" className="bg-white dark:bg-gray-700">
                         {t("project.sort.created") || "Created"}
                       </option>
                     </select>
@@ -841,7 +914,7 @@ const openSubmitModal = useCallback(
                       onClick={() =>
                         setSortOrder((s) => (s === "asc" ? "desc" : "asc"))
                       }
-                      className="ml-1.5 px-1.5 py-1 rounded border text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 flex items-center gap-1 hover:shadow-sm project-btn project-sort-active"
+                      className="p-2 rounded-full hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-colors"
                       title={
                         sortOrder === "asc"
                           ? t("project.sort.ascending") || "Ascending"
@@ -849,70 +922,60 @@ const openSubmitModal = useCallback(
                       }
                       aria-label="Toggle sort order"
                     >
-                      <span className="text-xs">
-                        {sortOrder === "asc" ? "Asc" : "Desc"}
-                      </span>
                       <ArrowUpDown
-                        className={`h-3.5 w-3.5 project-icon-rotate ${
+                        className={`h-5 w-5 text-[var(--on-surface-variant)] dark:text-gray-400 ${
                           sortOrder === "desc" ? "rotate-180" : ""
                         }`}
                       />
                     </button>
                   </div>
-
+                  {/* Refresh button */}
                   <button
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    className="px-2 py-1 rounded border text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-300 flex items-center project-btn hover:scale-105 disabled:opacity-60"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-colors disabled:opacity-60"
                     title={t("project.refresh") || "Refresh"}
                     aria-label="Refresh goals"
                   >
                     <RefreshCcw
-                      className={`h-3.5 w-3.5 mr-1.5 ${
-                        isRefreshing ? "project-refresh-spin" : ""
+                      className={`h-4 w-4 ${
+                        isRefreshing ? "animate-spin" : ""
                       }`}
                     />
-                    <span className="text-xs">
-                      {t("project.refresh") || "Refresh"}
-                    </span>
+                    <span className="hidden md:inline text-sm">{t("project.refresh")}</span>
                   </button>
-
+                  {/* Add Goal button (visible on larger screens) */}
                   {canManageGTA && (
                     <button
                       onClick={() =>
                         setModal({ isOpen: true, type: "createGoal", data: null })
                       }
-                      className="ml-1 px-2 py-1 rounded bg-sky-600 text-white hover:bg-sky-700 flex items-center project-btn"
+                      className="md3-button bg-green-700 dark:bg-indigo-700 text-[var(--on-primary)] dark:text-white hover:bg-[color-mix(in_srgb,var(--primary),white_20%)] dark:hover:bg-indigo-600 flex items-center gap-1 min-w-[100px]"
                       aria-label="Add goal"
-                      title={t("project.addGoal") || "Add goal"}
                     >
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />
-                      <span className="text-xs">
-                        {t("project.addGoalLabel") || "Add Goal"}
-                      </span>
+                      <Plus className="h-4 w-4" />
+                      <span className="hidden md:inline text-sm">{t("project.addGoalLabel")}</span>
                     </button>
                   )}
                 </div>
               </div>
-              
-              {/* Row 2: Quarter Filters (Responsive) */}
-              <div className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 pl-1 flex-shrink-0">
+              {/* Row 2: Quarter Filters */}
+              <div className="bg-[var(--surface-container)] dark:bg-gray-700 rounded-xl p-4 dark:border-gray-800 surface-elevation-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <span className="text-sm font-medium text-[var(--on-surface)] dark:text-white flex-shrink-0">
                     {t("project.quarterFilter", "Quarter")}:
                   </span>
-                  <div className="flex flex-wrap flex-1 gap-1.5 min-w-[180px]">
+                  <div className="flex flex-wrap gap-2">
                     {[0, 1, 2, 3, 4].map((q) => (
                       <button
                         key={q}
                         onClick={() => setCurrentQuarter(q)}
                         className={`
-                          px-2 py-1 rounded-md text-xs font-semibold transition-all duration-200 
-                          flex-1 sm:flex-auto
+                          px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 
                           ${
                             currentQuarter === q
-                              ? "bg-sky-600 text-white shadow"
-                              : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
+                              ? "bg-green-800 dark:bg-indigo-700 text-[var(--on-primary)] dark:text-white shadow"
+                              : "bg-[var(--surface-container-lowest)] dark:bg-gray-800 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700"
                           }
                         `}
                       >
@@ -922,181 +985,176 @@ const openSubmitModal = useCallback(
                   </div>
                 </div>
               </div>
-
             </div>
-            {/* ---------------------------------------------------------------- */}
-            {/* MODIFICATION END */}
-            {/* ---------------------------------------------------------------- */}
-          </header>
-
-          <main className="grid gap-4 project-content-transition">
-            <div className="lg:col-span-8">
-              {isLoadingGoals ? (
-                <div className="space-y-3 project-fade-in">
-                  <SkeletonCard rows={2} />
-                  <SkeletonCard rows={3} />
-                  <SkeletonCard rows={1} />
-                </div>
-              ) : sortedGoals.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4 text-center text-xs text-gray-500 dark:text-gray-400 project-fade-in project-shake">
-                  {goals.length === 0
-                    ? t("project.empty.noGoals")
-                    : t("project.empty.noMatch")}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {sortedGoals.map((goal, index) => (
-                    <GoalCard
-                      key={goal.id}
-                      goal={goal}
-                      expandedGoal={expandedGoal}
-                      toggleGoal={toggleGoal}
-                      setSelectedGoal={setSelectedGoal}
-                      canManageGTA={canManageGTA}
-                      handleDeleteGoal={handleDeleteGoal}
-                      onEditGoal={(g) =>
-                        setModal({ isOpen: true, type: "editGoal", data: g })
-                      }
-                      onCreateTask={(goalId) =>
-                        setModal({
-                          isOpen: true,
-                          type: "createTask",
-                          data: { goalId },
-                        })
-                      }
-                      onEditTask={(goalId, task) =>
-                        setModal({
-                          isOpen: true,
-                          type: "editTask",
-                          data: { goalId, ...task },
-                        })
-                      }
-                      onDeleteTask={handleDeleteTask}
-                      onCreateActivity={(goalId, taskId) =>
-                        setModal({
-                          isOpen: true,
-                          type: "createActivity",
-                          data: { goalId, taskId },
-                        })
-                      }
-                      onEditActivity={(goalId, taskId, activity) =>
-                        setModal({
-                          isOpen: true,
-                          type: "editActivity",
-                          data: { goalId, taskId, ...activity },
-                        })
-                      }
-                      onDeleteActivity={handleDeleteActivity}
-                      tasks={tasks}
-                      tasksLoading={tasksLoading}
-                      toggleTask={toggleTask}
-                      expandedTask={expandedTask}
-                      activities={activities}
-                      activitiesLoading={activitiesLoading}
-                      openSubmitModal={openSubmitModal}
-                      canSubmitReport={canSubmitReport}
-                      reportingActive={reportingActive}
-                    />
-                  ))}
-                </div>
-              )}
-
-              <PaginationFooter
-                currentPage={currentPage}
-                pageSize={pageSize}
-                setPageSize={setPageSize}
-                setCurrentPage={setCurrentPage}
-                total={goals.length}
-              />
+          </div>
+        </header>
+        <main className="space-y-4">
+          {isLoadingGoals ? (
+            <div className="space-y-4 animate-fade-in">
+              <SkeletonCard rows={2} />
+              <SkeletonCard rows={3} />
+              <SkeletonCard rows={1} />
             </div>
-          </main>
-
-          {modal.isOpen && modal.type && modal.type !== "submitReport" && (
-            <GenericModal
-              modal={modal}
-              setModal={setModal}
-              groups={groups}
-              tasks={tasks}
-              goals={goals}
-              activities={activities}
-              onCreateGoal={handleCreateGoal}
-              onUpdateGoal={handleUpdateGoal}
-              onCreateTask={handleCreateTask}
-              onUpdateTask={handleUpdateTask}
-              onCreateActivity={handleCreateActivity}
-              onUpdateActivity={handleUpdateActivity}
-              isSubmitting={isSubmitting}
-              t={t}
-            />
+          ) : sortedGoals.length === 0 ? (
+            <div className="bg-[var(--surface-container-lowest)] dark:bg-gray-800 surface-elevation-3 rounded-xl p-6 text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--surface-container)] dark:bg-gray-700 mb-4">
+                <Target className="h-6 w-6 text-[var(--on-surface-variant)] dark:text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-[var(--on-surface)] dark:text-white mb-1">
+                {goals.length === 0
+                  ? t("project.empty.noGoals")
+                  : t("project.empty.noMatch")}
+              </h3>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sortedGoals.map((goal, index) => (
+                <GoalCard
+                  key={goal.id}
+                  goal={goal}
+                  expandedGoal={expandedGoal}
+                  toggleGoal={toggleGoal}
+                  setSelectedGoal={setSelectedGoal}
+                  canManageGTA={canManageGTA}
+                  handleDeleteGoal={handleDeleteGoal}
+                  onEditGoal={(g) =>
+                    setModal({ isOpen: true, type: "editGoal", data: g })
+                  }
+                  onCreateTask={(goalId) =>
+                    setModal({
+                      isOpen: true,
+                      type: "createTask",
+                      data: { goalId },
+                    })
+                  }
+                  onEditTask={(goalId, task) =>
+                    setModal({
+                      isOpen: true,
+                      type: "editTask",
+                      data: { goalId, ...task },
+                    })
+                  }
+                  onDeleteTask={handleDeleteTask}
+                  onCreateActivity={(goalId, taskId) =>
+                    setModal({
+                      isOpen: true,
+                      type: "createActivity",
+                      data: { goalId, taskId },
+                    })
+                  }
+                  onEditActivity={(goalId, taskId, activity) =>
+                    setModal({
+                      isOpen: true,
+                      type: "editActivity",
+                      data: { goalId, taskId, ...activity },
+                    })
+                  }
+                  onDeleteActivity={handleDeleteActivity}
+                  tasks={tasks}
+                  tasksLoading={tasksLoading}
+                  toggleTask={toggleTask}
+                  expandedTask={expandedTask}
+                  activities={activities}
+                  activitiesLoading={activitiesLoading}
+                  openSubmitModal={openSubmitModal}
+                  canSubmitReport={canSubmitReport}
+                  reportingActive={reportingActive}
+                />
+              ))}
+            </div>
           )}
-
-          {submitModal.isOpen && submitModal.data && (
-            <SubmitReportModal
-              data={submitModal.data}
-              onClose={closeSubmitModal}
-              onSubmit={handleSubmitReport}
-              loading={isSubmitting}
-              t={t}
-            />
-          )}
-
-          <ConfirmModal
-            open={confirmOpen}
-            title={
-              toDelete
-                ? toDelete.type === "goal"
-                  ? t("project.confirm.deleteGoalTitle") || "Delete goal"
-                  : toDelete.type === "task"
-                  ? t("project.confirm.deleteTaskTitle") || "Delete task"
-                  : t("project.confirm.deleteActivityTitle") || "Delete activity"
-                : t("project.confirm.deleteTitle") || "Confirm delete"
-            }
-            message={
-              toDelete
-                ? toDelete.name
-                  ? toDelete.type === "goal"
-                    ? t("project.confirm.deleteGoalMessage", {
-                        title: toDelete.name,
-                      }) || `Are you sure you want to delete goal "${toDelete.name}"?`
-                    : toDelete.type === "task"
-                    ? t("project.confirm.deleteTaskMessage", {
-                        title: toDelete.name,
-                      }) || `Are you sure you want to delete task "${toDelete.name}"?`
-                    : t("project.confirm.deleteActivityMessage", {
-                        title: toDelete.name,
-                      }) ||
-                      `Are you sure you want to delete activity "${toDelete.name}"?`
-                  : toDelete.type === "goal"
-                  ? t("project.confirm.deleteGoalMessageGeneric") ||
-                    "Are you sure you want to delete this goal?"
-                  : toDelete.type === "task"
-                  ? t("project.confirm.deleteTaskMessageGeneric") ||
-                    "Are you sure you want to delete this task?"
-                  : t("project.confirm.deleteActivityMessageGeneric") ||
-                    "Are you sure you want to delete this activity?"
-                : t("project.confirm.deleteMessage") ||
-                  "Are you sure you want to delete this item?"
-            }
-            onCancel={() => {
-              setConfirmOpen(false);
-              setToDelete(null);
-            }}
-            onConfirm={performDelete}
-            loading={deleting}
-            confirmLabel={t("project.actions.delete") || "Delete"}
-            cancelLabel={t("project.actions.cancel") || "Cancel"}
+          <PaginationFooter
+            currentPage={currentPage}
+            pageSize={pageSize}
+            setPageSize={setPageSize}
+            setCurrentPage={setCurrentPage}
+            total={goals.length}
+          />
+        </main>
+        {modal.isOpen && modal.type && modal.type !== "submitReport" && (
+          <GenericModal
+            modal={modal}
+            setModal={setModal}
+            groups={groups}
+            tasks={tasks}
+            goals={goals}
+            activities={activities}
+            onCreateGoal={handleCreateGoal}
+            onUpdateGoal={handleUpdateGoal}
+            onCreateTask={handleCreateTask}
+            onUpdateTask={handleUpdateTask}
+            onCreateActivity={handleCreateActivity}
+            onUpdateActivity={handleUpdateActivity}
+            isSubmitting={isSubmitting}
             t={t}
           />
-
-          {toast && (
+        )}
+        {submitModal.isOpen && submitModal.data && (
+          <SubmitReportModal
+            data={submitModal.data}
+            onClose={closeSubmitModal}
+            onSubmit={handleSubmitReport}
+            loading={isSubmitting}
+            t={t}
+          />
+        )}
+        <ConfirmModal
+          open={confirmOpen}
+          title={
+            toDelete
+              ? toDelete.type === "goal"
+                ? t("project.confirm.deleteGoalTitle") || "Delete goal"
+                : toDelete.type === "task"
+                ? t("project.confirm.deleteTaskTitle") || "Delete task"
+                : t("project.confirm.deleteActivityTitle") || "Delete activity"
+              : t("project.confirm.deleteTitle") || "Confirm delete"
+          }
+          message={
+            toDelete
+              ? toDelete.name
+                ? toDelete.type === "goal"
+                  ? t("project.confirm.deleteGoalMessage", {
+                      title: toDelete.name,
+                    }) || `Are you sure you want to delete goal "${toDelete.name}"?`
+                  : toDelete.type === "task"
+                  ? t("project.confirm.deleteTaskMessage", {
+                      title: toDelete.name,
+                    }) || `Are you sure you want to delete task "${toDelete.name}"?`
+                  : t("project.confirm.deleteActivityMessage", {
+                      title: toDelete.name,
+                    }) ||
+                    `Are you sure you want to delete activity "${toDelete.name}"?`
+                : toDelete.type === "goal"
+                ? t("project.confirm.deleteGoalMessageGeneric") ||
+                  "Are you sure you want to delete this goal?"
+                : toDelete.type === "task"
+                ? t("project.confirm.deleteTaskMessageGeneric") ||
+                  "Are you sure you want to delete this task?"
+                : t("project.confirm.deleteActivityMessageGeneric") ||
+                  "Are you sure you want to delete this activity?"
+              : t("project.confirm.deleteMessage") ||
+                "Are you sure you want to delete this item?"
+          }
+          onCancel={() => {
+            setConfirmOpen(false);
+            setToDelete(null);
+          }}
+          onConfirm={performDelete}
+          loading={deleting}
+          confirmLabel={t("project.actions.delete") || "Delete"}
+          cancelLabel={t("project.actions.cancel") || "Cancel"}
+          t={t}
+        />
+        {toast && (
+          <div className="fixed z-50 right-4 bottom-4 animate-fade-in">
             <Toast
               message={toast.message}
               type={toast.type}
               onClose={() => setToast(null)}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }

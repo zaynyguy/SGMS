@@ -472,10 +472,11 @@
         "formValidation": "Please fix the form errors",
         "pictureUploadFailed": "Failed to upload profile picture",
         "saveFailed": "Failed to save user: {{error}}",
-        "deleteFailed": "Failed to delete user: {{error}}"
+        "deleteFailed": "Failed to delete user: {{error}}",
+        "usernameExists": "Username Exists"
       },
       "placeholders": {
-        "search": "Search users..."
+        "search": "Search by name, username or role..."
       }
     }
   },
@@ -525,7 +526,12 @@
       "reports": "Reports",
       "projectManagement": "Project Management",
       "attachments": "Attachments",
-      "notification": "Notifications"
+      "notification": "Notifications",
+      "userManagement": "User Management",
+      "roleManagement": "Role Management",
+      "groupManagement": "Group Management",
+      "reportReview": "Report Review",
+      "masterReport": "Master Report"
     },
     "logoAlt": "Company logo",
     "appName": "SGMS",

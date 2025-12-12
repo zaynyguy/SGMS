@@ -1,11 +1,10 @@
-// src/pages/SystemSettingsPage.jsx
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { fetchSystemSettings, updateSystemSettings } from "../api/systemSettings";
 import AllowedTypesInput from "../components/AllowedTypesInput";
 import TopBar from "../components/layout/TopBar";
-import Toast from "../components/common/Toast"; // <-- adjust path if needed
-import { Settings2Icon } from "lucide-react";
+import Toast from "../components/common/Toast";
+import { Settings2Icon, Save } from "lucide-react";
 
 /**
  * Helpers
@@ -77,6 +76,94 @@ function diffObjects(oldObj = {}, newObj = {}) {
  */
 export default function SystemSettingsPage() {
   const { t } = useTranslation();
+  const [mounted, setMounted] = useState(false);
+
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Material Design 3 color system - light theme
+  const lightColors = {
+    primary: "#00684A", // Deep green (MD3 primary)
+    onPrimary: "#FFFFFF",
+    primaryContainer: "#94F4C6", // Light green container
+    onPrimaryContainer: "#002015", // Dark green text on container
+    secondary: "#4F616E",
+    onSecondary: "#FFFFFF",
+    secondaryContainer: "#D2E4F2",
+    onSecondaryContainer: "#0D1E2A",
+    tertiary: "#7A5571",
+    onTertiary: "#FFFFFF",
+    tertiaryContainer: "#FFD8F1",
+    onTertiaryContainer: "#2F1328",
+    error: "#BA1A1A",
+    onError: "#FFFFFF",
+    errorContainer: "#FFDAD6",
+    onErrorContainer: "#410002",
+    background: "#FCFDF7",
+    onBackground: "#1A1C19",
+    surface: "#FCFDF7",
+    onSurface: "#1A1C19",
+    surfaceVariant: "#DDE4D9",
+    onSurfaceVariant: "#414941",
+    outline: "#717970",
+    outlineVariant: "#C1C9C0",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#2E312E",
+    inverseOnSurface: "#F0F2EC",
+    inversePrimary: "#77D8B8",
+    surfaceContainerLowest: "#FFFFFF",
+    surfaceContainerLow: "#F8F9F4",
+    surfaceContainer: "#F2F4EF",
+    surfaceContainerHigh: "#ECF0E8",
+    surfaceContainerHighest: "#E6EAE2",
+  };
+
+  // Material Design 3 color system - dark theme
+  const darkColors = {
+    primary: "#4ADE80", // Lighter green for dark mode
+    onPrimary: "#002115",
+    primaryContainer: "#003925",
+    onPrimaryContainer: "#BBF7D0",
+    secondary: "#B6C9FF",
+    onSecondary: "#1E307D",
+    secondaryContainer: "#354796",
+    onSecondaryContainer: "#DBE6FD",
+    tertiary: "#D0BCFF",
+    onTertiary: "#4F308B",
+    tertiaryContainer: "#6745A3",
+    onTertiaryContainer: "#E9D7FD",
+    error: "#FFB4AB",
+    onError: "#690005",
+    errorContainer: "#93000A",
+    onErrorContainer: "#FFDAD6",
+    background: "#1A1C19",
+    onBackground: "#E1E3DD",
+    surface: "#1A1C19",
+    onSurface: "#E1E3DD",
+    surfaceVariant: "#444C45",
+    onSurfaceVariant: "#C2C9C2",
+    outline: "#8C948D",
+    outlineVariant: "#444C45",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#E1E3DD",
+    inverseOnSurface: "#1A1C19",
+    inversePrimary: "#006D5B",
+    surfaceContainerLowest: "#222421",
+    surfaceContainerLow: "#2D2F2C",
+    surfaceContainer: "#313330",
+    surfaceContainerHigh: "#3B3D3A",
+    surfaceContainerHighest: "#454744",
+  };
+
+  // Select colors based on dark mode
+  const m3Colors = darkMode ? darkColors : lightColors;
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+    return () => setMounted(false);
+  }, []);
 
   const defaults = {
     allowed_attachment_types: ["application/pdf", "image/png", "image/jpeg", "text/plain"],
@@ -89,32 +176,28 @@ export default function SystemSettingsPage() {
   const [descriptions, setDescriptions] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  // message: { text, type } where type is 'success'|'error'|'info'
-  const [message, setMessage] = useState({ text: "", type: "" });
+  const [toast, setToast] = useState(null);
   const lastSavedRef = useRef(null);
 
-  // Toast state (single toast at a time)
-  const [toast, setToast] = useState(null);
-
-  // normalize message types to your Toast component types
+  // normalize toast types to match your Toast component
   const normalizeToastType = (type) => {
     if (!type) return "create";
     const tLower = String(type).toLowerCase();
     if (tLower === "success") return "create";
     if (tLower === "info") return "read";
-    if (tLower === "error") return "error";
-    if (["create", "read", "update", "delete"].includes(tLower)) return tLower;
+    if (tLower === "warning") return "update";
+    if (["create", "read", "update", "delete", "error"].includes(tLower)) return tLower;
     return "create";
   };
 
-  const showToastLocal = (messageText, type = "create") => {
+  const showToastLocal = (message, type = "create") => {
     const normalized = normalizeToastType(type);
-    setToast({ id: Date.now(), message: messageText, type: normalized });
+    setToast({ id: Date.now(), message, type: normalized });
   };
 
   // use this to show a toast from this page
-  const showToast = (messageText, type = "create") => {
-    showToastLocal(messageText, type);
+  const showToast = (message, type = "create") => {
+    showToastLocal(message, type);
   };
 
   useEffect(() => {
@@ -132,14 +215,11 @@ export default function SystemSettingsPage() {
       } catch (err) {
         console.error("fetchSystemSettings failed:", err);
         const text = t("systemSettings.messages.failedLoad") || "Failed to load system settings";
-        setMessage({ text, type: "error" });
         showToast(text, "error");
         // keep defaults in UI so the page remains usable
         lastSavedRef.current = { ...defaults };
       } finally {
         setLoading(false);
-        // clear message after a while
-        setTimeout(() => setMessage({ text: "", type: "" }), 4000);
       }
     }
     loadSettings();
@@ -167,9 +247,7 @@ export default function SystemSettingsPage() {
     const diffs = diffObjects(original, settings);
     if (Object.keys(diffs).length === 0) {
       const text = t("systemSettings.messages.noChanges") || "No changes to save";
-      setMessage({ text, type: "info" });
       showToast(text, "info");
-      setTimeout(() => setMessage({ text: "", type: "" }), 2500);
       return;
     }
 
@@ -189,18 +267,15 @@ export default function SystemSettingsPage() {
       const newSaved = { ...original, ...diffs };
       lastSavedRef.current = newSaved;
       const savedText = t("systemSettings.messages.saved") || "Settings saved";
-      setMessage({ text: savedText, type: "success" });
       showToast(savedText, "success");
       // keep UI state consistent
       setSettings((prev) => ({ ...prev, ...diffs }));
     } catch (err) {
       console.error("updateSystemSettings failed:", err);
       const errText = t("systemSettings.messages.failedSave") || "Failed to save settings";
-      setMessage({ text: errText, type: "error" });
       showToast(errText, "error");
     } finally {
       setSaving(false);
-      setTimeout(() => setMessage({ text: "", type: "" }), 4000);
     }
   };
 
@@ -217,235 +292,362 @@ export default function SystemSettingsPage() {
     return [];
   }, [settings.allowed_attachment_types]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-200 dark:bg-gray-900 transition-all duration-500">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 dark:border-blue-400 transition-colors duration-300" />
-      </div>
-    );
-  }
-
-  // message color helpers
-  const messageBgClass = message.type === "error"
-    ? "bg-red-100 dark:bg-red-900/30"
-    : message.type === "info"
-      ? "bg-blue-100 dark:bg-blue-900/30"
-      : "bg-green-100 dark:bg-green-900/30";
-  const messageTextClass = message.type === "error"
-    ? "text-red-700 dark:text-red-400"
-    : message.type === "info"
-      ? "text-blue-700 dark:text-blue-400"
-      : "text-green-700 dark:text-green-400";
+  // Button style helpers with MD3 styling
+  const primaryBtn = "px-4 py-2.5 text-sm font-medium rounded-xl bg-[var(--primary)] hover:bg-[color-mix(in_srgb,var(--primary),white_10%)] text-[var(--on-primary)] transition-all duration-200 shadow-md hover:shadow-lg";
+  const ghostBtn = "px-4 py-2.5 text-sm font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-800 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200";
+  const outlineBtn = "px-4 py-2.5 text-sm font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[color-mix(in_srgb,var(--surface),black_4%)] dark:hover:bg-gray-700 transition-all duration-200";
 
   return (
-    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 py-3 px-3 transition-all duration-500 ease-in-out text-xs">
-      <div className="max-w-8xl mx-auto animate-fade-in-up">
-        {/* Header card: title (single line) + TopBar */}
-        <div className="mb-6">
-          <div className="rounded-2xl bg-white dark:bg-gray-800 backdrop-blur-xs border border-gray-200/60 dark:border-gray-700/40 shadow-sm px-4 py-3 transition-all duration-300 animate-fade-in-down">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 gap-3 items-center">
-                <div className="p-2 rounded-lg bg-gray-200 dark:bg-gray-900 shadow-sm transition-all duration-300 hover:shadow-md hover:scale-105">
-                  <Settings2Icon className="h-5 w-5 text-sky-600 dark:text-sky-300 transition-colors duration-300" />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white truncate transition-colors duration-300">
-                    {t("systemSettings.title")}
-                  </h1>
-                  <p className="mt-0.5 text-xs sm:text-xs text-gray-600 dark:text-gray-300 max-w-2xl transition-colors duration-300 truncate">
-                    {t("systemSettings.subtitle")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex-shrink-0">
-                <TopBar />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 transition-all duration-300 ease-in-out transform hover:shadow-lg">
-          <div className="space-y-4">
-            {/* Allowed attachment types */}
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-3 transition-all duration-300 ease-in-out transform hover:scale-[1.009] hover:shadow-sm">
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                {t("systemSettings.allowedAttachmentTypes.label")}
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 transition-colors duration-300">
-                {t("systemSettings.allowedAttachmentTypes.help")}
-              </p>
-              <AllowedTypesInput
-                value={allowedTypesArray}
-                onChange={handleAllowedTypesChange}
-              />
-
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
-                <div className="mb-1 text-[10px]">{t("systemSettings.current")}</div>
-                <code className="text-[10px] break-all bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md block transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500">
-                  {JSON.stringify(lastSavedRef.current?.allowed_attachment_types ?? settings.allowed_attachment_types)}
-                </code>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Audit retention days */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-3 transition-all duration-300 ease-in-out transform hover:scale-[1.009] hover:shadow-sm">
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                  {t("systemSettings.auditRetention.label")}
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 transition-colors duration-300">
-                  {t("systemSettings.auditRetention.help")}
-                </p>
-                <input
-                  type="number"
-                  min="0"
-                  inputMode="numeric"
-                  className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400"
-                  value={settings.audit_retention_days ?? ""}
-                  onChange={(e) => handleChange("audit_retention_days", e.target.value === "" ? "" : Number(e.target.value))}
-                  placeholder={t("systemSettings.auditRetention.placeholder")}
-                />
-                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
-                  <div className="mb-1 text-[10px]">{t("systemSettings.current")}</div>
-                  <code className="text-[10px] bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500">
-                    {JSON.stringify(lastSavedRef.current?.audit_retention_days ?? settings.audit_retention_days)}
-                  </code>
-                </div>
-              </div>
-
-              {/* Max attachment size */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-3 transition-all duration-300 ease-in-out transform hover:scale-[1.009] hover:shadow-sm">
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                  {t("systemSettings.maxAttachmentSize.label")}
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 transition-colors duration-300">
-                  {t("systemSettings.maxAttachmentSize.help")}
-                </p>
-                <input
-                  type="number"
-                  min="0"
-                  inputMode="numeric"
-                  className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 ease-in-out transform hover:border-blue-400 dark:hover:border-blue-400"
-                  value={settings.max_attachment_size_mb ?? ""}
-                  onChange={(e) => handleChange("max_attachment_size_mb", e.target.value === "" ? "" : Number(e.target.value))}
-                  placeholder={t("systemSettings.maxAttachmentSize.placeholder")}
-                />
-                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
-                  <div className="mb-1 text-[10px]">{t("systemSettings.current")}</div>
-                  <code className="text-[10px] bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500">
-                    {JSON.stringify(lastSavedRef.current?.max_attachment_size_mb ?? settings.max_attachment_size_mb)}
-                  </code>
-                </div>
-              </div>
-            </div>
-
-            {/* Reporting */}
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-3 transition-all duration-300 ease-in-out transform hover:scale-[1.009] hover:shadow-sm">
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">
-                {t("systemSettings.reporting.label")}
-              </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 transition-colors duration-300">
-                {t("systemSettings.reporting.help")}
-              </p>
-              <div className="flex items-center">
-                <div className="relative inline-block w-12 h-6 mr-3 align-middle select-none transition-transform duration-300 hover:scale-110">
-                  <input
-                    type="checkbox"
-                    id="reporting-toggle"
-                    checked={!!settings.reporting_active}
-                    onChange={(e) => handleChange("reporting_active", e.target.checked)}
-                    className="sr-only"
-                  />
-                  <label
-                    htmlFor="reporting-toggle"
-                    className={`block overflow-hidden h-6 rounded-full cursor-pointer transition-all duration-500 ease-in-out ${settings.reporting_active ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"} hover:shadow-md`}
-                  >
-                    <span className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full transition-all duration-500 ease-in-out ${settings.reporting_active ? "transform translate-x-6 bg-blue-100" : ""} hover:shadow-sm`} />
-                  </label>
-                </div>
-                <span className="text-gray-700 dark:text-gray-300 text-xs transition-colors duration-300">
-                  {settings.reporting_active ? t("systemSettings.enabled") : t("systemSettings.disabled")}
-                </span>
-              </div>
-              <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
-                <div className="mb-1 text-[10px]">{t("systemSettings.current")}</div>
-                <code className="text-[10px] bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-md transition-all duration-300 hover:bg-gray-200 dark:hover:bg-gray-500">
-                  {JSON.stringify(lastSavedRef.current?.reporting_active ?? settings.reporting_active)}
-                </code>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 transition-all duration-300">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              aria-label={t("systemSettings.saveButtonAria")}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium flex items-center justify-center disabled:opacity-50 transition-all duration-500 ease-in-out transform hover:scale-105 active:scale-95 text-xs"
-            >
-              {saving ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white transition-transform duration-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span className="text-xs">{t("systemSettings.saving") || "Saving..."}</span>
-                </>
-              ) : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-xs">{t("systemSettings.saveButton") || "Save settings"}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex justify-center mt-4 text-center text-xs text-gray-500 dark:text-gray-400 transition-all duration-500 animate-fade-in">
-          <p>{t("systemSettings.description")}</p>
-        </div>
-      </div>
-
-      {/* Toast render (single toast) */}
-      {toast && (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-
-      <style jsx>{`
-        @keyframes fade-in-up {
+    <div 
+      className={`min-h-screen font-sans transition-colors duration-300 bg-gray-50 dark:bg-gray-900 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+      style={{
+        "--primary": m3Colors.primary,
+        "--on-primary": m3Colors.onPrimary,
+        "--primary-container": m3Colors.primaryContainer,
+        "--on-primary-container": m3Colors.onPrimaryContainer,
+        "--secondary": m3Colors.secondary,
+        "--on-secondary": m3Colors.onSecondary,
+        "--secondary-container": m3Colors.secondaryContainer,
+        "--on-secondary-container": m3Colors.onSecondaryContainer,
+        "--tertiary": m3Colors.tertiary,
+        "--on-tertiary": m3Colors.onTertiary,
+        "--tertiary-container": m3Colors.tertiaryContainer,
+        "--on-tertiary-container": m3Colors.onTertiaryContainer,
+        "--error": m3Colors.error,
+        "--on-error": m3Colors.onError,
+        "--error-container": m3Colors.errorContainer,
+        "--on-error-container": m3Colors.onErrorContainer,
+        "--background": m3Colors.background,
+        "--on-background": m3Colors.onBackground,
+        "--surface": m3Colors.surface,
+        "--on-surface": m3Colors.onSurface,
+        "--surface-variant": m3Colors.surfaceVariant,
+        "--on-surface-variant": m3Colors.onSurfaceVariant,
+        "--outline": m3Colors.outline,
+        "--outline-variant": m3Colors.outlineVariant,
+        "--shadow": m3Colors.shadow,
+        "--scrim": m3Colors.scrim,
+        "--inverse-surface": m3Colors.inverseSurface,
+        "--inverse-on-surface": m3Colors.inverseOnSurface,
+        "--inverse-primary": m3Colors.inversePrimary,
+        "--surface-container-lowest": m3Colors.surfaceContainerLowest,
+        "--surface-container-low": m3Colors.surfaceContainerLow,
+        "--surface-container": m3Colors.surfaceContainer,
+        "--surface-container-high": m3Colors.surfaceContainerHigh,
+        "--surface-container-highest": m3Colors.surfaceContainerHighest,
+      }}
+    >
+      <style>{`
+        @keyframes fade-in {
           from {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(8px);
           }
           to {
             opacity: 1;
             transform: translateY(0);
           }
         }
-        @keyframes fade-in {
+        @keyframes fade-in-down {
           from {
             opacity: 0;
+            transform: translateY(-8px);
           }
           to {
             opacity: 1;
+            transform: translateY(0);
           }
         }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s ease-out;
-        }
         .animate-fade-in {
-          animation: fade-in 1.2s ease-out;
+          animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-fade-in-down {
+          animation: fade-in-down 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .surface-elevation-0 { 
+          box-shadow: none;
+        }
+        .surface-elevation-1 { 
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04); 
+          border: none;
+        }
+        .surface-elevation-2 { 
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06); 
+          border: none;
+        }
+        .surface-elevation-3 { 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08); 
+          border: none;
+        }
+        .md3-container {
+          border-radius: 28px;
+          overflow: hidden;
+        }
+        .md3-card {
+          border-radius: 20px;
+          overflow: hidden;
+        }
+        .md3-input {
+          border-radius: 16px;
+          padding: 10px 16px;
+          border: 1px solid var(--outline-variant);
+          background: var(--surface-container-lowest);
+          transition: all 0.2s ease;
+        }
+        .md3-input:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 2px var(--primary-container);
+        }
+        .md3-button {
+          border-radius: 20px;
+          padding: 8px 16px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+        }
+        .md3-icon-container {
+          border-radius: 16px;
+          padding: 10px;
+        }
+        .toggle-switch {
+          position: relative;
+          display: inline-block;
+          width: 52px;
+          height: 32px;
+          transition: all 0.2s ease;
+        }
+        .toggle-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .toggle-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: var(--outline-variant);
+          transition: all 0.2s ease;
+          border-radius: 999px;
+        }
+        .toggle-slider:before {
+          position: absolute;
+          content: "";
+          height: 24px;
+          width: 24px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: all 0.2s ease;
+          border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+          background-color: var(--primary);
+        }
+        input:checked + .toggle-slider:before {
+          transform: translateX(20px);
+        }
+        .setting-section {
+          transition: all 0.2s ease;
+        }
+        .setting-section:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.06);
         }
       `}</style>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Header container with MD3 container styling */}
+        <div className="mb-6 animate-fade-in-down">
+          <div className="md3-container surface-elevation-3 overflow-hidden">
+            <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 px-5 py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex min-w-0 gap-4 items-center">
+                  <div className="md3-icon-container bg-[var(--primary-container)] dark:bg-indigo-900 surface-elevation-1">
+                    <Settings2Icon className="h-6 w-6 text-green-800 dark:text-indigo-200 transition-transform duration-300 hover:scale-110" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-2xl font-bold text-[var(--on-surface)] dark:text-white truncate">
+                      {t("systemSettings.title")}
+                    </h1>
+                    <p className="mt-1 text-[var(--on-surface-variant)] dark:text-gray-400 max-w-2xl">
+                      {t("systemSettings.subtitle")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <TopBar /> 
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main content container with MD3 card styling */}
+        <div className="md3-card bg-[var(--surface-container-low)] dark:bg-gray-800 surface-elevation-3">
+          <div className="p-4 sm:p-6 space-y-6">
+            {/* Allowed attachment types */}
+            <div className="setting-section bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-2xl p-5 border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-1">
+                  {t("systemSettings.allowedAttachmentTypes.label")}
+                </label>
+                <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                  {t("systemSettings.allowedAttachmentTypes.help")}
+                </p>
+              </div>
+              <AllowedTypesInput
+                value={allowedTypesArray}
+                onChange={handleAllowedTypesChange}
+              />
+
+              <div className="mt-4 pt-4 border-t border-[var(--outline-variant)] dark:border-gray-700">
+                <div className="text-xs font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-2">
+                  {t("systemSettings.current")}
+                </div>
+                <div className="text-xs bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white p-3 rounded-xl break-all font-mono">
+                  {JSON.stringify(lastSavedRef.current?.allowed_attachment_types ?? settings.allowed_attachment_types)}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Audit retention days */}
+              <div className="setting-section bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-2xl p-5 border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-1">
+                    {t("systemSettings.auditRetention.label")}
+                  </label>
+                  <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                    {t("systemSettings.auditRetention.help")}
+                  </p>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  className="w-full md3-input text-base bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white"
+                  value={settings.audit_retention_days ?? ""}
+                  onChange={(e) => handleChange("audit_retention_days", e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder={t("systemSettings.auditRetention.placeholder")}
+                />
+                <div className="mt-4 pt-4 border-t border-[var(--outline-variant)] dark:border-gray-700">
+                  <div className="text-xs font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-2">
+                    {t("systemSettings.current")}
+                  </div>
+                  <div className="text-xs bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white p-3 rounded-xl font-mono">
+                    {JSON.stringify(lastSavedRef.current?.audit_retention_days ?? settings.audit_retention_days)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Max attachment size */}
+              <div className="setting-section bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-2xl p-5 border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1">
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-1">
+                    {t("systemSettings.maxAttachmentSize.label")}
+                  </label>
+                  <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                    {t("systemSettings.maxAttachmentSize.help")}
+                  </p>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  className="w-full md3-input text-base bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white"
+                  value={settings.max_attachment_size_mb ?? ""}
+                  onChange={(e) => handleChange("max_attachment_size_mb", e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder={t("systemSettings.maxAttachmentSize.placeholder")}
+                />
+                <div className="mt-4 pt-4 border-t border-[var(--outline-variant)] dark:border-gray-700">
+                  <div className="text-xs font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-2">
+                    {t("systemSettings.current")}
+                  </div>
+                  <div className="text-xs bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white p-3 rounded-xl font-mono">
+                    {JSON.stringify(lastSavedRef.current?.max_attachment_size_mb ?? settings.max_attachment_size_mb)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Reporting */}
+            <div className="setting-section bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-2xl p-5 border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-1">
+                  {t("systemSettings.reporting.label")}
+                </label>
+                <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                  {t("systemSettings.reporting.help")}
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="toggle-switch ">
+                  <input
+                    type="checkbox"
+                    checked={!!settings.reporting_active}
+                    onChange={(e) => handleChange("reporting_active", e.target.checked)}
+                  />
+                  <span className="toggle-slider "></span>
+                </label>
+                <span className="text-lg font-medium text-[var(--on-surface)] dark:text-white">
+                  {settings.reporting_active ? t("systemSettings.enabled") : t("systemSettings.disabled")}
+                </span>
+              </div>
+              <div className="mt-4 pt-4 border-t border-[var(--outline-variant)] dark:border-gray-700">
+                <div className="text-xs font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-2">
+                  {t("systemSettings.current")}
+                </div>
+                <div className="text-xs bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white p-3 rounded-xl font-mono">
+                  {JSON.stringify(lastSavedRef.current?.reporting_active ?? settings.reporting_active)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-6 border-t border-[var(--outline-variant)] dark:border-gray-700 bg-[var(--surface-container-low)] dark:bg-gray-800">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="text-[var(--on-surface-variant)] dark:text-gray-400 max-w-md">
+                {t("systemSettings.description")}
+              </div>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                aria-label={t("systemSettings.saveButtonAria")}
+                className={`${primaryBtn} dark:bg-indigo-800 w-full sm:w-auto flex items-center justify-center gap-2`}
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-transparent border-t-[var(--on-primary)]"></div>
+                    <span>{t("systemSettings.saving") || "Saving..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 text-[var(--on-primary)]" />
+                    <span>{t("systemSettings.saveButton") || "Save settings"}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Toast render (single toast) */}
+      {toast && (
+        <div className="fixed z-50 right-4 bottom-4 animate-fade-in">
+          <Toast
+            key={toast.id}
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }

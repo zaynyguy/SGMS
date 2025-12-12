@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Loader, ChevronRight, User, CheckCircle, Eye, Info } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Loader, ChevronRight, User, CheckCircle, Eye, Info, Search, ClipboardCheck } from "lucide-react";
 import { fetchReports, reviewReport } from "../api/reports";
 import { fetchAttachments, downloadAttachment } from "../api/attachments";
 import { useTranslation } from "react-i18next";
 import { fetchGroups } from "../api/groups";
+import TopBar from "../components/layout/TopBar";
 import Toast from "../components/common/Toast";
 
 /* -------------------------
-REVIEW PAGE
-MODIFIED:
-- Subtler animations and shorter durations.
-- Attachment hover/sizes toned down (smaller scale, smaller shadows).
-- Filenames and narrative now break long unbroken text so they don't overflow horizontally.
-- Admin textarea limited by viewport height (max-h) and made to scroll when very long.
+REVIEW PAGE with Material Design 3
 ------------------------- */
-
 function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title }) {
   const segments = [
     { label: group_name || null, key: "group" },
@@ -22,89 +18,78 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
     { label: task_title || null, key: "task" },
     { label: activity_title || null, key: "activity" },
   ].filter((s) => s.label);
-
   const [expanded, setExpanded] = useState(false);
   if (segments.length === 0) return null;
-
   if (segments.length <= 3) {
     return (
-      <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 min-w-0 flex-wrap transition-all duration-150">
+      <div className="flex items-center gap-1 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 min-w-0 flex-wrap transition-all duration-200">
         {segments.map((s, i) => (
           <React.Fragment key={s.key}>
             <span
-              className="font-medium truncate max-w-[140px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
+              className="font-medium truncate max-w-[140px] transition-all duration-200 hover:text-[var(--on-surface)] dark:hover:text-white"
               title={s.label}
             >
               {s.label}
             </span>
             {i < segments.length - 1 && (
-              <ChevronRight className="h-3 w-3 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
+              <ChevronRight className="h-4 w-4 text-[var(--on-surface-variant)] dark:text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-200" />
             )}
           </React.Fragment>
         ))}
       </div>
     );
   }
-
   const first = segments[0];
   const last = segments[segments.length - 1];
   const middle = segments.slice(1, segments.length - 1);
-
   return (
-    <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 min-w-0 flex-wrap transition-all duration-150">
-      {/* Always render first segment */}
+    <div className="flex items-center gap-1 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 min-w-0 flex-wrap transition-all duration-200">
       <span
-        className="font-medium truncate max-w-[120px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
+        className="font-medium truncate max-w-[120px] transition-all duration-200 hover:text-[var(--on-surface)] dark:hover:text-white"
         title={first.label}
       >
         {first.label}
       </span>
-      <ChevronRight className="h-3 w-3 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
-
+      <ChevronRight className="h-4 w-4 text-[var(--on-surface-variant)] dark:text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-200" />
       {!expanded ? (
         <>
           <button
             onClick={() => setExpanded(true)}
             aria-expanded={expanded}
-            className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
+            className="px-2 py-0.5 rounded-full bg-[var(--surface-container-low)] dark:bg-gray-700 text-sm text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-100"
             title="Show full path"
           >
             …
           </button>
-          <ChevronRight className="h-3 w-3 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
+          <ChevronRight className="h-4 w-4 text-[var(--on-surface-variant)] dark:text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-200" />
         </>
       ) : (
         <>
-          {/* Render middle segments when expanded */}
           {middle.map((s) => (
             <React.Fragment key={s.key}>
               <span
-                className="font-medium truncate max-w-[140px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
+                className="font-medium truncate max-w-[140px] transition-all duration-200 hover:text-[var(--on-surface)] dark:hover:text-white"
                 title={s.label}
               >
                 {s.label}
               </span>
-              <ChevronRight className="h-3 w-3 text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-150" />
+              <ChevronRight className="h-4 w-4 text-[var(--on-surface-variant)] dark:text-gray-400 mx-0.5 flex-shrink-0 transition-transform duration-200" />
             </React.Fragment>
           ))}
         </>
       )}
-
-      {/* Always render last segment (if different from first) */}
       {segments.length > 1 && (
         <span
-          className="font-medium truncate max-w-[120px] transition-all duration-150 hover:text-gray-800 dark:hover:text-gray-100"
+          className="font-medium truncate max-w-[120px] transition-all duration-200 hover:text-[var(--on-surface)] dark:hover:text-white"
           title={last.label}
         >
           {last.label}
         </span>
       )}
-
-      {/* Show collapse button if expanded */}
       {expanded && (
         <button
           onClick={() => setExpanded(false)}
-          className="ml-1 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
+          className="ml-1 px-2 py-0.5 rounded-full bg-[var(--surface-container-low)] dark:bg-gray-700 text-sm text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-100"
           title="Collapse path"
         >
           &lt;
@@ -114,8 +99,90 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
   );
 }
 
-export default function ReviewReportsPage({ permissions, readonly = false }) {
+const App = ({ permissions, readonly = false }) => {
   const { t } = useTranslation();
+  
+  // Dark mode state
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Material Design 3 color system - light theme
+  const lightColors = {
+    primary: "#10B981", // Green 40
+    onPrimary: "#FFFFFF",
+    primaryContainer: "#BBF7D0", // Light green container
+    onPrimaryContainer: "#047857", // Dark green text on container
+    secondary: "#4F7AE6",
+    onSecondary: "#FFFFFF",
+    secondaryContainer: "#DBE6FD",
+    onSecondaryContainer: "#0B2962",
+    tertiary: "#9333EA",
+    onTertiary: "#FFFFFF",
+    tertiaryContainer: "#E9D7FD",
+    onTertiaryContainer: "#381E72",
+    error: "#B3261E",
+    onError: "#FFFFFF",
+    errorContainer: "#F9DEDC",
+    onErrorContainer: "#410E0B",
+    background: "#F8FAF5",
+    onBackground: "#1C1B1F",
+    surface: "#F8FAF5",
+    onSurface: "#1C1B1F",
+    surfaceVariant: "#D8E8D9",
+    onSurfaceVariant: "#444C45",
+    outline: "#737B73",
+    outlineVariant: "#C2C9C2",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#313033",
+    inverseOnSurface: "#F4EFF4",
+    inversePrimary: "#99F6E4",
+    surfaceContainerLowest: "#FFFFFF",
+    surfaceContainerLow: "#F5F9F2",
+    surfaceContainer: "#F0F5ED",
+    surfaceContainerHigh: "#EBF1E9",
+    surfaceContainerHighest: "#E5ECE3",
+  };
+
+  // Material Design 3 color system - dark theme
+  const darkColors = {
+    primary: "#4ADE80", // Lighter green for dark mode
+    onPrimary: "#002115",
+    primaryContainer: "#003925",
+    onPrimaryContainer: "#BBF7D0",
+    secondary: "#B6C9FF",
+    onSecondary: "#1E307D",
+    secondaryContainer: "#354796",
+    onSecondaryContainer: "#DBE6FD",
+    tertiary: "#D0BCFF",
+    onTertiary: "#4F308B",
+    tertiaryContainer: "#6745A3",
+    onTertiaryContainer: "#E9D7FD",
+    error: "#FFB4AB",
+    onError: "#690005",
+    errorContainer: "#93000A",
+    onErrorContainer: "#FFDAD6",
+    background: "#1A1C19",
+    onBackground: "#E1E3DD",
+    surface: "#1A1C19",
+    onSurface: "#E1E3DD",
+    surfaceVariant: "#444C45",
+    onSurfaceVariant: "#C2C9C2",
+    outline: "#8C948D",
+    outlineVariant: "#444C45",
+    shadow: "#000000",
+    scrim: "#000000",
+    inverseSurface: "#E1E3DD",
+    inverseOnSurface: "#1A1C19",
+    inversePrimary: "#006D5B",
+    surfaceContainerLowest: "#222421",
+    surfaceContainerLow: "#2D2F2C",
+    surfaceContainer: "#313330",
+    surfaceContainerHigh: "#3B3D3A",
+    surfaceContainerHighest: "#454744",
+  };
+
+  // Select colors based on dark mode
+  const m3Colors = darkMode ? darkColors : lightColors;
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -127,18 +194,22 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
-
   // groups for filtering
   const [groups, setGroups] = useState([]);
   const [groupFilter, setGroupFilter] = useState("All");
-
   // attachments cache per reportId
   const [attachmentsMap, setAttachmentsMap] = useState({});
   const [attachmentDownloading, setAttachmentDownloading] = useState({});
-  const [attachmentPreviewing, setAttachmentPreviewing] = useState({}); // New state for preview loading
-
+  const [attachmentPreviewing, setAttachmentPreviewing] = useState({});
   // Toast state
-  const [toast, setToast] = useState(null); // { text, type }
+  const [toast, setToast] = useState(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+    return () => setMounted(false);
+  }, []);
+
   const showToast = (message, semanticType = "info") => {
     const map = { success: "create", info: "read", update: "update", delete: "delete", error: "error" };
     const tType = map[semanticType] || semanticType || "create";
@@ -160,7 +231,6 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
         const normalized = items
           .map((g) => (g && g.id ? { id: g.id, name: g.name || String(g.id) } : null))
           .filter(Boolean);
-
         setGroups([{ id: "All", name: t("reports.filters.groupAll", "All Groups") }, ...normalized]);
       } catch (err) {
         console.error("Failed to fetch groups for filter:", err);
@@ -169,7 +239,7 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
     }
     loadGroups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t]); // Run once on load
+  }, [t]);
 
   async function loadReports(opts = {}) {
     setLoading(true);
@@ -178,17 +248,12 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
       const useSize = opts.pageSize || pageSize;
       const status = statusFilter === "All" ? undefined : statusFilter;
       const q = opts.q !== undefined ? opts.q : search ? search : undefined;
-
       // call backend (expected signature fetchReports(page, pageSize, status, q))
-      // This now returns activity_target_metric and activity_current_metric
       const data = await fetchReports(usePage, useSize, status, q);
-
       // Ensure rows array
       const rows = Array.isArray(data.rows) ? data.rows : Array.isArray(data) ? data : [];
-
-      // If groupFilter is set, apply client-side filtering (robust if backend doesn't accept group param)
+      // If groupFilter is set, apply client-side filtering
       const filteredRows = groupFilter && groupFilter !== "All" ? rows.filter((r) => String(r.group_id) === String(groupFilter)) : rows;
-
       setReports(filteredRows);
       setPage(data.page || usePage);
       setPageSize(data.pageSize || useSize);
@@ -226,7 +291,6 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
         deadline: r.resubmissionDeadline ? formatDateLocal(r.resubmissionDeadline) : "",
       },
     }));
-
     (async () => {
       try {
         if (!attachmentsMap[expanded]) {
@@ -246,7 +310,6 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
     const adminComment = actionState[id]?.comment || null;
     const resubmissionDeadline = actionState[id]?.deadline || null;
     const actionKey = status === "Approved" ? "approving" : "rejecting";
-
     try {
       setActionLoading((s) => ({ ...s, [id]: actionKey }));
       await reviewReport(id, { status, adminComment, resubmissionDeadline });
@@ -313,28 +376,21 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
     const aid = attachment.id;
     try {
       setAttachmentPreviewing((s) => ({ ...s, [aid]: true }));
-      const res = await downloadAttachment(aid); // Re-use the same download API
-
+      const res = await downloadAttachment(aid);
       if (res && res.url) {
-        // If API provides a direct URL, open it
         window.open(res.url, "_blank");
       } else if (res && res.blob) {
-        // If API provides a blob, check if it's a type the browser can preview
         const blob = res.blob;
         const mimeType = blob.type || attachment.mimeType;
         const previewableTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf", "text/plain", "image/svg+xml"];
-
         if (previewableTypes.includes(mimeType)) {
           const url = URL.createObjectURL(blob);
           window.open(url, "_blank");
-          // Note: This URL is not revoked, which is a minor memory leak,
-          // but required to keep the blob alive for the new tab.
         } else {
-          // If not previewable (e.g., .zip, .docx), just trigger the original download
+          // If not previewable, just trigger the original download
           handleDownloadAttachment(attachment);
         }
       } else {
-        // Fallback to the generic download endpoint, attempting to open in new tab
         window.open(`/api/reports/attachments/${encodeURIComponent(aid)}/download`, "_blank");
       }
     } catch (err) {
@@ -359,601 +415,655 @@ export default function ReviewReportsPage({ permissions, readonly = false }) {
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusOptions = [
-    { id: "All", key: "reports.filters.all" },
-    { id: "Pending", key: "reports.filters.pending" },
-    { id: "Approved", key: "reports.filters.approved" },
-    { id: "Rejected", key: "reports.filters.rejected" },
+    { id: "All", key: "reports.filters.all",
+      classes: "bg-sky-100 text-sky-800 hover:bg-sky-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800",
+      active: "bg-sky-600 text-white shadow-[0_6px_18px_rgba(0,0,0,0.12)] dark:bg-blue-700 dark:shadow-[0_6px_18px_rgba(0,0,0,0.3)]"
+    },
+    { id: "Pending", key: "reports.filters.pending",
+      classes: "bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-yellow-900 dark:text-yellow-200 dark:hover:bg-yellow-800",
+      active: "bg-amber-600 text-white shadow-[0_6px_18px_rgba(245,158,11,0.18)] dark:bg-yellow-700 dark:shadow-[0_6px_18px_rgba(245,158,11,0.3)]"
+    },
+    { id: "Approved", key: "reports.filters.approved",
+      classes: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-green-900 dark:text-green-200 dark:hover:bg-green-800",
+      active: "bg-emerald-600 text-white shadow-[0_6px_18px_rgba(16,185,129,0.18)] dark:bg-green-700 dark:shadow-[0_6px_18px_rgba(16,185,129,0.3)]"
+    },
+    { id: "Rejected", key: "reports.filters.rejected",
+      classes: "bg-red-100 text-red-800 hover:bg-red-200 dark:bg-red-900 dark:text-red-200 dark:hover:bg-red-800",
+      active: "bg-red-600 text-white shadow-[0_6px_18px_rgba(220,38,38,0.18)] dark:bg-red-700 dark:shadow-[0_6px_18px_rgba(220,38,38,0.3)]"
+    },
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-3 md:p-4 lg:p-5 rounded-lg shadow border border-gray-200 dark:border-gray-700 transition-all duration-150">
-      {/* Enhanced Toast with subtle animations */}
-      {toast && (
-        <div className="fixed z-50 right-5 bottom-5 animate-slide-in-right">
-          <Toast message={toast.text} type={toast.type} onClose={handleToastClose} />
-        </div>
-      )}
-
+    <div className={`min-h-screen bg-[var(--background)] dark:bg-gray-900 font-sans transition-colors duration-300 ${mounted ? 'animate-fade-in' : ''}`} 
+      style={{
+        "--primary": m3Colors.primary,
+        "--on-primary": m3Colors.onPrimary,
+        "--primary-container": m3Colors.primaryContainer,
+        "--on-primary-container": m3Colors.onPrimaryContainer,
+        "--secondary": m3Colors.secondary,
+        "--on-secondary": m3Colors.onSecondary,
+        "--secondary-container": m3Colors.secondaryContainer,
+        "--on-secondary-container": m3Colors.onSecondaryContainer,
+        "--tertiary": m3Colors.tertiary,
+        "--on-tertiary": m3Colors.onTertiary,
+        "--tertiary-container": m3Colors.tertiaryContainer,
+        "--on-tertiary-container": m3Colors.onTertiaryContainer,
+        "--error": m3Colors.error,
+        "--on-error": m3Colors.onError,
+        "--error-container": m3Colors.errorContainer,
+        "--on-error-container": m3Colors.onErrorContainer,
+        "--background": m3Colors.background,
+        "--on-background": m3Colors.onBackground,
+        "--surface": m3Colors.surface,
+        "--on-surface": m3Colors.onSurface,
+        "--surface-variant": m3Colors.surfaceVariant,
+        "--on-surface-variant": m3Colors.onSurfaceVariant,
+        "--outline": m3Colors.outline,
+        "--outline-variant": m3Colors.outlineVariant,
+        "--shadow": m3Colors.shadow,
+        "--scrim": m3Colors.scrim,
+        "--inverse-surface": m3Colors.inverseSurface,
+        "--inverse-on-surface": m3Colors.inverseOnSurface,
+        "--inverse-primary": m3Colors.inversePrimary,
+        "--surface-container-lowest": m3Colors.surfaceContainerLowest,
+        "--surface-container-low": m3Colors.surfaceContainerLow,
+        "--surface-container": m3Colors.surfaceContainer,
+        "--surface-container-high": m3Colors.surfaceContainerHigh,
+        "--surface-container-highest": m3Colors.surfaceContainerHighest,
+      }}
+    >
       <style>{`
-        @keyframes slideInRight {
+        :root {
+          --primary: ${m3Colors.primary};
+          --on-primary: ${m3Colors.onPrimary};
+          --primary-container: ${m3Colors.primaryContainer};
+          --on-primary-container: ${m3Colors.onPrimaryContainer};
+          --secondary: ${m3Colors.secondary};
+          --on-secondary: ${m3Colors.onSecondary};
+          --secondary-container: ${m3Colors.secondaryContainer};
+          --on-secondary-container: ${m3Colors.onSecondaryContainer};
+          --tertiary: ${m3Colors.tertiary};
+          --on-tertiary: ${m3Colors.onTertiary};
+          --tertiary-container: ${m3Colors.tertiaryContainer};
+          --on-tertiary-container: ${m3Colors.onTertiaryContainer};
+          --error: ${m3Colors.error};
+          --on-error: ${m3Colors.onError};
+          --error-container: ${m3Colors.errorContainer};
+          --on-error-container: ${m3Colors.onErrorContainer};
+          --background: ${m3Colors.background};
+          --on-background: ${m3Colors.onBackground};
+          --surface: ${m3Colors.surface};
+          --on-surface: ${m3Colors.onSurface};
+          --surface-variant: ${m3Colors.surfaceVariant};
+          --on-surface-variant: ${m3Colors.onSurfaceVariant};
+          --outline: ${m3Colors.outline};
+          --outline-variant: ${m3Colors.outlineVariant};
+          --shadow: ${m3Colors.shadow};
+          --scrim: ${m3Colors.scrim};
+          --inverse-surface: ${m3Colors.inverseSurface};
+          --inverse-on-surface: ${m3Colors.inverseOnSurface};
+          --inverse-primary: ${m3Colors.inversePrimary};
+          --surface-container-lowest: ${m3Colors.surfaceContainerLowest};
+          --surface-container-low: ${m3Colors.surfaceContainerLow};
+          --surface-container: ${m3Colors.surfaceContainer};
+          --surface-container-high: ${m3Colors.surfaceContainerHigh};
+          --surface-container-highest: ${m3Colors.surfaceContainerHighest};
+        }
+        @keyframes fade-in {
           from {
             opacity: 0;
-            transform: translateX(20%);
+            transform: translateY(8px);
           }
           to {
             opacity: 1;
-            transform: translateX(0);
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes material-in {
+          from {
+            opacity: 0;
+            transform: translateY(16px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
         @keyframes slideInUp {
           from {
             opacity: 0;
-            transform: translateY(8px) scale(0.995);
+            transform: translateY(16px);
           }
           to {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: translateY(0);
           }
-        }
-        @keyframes slideOutDown {
-          to {
-            opacity: 0;
-            transform: translateY(8px) scale(0.995);
-          }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.01); }
-        }
-        @keyframes bounce {
-          0%, 20%, 53%, 80%, 100% {
-            transform: translate3d(0,0,0);
-          }
-          40%, 43% {
-            transform: translate3d(0, -6px, 0);
-          }
-          70% {
-            transform: translate3d(0, -3px, 0);
-          }
-          90% {
-            transform: translate3d(0, -1px, 0);
-          }
-        }
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-3px); }
-          75% { transform: translateX(3px); }
-        }
-        .animate-slide-in-right {
-          animation: slideInRight 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
         .animate-slide-in-up {
-          animation: slideInUp 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+          animation: slideInUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .animate-slide-out-down {
-          animation: slideOutDown 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        .surface-elevation-1 { 
+          box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04); 
+          border: 1px solid var(--outline-variant);
         }
-        .animate-fade-in {
-          animation: fadeIn 0.2s ease-out forwards;
+        .surface-elevation-2 { 
+          box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06); 
+          border: 1px solid var(--outline-variant);
         }
-        .animate-pulse-custom {
-          animation: pulse 3s infinite;
-        }
-        .animate-bounce-custom {
-          animation: bounce 0.9s ease-in-out;
-        }
-        .animate-shake {
-          animation: shake 0.35s ease-in-out;
-        }
-        .report-item-enter {
-          animation: slideInUp 0.25s ease-out forwards;
-        }
-        .attachment-item-enter {
-          animation: slideInUp 0.22s ease-out;
+        .surface-elevation-3 { 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08); 
+          border: 1px solid var(--outline-variant);
         }
       `}</style>
-
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4 animate-fade-in">
-        <div className="transition-all duration-150 transform origin-left">
-          <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-100 transition-colors duration-150">
-            {readonly ? t("reports.myReports.title", "My Reports") : t("reports.review.title")}
-          </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-300 mt-1 transition-colors duration-150">
-            {readonly ? t("reports.myReports.subtitle", "Your submitted reports and their review status.") : t("reports.review.subtitle")}
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full lg:w-auto transition-all duration-150">
-          <div className="flex-1 min-w-0 transition-all duration-150">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={onSearchKeyDown}
-              placeholder={t("reports.search.placeholder")}
-              className="w-full px-3 py-1.5 rounded border bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 min-w-0 focus:ring-1 focus:ring-sky-500 focus:border-transparent transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500"
-            />
-          </div>
-
-          <button
-            onClick={() => {
-              setPage(1);
-              loadReports({ page: 1, q: search });
-            }}
-            className="px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 dark:text-white text-xs whitespace-nowrap hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 flex items-center justify-center gap-1"
-          >
-            <svg className="w-3 h-3 transition-transform duration-150" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            {t("reports.search.button")}
-          </button>
-          <button
-            onClick={handleRefresh}
-            className="px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-700 dark:text-white text-xs whitespace-nowrap flex items-center justify-center gap-1 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="opacity-80 transition-transform duration-150 hover:rotate-180">
-              <path d="M21 12A9 9 0 1 0 6 20.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {t("reports.refresh")}
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 animate-fade-in">
-        <div className="flex flex-wrap gap-1 items-center transition-all duration-150">
-          {statusOptions.map((s, index) => (
-            <button
-              key={s.id}
-              onClick={() => {
-                setPage(1);
-                setStatusFilter(s.id);
-              }}
-              className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-150 transform ${
-                statusFilter === s.id 
-                  ? "bg-sky-600 text-white shadow-sm animate-pulse-custom" 
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-              style={{ animationDelay: `${index * 80}ms` }}
-            >
-              {t(s.key)}
-            </button>
-          ))}
-
-          {/* Enhanced Group Filter Select */}
-          <select
-            value={groupFilter}
-            onChange={(e) => {
-              setPage(1);
-              setGroupFilter(e.target.value);
-            }}
-            className="ml-1 px-2 py-1 rounded text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01]"
-            aria-label={t("reports.filters.groupLabel", "Group")}
-          >
-            {groups && groups.length > 0
-              ? groups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))
-              : <option value="All">{t("reports.filters.groupAll", "All Groups")}</option>
-            }
-          </select>
-        </div>
-        <div className="ml-auto text-xs text-gray-500 dark:text-gray-400 transition-colors duration-150">
-          {t("reports.pagination.showingPage", { page, totalPages, total })}
-        </div>
-      </div>
-
-      <div className="space-y-3 transition-all duration-150">
-        {loading ? (
-          Array.from({ length: Math.min(5, pageSize) }).map((_, i) => (
-            <div 
-              key={`skeleton-${i}`} 
-              className="border rounded overflow-hidden animate-pulse transition-all duration-150 transform hover:scale-[1.01]"
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-900">
-                <div className="min-w-0 w-full">
-                  <div className="flex items-center gap-3">
-                    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-20 transition-colors duration-150"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16 transition-colors duration-150"></div>
-                  </div>
-                  <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-32 mt-2 transition-colors duration-150"></div>
-                </div>
-                <div className="flex gap-1 items-center">
-                  <div className="h-6 w-6 bg-gray-200 dark:bg-gray-700 rounded transition-colors duration-150"></div>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Enhanced Toast with subtle animations */}
+        {toast &&
+          createPortal(
+            <div className="z-50 pointer-events-none">
+              {/* container that is fixed to viewport.
+                  mobile: full-width bottom; desktop: bottom-right small container */}
+              <div className="fixed inset-x-0 bottom-0 p-4 md:inset-auto md:right-4 md:bottom-4">
+                {/* use pointer-events-auto on the toast itself so buttons stay clickable */}
+                <div className="pointer-events-auto">
+                  <Toast
+                    message={toast.message ?? toast.text}
+                    type={toast.type}
+                    onClose={handleToastClose}
+                  />
                 </div>
               </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-800">
-                <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-full mb-1.5 transition-colors duration-150"></div>
-                <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded w-full transition-colors duration-150"></div>
+            </div>,
+            document.body
+          )}
+        <div className="mb-6">
+          <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-2xl dark:border-gray-800 surface-elevation-3 px-4 py-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex min-w-0 gap-4 items-center">
+                <div className="p-3 rounded-xl bg-[var(--primary-container)] dark:bg-indigo-900">
+                  <ClipboardCheck className="h-6 w-6 text-[var(--on-primary-container)] dark:text-indigo-200" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-bold text-[var(--on-surface)] dark:text-white truncate transition-colors duration-300">
+                    {readonly ? t("reports.myReports.title", "My Reports") : t("reports.review.title")}
+                  </h1>
+                  <p className="mt-0.5 text-base text-[var(--on-surface-variant)] dark:text-gray-400 max-w-2xl transition-colors duration-300">
+                    {readonly ? t("reports.myReports.subtitle", "Your submitted reports and their review status.") : t("reports.review.subtitle")}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <TopBar />
+                </div>
               </div>
             </div>
-          ))
-        ) : (
-          <>
-            {reports.map((r, index) => {
-              const isLoading = !!actionLoading[r.id];
-              const approving = actionLoading[r.id] === "approving";
-              const rejecting = actionLoading[r.id] === "rejecting";
-
-              const isDone = String(r.new_status || "").toLowerCase() === "done";
-
-              return (
-                <div 
-                  key={r.id} 
-                  className="report-item-enter border rounded overflow-hidden transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm group relative"
-                  style={{ animationDelay: `${index * 80}ms` }}
+          </div>
+        </div>
+        <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-2xl dark:border-gray-800 surface-elevation-3 p-4 sm:p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full">
+              <div className="flex-1 min-w-0">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-[var(--on-surface-variant)] dark:text-gray-400" />
+                  </div>
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={onSearchKeyDown}
+                    placeholder={t("reports.search.placeholder")}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] text-base placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 transition-all duration-300"
+                  />
+                </div>
+              </div>
+              {/* keep buttons fixed-size and prevent them from shrinking */}
+              <div className="flex gap-3 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    setPage(1);
+                    loadReports({ page: 1, q: search });
+                  }}
+                  className="px-4 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-300 flex items-center justify-center gap-2 surface-elevation-1 whitespace-nowrap"
                 >
-                  {isDone && (
-                    <div className="absolute top-2 left-0 -translate-x-3 -rotate-12 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded shadow-sm animate-bounce-custom" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized)")}>
-                      DONE
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 transition-colors duration-150 group-hover:bg-gray-50 dark:group-hover:bg-gray-800/50">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1 md:gap-2">
-                        <div className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-150 group-hover:text-sky-600 dark:group-hover:text-sky-400">
-                          Report #{r.id}
-                        </div>
-                        <div
-                          className={`px-1.5 py-0.5 md:px-2 md:py-1 rounded-full text-xs font-medium transition-all duration-150 transform hover:scale-[1.01] ${
-                            r.status === "Approved"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50"
-                              : r.status === "Rejected"
-                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50"
-                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50 animate-pulse-custom"
-                          }`}
-                        >
-                          {t(`reports.status.${r.status}`, { defaultValue: r.status })}
-                        </div>
+                  <Search className="h-4 w-4" />
+                  <span className="text-base">{t("reports.search.button")}</span>
+                </button>
+                <button
+                  onClick={handleRefresh}
+                  className="px-4 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-300 flex items-center justify-center gap-2 surface-elevation-1 whitespace-nowrap"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-80 transition-transform duration-300 hover:rotate-180">
+                    <path d="M21 12A9 9 0 1 0 6 20.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-base">{t("reports.refresh")}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col justify-between sm:flex-row sm:items-center gap-3 mb-5">
+            <div className="flex flex-wrap gap-2 items-center">
+              {statusOptions.map((s, index) => {
+                const isActive = statusFilter === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => { setPage(1); setStatusFilter(s.id); }}
+                    aria-pressed={isActive}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                      isActive ? s.active : s.classes
+                    }`}
+                    style={{ animationDelay: `${index * 60}ms` }}
+                  >
+                    {t(s.key)}
+                  </button>
+                );
+              })}
+            </div>
+            <div>
+              <select
+                value={groupFilter}
+                onChange={(e) => {
+                  setPage(1);
+                  setGroupFilter(e.target.value);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-[var(--surface-container-low)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-300 text-sm"
+                aria-label={t("reports.filters.groupLabel", "Group")}
+              >
+                {groups && groups.length > 0
+                  ? groups.map((g) => (
+                      <option key={g.id} value={g.id} className="bg-white dark:bg-gray-700">
+                        {g.name}
+                      </option>
+                    ))
+                  : <option value="All">{t("reports.filters.groupAll", "All Groups")}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {loading ? (
+              Array.from({ length: Math.min(5, pageSize) }).map((_, i) => (
+                <div 
+                  key={`skeleton-${i}`} 
+                  className="border border-[var(--outline-variant)] dark:border-gray-700 rounded-xl overflow-hidden animate-pulse surface-elevation-1"
+                  style={{ animationDelay: `${i * 60}ms` }}
+                >
+                  <div className="flex items-center justify-between p-4 bg-[var(--surface-container-low)] dark:bg-gray-800">
+                    <div className="min-w-0 w-full">
+                      <div className="flex items-center gap-3">
+                        <div className="h-5 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-24"></div>
+                        <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-20"></div>
                       </div>
-
-                      <div className="flex flex-col sm:flex-row sm:justify-between gap-x-3 gap-y-1 mt-1.5">
-                        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center flex-wrap min-w-0 transition-colors duration-150 group-hover:text-gray-600 dark:group-hover:text-gray-300">
-                          {r.group_name ? (
-                            <BreadcrumbsCompact
-                              group_name={r.group_name}
-                              goal_title={r.goal_title}
-                              task_title={r.task_title}
-                              activity_title={r.activity_title}
-                            />
-                          ) : (
-                            <span className="text-gray-800 dark:text-gray-100 font-semibold truncate transition-colors duration-150 group-hover:text-sky-600 dark:group-hover:text-sky-400" title={r.activity_title || "Activity"}>
-                              {r.activity_title || "Activity"}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded whitespace-nowrap self-start sm:self-center transition-all duration-150 transform hover:scale-[1.01]">
-                          <User className="h-3 w-3 transition-transform duration-150" />
-                          <span>{r.user_name || "Unknown User"}</span>
-
-                          {isDone && (
-                            <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs transition-all duration-150 transform hover:scale-[1.01]" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized). Approving this runs progress calculations across the system.")}>
-                              <CheckCircle className="h-3 w-3 transition-transform duration-150" />
-                              <span className="font-semibold">{t("reports.done", "Done")}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-40 mt-2"></div>
                     </div>
-
-                    <div className="flex gap-1 items-center pl-2">
-                      <button
-                        onClick={() => setExpanded(expanded === r.id ? null : r.id)}
-                        aria-expanded={expanded === r.id}
-                        className="flex items-center gap-1 p-1.5 rounded bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-150 transform hover:scale-[1.02] active:scale-100"
-                      >
-                        <svg 
-                          className={`transition-transform duration-150 ${expanded === r.id ? "rotate-180" : "rotate-0"}`} 
-                          width="16" 
-                          height="16" 
-                          viewBox="0 0 24 24" 
-                          fill="none"
-                        >
-                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
+                    <div className="flex gap-2 items-center">
+                      <div className="h-6 w-6 bg-[var(--surface-container)] dark:bg-gray-700 rounded"></div>
                     </div>
                   </div>
-
-                  {expanded === r.id && (
-                    <div className="p-3 bg-gray-50 dark:bg-gray-800 space-y-3 animate-slide-in-up">
-                      {/* Enhanced Activity Context Section */}
-                      {!readonly && (
-                        <div className="p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded transition-all duration-150 transform hover:scale-[1.01]">
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <Info className="h-4 w-4 text-blue-600 dark:text-blue-300 transition-transform duration-150 hover:scale-[1.02]" />
-                            <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200 transition-colors duration-150">
-                              {t("reports.activityContext.title", "Activity Context")}
-                            </h4>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
-                              <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
-                                {t("reports.activityContext.target", "Activity Target")}
-                              </div>
-                              <div className="mt-1">{renderMetricsList(r.activity_target_metric)}</div>
-                            </div>
-                            <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
-                              <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
-                                {t("reports.activityContext.current", "Activity Current (Before Report)")}
-                              </div>
-                              <div className="mt-1">{renderMetricsList(r.activity_current_metric)}</div>
-                            </div>
-                          </div>
-                          <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 transition-colors duration-150">
-                            {t("reports.activityContext.help", "This shows the activity's metrics *before* this report is applied. Approving the report will add the new metrics to the 'Current' values.")}
-                          </p>
+                  <div className="p-4 bg-[var(--surface-container-lowest)] dark:bg-gray-800">
+                    <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-full mb-2"></div>
+                    <div className="h-3 bg-[var(--surface-container)] dark:bg-gray-700 rounded w-full"></div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <>
+                {reports.map((r, index) => {
+                  const isLoading = !!actionLoading[r.id];
+                  const approving = actionLoading[r.id] === "approving";
+                  const rejecting = actionLoading[r.id] === "rejecting";
+                  const isDone = String(r.new_status || "").toLowerCase() === "done";
+                  return (
+                    <div 
+                      key={r.id} 
+                      className="border border-[var(--outline-variant)] dark:border-gray-700 rounded-xl overflow-hidden surface-elevation-1 transition-all duration-200 hover:surface-elevation-2"
+                      style={{ animation: `material-in 0.4s ease-out forwards`, animationDelay: `${index * 60}ms` }}
+                    >
+                      {isDone && (
+                        <div className="absolute top-3 left-0 -translate-x-3 -rotate-12 bg-[var(--secondary-container)] dark:bg-blue-900 text-[var(--on-secondary-container)] dark:text-blue-200 text-sm font-bold px-3 py-1 rounded-full shadow-md">
+                          DONE
                         </div>
                       )}
-                      {/* --- END NEW SECTION --- */}
-
-                      <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
-                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
-                          {t("reports.narrative")}
-                        </div>
-                        <div
-                          className="text-xs md:text-sm text-gray-700 dark:text-gray-200 mt-0.5 p-1.5 bg-white dark:bg-gray-900/30 rounded border border-gray-200 dark:border-gray-700 transition-all duration-150 hover:border-gray-300 dark:hover:border-gray-600 break-words max-w-full"
-                          style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}
-                        >
-                          {r.narrative || <em className="text-gray-400 transition-colors duration-150">{t("reports.noNarrative")}</em>}
-                        </div>
-                      </div>
-
-                      <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
-                        {/* MODIFIED: Label clarifies these are the report's metrics */}
-                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
-                          {t("reports.reportMetrics", "Metrics in this Report")}
-                        </div>
-                        <div className="mt-1">{renderMetricsList(r.metrics_data)}</div>
-                      </div>
-
-                      {((attachmentsMap[r.id] && attachmentsMap[r.id].length) || (Array.isArray(r.attachments) && r.attachments.length)) && (
-                        <div className="transition-all duration-150">
-                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-150">
-                            {t("reports.attachments")}
+                      <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 transition-colors duration-200 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="text-lg font-semibold text-[var(--on-surface)] dark:text-white transition-colors duration-200 hover:text-[var(--primary)] dark:hover:text-green-400">
+                              Report #{r.id}
+                            </div>
+                            <div
+                              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                r.status === "Approved"
+                                  ? "bg-[var(--primary-container)] dark:bg-green-900 text-[var(--on-primary-container)] dark:text-green-200"
+                                  : r.status === "Rejected"
+                                  ? "bg-[var(--error-container)] dark:bg-red-900 text-[var(--on-error-container)] dark:text-red-200"
+                                  : "bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200"
+                              }`}
+                            >
+                              {t(`reports.status.${r.status}`, { defaultValue: r.status })}
+                            </div>
                           </div>
-                          <ul className="mt-1 space-y-1.5">
-                            {((attachmentsMap[r.id] && attachmentsMap[r.id].length ? attachmentsMap[r.id] : r.attachments) || []).map((a, idx) => (
-                              <li 
-                                key={a.id} 
-                                className="attachment-item-enter flex items-center justify-between gap-2 p-1.5 bg-white dark:bg-gray-900/30 rounded border border-gray-200 dark:border-gray-700 transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm"
-                                style={{ animationDelay: `${idx * 40}ms` }}
-                              >
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handleDownloadAttachment(a); // This button can still be the filename
-                                  }}
-                                  className="text-left text-sky-600 dark:text-sky-400 hover:underline text-xs flex-1 break-words overflow-hidden transition-all duration-150"
-                                  title={a.fileName || a.attachment_name || `attachment-${a.id}`}
-                                  style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}
-                                >
-                                  {a.fileName || a.attachment_name || `attachment-${a.id}`}
-                                </button>
-
-                                <div className="flex items-center gap-1.5">
-                                  {a.size && <div className="text-xs text-gray-400 hidden sm:inline transition-colors duration-150">{(a.size / 1024).toFixed(1)} KB</div>}
-                                  {a.mimeType && <div className="text-xs text-gray-400 hidden sm:inline transition-colors duration-150">{a.mimeType}</div>}
-                                  {/* ENHANCED PREVIEW BUTTON */}
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handlePreviewAttachment(a);
-                                    }}
-                                    className="p-1.5 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs text-gray-700 dark:text-gray-300 transition-all duration-150 transform hover:scale-[1.02] active:scale-100"
-                                    aria-label={`Preview ${a.fileName || a.attachment_name || a.id}`}
-                                    title={t("reports.attachments.preview", "Preview")}
-                                  >
-                                    {attachmentPreviewing[a.id] ? <Loader className="h-3.5 w-3.5 animate-spin transition-transform duration-150" /> : <Eye className="h-3.5 w-3.5 transition-transform duration-150" />}
-                                  </button>
-
-                                  {/* ENHANCED DOWNLOAD BUTTON */}
-                                  <button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      handleDownloadAttachment(a);
-                                    }}
-                                    className="px-1.5 py-0.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 text-xs flex items-center gap-0.5 transition-all duration-150 transform hover:scale-[1.01] active:scale-100"
-                                    aria-label={`Download ${a.fileName || a.attachment_name || a.id}`}
-                                    title={t("reports.attachments.download", "Download")}
-                                  >
-                                    {attachmentDownloading[a.id] ? <Loader className="h-3.5 w-3.5 animate-spin transition-transform duration-150" /> : t("reports.attachmentsDownload.download", "Download")}
-                                  </button>
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-3 mt-2">
+                            <div className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400 flex items-center flex-wrap min-w-0 transition-colors duration-200">
+                              {r.group_name ? (
+                                <BreadcrumbsCompact
+                                  group_name={r.group_name}
+                                  goal_title={r.goal_title}
+                                  task_title={r.task_title}
+                                  activity_title={r.activity_title}
+                                />
+                              ) : (
+                                <span className="text-[var(--on-surface)] dark:text-white font-semibold truncate transition-colors duration-200 hover:text-[var(--primary)] dark:hover:text-green-400" title={r.activity_title || "Activity"}>
+                                  {r.activity_title || "Activity"}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 bg-[var(--surface-container)] dark:bg-gray-700 px-2.5 py-1 rounded-full whitespace-nowrap self-start sm:self-center">
+                              <User className="h-4 w-4" />
+                              <span>{r.user_name || "Unknown User"}</span>
+                              {isDone && (
+                                <span className="ml-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[var(--secondary-container)] dark:bg-blue-900 text-[var(--on-secondary-container)] dark:text-blue-200 text-sm font-medium" title={t("reports.newStatusDoneTooltip", "This report marked as Done (finalized). Approving this runs progress calculations across the system.")}>
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span className="font-medium">{t("reports.done", "Done")}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 items-center pl-2">
+                          <button
+                            onClick={() => setExpanded(expanded === r.id ? null : r.id)}
+                            aria-expanded={expanded === r.id}
+                            className="flex items-center gap-1 p-2 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-200"
+                          >
+                            <svg 
+                              className={`transition-transform duration-200 ${expanded === r.id ? "rotate-180" : ""}`} 
+                              width="18" 
+                              height="18" 
+                              viewBox="0 0 24 24" 
+                              fill="none"
+                            >
+                              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      {expanded === r.id && (
+                        <div className="p-4 bg-[var(--surface-container-lowest)] dark:bg-gray-800 space-y-4 animate-slide-in-up">
+                          {/* Enhanced Activity Context Section */}
+                          {!readonly && (
+                            <div className="p-3 bg-[var(--secondary-container)] dark:bg-blue-900 border border-[var(--secondary)] dark:border-blue-700 rounded-xl transition-all duration-200">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Info className="h-5 w-5 text-[var(--on-secondary-container)] dark:text-blue-200" />
+                                <h4 className="text-base font-semibold text-[var(--on-secondary-container)] dark:text-blue-200">
+                                  {t("reports.activityContext.title", "Activity Context")}
+                                </h4>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="transition-all duration-200 hover:scale-[1.01]">
+                                  <div className="text-sm font-medium text-[var(--on-surface)] dark:text-white mb-1">
+                                    {t("reports.activityContext.target", "Activity Target")}
+                                  </div>
+                                  <div className="mt-1">{renderMetricsList(r.activity_target_metric)}</div>
                                 </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {!readonly ? (
-                        <div className="pt-1 transition-all duration-150">
-                          <div className="flex flex-col md:flex-row md:items-start gap-2">
-                            <textarea
-                              rows={2}
-                              placeholder={t("reports.adminComment_placeholder.placeholder")}
-                              value={actionState[r.id]?.comment || ""}
-                              onChange={(e) =>
-                                setActionState((s) => ({
-                                  ...s,
-                                  [r.id]: { ...(s[r.id] || {}), comment: e.target.value },
-                                }))
-                              }
-                              className="flex-1 px-2 py-1.5 rounded border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sky-500 focus:border-transparent resize-y transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500 break-words max-h-[30vh] overflow-auto min-w-0 text-xs"
-                              disabled={isLoading}
-                              aria-label={t("reports.adminComment_placeholder.placeholder")}
-                            />
-
-                            <div className="w-full md:w-48 flex flex-col gap-1.5 transition-all duration-150">
-                              <input
-                                type="date"
-                                value={actionState[r.id]?.deadline || ""}
-                                onChange={(e) =>
-                                  setActionState((s) => ({
-                                    ...s,
-                                    [r.id]: { ...(s[r.id] || {}), deadline: e.target.value },
-                                  }))
-                                }
-                                className="px-2 py-1.5 rounded border bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-1 focus:ring-sky-500 focus:border-transparent w-full transition-all duration-150 hover:border-gray-400 dark:hover:border-gray-500 text-xs"
-                                disabled={isLoading}
-                                aria-label={t("reports.deadline")}
-                              />
-
-                              <div className="flex gap-1.5">
-                                <button
-                                  onClick={() => handleReview(r.id, "Approved")}
-                                  className="flex-1 bg-green-600 text-white px-2 py-1.5 rounded flex items-center justify-center gap-1 hover:bg-green-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-60 disabled:transform-none text-xs"
-                                  disabled={isLoading}
-                                  aria-busy={approving}
-                                >
-                                  {approving ? <Loader className="h-3.5 w-3.5 animate-spin transition-transform duration-150" /> : t("reports.actions.approve")}
-                                </button>
-
-                                <button
-                                  onClick={() => handleReview(r.id, "Rejected")}
-                                  className="flex-1 bg-red-600 text-white px-2 py-1.5 rounded flex items-center justify-center gap-1 hover:bg-red-700 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-60 disabled:transform-none text-xs"
-                                  disabled={isLoading}
-                                  aria-busy={rejecting}
-                                >
-                                  {rejecting ? <Loader className="h-3.5 w-3.5 animate-spin transition-transform duration-150" /> : t("reports.actions.reject")}
-                                </button>
+                                <div className="transition-all duration-200 hover:scale-[1.01]">
+                                  <div className="text-sm font-medium text-[var(--on-surface)] dark:text-white mb-1">
+                                    {t("reports.activityContext.current", "Activity Current (Before Report)")}
+                                  </div>
+                                  <div className="mt-1">{renderMetricsList(r.activity_current_metric)}</div>
+                                </div>
                               </div>
+                              <p className="text-sm text-[var(--on-secondary-container)] dark:text-blue-200 mt-3">
+                                {t("reports.activityContext.help", "This shows the activity's metrics *before* this report is applied. Approving the report will add the new metrics to the 'Current' values.")}
+                              </p>
+                            </div>
+                          )}
+                          <div className="transition-all duration-200">
+                            <div className="text-sm font-medium text-[var(--on-surface)] dark:text-white mb-1">
+                              {t("reports.narrative")}
+                            </div>
+                            <div
+                              className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 mt-1 p-3 bg-[var(--surface-container-low)] dark:bg-gray-700 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 transition-all duration-200 hover:border-[var(--outline)] dark:hover:border-gray-500 break-words"
+                              style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}
+                            >
+                              {r.narrative || <em className="text-[var(--on-surface-variant)] dark:text-gray-500">{t("reports.noNarrative")}</em>}
                             </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5 pt-1 transition-all duration-150">
-                          {r.adminComment && (
-                            <div className="transition-all duration-150 hover:scale-[1.01] transform origin-left">
-                              <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 transition-colors duration-150">
-                                {t("reports.adminComment")}
+                          <div className="transition-all duration-200">
+                            <div className="text-sm font-medium text-[var(--on-surface)] dark:text-white mb-1">
+                              {t("reports.reportMetrics", "Metrics in this Report")}
+                            </div>
+                            <div className="mt-1">{renderMetricsList(r.metrics_data)}</div>
+                          </div>
+                          {((attachmentsMap[r.id] && attachmentsMap[r.id].length) || (Array.isArray(r.attachments) && r.attachments.length)) && (
+                            <div>
+                              <div className="text-sm font-medium text-[var(--on-surface)] dark:text-white mb-2">
+                                {t("reports.attachments")}
                               </div>
-                              <div className="mt-0.5 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900/50 p-1.5 rounded transition-colors duration-150 break-words">
-                                {r.adminComment}
-                              </div>
+                              <ul className="space-y-2">
+                                {((attachmentsMap[r.id] && attachmentsMap[r.id].length ? attachmentsMap[r.id] : r.attachments) || []).map((a, idx) => (
+                                  <li 
+                                    key={a.id} 
+                                    className="flex items-center justify-between gap-3 p-3 bg-[var(--surface-container-low)] dark:bg-gray-700 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 transition-all duration-200 hover:surface-elevation-1"
+                                    style={{ animationDelay: `${idx * 30}ms` }}
+                                  >
+                                    <button
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        handleDownloadAttachment(a);
+                                      }}
+                                      className="text-left text-[var(--primary)] dark:text-green-400 hover:underline text-base flex-1 break-words overflow-hidden transition-all duration-200"
+                                      title={a.fileName || a.attachment_name || `attachment-${a.id}`}
+                                      style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}
+                                    >
+                                      {a.fileName || a.attachment_name || `attachment-${a.id}`}
+                                    </button>
+                                    <div className="flex items-center gap-2">
+                                      {a.size && <div className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400 hidden sm:inline">{(a.size / 1024).toFixed(1)} KB</div>}
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          handlePreviewAttachment(a);
+                                        }}
+                                        className="p-2 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 text-[var(--on-surface)] dark:text-white transition-all duration-200"
+                                        aria-label={`Preview ${a.fileName || a.attachment_name || a.id}`}
+                                        title={t("reports.attachments.preview", "Preview")}
+                                      >
+                                        {attachmentPreviewing[a.id] ? <Loader className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          handleDownloadAttachment(a);
+                                        }}
+                                        className="px-3 py-1.5 rounded-full bg-[var(--surface-container-lowest)] dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-low)] dark:hover:bg-gray-700 text-sm flex items-center gap-1 transition-all duration-200"
+                                        aria-label={`Download ${a.fileName || a.attachment_name || a.id}`}
+                                        title={t("reports.attachments.download", "Download")}
+                                      >
+                                        {attachmentDownloading[a.id] ? <Loader className="h-3.5 w-3.5 animate-spin" /> : t("reports.attachmentsDownload.download", "Download")}
+                                      </button>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
                             </div>
                           )}
-
-                          {r.resubmissionDeadline && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-150">
-                              {t("reports.resubmissionDeadline")}: {new Date(r.resubmissionDeadline).toLocaleDateString()}
+                          {!readonly ? (
+                            <div className="pt-2">
+                              <div className="flex flex-col md:flex-row md:items-start gap-3">
+                                <textarea
+                                  rows={3}
+                                  placeholder={t("reports.adminComment_placeholder.placeholder")}
+                                  value={actionState[r.id]?.comment || ""}
+                                  onChange={(e) =>
+                                    setActionState((s) => ({
+                                      ...s,
+                                      [r.id]: { ...(s[r.id] || {}), comment: e.target.value },
+                                    }))
+                                  }
+                                  className="flex-1 px-3 py-2.5 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] resize-y transition-all duration-200 hover:border-[var(--outline)] dark:hover:border-gray-500 break-words max-h-[30vh] overflow-auto min-w-0 text-base"
+                                  disabled={isLoading}
+                                  aria-label={t("reports.adminComment_placeholder.placeholder")}
+                                />
+                                <div className="w-full md:w-60 flex flex-col gap-3">
+                                  <input
+                                    type="date"
+                                    value={actionState[r.id]?.deadline || ""}
+                                    onChange={(e) =>
+                                      setActionState((s) => ({
+                                        ...s,
+                                        [r.id]: { ...(s[r.id] || {}), deadline: e.target.value },
+                                      }))
+                                    }
+                                    className="px-3 py-2.5 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] w-full text-base"
+                                    disabled={isLoading}
+                                    aria-label={t("reports.deadline")}
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleReview(r.id, "Approved")}
+                                      className="flex-1 bg-[var(--primary)] dark:bg-green-700 text-[var(--on-primary)] dark:text-white px-4 py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-[var(--primary-container)] dark:hover:bg-green-600 transition-all duration-200 disabled:opacity-60 text-base surface-elevation-1"
+                                      disabled={isLoading}
+                                      aria-busy={approving}
+                                    >
+                                      {approving ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.approve")}
+                                    </button>
+                                    <button
+                                      onClick={() => handleReview(r.id, "Rejected")}
+                                      className="flex-1 bg-[var(--error)] dark:bg-red-700 text-[var(--on-error)] dark:text-white px-4 py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-[var(--error-container)] dark:hover:bg-red-600 transition-all duration-200 disabled:opacity-60 text-base surface-elevation-1"
+                                      disabled={isLoading}
+                                      aria-busy={rejecting}
+                                    >
+                                      {rejecting ? <Loader className="h-4 w-4 animate-spin" /> : t("reports.actions.reject")}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 pt-2">
+                              {r.adminComment && (
+                                <div>
+                                  <div className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-1">
+                                    {t("reports.adminComment")}
+                                  </div>
+                                  <div className="mt-1 text-base text-[var(--on-surface-variant)] dark:text-gray-400 bg-[var(--surface-container-low)] dark:bg-gray-700 p-3 rounded-xl transition-colors duration-200 break-words">
+                                    {r.adminComment}
+                                  </div>
+                                </div>
+                              )}
+                              {r.resubmissionDeadline && (
+                                <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400">
+                                  {t("reports.resubmissionDeadline")}: {new Date(r.resubmissionDeadline).toLocaleDateString()}
+                                </div>
+                              )}
                             </div>
                           )}
-                        </div>
-                      )}
-
-                      {actionState[r.id]?._lastResult && (
-                        <div className="text-xs text-green-700 dark:text-green-300 transition-all duration-150 animate-slide-in-up">
-                          {actionState[r.id]._lastResult}
-                        </div>
-                      )}
-                      {actionState[r.id]?._lastError && (
-                        <div className="text-xs text-red-600 dark:text-red-400 transition-all duration-150 animate-shake">
-                          {actionState[r.id]._lastError}
+                          {actionState[r.id]?._lastResult && (
+                            <div className="text-base text-[var(--primary)] dark:text-green-400 transition-all duration-200 animate-slide-in-up">
+                              {actionState[r.id]._lastResult}
+                            </div>
+                          )}
+                          {actionState[r.id]?._lastError && (
+                            <div className="text-base text-[var(--error)] dark:text-red-400 transition-all duration-200">
+                              {actionState[r.id]._lastError}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-
-            {reports.length === 0 && !loading && (
-              <div className="text-center text-gray-500 dark:text-gray-400 py-4 transition-all duration-150 transform hover:scale-[1.01] text-sm">
-                {t("reports.noReports")}
-              </div>
+                  );
+                })}
+                {reports.length === 0 && !loading && (
+                  <div className="text-center text-[var(--on-surface-variant)] dark:text-gray-400 py-8 transition-all duration-200 text-base">
+                    {t("reports.noReports")}
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
-      </div>
-
-      <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-3 text-gray-900 dark:text-gray-300 transition-all duration-150">
-        <div className="flex flex-wrap items-center gap-1.5 transition-all duration-150">
-          <button
-            disabled={page <= 1}
-            onClick={() => {
-              setPage(1);
-              loadReports({ page: 1 });
-            }}
-            className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {t("reports.pagination.first")}
-          </button>
-          <button
-            disabled={page <= 1}
-            onClick={() => {
-              const next = Math.max(1, page - 1);
-              setPage(next);
-              loadReports({ page: next });
-            }}
-            className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {t("reports.pagination.prev")}
-          </button>
-          <div className="px-2 py-1 text-xs transition-colors duration-150">
-            {page} / {totalPages}
           </div>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => {
-              const next = Math.min(totalPages, page + 1);
-              setPage(next);
-              loadReports({ page: next });
-            }}
-            className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {t("reports.pagination.next")}
-          </button>
-          <button
-            disabled={page >= totalPages}
-            onClick={() => {
-              setPage(totalPages);
-              loadReports({ page: totalPages });
-            }}
-            className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-xs hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-150 transform hover:scale-[1.01] active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {t("reports.pagination.last")}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1.5 transition-all duration-150">
-          <label className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-150">
-            {t("reports.pageSize")}
-          </label>
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(1);
-            }}
-            className="px-1.5 py-1 rounded bg-white dark:bg-gray-700 text-xs focus:ring-1 focus:ring-sky-500 focus:border-transparent transition-all duration-150 transform hover:scale-[1.01]"
-          >
-            {[10, 20, 50, 100].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
+          <div className="mt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[var(--on-surface)] dark:text-white">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                disabled={page <= 1}
+                onClick={() => {
+                  setPage(1);
+                  loadReports({ page: 1 });
+                }}
+                className="px-4 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-base hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("reports.pagination.first")}
+              </button>
+              <button
+                disabled={page <= 1}
+                onClick={() => {
+                  const next = Math.max(1, page - 1);
+                  setPage(next);
+                  loadReports({ page: next });
+                }}
+                className="px-4 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-base hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("reports.pagination.prev")}
+              </button>
+              <div className="ml-auto text-base text-[var(--on-surface-variant)] dark:text-gray-400">
+                {t("reports.pagination.showingPage", { page, totalPages, total })}
+              </div>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => {
+                  const next = Math.min(totalPages, page + 1);
+                  setPage(next);
+                  loadReports({ page: next });
+                }}
+                className="px-4 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-base hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("reports.pagination.next")}
+              </button>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => {
+                  setPage(totalPages);
+                  loadReports({ page: totalPages });
+                }}
+                className="px-4 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-base hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t("reports.pagination.last")}
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-base text-[var(--on-surface-variant)] dark:text-gray-400">
+                {t("reports.pageSize")}
+              </label>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="px-3 py-2 rounded-xl bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-base focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-all duration-200 dark:text-white"
+              >
+                {[10, 20, 50, 100].map((n) => (
+                  <option key={n} value={n} className="bg-white dark:bg-gray-700">
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
 /* -------------------------
 Enhanced helper: render metrics nicely (object or JSON) with subtle animations
 ------------------------- */
 function renderMetricsList(metrics) {
-  if (!metrics) return <div className="text-xs text-gray-400 transition-colors duration-150">—</div>;
-
+  if (!metrics) return <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400">—</div>;
   let obj = null;
   try {
     if (typeof metrics === "string") {
@@ -964,20 +1074,18 @@ function renderMetricsList(metrics) {
   } catch (err) {
     const s = String(metrics);
     return (
-      <div className="text-xs font-mono break-words p-1.5 bg-white dark:bg-gray-900 rounded border text-gray-800 dark:text-gray-100 transition-all duration-150 transform hover:scale-[1.01]">
+      <div className="text-base font-mono break-words p-3 bg-[var(--surface-container-low)] dark:bg-gray-700 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white transition-all duration-200">
         {s}
       </div>
     );
   }
-
   if (!obj || typeof obj !== "object") {
-    return <div className="text-xs text-gray-400 transition-colors duration-150">—</div>;
+    return <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400">—</div>;
   }
   const keys = Object.keys(obj);
-  if (keys.length === 0) return <div className="text-xs text-gray-400 transition-colors duration-150">—</div>;
-
+  if (keys.length === 0) return <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400">—</div>;
   return (
-    <div className="space-y-0.5 transition-all duration-150">
+    <div className="space-y-2">
       {keys.map((k, index) => {
         const value = obj[k];
         const displayValue =
@@ -985,11 +1093,11 @@ function renderMetricsList(metrics) {
         return (
           <div
             key={k}
-            className="flex items-start justify-between bg-white dark:bg-gray-900 rounded px-1.5 py-0.5 border dark:border-gray-700 gap-3 transition-all duration-150 transform hover:scale-[1.01] hover:shadow-sm"
-            style={{ animationDelay: `${index * 40}ms` }}
+            className="flex items-start justify-between bg-[var(--surface-container-low)] dark:bg-gray-700 rounded-xl px-3 py-2 border border-[var(--outline-variant)] dark:border-gray-600 gap-3 transition-all duration-200 hover:surface-elevation-1"
+            style={{ animationDelay: `${index * 30}ms` }}
           >
-            <div className="text-xs text-gray-600 dark:text-gray-300 pt-px transition-colors duration-150">{k}</div>
-            <div className="text-xs font-mono text-gray-900 dark:text-gray-100 break-all text-right whitespace-pre-wrap transition-colors duration-150">
+            <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 pt-px">{k}</div>
+            <div className="text-base font-mono text-[var(--on-surface)] dark:text-white break-all text-right whitespace-pre-wrap">
               {displayValue}
             </div>
           </div>
@@ -998,3 +1106,5 @@ function renderMetricsList(metrics) {
     </div>
   );
 }
+
+export default App;
