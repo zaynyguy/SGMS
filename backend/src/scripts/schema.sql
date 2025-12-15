@@ -1,6 +1,8 @@
 -- ./docker/initdb/01_schema.sql
 -- Idempotent schema initialization for SGMS (safe for re-run)
 
+
+
 SET client_min_messages TO WARNING;
 SET search_path = public;
 

@@ -727,7 +727,8 @@ at."fileType" as attachment_type
 FROM "Goals" g
 LEFT JOIN "Tasks" t ON t."goalId" = g.id
 LEFT JOIN "Activities" a ON a."taskId" = t.id
-LEFT JOIN "Reports" r ON r."activityId" = a.id
+-- Only join reports that have been Approved so Pending/Rejected don't affect master report
+LEFT JOIN "Reports" r ON r."activityId" = a.id AND r.status = 'Approved'
 LEFT JOIN "Attachments" at ON at."reportId" = r.id
 ${groupId ? 'WHERE g."groupId" = $1' : ""}
 ORDER BY g.id, t.id, a.id, r.id
@@ -766,6 +767,8 @@ ORDER BY entity_id, snapshot_month
     if (Object.keys(historyByActivity).length === 0) {
       for (const row of raw) {
         if (!row.activity_id || !row.report_id) continue;
+        // SAFETY: ensure only approved reports are used (case-insensitive check)
+        if (row.report_status && String(row.report_status).toLowerCase() !== 'approved') continue;
         const actId = row.activity_id;
         const createdAt =
           row.report_createdat ||

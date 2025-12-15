@@ -57,7 +57,7 @@ COPY public."RolePermissions" (id, "roleId", "permissionId", "createdAt", "updat
 
 COPY public."SystemSettings" (key, value, description, "createdAt", "updatedAt") FROM stdin;
 max_attachment_size_mb	10	Max attachment upload size (MB)	2025-11-11 14:51:59.931902+03	2025-11-11 14:51:59.931902+03
-allowed_attachment_types	["application/pdf", "image/png", "image/jpeg", "text/plain"]	Allowed MIME types	2025-11-11 14:51:59.931902+03	2025-11-11 14:51:59.931902+03
+allowed_attachment_types	["application/pdf", "image/png", "image/jpeg", "text/plain", "image/jpg", "application/msword"]	Allowed MIME types	2025-11-11 14:51:59.931902+03	2025-11-11 14:51:59.931902+03
 reporting_active	true	Enable report submissions	2025-11-11 14:51:59.931902+03	2025-11-11 14:51:59.931902+03
 audit_retention_days	365	Days to retain audit logs	2025-11-11 14:51:59.931902+03	2025-11-11 14:51:59.931902+03
 \.
