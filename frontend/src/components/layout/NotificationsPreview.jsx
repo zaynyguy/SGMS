@@ -36,7 +36,11 @@ export default function NotificationPreview({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unread, setUnread] = useState(0);
-  const [coords, setCoords] = useState({ top: 0, left: 0, transform: "translate(0,0)" });
+  const [coords, setCoords] = useState({
+    top: 0,
+    left: 0,
+    transform: "translate(0,0)",
+  });
 
   const [latestNew, setLatestNew] = useState(null);
   const [showToast, setShowToast] = useState(false);
@@ -71,13 +75,21 @@ export default function NotificationPreview({
   const iconFor = (level) => {
     switch (level) {
       case "success":
-        return <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 transition-colors duration-200" />;
+        return (
+          <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 transition-colors duration-200" />
+        );
       case "warning":
-        return <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 transition-colors duration-200" />;
+        return (
+          <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 transition-colors duration-200" />
+        );
       case "error":
-        return <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 transition-colors duration-200" />;
+        return (
+          <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400 transition-colors duration-200" />
+        );
       default:
-        return <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 transition-colors duration-200" />;
+        return (
+          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 transition-colors duration-200" />
+        );
     }
   };
 
@@ -119,7 +131,9 @@ export default function NotificationPreview({
     const clampedLeft = Math.min(Math.max(left, minLeft), maxLeft);
 
     const minTop = (window.scrollY || 0) + 8;
-    const maxTop = (window.scrollY || 0) + Math.max(8, window.innerHeight - POPOVER_HEIGHT - 8);
+    const maxTop =
+      (window.scrollY || 0) +
+      Math.max(8, window.innerHeight - POPOVER_HEIGHT - 8);
     const clampedTop = Math.min(Math.max(top, minTop), maxTop);
 
     let transform = "translate(0,0)";
@@ -128,8 +142,12 @@ export default function NotificationPreview({
   };
 
   const buildDisplayList = (candidates) => {
-    const unreadList = (candidates || []).filter((n) => !n.isRead).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    const readList = (candidates || []).filter((n) => n.isRead).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const unreadList = (candidates || [])
+      .filter((n) => !n.isRead)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const readList = (candidates || [])
+      .filter((n) => n.isRead)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const combined = [...unreadList, ...readList];
     return combined.slice(0, 5);
   };
@@ -149,7 +167,9 @@ export default function NotificationPreview({
 
   const handleMarkRead = async (id) => {
     try {
-      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
       setUnread((u) => Math.max(0, u - 1));
       await markNotificationRead(id);
     } catch (err) {
@@ -161,7 +181,10 @@ export default function NotificationPreview({
     let mounted = true;
     (async () => {
       try {
-        const [res, u] = await Promise.all([fetchNotifications(1, 10), fetchUnreadCount()]);
+        const [res, u] = await Promise.all([
+          fetchNotifications(1, 10),
+          fetchUnreadCount(),
+        ]);
         if (!mounted) return;
         const rows = res?.rows ?? [];
         setNotifications(rows);
@@ -254,8 +277,9 @@ export default function NotificationPreview({
         toastTimer.current = null;
       }
     };
+    // Initialize socket once on mount/unmount to avoid connect/disconnect churn
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, location.pathname]);
+  }, []);
 
   const openPreviewAtBell = () => {
     if (!bellRef.current) return;
@@ -369,10 +393,12 @@ export default function NotificationPreview({
                   </div>
                 )}
                 {buildDisplayList(notifications).map((n, index) => (
-                  <div 
-                    key={n.id} 
+                  <div
+                    key={n.id}
                     className={`flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 transform  ${
-                      n.isRead ? "bg-white dark:bg-gray-900" : "bg-blue-50 dark:bg-blue-900/20"
+                      n.isRead
+                        ? "bg-white dark:bg-gray-900"
+                        : "bg-blue-50 dark:bg-blue-900/20"
                     } notification-item`}
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
@@ -381,11 +407,13 @@ export default function NotificationPreview({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className={`text-sm truncate transition-all duration-200 ${
-                        n.isRead 
-                          ? "text-gray-600 dark:text-gray-300" 
-                          : "font-medium text-gray-900 dark:text-white"
-                      }`}>
+                      <div
+                        className={`text-sm truncate transition-all duration-200 ${
+                          n.isRead
+                            ? "text-gray-600 dark:text-gray-300"
+                            : "font-medium text-gray-900 dark:text-white"
+                        }`}
+                      >
                         {n.message}
                       </div>
                       <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 transition-colors duration-200">
@@ -418,14 +446,24 @@ export default function NotificationPreview({
               </div>
 
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-colors duration-200">
-                <button 
-                  onClick={() => { setIsClosing(true); if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current); closeTimeoutRef.current = setTimeout(() => { setIsClosing(false); setOpen(false); closeTimeoutRef.current = null; }, 220); navigate(item?.to || "/notification"); }} 
+                <button
+                  onClick={() => {
+                    setIsClosing(true);
+                    if (closeTimeoutRef.current)
+                      clearTimeout(closeTimeoutRef.current);
+                    closeTimeoutRef.current = setTimeout(() => {
+                      setIsClosing(false);
+                      setOpen(false);
+                      closeTimeoutRef.current = null;
+                    }, 220);
+                    navigate(item?.to || "/notification");
+                  }}
                   className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
                 >
                   {t("notificationsPreview.viewAll")}
                 </button>
-                <button 
-                  onClick={loadPreview} 
+                <button
+                  onClick={loadPreview}
                   className="text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
                 >
                   {t("notificationsPreview.refresh")}
@@ -457,7 +495,10 @@ export default function NotificationPreview({
                 const rect = bellRef.current.getBoundingClientRect();
                 const rawLeft = rect.left;
                 const minLeft = 8;
-                const maxLeft = Math.max(8, window.innerWidth - POPOVER_WIDTH - 8);
+                const maxLeft = Math.max(
+                  8,
+                  window.innerWidth - POPOVER_WIDTH - 8
+                );
                 return Math.min(Math.max(rawLeft, minLeft), maxLeft);
               })(),
               transform: "translate(0,0)",
@@ -569,8 +610,13 @@ export default function NotificationPreview({
           animation: slideInDown 0.3s ease-out;
         }
       `}</style>
-      
-      <div ref={bellRef} className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+
+      <div
+        ref={bellRef}
+        className="relative"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
         <div
           role="button"
           tabIndex={0}
@@ -584,11 +630,14 @@ export default function NotificationPreview({
           } cursor-pointer sm:hover:bg-gray-100 sm:dark:hover:bg-gray-800 hover:bg-green-200 dark:hover:bg-indigo-400 transform hover:scale-110 active:scale-95 group/bell`}
         >
           <div className="relative flex items-center justify-center w-6 sm:text-gray-700 sm:dark:text-gray-300 text-green-700 dark:text-indigo-900 transition-colors duration-200">
-            <Bell size={24} className="transition-transform duration-300 group-hover/bell:rotate-12" />
+            <Bell
+              size={24}
+              className="transition-transform duration-300 group-hover/bell:rotate-12"
+            />
             {unread > 0 && (
-              <span 
+              <span
                 className={`absolute -top-1 -right-1 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-semibold leading-none text-white bg-red-600 rounded-full min-w-[1.25rem] transition-all duration-300 transform ${
-                  unread > 9 ? 'badge-bounce' : 'bell-pulse'
+                  unread > 9 ? "badge-bounce" : "bell-pulse"
                 }`}
               >
                 {unread > 9 ? "9+" : unread}
@@ -624,11 +673,11 @@ export default function NotificationPreview({
               </div>
             )}
             {buildDisplayList(notifications).map((n, index) => (
-              <div 
-                key={n.id} 
+              <div
+                key={n.id}
                 className={`p-3 flex items-start gap-3 transition-all duration-200 transform hover:scale-[1.02] notification-item ${
-                  n.isRead 
-                    ? "text-gray-600 dark:text-gray-300" 
+                  n.isRead
+                    ? "text-gray-600 dark:text-gray-300"
                     : "text-gray-900 dark:text-white font-medium"
                 }`}
                 style={{ animationDelay: `${index * 100}ms` }}
@@ -646,8 +695,8 @@ export default function NotificationPreview({
                 </div>
                 <div className="ml-2 flex flex-col gap-2">
                   {!n.isRead && (
-                    <button 
-                      onClick={() => handleMarkRead(n.id)} 
+                    <button
+                      onClick={() => handleMarkRead(n.id)}
                       className="text-xs px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95"
                     >
                       {t("notificationsPreview.mark")}
@@ -668,8 +717,8 @@ export default function NotificationPreview({
             >
               {t("notificationsPreview.viewAll")}
             </button>
-            <button 
-              onClick={loadPreview} 
+            <button
+              onClick={loadPreview}
               className="text-sm px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all duration-200 transform hover:scale-105 active:scale-95 w-full sm:w-auto"
             >
               {t("notificationsPreview.refresh")}

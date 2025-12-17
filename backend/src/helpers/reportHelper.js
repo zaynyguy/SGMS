@@ -5,11 +5,11 @@
  * @returns {string} The escaped string.
  */
 function escapeHtml(s) {
-  if (s === null || s === undefined) return '';
+  if (s === null || s === undefined) return "";
   return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /**
@@ -24,113 +24,196 @@ function generateReportHtml(rows, breakdowns = {}) {
     goal: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 16c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z"></path><path d="M12 12v.01"></path></svg>',
     task: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
     user: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>',
-    report: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
-    calendar: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
-    attachment: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>',
-    print: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>'
+    report:
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
+    calendar:
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+    attachment:
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>',
+    print:
+      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
   };
-  
+
   function getIcon(name) {
-    return `<span class="icon">${ICONS[name] || ''}</span>`;
+    return `<span class="icon">${ICONS[name] || ""}</span>`;
   }
-  
+
   function formatMetrics(metric) {
-    if (!metric || typeof metric !== 'object' || Object.keys(metric).length === 0) {
+    if (
+      !metric ||
+      typeof metric !== "object" ||
+      Object.keys(metric).length === 0
+    ) {
       return '<span class="metric-empty">—</span>';
     }
-    return `<div class="metric-grid">` + Object.entries(metric)
-      .map(([key, value]) => `<div class="metric-key">${escapeHtml(key)}</div><div class="metric-value">${escapeHtml(value)}</div>`)
-      .join('') + `</div>`;
+    return (
+      `<div class="metric-grid">` +
+      Object.entries(metric)
+        .map(
+          ([key, value]) =>
+            `<div class="metric-key">${escapeHtml(
+              key
+            )}</div><div class="metric-value">${escapeHtml(value)}</div>`
+        )
+        .join("") +
+      `</div>`
+    );
   }
-  
+
   function getStatusBadge(status) {
-    if (!status) return '—';
-    let className = 'default';
+    if (!status) return "—";
+    let className = "default";
     switch (String(status).toLowerCase()) {
-      case 'completed': case 'done': case 'approved': className = 'success'; break;
-      case 'in progress': className = 'primary'; break;
-      case 'on hold': case 'blocked': case 'pending': className = 'warning'; break;
-      case 'not started': case 'to do': case 'rejected': className = 'danger'; break;
+      case "completed":
+      case "done":
+      case "approved":
+        className = "success";
+        break;
+      case "in progress":
+        className = "primary";
+        break;
+      case "on hold":
+      case "blocked":
+      case "pending":
+        className = "warning";
+        break;
+      case "not started":
+      case "to do":
+      case "rejected":
+        className = "danger";
+        break;
     }
-    return `<span class="badge badge-${className}">${escapeHtml(status)}</span>`;
+    return `<span class="badge badge-${className}">${escapeHtml(
+      status
+    )}</span>`;
   }
-  
+
   function renderProgressBar(progress = 0) {
     const p = Math.max(0, Math.min(100, progress));
     return `<div class="progress-bar-container"><div class="progress-bar-inner" style="width: ${p}%;">${p}%</div></div>`;
   }
-  
+
   // --- 2. Data Aggregation (with group + code support) ---
   const goals = new Map();
-  const goalMeta = new Map();   // goalId => { code, groupName }
-  const taskMeta = new Map();   // taskId => { code }
+  const goalMeta = new Map(); // goalId => { code, groupName }
+  const taskMeta = new Map(); // taskId => { code }
   const activityMeta = new Map(); // activityId => { code }
-  
+
   for (const r of rows) {
-    const goalId = (r.goal_id === undefined) ? null : r.goal_id;
-    const taskId = (r.task_id === undefined) ? null : r.task_id;
-    const activityId = (r.activity_id === undefined) ? null : r.activity_id;
-    
+    const goalId = r.goal_id === undefined ? null : r.goal_id;
+    const taskId = r.task_id === undefined ? null : r.task_id;
+    const activityId = r.activity_id === undefined ? null : r.activity_id;
+
     // capture roll/code info if present
     const gCode = r.goalCode ?? r.goal_rollno ?? null;
     const tCode = r.taskCode ?? r.task_rollno ?? null;
     const aCode = r.activityCode ?? r.activity_rollno ?? null;
-    
-    if (goalId != null && gCode != null && !goalMeta.has(goalId)) goalMeta.set(goalId, { code: String(gCode), groupName: r.group_name ?? null });
-    if (goalId != null && !goalMeta.has(goalId) && r.group_name) goalMeta.set(goalId, { code: null, groupName: r.group_name });
-    if (taskId != null && tCode != null && !taskMeta.has(taskId)) taskMeta.set(taskId, { code: String(tCode) });
-    if (activityId != null && aCode != null && !activityMeta.has(activityId)) activityMeta.set(activityId, { code: String(aCode) });
-    
+
+    if (goalId != null && gCode != null && !goalMeta.has(goalId))
+      goalMeta.set(goalId, {
+        code: String(gCode),
+        groupName: r.group_name ?? null,
+      });
+    if (goalId != null && !goalMeta.has(goalId) && r.group_name)
+      goalMeta.set(goalId, { code: null, groupName: r.group_name });
+    if (taskId != null && tCode != null && !taskMeta.has(taskId))
+      taskMeta.set(taskId, { code: String(tCode) });
+    if (activityId != null && aCode != null && !activityMeta.has(activityId))
+      activityMeta.set(activityId, { code: String(aCode) });
+
     if (!goals.has(goalId)) {
       goals.set(goalId, {
         id: goalId,
-        title: r.goal_title || '—',
+        title: r.goal_title || "—",
         progress: r.goal_progress ?? 0,
-        status: r.goal_status || '—',
-        weight: typeof r.goal_weight !== 'undefined' ? r.goal_weight : null,
-        tasks: new Map()
+        status: r.goal_status || "—",
+        weight: typeof r.goal_weight !== "undefined" ? r.goal_weight : null,
+        tasks: new Map(),
       });
     }
-    
+
     const g = goals.get(goalId);
-    
+
     if (taskId !== null) {
       if (!g.tasks.has(taskId)) {
         g.tasks.set(taskId, {
           id: taskId,
-          title: r.task_title || '—',
+          title: r.task_title || "—",
           progress: r.task_progress ?? 0,
-          status: r.task_status || '—',
+          status: r.task_status || "—",
           assignee: r.task_assignee || null,
-          weight: typeof r.task_weight !== 'undefined' ? Number(r.task_weight) : null,
-          activities: new Map()
+          weight:
+            typeof r.task_weight !== "undefined" ? Number(r.task_weight) : null,
+          activities: new Map(),
         });
       }
-      
+
       const t = g.tasks.get(taskId);
-      
+
       if (activityId !== null) {
         if (!t.activities.has(activityId)) {
           t.activities.set(activityId, {
             id: activityId,
-            title: r.activity_title || '—',
-            description: r.activity_description || '',
+            title: r.activity_title || "—",
+            description: r.activity_description || "",
             currentMetric: r.currentMetric ?? r.currentmetric ?? {},
             targetMetric: r.targetMetric ?? r.targetmetric ?? {},
             quarterlyGoals: r.quarterlyGoals ?? r.quarterlygoals ?? {},
             previousMetric: r.previousMetric ?? r.previousmetric ?? {},
-            status: r.activity_status || '—',
-            weight: typeof r.activity_weight !== 'undefined' ? Number(r.activity_weight) : 0,
+            status: r.activity_status || "—",
+            weight:
+              typeof r.activity_weight !== "undefined"
+                ? Number(r.activity_weight)
+                : 0,
             isDone: !!r.activity_done,
-            history: breakdowns[activityId] || { monthly: {}, quarterly: {}, annual: {} }
+            history: breakdowns[activityId] || {
+              monthly: {},
+              quarterly: {},
+              annual: {},
+            },
+            // reports map to collect multiple approved reports and attachments
+            _reports: new Map(),
           });
+        }
+
+        // If this row includes a report (approved join), attach it to the activity's reports map
+        if (r.report_id) {
+          const act = t.activities.get(activityId);
+          const rid = Number(r.report_id);
+          if (!act._reports.has(rid)) {
+            act._reports.set(rid, {
+              id: rid,
+              narrative: r.report_narrative || null,
+              status: r.report_status || null,
+              metrics: r.report_metrics || {},
+              new_status: r.report_new_status || null,
+              createdAt: r.report_createdAt || r.report_createdat || null,
+              attachments: [],
+            });
+          }
+
+          // attach any attachment for this report row
+          if (r.attachment_id) {
+            const rep = act._reports.get(rid);
+            rep.attachments.push({
+              id: r.attachment_id,
+              name: r.attachment_name || null,
+              path: r.attachment_path || null,
+              fileType: r.attachment_type || null,
+            });
+          }
         }
       }
     }
   }
-  
-  const generationDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  
+
+  const generationDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   // --- 3. HTML Generation ---
   let html = `
   <!doctype html>
@@ -219,9 +302,11 @@ function generateReportHtml(rows, breakdowns = {}) {
                   <h1>Master Report</h1>
                   <p class="subtitle">Generated on ${generationDate}</p>
               </div>
-              <button class="print-btn" onclick="window.print()">${getIcon('print')} <span>Print / Save PDF</span></button>
+              <button class="print-btn" onclick="window.print()">${getIcon(
+                "print"
+              )} <span>Print / Save PDF</span></button>
           </header>`;
-  
+
   if (goals.size === 0) {
     html += `<div class="goal-card"><div class="goal-card-body empty-state"><p>No goals or data available for this report.</p></div></div>`;
   } else {
@@ -229,40 +314,65 @@ function generateReportHtml(rows, breakdowns = {}) {
       // determine code & group name if available
       const meta = goalMeta.get(gid) || {};
       const gCode = meta.code || null;
-      const groupName = meta.groupName || (rows.find(r => r.goal_id === gid) || {}).group_name || null;
-      
+      const groupName =
+        meta.groupName ||
+        (rows.find((r) => r.goal_id === gid) || {}).group_name ||
+        null;
+
       // Build breadcrumb line: group > goalCode - goalTitle
-      let breadcrumbLine = '';
-      if (groupName) breadcrumbLine += `<span class="goal-meta">${escapeHtml(groupName)}</span> &nbsp;›&nbsp; `;
-      if (gCode) breadcrumbLine += `<span class="goal-code">${escapeHtml(String(gCode))}</span>`;
+      let breadcrumbLine = "";
+      if (groupName)
+        breadcrumbLine += `<span class="goal-meta">${escapeHtml(
+          groupName
+        )}</span> &nbsp;›&nbsp; `;
+      if (gCode)
+        breadcrumbLine += `<span class="goal-code">${escapeHtml(
+          String(gCode)
+        )}</span>`;
       breadcrumbLine += `<span>${escapeHtml(g.title)}</span>`;
-      
+
       html += `
         <div class="goal-card">
           <div class="goal-card-header">
-            ${getIcon('goal')}
+            ${getIcon("goal")}
             <h2><span>${breadcrumbLine}</span></h2>
-            <div class="goal-meta">${getStatusBadge(g.status)} &nbsp; ${renderProgressBar(g.progress)}</div>
+            <div class="goal-meta">${getStatusBadge(
+              g.status
+            )} &nbsp; ${renderProgressBar(g.progress)}</div>
           </div>
           <div class="goal-card-body">`;
-      
+
       if (g.tasks.size === 0) {
         html += `<div class="empty-state"><p>This goal has no tasks.</p></div>`;
       } else {
         for (const [tid, t] of g.tasks) {
           const tMeta = taskMeta.get(tid) || {};
           const tCode = tMeta.code || null;
-          
+
           html += `
             <div class="task-block">
               <div class="task-header">
-                ${getIcon('task')}
-                <h3>${tCode ? `<span class="task-code">${escapeHtml(String(tCode))}</span>` : ''} <span>${escapeHtml(t.title)}</span></h3>
+                ${getIcon("task")}
+                <h3>${
+                  tCode
+                    ? `<span class="task-code">${escapeHtml(
+                        String(tCode)
+                      )}</span>`
+                    : ""
+                } <span>${escapeHtml(t.title)}</span></h3>
               </div>
               <div class="task-meta">
-                <div class="task-meta-item">${getIcon('user')} <strong>Assignee:</strong> ${escapeHtml(t.assignee || 'Unassigned')}</div>
-                <div class="task-meta-item"><strong>Status:</strong> ${getStatusBadge(t.status)}</div>
-                <div class="task-meta-item"><strong>Progress:</strong> ${renderProgressBar(t.progress)}</div>
+                <div class="task-meta-item">${getIcon(
+                  "user"
+                )} <strong>Assignee:</strong> ${escapeHtml(
+            t.assignee || "Unassigned"
+          )}</div>
+                <div class="task-meta-item"><strong>Status:</strong> ${getStatusBadge(
+                  t.status
+                )}</div>
+                <div class="task-meta-item"><strong>Progress:</strong> ${renderProgressBar(
+                  t.progress
+                )}</div>
               </div>
               
               <div style="overflow-x: auto;">
@@ -273,17 +383,23 @@ function generateReportHtml(rows, breakdowns = {}) {
                   <th style="width:15%">Status</th>
                 </tr></thead>
                 <tbody>`;
-          
+
           if (t.activities.size > 0) {
             for (const [aid, a] of t.activities) {
               const aMeta = activityMeta.get(aid) || {};
               const aCode = aMeta.code || null;
-              
+
               html += `
                 <tr>
                   <td>
-                    <p style="font-weight: 500; margin-bottom: 0.25rem;">${aCode ? `<strong>${escapeHtml(String(aCode))}</strong> ` : ''}${escapeHtml(a.title)}</p>
-                    <p style="font-size: 0.85rem; color: var(--color-text-secondary); margin:0;">${escapeHtml(a.description)}</p>
+                    <p style="font-weight: 500; margin-bottom: 0.25rem;">${
+                      aCode
+                        ? `<strong>${escapeHtml(String(aCode))}</strong> `
+                        : ""
+                    }${escapeHtml(a.title)}</p>
+                    <p style="font-size: 0.85rem; color: var(--color-text-secondary); margin:0;">${escapeHtml(
+                      a.description
+                    )}</p>
                   </td>
                   <td>
                     <div class="metrics-comparison">
@@ -294,25 +410,41 @@ function generateReportHtml(rows, breakdowns = {}) {
                   </td>
                   <td>${getStatusBadge(a.status)}</td>
                 </tr>`;
-              
+
               // Show quarterly goals if available
-              if (a.quarterlyGoals && Object.keys(a.quarterlyGoals).length > 0) {
+              if (
+                a.quarterlyGoals &&
+                Object.keys(a.quarterlyGoals).length > 0
+              ) {
                 html += `
                   <tr>
                     <td colspan="3">
                       <div class="report-wrapper">
-                        <h4>${getIcon('calendar')} Quarterly Goals</h4>
+                        <h4>${getIcon("calendar")} Quarterly Goals</h4>
                         <div class="metric-grid">`;
-                
-                const quarterlyGoals = typeof a.quarterlyGoals === 'string' ? 
-                  JSON.parse(a.quarterlyGoals) : a.quarterlyGoals;
-                
+
+                let quarterlyGoals = a.quarterlyGoals;
+                if (typeof quarterlyGoals === "string") {
+                  try {
+                    quarterlyGoals = JSON.parse(quarterlyGoals);
+                  } catch (e) {
+                    console.warn(
+                      "generateReportHtml: failed to parse quarterlyGoals for activity",
+                      a.title || a.id,
+                      e && e.message ? e.message : e
+                    );
+                    quarterlyGoals = {};
+                  }
+                }
+
                 Object.entries(quarterlyGoals).forEach(([quarter, value]) => {
                   html += `
                     <div class="metric-key">${quarter.toUpperCase()}</div>
-                    <div class="metric-value">${escapeHtml(String(value))}</div>`;
+                    <div class="metric-value">${escapeHtml(
+                      String(value)
+                    )}</div>`;
                 });
-                
+
                 html += `
                         </div>
                       </div>
@@ -323,17 +455,17 @@ function generateReportHtml(rows, breakdowns = {}) {
           } else {
             html += `<tr><td colspan="3"><div class="empty-state">No activities for this task.</div></td></tr>`;
           }
-          
+
           html += `</tbody></table></div></div>`;
         }
       }
-      
+
       html += `</div></div>`; // .goal-card-body, .goal-card
     }
   }
-  
+
   html += `</div></body></html>`;
-  
+
   return html;
 }
 
@@ -345,48 +477,57 @@ function generateReportHtml(rows, breakdowns = {}) {
  */
 function generateReportJson(rows, breakdowns = {}) {
   const goals = new Map();
-  
+
   // Helper: ensure nested maps/objects exist
   function getOrCreate(map, key, factory) {
     if (!map.has(key)) map.set(key, factory());
     return map.get(key);
   }
-  
+
   // Metadata for codes and groups
-  const goalMeta = new Map();   // goalId -> { goalCode, groupName }
-  const taskMeta = new Map();   // taskId -> { taskCode }
+  const goalMeta = new Map(); // goalId -> { goalCode, groupName }
+  const taskMeta = new Map(); // taskId -> { taskCode }
   const activityMeta = new Map(); // activityId -> { activityCode }
-  
+
   for (const r of rows) {
-    const gid = (r.goal_id === undefined) ? null : r.goal_id;
-    const tid = (r.task_id === undefined) ? null : r.task_id;
-    const aid = (r.activity_id === undefined) ? null : r.activity_id;
-    
+    const gid = r.goal_id === undefined ? null : r.goal_id;
+    const tid = r.task_id === undefined ? null : r.task_id;
+    const aid = r.activity_id === undefined ? null : r.activity_id;
+
     // record meta
     if (gid != null) {
       const gCode = r.goalCode ?? r.goal_rollno ?? null;
       const gName = r.group_name ?? null;
-      if (!goalMeta.has(gid)) goalMeta.set(gid, { goalCode: gCode != null ? String(gCode) : null, groupName: gName });
+      if (!goalMeta.has(gid))
+        goalMeta.set(gid, {
+          goalCode: gCode != null ? String(gCode) : null,
+          groupName: gName,
+        });
     }
     if (tid != null) {
       const tCode = r.taskCode ?? r.task_rollno ?? null;
-      if (!taskMeta.has(tid)) taskMeta.set(tid, { taskCode: tCode != null ? String(tCode) : null });
+      if (!taskMeta.has(tid))
+        taskMeta.set(tid, { taskCode: tCode != null ? String(tCode) : null });
     }
     if (aid != null) {
       const aCode = r.activityCode ?? r.activity_rollno ?? null;
-      if (!activityMeta.has(aid)) activityMeta.set(aid, { activityCode: aCode != null ? String(aCode) : null });
+      if (!activityMeta.has(aid))
+        activityMeta.set(aid, {
+          activityCode: aCode != null ? String(aCode) : null,
+        });
     }
-    
+
     // create goal
     const goal = getOrCreate(goals, gid, () => ({
       id: gid,
       title: r.goal_title || null,
       progress: r.goal_progress ?? 0,
       status: r.goal_status || null,
-      weight: typeof r.goal_weight !== 'undefined' ? Number(r.goal_weight) : null,
-      tasks: new Map()
+      weight:
+        typeof r.goal_weight !== "undefined" ? Number(r.goal_weight) : null,
+      tasks: new Map(),
     }));
-    
+
     // create task under goal (if exists)
     let task = null;
     if (tid !== null) {
@@ -396,11 +537,12 @@ function generateReportJson(rows, breakdowns = {}) {
         progress: r.task_progress ?? 0,
         status: r.task_status || null,
         assignee: r.task_assignee ?? null,
-        weight: typeof r.task_weight !== 'undefined' ? Number(r.task_weight) : null,
-        activities: new Map()
+        weight:
+          typeof r.task_weight !== "undefined" ? Number(r.task_weight) : null,
+        activities: new Map(),
       }));
     }
-    
+
     // create activity under task (if exists)
     if (aid !== null && task) {
       const act = getOrCreate(task.activities, aid, () => ({
@@ -411,14 +553,45 @@ function generateReportJson(rows, breakdowns = {}) {
         targetMetric: (r.targetMetric ?? r.targetmetric) || {},
         previousMetric: (r.previousMetric ?? r.previousmetric) || {},
         quarterlyGoals: (r.quarterlyGoals ?? r.quarterlygoals) || {},
-        weight: typeof r.activity_weight !== 'undefined' ? Number(r.activity_weight) : 0,
+        weight:
+          typeof r.activity_weight !== "undefined"
+            ? Number(r.activity_weight)
+            : 0,
         isDone: !!r.activity_done,
         status: r.activity_status || null,
-        history: breakdowns[aid] || { monthly: {}, quarterly: {}, annual: {} }
+        history: breakdowns[aid] || { monthly: {}, quarterly: {}, annual: {} },
+        // collect approved reports (and attachments) joined in the SQL
+        _reports: new Map(),
       }));
+
+      // If this row includes a report/attachment, attach into the activity's reports map
+      if (r.report_id) {
+        const rid = Number(r.report_id);
+        if (!act._reports.has(rid)) {
+          act._reports.set(rid, {
+            id: rid,
+            narrative: r.report_narrative || null,
+            status: r.report_status || null,
+            metrics: r.report_metrics || {},
+            new_status: r.report_new_status || null,
+            createdAt: r.report_createdAt || r.report_createdat || null,
+            attachments: [],
+          });
+        }
+
+        if (r.attachment_id) {
+          const rep = act._reports.get(rid);
+          rep.attachments.push({
+            id: r.attachment_id,
+            name: r.attachment_name || null,
+            path: r.attachment_path || null,
+            fileType: r.attachment_type || null,
+          });
+        }
+      }
     }
   }
-  
+
   // Convert maps -> arrays
   const goalsOut = [];
   for (const goal of goals.values()) {
@@ -426,6 +599,22 @@ function generateReportJson(rows, breakdowns = {}) {
     for (const task of goal.tasks.values()) {
       const activitiesOut = [];
       for (const act of task.activities.values()) {
+        // convert activity reports map to array
+        const reportsOut = [];
+        if (act._reports && act._reports instanceof Map) {
+          for (const rep of act._reports.values()) {
+            reportsOut.push({
+              id: rep.id,
+              narrative: rep.narrative,
+              status: rep.status,
+              metrics: rep.metrics,
+              new_status: rep.new_status,
+              createdAt: rep.createdAt,
+              attachments: rep.attachments || [],
+            });
+          }
+        }
+
         activitiesOut.push({
           id: act.id,
           title: act.title,
@@ -437,10 +626,11 @@ function generateReportJson(rows, breakdowns = {}) {
           weight: act.weight,
           isDone: act.isDone,
           status: act.status,
-          history: act.history
+          history: act.history,
+          reports: reportsOut,
         });
       }
-      
+
       // attach task code if present
       const tMeta = taskMeta.get(task.id) || {};
       tasksOut.push({
@@ -451,10 +641,10 @@ function generateReportJson(rows, breakdowns = {}) {
         assignee: task.assignee,
         weight: task.weight,
         activities: activitiesOut,
-        taskCode: tMeta.taskCode || null
+        taskCode: tMeta.taskCode || null,
       });
     }
-    
+
     // attach goal code and group name if present
     const gMeta = goalMeta.get(goal.id) || {};
     goalsOut.push({
@@ -465,13 +655,13 @@ function generateReportJson(rows, breakdowns = {}) {
       weight: goal.weight,
       tasks: tasksOut,
       goalCode: gMeta.goalCode || null,
-      groupName: gMeta.groupName || null
+      groupName: gMeta.groupName || null,
     });
   }
-  
+
   return {
-    generationDate: (new Date()).toISOString(),
-    goals: goalsOut
+    generationDate: new Date().toISOString(),
+    goals: goalsOut,
   };
 }
 

@@ -30,37 +30,45 @@ const envAllowed = process.env.ALLOWED_MIMETYPES
 
 const ALLOWED_MIMETYPES = envAllowed.length ? envAllowed : DEFAULT_ALLOWED;
 
-const CLOUDINARY_ENABLED =
-  !!process.env.CLOUDINARY_CLOUD_NAME &&
-  !!process.env.CLOUDINARY_API_KEY &&
-  !!process.env.CLOUDINARY_API_SECRET;
-
 try {
-  if (CLOUDINARY_ENABLED) {
-    if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
-  } else {
-    if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  }
+  if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 } catch (err) {
-  console.error("Failed to ensure upload directories exist:", { UPLOAD_DIR, TMP_DIR, err });
+  console.error("Failed to ensure upload directory exists:", {
+    UPLOAD_DIR,
+    err,
+  });
 }
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const dest = CLOUDINARY_ENABLED ? TMP_DIR : UPLOAD_DIR;
-    cb(null, dest);
-  },
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => {
-    // ✅ PRESERVE ORIGINAL NAME — only sanitize for filesystem safety
-    const ext = path.extname(file.originalname).toLowerCase();
-    const basename = path.basename(file.originalname, ext);
+    // Attempt to preserve original Unicode filename even when the
+    // Content-Disposition header bytes were interpreted as latin1.
+    // Convert from latin1 -> utf8 when it yields a valid UTF-8 string.
+    let rawName = file.originalname || "file";
+    let decodedName = rawName;
+    try {
+      const buf = Buffer.from(rawName, "binary"); // 'binary' alias uses latin1
+      const maybe = buf.toString("utf8");
+      // Use decoded only if it doesn't contain replacement characters
+      if (!maybe.includes("\uFFFD")) decodedName = maybe;
+    } catch (e) {
+      // fallback to rawName
+      decodedName = rawName;
+    }
+
+    const ext = path.extname(decodedName).toLowerCase();
+    const basename = path.basename(decodedName, ext);
 
     // Keep Unicode in basename; only replace dangerous chars
-    // \ / : * ? " < > | are unsafe on Windows → replace with _
     const safeBasename = basename.replace(/[\\\/:*?"<>|]/g, "_");
     const timestamp = Date.now();
     const uniqueName = `${timestamp}_${safeBasename}${ext}`;
-    
+
+    // Overwrite file.originalname so downstream code (DB inserts, responses)
+    // will use the corrected Unicode filename when available.
+    file.originalname = decodedName;
+
     cb(null, uniqueName);
   },
 });
@@ -73,7 +81,11 @@ async function readSystemUploadSettings() {
   try {
     const q = await db.query(
       `SELECT key, value FROM "SystemSettings" WHERE key IN ($1,$2,$3)`,
-      ["max_attachment_size_mb", "allowed_attachment_types", "allowed_mimetypes"]
+      [
+        "max_attachment_size_mb",
+        "allowed_attachment_types",
+        "allowed_mimetypes",
+      ]
     );
     for (const row of q.rows) {
       const key = row.key;
@@ -91,10 +103,18 @@ async function readSystemUploadSettings() {
             } catch {}
           }
         } else if (typeof raw === "object") {
-          if (raw.max_attachment_size_mb && typeof raw.max_attachment_size_mb === "number") out.maxMb = raw.max_attachment_size_mb;
-          else if (raw.value && typeof raw.value === "number") out.maxMb = raw.value;
+          if (
+            raw.max_attachment_size_mb &&
+            typeof raw.max_attachment_size_mb === "number"
+          )
+            out.maxMb = raw.max_attachment_size_mb;
+          else if (raw.value && typeof raw.value === "number")
+            out.maxMb = raw.value;
         }
-      } else if (key === "allowed_attachment_types" || key === "allowed_mimetypes") {
+      } else if (
+        key === "allowed_attachment_types" ||
+        key === "allowed_mimetypes"
+      ) {
         if (!raw) continue;
         if (Array.isArray(raw)) {
           out.allowed = raw.slice();
@@ -115,8 +135,11 @@ async function readSystemUploadSettings() {
   } catch (err) {
     console.error("readSystemUploadSettings failed, using env/defaults:", err);
   }
-  out.maxMb = Number.isFinite(Number(out.maxMb)) ? Math.max(1, Math.round(Number(out.maxMb))) : 10;
-  if (!Array.isArray(out.allowed) || out.allowed.length === 0) out.allowed = ALLOWED_MIMETYPES.slice();
+  out.maxMb = Number.isFinite(Number(out.maxMb))
+    ? Math.max(1, Math.round(Number(out.maxMb)))
+    : 10;
+  if (!Array.isArray(out.allowed) || out.allowed.length === 0)
+    out.allowed = ALLOWED_MIMETYPES.slice();
   return out;
 }
 
@@ -124,12 +147,18 @@ function buildFileFilter(allowed) {
   const norm = allowed.map((s) => String(s).trim());
   return function (req, file, cb) {
     try {
-      if (norm.includes(file.mimetype) || norm.includes("*/*")) return cb(null, true);
-      const docxMime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-      const xlsxMime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      if (norm.includes(file.mimetype) || norm.includes("*/*"))
+        return cb(null, true);
+      const docxMime =
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      const xlsxMime =
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       if (
-        (file.mimetype === "application/zip" || file.mimetype === "application/x-zip-compressed") &&
-        (norm.includes(docxMime) || norm.includes(xlsxMime) || norm.includes("application/pdf"))
+        (file.mimetype === "application/zip" ||
+          file.mimetype === "application/x-zip-compressed") &&
+        (norm.includes(docxMime) ||
+          norm.includes(xlsxMime) ||
+          norm.includes("application/pdf"))
       ) {
         return cb(null, true);
       }
@@ -253,4 +282,4 @@ const upload = {
   },
 };
 
-module.exports = { upload, UPLOAD_DIR, TMP_DIR, ALLOWED_MIMETYPES, CLOUDINARY_ENABLED };
+module.exports = { upload, UPLOAD_DIR, TMP_DIR, ALLOWED_MIMETYPES };

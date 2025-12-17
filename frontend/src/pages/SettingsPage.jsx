@@ -247,35 +247,10 @@ const SettingsPage = () => {
       const fd = new FormData();
       fd.append("profilePicture", profilePictureFile);
 
-      const token =
-        typeof window !== "undefined" && window.__ACCESS_TOKEN
-          ? window.__ACCESS_TOKEN
-          : localStorage.getItem("authToken");
-
-      const resp = await fetch(
-        `${import.meta.env.VITE_API_URL || ""}/api/settings/profile-picture`,
-        {
-          method: "PUT",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          credentials: "include",
-          body: fd,
-        }
-      );
-
-      if (!resp.ok) {
-        const errText = await resp.text().catch(() => null);
-        let parsed;
-        try {
-          parsed = errText ? JSON.parse(errText) : null;
-        } catch {
-          parsed = errText;
-        }
-        throw new Error(
-          parsed?.message || t("settings.errors.uploadError") || "Upload failed"
-        );
-      }
-
-      const data = await resp.json();
+      // Use shared `api` helper so refresh tokens and auth logic run automatically
+      const data = await api("/api/settings/profile-picture", "PUT", fd, {
+        isFormData: true,
+      });
 
       let returnedUser = data.user || {};
       if (!returnedUser || typeof returnedUser !== "object") returnedUser = {};
@@ -384,20 +359,26 @@ const SettingsPage = () => {
   };
 
   // Button style helpers with MD3 styling
-  const primaryBtn = "px-4 py-2.5 text-sm font-medium rounded-xl bg-green-700 hover:bg-[color-mix(in_srgb,var(--primary),white_10%)] text-white transition-all duration-200 shadow-md hover:shadow-lg";
-  const ghostBtn = "px-4 py-2.5 text-sm font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-800 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200";
-  const outlineBtn = "px-4 py-2.5 text-sm font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[color-mix(in_srgb,var(--surface),black_4%)] dark:hover:bg-gray-700 transition-all duration-200";
-  const errorBtn = "px-4 py-2.5 text-sm font-medium rounded-xl bg-[var(--error)] hover:bg-[color-mix(in_srgb,var(--error),white_10%)] text-[var(--on-error)] transition-all duration-200 shadow-md hover:shadow-lg";
-  
+  const primaryBtn =
+    "px-4 py-2.5 text-sm font-medium rounded-xl bg-green-700 hover:bg-[color-mix(in_srgb,var(--primary),white_10%)] text-white transition-all duration-200 shadow-md hover:shadow-lg";
+  const ghostBtn =
+    "px-4 py-2.5 text-sm font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-800 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200";
+  const outlineBtn =
+    "px-4 py-2.5 text-sm font-medium rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[color-mix(in_srgb,var(--surface),black_4%)] dark:hover:bg-gray-700 transition-all duration-200";
+  const errorBtn =
+    "px-4 py-2.5 text-sm font-medium rounded-xl bg-[var(--error)] hover:bg-[color-mix(in_srgb,var(--error),white_10%)] text-[var(--on-error)] transition-all duration-200 shadow-md hover:shadow-lg";
+
   // Input style helpers
-  const inputClass = "w-full md3-input text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400";
-  const labelClass = "block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1";
+  const inputClass =
+    "w-full md3-input text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400";
+  const labelClass =
+    "block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1";
 
   if (loading) {
     return (
-      <div 
+      <div
         className={`min-h-screen flex items-center justify-center p-6 transition-colors duration-300 bg-gray-50 dark:bg-gray-900 ${
-          mounted ? 'opacity-100 animate-fade-in' : 'opacity-0'
+          mounted ? "opacity-100 animate-fade-in" : "opacity-0"
         }`}
         style={{
           "--background": m3Colors.background,
@@ -439,8 +420,10 @@ const SettingsPage = () => {
   );
 
   return (
-    <div 
-      className={`min-h-screen font-sans transition-colors duration-300 bg-gray-50 dark:bg-gray-900 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+    <div
+      className={`min-h-screen font-sans transition-colors duration-300 bg-gray-50 dark:bg-gray-900 ${
+        mounted ? "opacity-100" : "opacity-0"
+      }`}
       style={{
         "--primary": m3Colors.primary,
         "--on-primary": m3Colors.onPrimary,
@@ -622,7 +605,7 @@ const SettingsPage = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
-                    <TopBar /> 
+                    <TopBar />
                   </div>
                 </div>
               </div>
@@ -641,8 +624,13 @@ const SettingsPage = () => {
                     <User className="h-5 w-5 text-[var(--on-primary-container)] text-black dark:text-green-200" />
                   </div>
                   <div>
-                    <h2 className="text-[var(--on-surface)] text-xl font-semibold text-black dark:text-white">{t("settings.profilePicture") || "Profile picture"}</h2>
-                    <p className="text-[var(--on-surface-variant)] text-sm text-gray-700 dark:text-gray-400">{t("settings.pictureHint") || "Square image works best (max 5 MB)"}</p>
+                    <h2 className="text-[var(--on-surface)] text-xl font-semibold text-black dark:text-white">
+                      {t("settings.profilePicture") || "Profile picture"}
+                    </h2>
+                    <p className="text-[var(--on-surface-variant)] text-sm text-gray-700 dark:text-gray-400">
+                      {t("settings.pictureHint") ||
+                        "Square image works best (max 5 MB)"}
+                    </p>
                   </div>
                 </div>
 
@@ -700,7 +688,8 @@ const SettingsPage = () => {
                     {profilePictureFile && (
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {profilePictureFile.name} • {formatBytes(profilePictureFile.size)}
+                          {profilePictureFile.name} •{" "}
+                          {formatBytes(profilePictureFile.size)}
                         </div>
                         <button
                           type="button"
@@ -711,7 +700,9 @@ const SettingsPage = () => {
                           {uploadingPicture ? (
                             <>
                               <div className="animate-spin rounded-full h-4 w-4 border-2 border-transparent border-t-[var(--on-primary)]"></div>
-                              <span>{t("settings.uploading") || "Uploading..."}</span>
+                              <span>
+                                {t("settings.uploading") || "Uploading..."}
+                              </span>
                             </>
                           ) : (
                             <>
@@ -733,8 +724,12 @@ const SettingsPage = () => {
                     <UserCircle className="h-5 w-5 text-[var(--on-tertiary-container)] text-black dark:text-purple-200" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold dark:text-white">{t("settings.personalInfo") || "Personal info"}</h2>
-                    <p className="text-sm dark:text-gray-400">{t("settings.personalInfoDesc")}</p>
+                    <h2 className="text-xl font-semibold dark:text-white">
+                      {t("settings.personalInfo") || "Personal info"}
+                    </h2>
+                    <p className="text-sm dark:text-gray-400">
+                      {t("settings.personalInfoDesc")}
+                    </p>
                   </div>
                 </div>
 
@@ -807,8 +802,13 @@ const SettingsPage = () => {
                     <Shield className="h-5 w-5 text-black dark:text-red-200" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold dark:text-white">{t("settings.changePassword") || "Change password"}</h2>
-                    <p className="text-sm dark:text-gray-400">{t("settings.passwordRequirements") || "Minimum 8 characters."}</p>
+                    <h2 className="text-xl font-semibold dark:text-white">
+                      {t("settings.changePassword") || "Change password"}
+                    </h2>
+                    <p className="text-sm dark:text-gray-400">
+                      {t("settings.passwordRequirements") ||
+                        "Minimum 8 characters."}
+                    </p>
                   </div>
                 </div>
 
@@ -829,7 +829,9 @@ const SettingsPage = () => {
                         t("settings.passwordPlaceholder") || "••••••••"
                       }
                       className={`w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ${
-                        oldPasswordError ? "border-[var(--error)] ring-2 ring-[var(--error-container)]" : ""
+                        oldPasswordError
+                          ? "border-[var(--error)] ring-2 ring-[var(--error-container)]"
+                          : ""
                       }`}
                     />
                     {oldPasswordError && (
@@ -859,7 +861,9 @@ const SettingsPage = () => {
                         t("settings.passwordPlaceholder") || "••••••••"
                       }
                       className={`w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ${
-                        passwordError ? "border-[var(--error)] ring-2 ring-[var(--error-container)]" : ""
+                        passwordError
+                          ? "border-[var(--error)] ring-2 ring-[var(--error-container)]"
+                          : ""
                       }`}
                     />
                     {passwordError && (

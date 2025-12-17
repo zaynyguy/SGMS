@@ -6,9 +6,16 @@ let pendingQueue = [];
 function initSocket(httpServer) {
   if (io) return io;
 
+  // Normalize FRONTEND_ORIGIN into an array (socket.io expects string/array/regex)
+  const raw = process.env.FRONTEND_ORIGIN || "";
+  const origins = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_ORIGIN || true,
+      origin: origins.length ? origins : true,
       credentials: true,
     },
   });
@@ -17,12 +24,16 @@ function initSocket(httpServer) {
     // minimal listeners: join/leave and error handling
     socket.on("join", (userId) => {
       if (!userId) return;
-      try { socket.join(`user_${userId}`); } catch (e) {}
+      try {
+        socket.join(`user_${userId}`);
+      } catch (e) {}
     });
 
     socket.on("leave", (userId) => {
       if (!userId) return;
-      try { socket.leave(`user_${userId}`); } catch (e) {}
+      try {
+        socket.leave(`user_${userId}`);
+      } catch (e) {}
     });
 
     socket.on("error", (err) => {
@@ -33,7 +44,11 @@ function initSocket(httpServer) {
   // flush any queued emits (if any)
   if (pendingQueue.length > 0) {
     for (const { userId, event, payload } of pendingQueue) {
-      try { io.to(`user_${userId}`).emit(event, payload); } catch (e) { /* ignore */ }
+      try {
+        io.to(`user_${userId}`).emit(event, payload);
+      } catch (e) {
+        /* ignore */
+      }
     }
     pendingQueue = [];
   }

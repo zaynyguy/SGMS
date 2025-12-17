@@ -10,9 +10,10 @@ const https = require("https");
 const { URL } = require("url");
 
 function encodeRFC5987(value) {
- 
-  return encodeURIComponent(value)
-    .replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return encodeURIComponent(value).replace(
+    /['()*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+  );
 }
 
 exports.downloadAttachment = async (req, res) => {
@@ -60,36 +61,33 @@ exports.downloadAttachment = async (req, res) => {
       console.error("ATTACHMENT_DOWNLOADED audit failed:", e);
     }
 
-    if (at.provider === "cloudinary" || /^https?:\/\//i.test(at.filePath)) {
-      let fileUrl = at.filePath;
-      if (!/^https?:\/\//i.test(fileUrl)) {
-        fileUrl = null;
-      }
+    // If the stored filePath is a remote URL, proxy it. Otherwise stream local file.
+    if (/^https?:\/\//i.test(at.filePath)) {
+      const fileUrl = at.filePath;
+      try {
+        const parsed = new URL(fileUrl);
+        const lib = parsed.protocol === "https:" ? https : http;
+        const requestOptions = {
+          headers: { accept: req.headers.accept || "*/*" },
+        };
 
-      if (fileUrl) {
-        try {
-          const parsed = new URL(fileUrl);
-          const lib = parsed.protocol === "https:" ? https : http;
-          const requestOptions = {
-            headers: {
-              accept: req.headers.accept || "*/*",
-            },
-          };
-
-          lib.get(fileUrl, requestOptions, (proxRes) => {
+        lib
+          .get(fileUrl, requestOptions, (proxRes) => {
             if (proxRes.statusCode >= 400) {
-              return res.status(proxRes.statusCode).send("Failed to fetch remote file");
+              return res
+                .status(proxRes.statusCode)
+                .send("Failed to fetch remote file");
             }
             const ct = proxRes.headers["content-type"];
             const cl = proxRes.headers["content-length"];
             if (ct) res.setHeader("Content-Type", ct);
             if (cl) res.setHeader("Content-Length", cl);
 
-            // ✅ RFC 5987 with fallback
+            // RFC 5987 with fallback
             const fileName = at.fileName || `attachment-${attachmentId}`;
             const asciiFallback = fileName
-              .replace(/[^\x20-\x7E]/g, "_") // strip non-ASCII
-              .replace(/"/g, "'");
+              .replace(/[^\x20-\x7E]/g, "_")
+              .replace(/\"/g, "'");
             const encoded = encodeRFC5987(fileName);
 
             res.setHeader(
@@ -100,17 +98,19 @@ exports.downloadAttachment = async (req, res) => {
             proxRes.pipe(res);
             proxRes.on("error", (err) => {
               console.error("Error piping remote file:", err);
-              try { res.end(); } catch {}
+              try {
+                res.end();
+              } catch {}
             });
-          }).on("error", (err) => {
+          })
+          .on("error", (err) => {
             console.error("Remote request failed:", err);
             res.status(502).json({ error: "Failed fetching remote file." });
           });
 
-          return;
-        } catch (err) {
-          console.error("Error proxying remote file:", err);
-        }
+        return;
+      } catch (err) {
+        console.error("Error proxying remote file:", err);
       }
     }
 
@@ -126,7 +126,7 @@ exports.downloadAttachment = async (req, res) => {
       .replace(/"/g, "'");
     const encoded = encodeRFC5987(fileName);
 
-    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader("Content-Type", at.fileType || "application/octet-stream");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`
@@ -180,12 +180,10 @@ exports.deleteAttachment = async (req, res) => {
       attachmentId,
     ]);
 
-    if (row.provider === "cloudinary") {
-      await deleteFile(row.filePath, { publicId: row.publicId || null });
-    } else {
-      const fullPath = path.join(UPLOAD_DIR, path.basename(row.filePath));
+    // Only try to delete local files; remote URLs are left untouched.
+    if (!/^https?:\/\//i.test(row.filePath)) {
       try {
-        fs.unlinkSync(fullPath);
+        await deleteFile(row.filePath);
       } catch (e) {}
     }
 

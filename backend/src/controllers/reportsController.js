@@ -84,11 +84,9 @@ exports.submitReport = async (req, res) => {
         .json({ message: "Reporting is currently disabled." });
   } catch (err) {
     console.error("Error reading reporting_active setting:", err);
-    return res
-      .status(500)
-      .json({
-        message: "Unable to determine reporting status. Contact admin.",
-      });
+    return res.status(500).json({
+      message: "Unable to determine reporting status. Contact admin.",
+    });
   }
 
   const client = await db.connect();
@@ -231,8 +229,8 @@ RETURNING *`,
       const attachmentSettings = await getAttachmentSettings();
       const maxSizeMb = Number(
         attachmentSettings?.maxSizeMb ||
-        attachmentSettings?.max_attachment_size_mb ||
-        10
+          attachmentSettings?.max_attachment_size_mb ||
+          10
       );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
       const oversized = req.files.filter((f) => {
@@ -247,14 +245,12 @@ RETURNING *`,
         for (const f of req.files) {
           try {
             fs.unlinkSync(f.path);
-          } catch (e) { }
+          } catch (e) {}
         }
         await client.query("ROLLBACK");
-        return res
-          .status(400)
-          .json({
-            message: `One or more files exceed the maximum allowed size of ${maxSizeMb} MB.`,
-          });
+        return res.status(400).json({
+          message: `One or more files exceed the maximum allowed size of ${maxSizeMb} MB.`,
+        });
       }
     }
 
@@ -273,7 +269,7 @@ VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
               uploaded.url,
               uploaded.fileType || file.mimetype,
               uploaded.provider || "local",
-              uploaded.public_id || null,
+              uploaded.publicId || null,
             ]
           );
           insertedAttachments.push(insertRes.rows[0]);
@@ -282,21 +278,15 @@ VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
           // cleanup uploaded files already done later; rollback now
           for (const entry of uploadedFiles) {
             try {
-              if (entry.uploaded && entry.uploaded.provider === "cloudinary") {
-                await deleteFile(entry.uploaded.url, {
-                  public_id: entry.uploaded.public_id,
-                });
-              } else if (
-                entry.uploaded &&
-                entry.uploaded.provider === "local"
-              ) {
+              // Only remove files we stored locally
+              if (entry.uploaded && entry.uploaded.provider === "local") {
                 try {
                   const fname = path.basename(
                     entry.uploaded.url || entry.originalFile.path || ""
                   );
                   const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
                   if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
-                } catch (e) { }
+                } catch (e) {}
               }
             } catch (cleanupErr) {
               console.error("cleanup after failed upload error:", cleanupErr);
@@ -305,7 +295,7 @@ VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
           for (const f of req.files) {
             try {
               fs.unlinkSync(f.path);
-            } catch (e) { }
+            } catch (e) {}
           }
           await client.query("ROLLBACK");
           return res.status(500).json({ error: "File upload failed." });
@@ -420,15 +410,7 @@ WHERE a.id = $1 LIMIT 1`,
     await client.query("ROLLBACK");
     for (const entry of uploadedFiles) {
       try {
-        if (entry.uploaded && entry.uploaded.provider === "cloudinary") {
-          try {
-            await deleteFile(entry.uploaded.url, {
-              public_id: entry.uploaded.public_id,
-            });
-          } catch (e) {
-            console.error(e);
-          }
-        } else if (entry.uploaded && entry.uploaded.provider === "local") {
+        if (entry.uploaded && entry.uploaded.provider === "local") {
           try {
             const fname = path.basename(
               entry.uploaded.url || entry.originalFile.path || ""
@@ -447,7 +429,7 @@ WHERE a.id = $1 LIMIT 1`,
       for (let file of req.files) {
         try {
           fs.unlinkSync(file.path);
-        } catch (e) { }
+        } catch (e) {}
       }
     }
     console.error("Error submitting report:", err);
@@ -546,6 +528,27 @@ RETURNING *`,
           return res
             .status(500)
             .json({ error: "Failed to apply report metrics." });
+        }
+
+        // After applying metrics, update progress history for this activity for the current month.
+        try {
+          const { snapshotActivity } = require("../jobs/monthlySnapshot");
+          // run best-effort (don't block response on failure)
+          setImmediate(async () => {
+            try {
+              await snapshotActivity(updatedReport.activityId);
+            } catch (e) {
+              console.error(
+                "post-apply snapshotActivity failed (background):",
+                e && e.message ? e.message : e
+              );
+            }
+          });
+        } catch (e) {
+          console.error(
+            "Failed to trigger post-apply snapshotActivity:",
+            e && e.message ? e.message : e
+          );
         }
       }
 
@@ -684,13 +687,11 @@ LIMIT $1 OFFSET $2
   }
 };
 
-
 exports.generateMasterReport = async (req, res) => {
   const groupId = req.query.groupId ? Number(req.query.groupId) : null;
   const format = (req.query.format || "").toLowerCase();
 
   try {
-
     const rows = await db.query(
       `
 SELECT g.id as goal_id,
@@ -738,12 +739,11 @@ ORDER BY g.id, t.id, a.id, r.id
 
     const raw = rows.rows || [];
 
-    
     const phRowsQ = await db.query(
       `
 SELECT entity_id::int as activity_id, snapshot_month, progress, metrics, recorded_at
 FROM "ProgressHistory"
-WHERE entity_type = 'activity'
+WHERE lower(entity_type) = 'activity'
 ${groupId ? "AND group_id = $1" : ""}
 ORDER BY entity_id, snapshot_month
 `,
@@ -768,7 +768,11 @@ ORDER BY entity_id, snapshot_month
       for (const row of raw) {
         if (!row.activity_id || !row.report_id) continue;
         // SAFETY: ensure only approved reports are used (case-insensitive check)
-        if (row.report_status && String(row.report_status).toLowerCase() !== 'approved') continue;
+        if (
+          row.report_status &&
+          String(row.report_status).toLowerCase() !== "approved"
+        )
+          continue;
         const actId = row.activity_id;
         const createdAt =
           row.report_createdat ||
@@ -791,14 +795,39 @@ ORDER BY entity_id, snapshot_month
     for (const [actId, snaps] of Object.entries(historyByActivity)) {
       const numericActId = Number(actId);
       breakdowns[numericActId] = { monthly: {}, quarterly: {}, annual: {} };
+
+      // We'll dedupe/aggregate by month: keep the latest snapshot per month (by recorded_at)
+      const monthlyLatest = new Map();
+
       for (const snap of snaps) {
         const dateStr = snap.snapshot_month || snap.recorded_at || snap.date;
         const d = new Date(dateStr);
         if (isNaN(d)) continue;
-        const monthKey = `${d.getFullYear()}-${d.getMonth() + 1}`;
-        const quarterKey = `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1
-          }`;
-        const yearKey = `${d.getFullYear()}`;
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const monthKey = `${year}-${String(month).padStart(2, "0")}`; // YYYY-MM (zero-padded)
+        const quarterKey = `${year}-Q${Math.floor((month - 1) / 3) + 1}`;
+        const yearKey = `${year}`;
+
+        const recordedAt = snap.recorded_at ? new Date(snap.recorded_at) : d;
+        const existing = monthlyLatest.get(monthKey);
+        if (
+          !existing ||
+          (recordedAt &&
+            recordedAt > new Date(existing.recorded_at || existing.date || 0))
+        ) {
+          monthlyLatest.set(monthKey, {
+            snap,
+            dateStr,
+            monthKey,
+            quarterKey,
+            yearKey,
+          });
+        }
+      }
+
+      for (const entry of monthlyLatest.values()) {
+        const { snap, dateStr, monthKey, quarterKey, yearKey } = entry;
         if (!breakdowns[numericActId].monthly[monthKey])
           breakdowns[numericActId].monthly[monthKey] = [];
         breakdowns[numericActId].monthly[monthKey].push({
@@ -807,6 +836,7 @@ ORDER BY entity_id, snapshot_month
           metrics: snap.metrics,
           recorded_at: snap.recorded_at || snap.date,
         });
+
         if (!breakdowns[numericActId].quarterly[quarterKey])
           breakdowns[numericActId].quarterly[quarterKey] = [];
         breakdowns[numericActId].quarterly[quarterKey].push({
@@ -815,6 +845,7 @@ ORDER BY entity_id, snapshot_month
           metrics: snap.metrics,
           recorded_at: snap.recorded_at || snap.date,
         });
+
         if (!breakdowns[numericActId].annual[yearKey])
           breakdowns[numericActId].annual[yearKey] = [];
         breakdowns[numericActId].annual[yearKey].push({
@@ -889,12 +920,18 @@ ORDER BY entity_id, snapshot_month
           }
 
           // Add quarterlyGoals
-          if (activityQuarterlyGoalsById[activity.id] && !activity.quarterlyGoals) {
+          if (
+            activityQuarterlyGoalsById[activity.id] &&
+            !activity.quarterlyGoals
+          ) {
             activity.quarterlyGoals = activityQuarterlyGoalsById[activity.id];
           }
 
           // <-- ADDED: Add currentMetric
-          if (activityCurrentMetricById[activity.id] && !activity.currentMetric) {
+          if (
+            activityCurrentMetricById[activity.id] &&
+            !activity.currentMetric
+          ) {
             activity.currentMetric = activityCurrentMetricById[activity.id];
           }
 

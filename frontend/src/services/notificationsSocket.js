@@ -17,7 +17,9 @@ export function initNotificationsSocket(userId, onNewNotification) {
 
   // replace socket if different user or not created
   if (socket) {
-    try { socket.disconnect(); } catch {}
+    try {
+      socket.disconnect();
+    } catch {}
     socket = null;
     currentUserId = null;
   }
@@ -25,6 +27,8 @@ export function initNotificationsSocket(userId, onNewNotification) {
   const token = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
 
   socket = io(SOCKET_URL, {
+    // don't autoConnect so we can attach listeners before connecting
+    autoConnect: false,
     withCredentials: true,
     auth: token ? { token } : undefined,
     transports: ["websocket", "polling"],
@@ -34,7 +38,9 @@ export function initNotificationsSocket(userId, onNewNotification) {
 
   // join room on connect (silent)
   socket.on("connect", () => {
-    try { socket.emit("join", userId); } catch {}
+    try {
+      socket.emit("join", userId);
+    } catch {}
   });
 
   // only log real connection errors
@@ -57,11 +63,36 @@ export function initNotificationsSocket(userId, onNewNotification) {
       console.error("Socket disconnected:", reason);
     }
   });
+
+  // now start the connection
+  try {
+    socket.connect();
+  } catch (e) {
+    console.error("Socket connect failed:", e);
+  }
 }
 
 export function disconnectNotificationsSocket() {
-  if (socket) {
-    try { socket.disconnect(); } catch {}
+  if (!socket) return;
+  try {
+    // Prefer graceful disconnect only if connected
+    if (socket.connected) {
+      socket.disconnect();
+    } else {
+      // If not connected yet (connecting/opening), remove listeners and try to close engine
+      try {
+        socket.off && socket.off();
+      } catch {}
+      try {
+        socket.io &&
+          socket.io.engine &&
+          socket.io.engine.close &&
+          socket.io.engine.close();
+      } catch {}
+    }
+  } catch (err) {
+    console.error("disconnectNotificationsSocket error:", err);
+  } finally {
     socket = null;
     currentUserId = null;
   }
