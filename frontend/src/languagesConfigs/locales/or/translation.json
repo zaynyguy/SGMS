@@ -528,7 +528,12 @@
       "reports": "Gabaasa",
       "projectManagement": "Bulchiinsa Pirojektii",
       "attachments": "Dabalata (Dabalata) jedhaman",
-      "notification": "Beeksisa"
+      "notification": "Beeksisa",
+      "userManagement": "Bulchiinsa Fayyadamtootaa",
+      "roleManagement": "Hoggansa Gahee",
+      "groupManagement": "Bulchiinsa Garee",
+      "reportReview": "Gabaasa Gamaaggama",
+      "masterReport": "Gabaasa Master"
     },
     "logoAlt": "Asxaa dhaabbatichaa",
     "appName": "SGMS",

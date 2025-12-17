@@ -678,7 +678,7 @@ const SettingsPage = () => {
                       />
                       <label
                         htmlFor="profile-picture"
-                        className="inline-flex items-center px-4 py-2 border border-gray-400 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-black dark:text-white cursor-pointer hover:bg-[var(--surface-container)] hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
+                        className="inline-flex w-full sm:w-fit justify-center items-center px-4 py-2 border border-gray-400 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-700 text-black dark:text-white cursor-pointer hover:bg-[var(--surface-container)] hover:bg-gray-200 dark:hover:bg-gray-600 transition-all"
                       >
                         <Upload className="w-4 h-4 mr-2 text-[var(--on-surface)] text-black dark:text-white" />
                         {t("settings.chooseImage") || "Choose image"}

@@ -525,7 +525,12 @@
       "reports": "ሪፖርቶች",
       "projectManagement": "የፕሮጀክት አስተዳደር",
       "attachments": "አባሪዎች",
-      "notification": "ማሳወቂያዎች"
+      "notification": "ማሳወቂያዎች",
+      "userManagement": "የተጠቃሚ አስተዳደር",
+      "roleManagement": "ሚና አስተዳደር",
+      "groupManagement": "የቡድን አስተዳደር",
+      "reportReview": "ሪፖርት ግምገማ",
+      "masterReport": "ማስተር ሪፖርት"
     },
     "logoAlt": "የኩባንያ አርማ",
     "appName": "SGMS",
