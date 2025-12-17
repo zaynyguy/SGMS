@@ -99,11 +99,11 @@ export default function SystemSettingsPage() {
     onError: "#FFFFFF",
     errorContainer: "#FFDAD6",
     onErrorContainer: "#410002",
-    background: "#FCFDF7",
-    onBackground: "#1A1C19",
-    surface: "#FCFDF7",
-    onSurface: "#1A1C19",
-    surfaceVariant: "#DDE4D9",
+    background: "#FFFFFF",
+    onBackground: "#111827",
+    surface: "#FFFFFF",
+    onSurface: "#111827",
+    surfaceVariant: "#EEF2F7",
     onSurfaceVariant: "#414941",
     outline: "#717970",
     outlineVariant: "#C1C9C0",
@@ -113,10 +113,10 @@ export default function SystemSettingsPage() {
     inverseOnSurface: "#F0F2EC",
     inversePrimary: "#77D8B8",
     surfaceContainerLowest: "#FFFFFF",
-    surfaceContainerLow: "#F8F9F4",
-    surfaceContainer: "#F2F4EF",
-    surfaceContainerHigh: "#ECF0E8",
-    surfaceContainerHighest: "#E6EAE2",
+    surfaceContainerLow: "#F8FAFB",
+    surfaceContainer: "#F4F6F8",
+    surfaceContainerHigh: "#EEF2F7",
+    surfaceContainerHighest: "#EEF2F7",
   };
 
   // Material Design 3 color system - dark theme
@@ -591,6 +591,7 @@ export default function SystemSettingsPage() {
                     type="checkbox"
                     checked={!!settings.reporting_active}
                     onChange={(e) => handleChange("reporting_active", e.target.checked)}
+                    className="bg-purple-500"
                   />
                   <span className="toggle-slider "></span>
                 </label>

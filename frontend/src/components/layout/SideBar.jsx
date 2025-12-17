@@ -52,11 +52,11 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
     onError: "#FFFFFF",
     errorContainer: "#F9DEDC",
     onErrorContainer: "#410E0B",
-    background: "#F8FAF5",
-    onBackground: "#1C1B1F",
-    surface: "#F8FAF5",
-    onSurface: "#1C1B1F",
-    surfaceVariant: "#D8E8D9",
+    background: "#FFFFFF",
+    onBackground: "#111827",
+    surface: "#FFFFFF",
+    onSurface: "#111827",
+    surfaceVariant: "#EEF2F7",
     onSurfaceVariant: "#444C45",
     outline: "#737B73",
     outlineVariant: "#C2C9C2",
@@ -66,10 +66,10 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
     inverseOnSurface: "#F4EFF4",
     inversePrimary: "#99F6E4",
     surfaceContainerLowest: "#FFFFFF",
-    surfaceContainerLow: "#F5F9F2",
-    surfaceContainer: "#F0F5ED",
-    surfaceContainerHigh: "#EBF1E9",
-    surfaceContainerHighest: "#E5ECE3",
+    surfaceContainerLow: "#F8FAFB",
+    surfaceContainer: "#F4F6F8",
+    surfaceContainerHigh: "#EEF2F7",
+    surfaceContainerHighest: "#EEF2F7",
   };
 
   // Material 3 color system - dark theme
@@ -432,20 +432,24 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
         <div className="flex flex-col h-full overflow-hidden">
           {/* Logo */}
           <div className="flex items-center justify-center p-3 h-16 border-b border-[var(--outline)]/[0.12] dark:border-gray-700 bg-[var(--background)] dark:bg-gray-800">
-            <div className="flex items-center min-w-0 transition-all duration-300">
-              <img 
-                src={companyLogo} 
-                alt={t("sidebar.logoAlt")} 
-                className={`h-8 w-8 min-w-[2rem] transition-all duration-300 ${
-                  showExpanded ? 'mr-2' : 'mx-auto'
-                }`}
-              />
-              {showExpanded && (
-                <span className="text-lg font-bold text-[var(--on-surface)] dark:text-white truncate transition-opacity duration-300">
-                  {t("sidebar.appName")}
-                </span>
-              )}
-            </div>
+              <div className="flex items-center min-w-0 transition-all duration-300">
+                <div className={`${showExpanded ? 'mr-2' : 'mx-auto'} flex-shrink-0`}> 
+                  <img
+                    src={companyLogo}
+                    alt={t("sidebar.logoAlt")}
+                    className="h-8 w-8 min-w-[2rem] transition-all duration-300"
+                    width="32"
+                    height="32"
+                    decoding="async"
+                    loading="eager"
+                  />
+                </div>
+                {showExpanded && (
+                  <span className="text-lg font-bold text-[var(--on-surface)] dark:text-white truncate transition-opacity duration-300">
+                    {t("sidebar.appName")}
+                  </span>
+                )}
+              </div>
           </div>
 
           {/* Menu Items */}
@@ -458,27 +462,8 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
           {/* User Info */}
           <div className="mt-auto p-3 bg-[var(--background)] dark:bg-gray-800 border-t border-[var(--outline)]/[0.12] dark:border-gray-700">
             <div className={`flex items-center gap-3 ${showExpanded ? "justify-start" : "justify-center"}`}>
-              {showExpanded ? (
-                <div className="flex items-center min-w-0">
-                  <div className="relative flex-shrink-0 w-8 h-8">
-                    <AuthenticatedImage
-                      src={user?.profilePicture}
-                      alt={t("sidebar.profileAlt")}
-                      fallbackName={user?.name}
-                      fallbackUsername={user?.username}
-                      fallbackSeed={user?.name || user?.username}
-                      className="w-8 h-8 rounded-full object-cover border-2 border-[var(--outline)]/[0.12] dark:border-gray-600"
-                      fallbackClassName="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium bg-[var(--primary)] text-xs dark:bg-green-600"
-                    />
-                  </div>
-
-                  <div className="min-w-0 ms-2">
-                    <div className="font-medium text-[var(--on-surface)] dark:text-white truncate text-sm leading-tight">{formatName(user?.name)}</div>
-                    <div className="text-xs text-[var(--on-surface-variant)] dark:text-gray-400 truncate">{user?.role || ""}</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="relative w-8 h-8">
+              <div className={`flex items-center ${showExpanded ? "min-w-0" : "justify-center"}`}>
+                <div className="relative flex-shrink-0 w-8 h-8">
                   <AuthenticatedImage
                     src={user?.profilePicture}
                     alt={t("sidebar.profileAlt")}
@@ -489,7 +474,14 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
                     fallbackClassName="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium bg-[var(--primary)] text-xs dark:bg-green-600"
                   />
                 </div>
-              )}
+
+                {showExpanded && (
+                  <div className="min-w-0 ms-2">
+                    <div className="font-medium text-[var(--on-surface)] dark:text-white truncate text-sm leading-tight">{formatName(user?.name)}</div>
+                    <div className="text-xs text-[var(--on-surface-variant)] dark:text-gray-400 truncate">{user?.role || ""}</div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Logout Button */}
@@ -512,7 +504,7 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
       </div>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${contentMargin} min-h-screen bg-gray-50 dark:bg-gray-900`}>
+      <div className={`transition-all duration-300 ${contentMargin} min-h-screen bg-white dark:bg-gray-900`}>
         {children}
       </div>
     </div>

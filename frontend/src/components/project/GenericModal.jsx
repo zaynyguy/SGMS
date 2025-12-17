@@ -849,11 +849,24 @@ opacity: 1;
 transform: translateY(0);
 }
 }
+
+/* Responsive modal enhancements */
+.modal-body {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Utility to make footer buttons full-width on small screens if needed */
+@media (max-width: 640px) {
+  .modal-footer-stack .btn {
+    width: 100%;
+  }
+}
 `}</style>
 
       <div
         ref={modalRef}
-        className="w-full max-w-lg bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-auto max-h-[90vh] transform transition-all duration-300 ease-out"
+        className="w-full h-full sm:h-auto max-w-3xl sm:max-w-lg bg-white dark:bg-gray-800 rounded-none sm:rounded-xl shadow-2xl overflow-hidden sm:overflow-auto max-h-[100vh] sm:max-h-[90vh] transform transition-all duration-300 ease-out flex flex-col"
         style={{
           transform: "scale(0.9)",
           opacity: 0,
@@ -885,7 +898,7 @@ transform: translateY(0);
           </button>
         </div>
 
-        <form onSubmit={submitLocal} className="px-4 py-4 space-y-4">
+        <form id="generic-modal-form" onSubmit={submitLocal} className="modal-body flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 pb-20 sm:pb-6 space-y-4">
           {(modal.type === "createActivity" ||
             modal.type === "editActivity") && (
             <>
@@ -1445,22 +1458,24 @@ transform: translateY(0);
               {inlineError}
             </div>
           )}
+        </form>
 
           {/* Enhanced footer with smooth transitions */}
-          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2 bg-white dark:bg-gray-800 sticky bottom-0 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
+          <div className="w-full px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col-reverse sm:flex-row sm:justify-end items-stretch sm:items-center gap-2 bg-white/95 dark:bg-gray-800/95 sticky bottom-0 z-10">
             <button
               type="button"
               onClick={() =>
                 setModal({ isOpen: false, type: null, data: null })
               }
-              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-600 hover:scale-105 active:scale-95"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-600 hover:scale-105 active:scale-95"
             >
               {t("project.actions.cancel")}
             </button>
             <button
+              form="generic-modal-form"
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 disabled:scale-100"
+              className="w-full sm:w-auto px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 disabled:scale-100"
             >
               {isSubmitting ? (
                 <Loader className="h-4 w-4 animate-spin mr-2" />
@@ -1470,7 +1485,6 @@ transform: translateY(0);
                 : t("project.actions.create")}
             </button>
           </div>
-        </form>
       </div>
     </div>
   );

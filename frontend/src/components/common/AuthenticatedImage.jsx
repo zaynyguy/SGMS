@@ -37,6 +37,43 @@ const gradientFromString = (s) => {
  * @param {string} [fallbackSeed] - A string to seed the gradient (e.g., user.name or user.id).
  * @param {string} [fallbackClassName] - Tailwind classes for the fallback <div> (initials/gradient).
  */
+// Simple in-memory cache for fetched image object URLs to avoid
+// refetching when the component unmounts and remounts with the same src.
+// Implement a small LRU-like eviction to prevent unbounded memory growth.
+const imageCache = new Map(); // src -> objectUrl
+const MAX_CACHE_ENTRIES = 50;
+
+function cacheSet(key, value) {
+  // Ensure most-recently-set keys are at the end of Map insertion order
+  if (imageCache.has(key)) imageCache.delete(key);
+  imageCache.set(key, value);
+
+  // Evict oldest entries if we're over the cap
+  while (imageCache.size > MAX_CACHE_ENTRIES) {
+    const oldestKey = imageCache.keys().next().value;
+    const oldestUrl = imageCache.get(oldestKey);
+    imageCache.delete(oldestKey);
+    try {
+      // Revoke the object URL for the evicted entry to free memory
+      if (oldestUrl) URL.revokeObjectURL(oldestUrl);
+    } catch (e) {
+      /* ignore revocation errors */
+    }
+  }
+}
+
+function clearImageCache() {
+  for (const url of imageCache.values()) {
+    try { URL.revokeObjectURL(url); } catch (e) { /* ignore */ }
+  }
+  imageCache.clear();
+}
+
+// Optionally clear cache on page unload to release memory for long-lived sessions
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", clearImageCache);
+}
+
 const AuthenticatedImage = ({
   src,
   alt,
@@ -46,13 +83,23 @@ const AuthenticatedImage = ({
   fallbackSeed = "user",
   fallbackClassName = "w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold",
 }) => {
-  const [objectUrl, setObjectUrl] = useState(null);
-  const [status, setStatus] = useState("loading"); // 'loading', 'loaded', 'error'
+  // Initialize state from cache when possible to avoid an intermediate fallback render
+  const [objectUrl, setObjectUrl] = useState(() => (imageCache.has(src) ? imageCache.get(src) : null));
+  const [status, setStatus] = useState(() => (imageCache.has(src) ? "loaded" : "loading")); // 'loading', 'loaded', 'error'
   const objectUrlRef = useRef(null); // To store the URL for revocation
 
   useEffect(() => {
-    // Cleanup previous object URL if src changes
-    if (objectUrlRef.current) {
+    // If we have a cached object URL for this src, reuse it and skip fetch
+    if (imageCache.has(src)) {
+      const cached = imageCache.get(src);
+      // When reusing, move to the end of insertion order to mark as recently used
+      try { cacheSet(src, cached); } catch (e) { /* ignore */ }
+      setObjectUrl(cached);
+      setStatus("loaded");
+      return;
+    }
+    // Cleanup previous object URL if it wasn't cached
+    if (objectUrlRef.current && !Array.from(imageCache.values()).includes(objectUrlRef.current)) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
@@ -88,6 +135,8 @@ const AuthenticatedImage = ({
 
         const url = URL.createObjectURL(blob);
         objectUrlRef.current = url; // Store for cleanup
+        // Cache the object URL so future mounts can reuse it (LRU-set)
+        try { cacheSet(src, url); } catch (e) { /* ignore cache errors */ }
         setObjectUrl(url);
         setStatus("loaded");
       } catch (error) {
@@ -103,36 +152,50 @@ const AuthenticatedImage = ({
     // Cleanup function
     return () => {
       isCancelled = true;
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
+      // Only revoke if this objectUrl isn't cached (others may still use it)
+      if (objectUrlRef.current && !Array.from(imageCache.values()).includes(objectUrlRef.current)) {
+        try { URL.revokeObjectURL(objectUrlRef.current); } catch (e) { /* ignore */ }
         objectUrlRef.current = null;
       }
     };
   }, [src]); // Re-run whenever the src URL changes
 
-  // STATE: Image is successfully loaded
-  if (status === "loaded" && objectUrl) {
-    return <img src={objectUrl} alt={alt} className={className} />;
-  }
-
-  // STATE: Loading or Error
-  // Show the fallback (initials/gradient)
+  // Prepare fallback content
   const initials = initialsFromName(fallbackName, fallbackUsername);
   const gradient = gradientFromString(fallbackSeed || fallbackName || fallbackUsername);
 
+  // Render both the fallback and the image in the same container so we can
+  // crossfade between them instead of unmounting/remounting nodes.
   return (
     <div
-      className={fallbackClassName || className} // Use fallback class, or default to img class
-      style={{ background: gradient }}
+      className={`relative inline-block ${fallbackClassName || className}`}
       aria-label={alt}
       title={alt}
+      style={{ overflow: "hidden", background: gradient }}
     >
-      {/* Show initials. If no initials, show a generic user icon */}
-      {initials ? (
-        <span className="text-lg">{initials}</span>
-      ) : (
-        <User className="w-1/2 h-1/2 opacity-80" />
+      {/* Image (absolutely positioned to cover the container) */}
+      {objectUrl && (
+        <img
+          src={objectUrl}
+          alt={alt}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-150 ${
+            status === "loaded" ? "opacity-100" : "opacity-0"
+          }`}
+        />
       )}
+
+      {/* Fallback (initials or icon) */}
+      <div
+        className={`absolute inset-0 flex items-center justify-center transition-opacity duration-150 ${
+          status === "loaded" ? "opacity-0 pointer-events-none" : "opacity-100"
+        }`}
+      >
+        {initials ? (
+          <span className="text-lg font-semibold text-white">{initials}</span>
+        ) : (
+          <User className="w-1/2 h-1/2 opacity-80 text-white" />
+        )}
+      </div>
     </div>
   );
 };

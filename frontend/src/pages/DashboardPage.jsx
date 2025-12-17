@@ -41,11 +41,11 @@ const App = () => {
     onError: "#FFFFFF",
     errorContainer: "#F9DEDC",
     onErrorContainer: "#410E0B",
-    background: "#F8FAF5",
-    onBackground: "#1C1B1F",
-    surface: "#F8FAF5",
-    onSurface: "#1C1B1F",
-    surfaceVariant: "#D8E8D9",
+    background: "#FFFFFF",
+    onBackground: "#111827",
+    surface: "#FFFFFF",
+    onSurface: "#111827",
+    surfaceVariant: "#EEF2F7",
     onSurfaceVariant: "#444C45",
     outline: "#737B73",
     outlineVariant: "#C2C9C2",
@@ -55,10 +55,10 @@ const App = () => {
     inverseOnSurface: "#F4EFF4",
     inversePrimary: "#99F6E4",
     surfaceContainerLowest: "#FFFFFF",
-    surfaceContainerLow: "#F5F9F2",
-    surfaceContainer: "#F0F5ED",
-    surfaceContainerHigh: "#EBF1E9",
-    surfaceContainerHighest: "#E5ECE3",
+    surfaceContainerLow: "#F8FAFB",
+    surfaceContainer: "#F4F6F8",
+    surfaceContainerHigh: "#EEF2F7",
+    surfaceContainerHighest: "#EEF2F7",
   };
 
   // Material Design 3 color system - dark theme
@@ -1104,7 +1104,7 @@ const App = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 24px 24px rgba(0,0,0,0.18); 
         }
       `}</style>
-      <div className="max-w-8xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Card-style Header */}
         <div className="mb-6">
   <div className="rounded-2xl bg-[var(--surface-container-low)] dark:bg-gray-800 surface-elevation-3 px-4 py-4">

@@ -851,6 +851,9 @@ const openSubmitModal = useCallback(
                 {/* Search Bar */}
                 <div className="flex-1 w-full">
                   <div className="relative">
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-[var(--on-surface-variant)] dark:text-gray-400" />
+                    </div>
                     <input
                       type="search"
                       value={searchTerm}
@@ -864,11 +867,8 @@ const openSubmitModal = useCallback(
                         }
                       }}
                       placeholder={t("project.searchPlaceholder") || "Search goals..."}
-                      className="md3-input w-full pl-10 text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 focus:ring-0"
+                      className="w-full pl-10 rounded-2xl text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 focus:ring-0"
                     />
-                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 text-[var(--on-surface-variant)] dark:text-gray-400" />
-                    </div>
                     {searchTerm && (
                       <button
                         type="button"
@@ -882,7 +882,6 @@ const openSubmitModal = useCallback(
                         }}
                         className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-colors"
                       >
-                        <X className="h-4 w-4 text-[var(--on-surface-variant)] dark:text-gray-400" />
                       </button>
                     )}
                   </div>
