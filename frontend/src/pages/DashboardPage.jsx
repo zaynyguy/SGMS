@@ -451,7 +451,7 @@ const App = () => {
                   {formatValue(val, true)}
                 </text>
                 {/* X-axis label below bar */}
-                <text
+                {/* <text
                   x={barWidth / 2}
                   y={innerHeight + 26}
                   fontSize="11"
@@ -466,7 +466,7 @@ const App = () => {
                   }}
                 >
                   {label}
-                </text>
+                </text> */}
               </g>
             );
           })}

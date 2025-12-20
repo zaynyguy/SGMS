@@ -483,7 +483,7 @@ const App = ({ showToast: propShowToast }) => {
               <input
                 type="text"
                 placeholder={t("audit.searchPlaceholder")}
-                className="block w-full pl-10 pr-3.5 py-2.5 text-sm border border-[var(--outline-variant)] dark:border-gray-600 rounded-xl leading-5 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] transition-all duration-300"
+                className="block w-full pl-10 pr-3.5 py-2.5 text-sm border border-[var(--outline-variant)] dark:border-gray-600 rounded-xl leading-5 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 transition-all duration-300"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label={t("audit.searchAria")}

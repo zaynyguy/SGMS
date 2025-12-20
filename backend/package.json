@@ -8,6 +8,7 @@
     "start": "node src/server.js"
   },
   "dependencies": {
+    "abushakir": "^1.5.2",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "child_process": "^1.0.2",
@@ -22,6 +23,7 @@
     "helmet": "^7.1.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
+    "kenat": "^3.2.0",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "node-cron": "^4.2.1",

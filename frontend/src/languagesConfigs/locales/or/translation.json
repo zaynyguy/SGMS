@@ -323,12 +323,31 @@
       "currentLabel": "Amma", 
       "previousText": "Duraa", 
       "quarterlyGoals": "Galmoota Kurmaana Kurmaana",
+      "yearRequired": "Maaloo waggaa tokko galchi", 
+      "monthRequired": "Maaloo ji'a filadhu", 
+      "quarterRequired": "Maaloo yoo xiqqaate afurtama tokko filadhu", 
+      "selectMonth": "Ji'a filadhu", 
+      "selectYear": "Bara filadhu", 
+      "assignMonths": "Ji'oota ramadi", 
+      "calendarSystem": "Sirna Kaalaandarii", 
+      "itophiyaa": "Itoophiyaa", 
+      "gregorian": "Girigooriyaan",
+      "monthLabel": "Ji'a", 
+      "selectQuarters": "Kudhaama filadhu", 
+      "yearLabel": "Waggaa", 
+      "noMonthsAssigned": "Ji'oonni hin ramadamne",
       "granularities": {
         "monthly": "Ji'a ji'aan",
         "quarterly": "Kurmaana kurmaanaan",
         "annual": "Waggaatti"
       },
-      "periodColumns": "{{count}} turtii(wwan) — {{granularity}}"
+      "periodColumns": "{{count}} turtii(wwan) — {{granularity}}",
+      "metrics": {
+        "target": "Xiyyeeffannoo",
+        "current": "Yeroo ammaa",
+        "previous": "Kana dura",
+        "quarterly": "Kurmaana kurmaana"
+      }
     },
     "table": {
       "title": "Mata-duree",
@@ -586,6 +605,8 @@
     "unassigned": "Hin ramadamne",
     "none": "— Jijjiiramni hin jiru —",
     "loadingTasks": "okutaho emirimo",
+    "quarterFilter": "Kurmaana",
+    "all": "Hunda",
     "sort": {
       "label": "Sassaabuu",
       "title": "Mata duree",

@@ -322,12 +322,31 @@
       "currentLabel": "Current",
       "previousText": "Previous",
       "quarterlyGoals": "Quarterly Goals",
+      "yearRequired": "Please enter a year",
+      "monthRequired": "Please select a month",
+      "quarterRequired": "Please select at least one quarter",
+      "selectMonth": "Select month",
+      "selectYear": "Select year",
+      "assignMonths": "Assign months",
+      "calendarSystem": "Calendar System",
+      "ethiopian": "Ethiopian",
+      "gregorian": "Gregorian",
+      "monthLabel": "Month",
+      "selectQuarters": "Select quarters",
+      "yearLabel": "Year",
+      "noMonthsAssigned": "No months assigned",
       "granularities": {
         "monthly": "Monthly",
         "quarterly": "Quarterly",
         "annual": "Annual"
       },
-      "periodColumns": "{{count}} period(s) — {{granularity}}"
+      "periodColumns": "{{count}} period(s) — {{granularity}}",
+      "metrics": {
+        "target": "Target",
+        "current": "Current",
+        "previous": "Previous",
+        "quarterly": "Quarterly"
+      }
     },
     "table": {
       "title": "Title",
@@ -584,6 +603,8 @@
     "unassigned": "Unassigned",
     "none": "— No change —",
     "loadingTasks": "Loading tasks",
+    "quarterFilter": "Quarter",
+    "all": "All",
     "sort": {
       "label": "Sort",
       "title": "Title",

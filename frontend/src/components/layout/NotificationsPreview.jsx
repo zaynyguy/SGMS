@@ -629,7 +629,7 @@ export default function NotificationPreview({
             showExpanded ? "justify-normal" : "justify-center"
           } cursor-pointer sm:hover:bg-gray-100 sm:dark:hover:bg-gray-800 hover:bg-green-200 dark:hover:bg-indigo-400 transform hover:scale-110 active:scale-95 group/bell`}
         >
-          <div className="relative flex items-center justify-center w-6 sm:text-gray-700 sm:dark:text-gray-300 text-green-700 dark:text-indigo-900 transition-colors duration-200">
+          <div className="relative flex items-center justify-center w-6 text-green-700 dark:text-indigo-800 sm:text-gray-700 sm:dark:text-gray-300 transition-colors duration-200">
             <Bell
               size={24}
               className="transition-transform duration-300 group-hover/bell:rotate-12"

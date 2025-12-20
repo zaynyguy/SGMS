@@ -322,12 +322,31 @@
       "previousText": "የቀድሞ",
       "quarterlyGoals": "የሩብ ግቦች",
       "granularityLabel": "ግራኑላርነት",
+      "yearRequired": "እባክዎ ዓመት ያስገቡ",
+      "monthRequired": "እባክዎ ወር ይምረጡ",
+      "quarterRequired": "እባክዎ በየሩብ ዓመቱ ተጠቃሚዎችን ይምረጡ",
+      "selectMonth": "ወር ይምረጡ",
+      "selectYear": "ዓመት ይምረጡ",
+      "assignMonths": "ወሮችን አስገባ",
+      "calendarSystem": "የቀን መቁጠሪያ ስርዓት",
+      "ethiopian": "ኢትዮጵያዊ",
+      "gregorian": "ግሪጎሪያን",
+      "monthLabel": "ወርሃዊ",
+      "selectQuarters": "ሩብ ይምረጡ",
+      "yearLabel": "ዓመት",
+      "noMonthsAssigned": "ምንም ወር አልተመደበም",
       "granularities": {
         "monthly": "ወርሃዊ",
         "quarterly": "በየሩብ ዓመቱ",
         "annual": "አመታዊ"
       },
-      "periodColumns": "{{count}} ጊዜ(ዎች) — {{granularity}}"
+      "periodColumns": "{{count}} ጊዜ(ዎች) — {{granularity}}",
+      "metrics": {
+        "target": "ታርጌት",
+        "current": "አሁን",
+        "previous": "Previous",
+        "quarterly": "Quarterly"
+      }
     },
     "table": {
       "title": "ርዕስ",
@@ -583,6 +602,8 @@
     "unassigned": "ያልተመደበ",
     "none": "- ምንም ለውጥ የለም -",
     "loadingTasks": "የመጫኛ ተግባራት",
+    "quarterFilter": "ሩብ",
+    "all": "ሁሉም",
     "sort": {
       "label": "መደርደር",
       "title": "ርዕስ",

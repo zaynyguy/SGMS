@@ -867,7 +867,7 @@ const openSubmitModal = useCallback(
                         }
                       }}
                       placeholder={t("project.searchPlaceholder") || "Search goals..."}
-                      className="w-full pl-10 rounded-2xl text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 focus:ring-0"
+                      className="w-full pl-10 rounded-2xl text-[var(--on-surface)] dark:text-white bg-white dark:bg-gray-800 placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 border"
                     />
                     {searchTerm && (
                       <button
@@ -890,7 +890,7 @@ const openSubmitModal = useCallback(
                 <div className="flex flex-wrap gap-2">
                   {/* Sort controls */}
                   <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 hidden md:block">
+                    <label className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400">
                       {t("project.sort.label") || "Sort"}
                     </label>
                     <select
@@ -941,7 +941,7 @@ const openSubmitModal = useCallback(
                         isRefreshing ? "animate-spin" : ""
                       }`}
                     />
-                    <span className="hidden md:inline text-sm">{t("project.refresh")}</span>
+                    <span className="inline text-sm">{t("project.refresh")}</span>
                   </button>
                   {/* Add Goal button (visible on larger screens) */}
                   {canManageGTA && (
@@ -953,7 +953,7 @@ const openSubmitModal = useCallback(
                       aria-label="Add goal"
                     >
                       <Plus className="h-4 w-4" />
-                      <span className="hidden md:inline text-sm">{t("project.addGoalLabel")}</span>
+                      <span className="inline text-sm">{t("project.addGoalLabel")}</span>
                     </button>
                   )}
                 </div>
@@ -978,7 +978,7 @@ const openSubmitModal = useCallback(
                           }
                         `}
                       >
-                        {q === 0 ? t("project.all", "All") : `Q${q}`}
+                        {q === 0 ? t("project.all", "All") : `${t("project.quarterFilter", "All")} ${q}`}
                       </button>
                     ))}
                   </div>

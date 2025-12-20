@@ -568,7 +568,7 @@ const App = ({ reportId }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={t("attachments.searchPlaceholder")}
-              className="pl-10 pr-10 py-2.5 text-sm w-full rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--primary)] transition-all duration-300 ease-in-out focus:bg-[var(--surface-container)] dark:focus:bg-gray-600"
+              className="pl-10 pr-10 py-2.5 text-sm w-full rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white transition-all duration-300 ease-in-out focus:bg-[var(--surface-container)] dark:focus:bg-gray-600"
               aria-label={t("attachments.searchAria")}
             />
             {searchTerm && (
