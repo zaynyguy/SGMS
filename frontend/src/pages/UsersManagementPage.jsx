@@ -778,11 +778,11 @@ const handleSaveUser = async (e) => {
             <button
               type="button"
               onClick={() => handleOpenUserModal(null)}
-              className={`${primaryBtn} w-full justify-center sm:w-auto sm:flex sm:items-center sm:gap-2`}
               disabled={submitting}
               aria-label={t("admin.users.addUser")}
+              className={`${primaryBtn} inline-flex items-center justify-center w-full sm:w-auto gap-2`}
             >
-              <UserPlus size={18} className="sm:mr-1.5" />
+              <UserPlus size={18} aria-hidden="true" />
               <span>{t("admin.users.addUser")}</span>
             </button>
           </div>

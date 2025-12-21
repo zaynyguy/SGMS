@@ -891,10 +891,11 @@ function GroupsManager() {
           {/* Action Button */}
           <div className="flex-shrink-0">
             <button
+              type="button"
               onClick={openCreateModal}
-              className="w-full justify-center rounded-xl bg-green-900 dark:bg-indigo-900 px-4 py-2.5 text-sm font-medium text-white dark:text-indigo-200 shadow-md transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg sm:w-auto sm:flex-0 sm:flex sm:items-center sm:gap-2"
+              className="inline-flex items-center justify-center w-full sm:w-auto rounded-xl bg-green-900 dark:bg-indigo-900 px-4 py-2.5 text-sm font-medium text-white dark:text-indigo-200 shadow-md transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg gap-2"
             >
-              <Plus size={18} aria-hidden="true" className="sm:mr-1.5" />
+              <Plus size={18} aria-hidden="true" />
               <span>{t("groups.newGroup")}</span>
             </button>
           </div>
