@@ -335,6 +335,7 @@
       "selectQuarters": "ሩብ ይምረጡ",
       "yearLabel": "ዓመት",
       "noMonthsAssigned": "ምንም ወር አልተመደበም",
+      "groupSearchLabel": "የፍለጋ ቡድን",
       "granularities": {
         "monthly": "ወርሃዊ",
         "quarterly": "በየሩብ ዓመቱ",
@@ -344,9 +345,30 @@
       "metrics": {
         "target": "ታርጌት",
         "current": "አሁን",
-        "previous": "Previous",
-        "quarterly": "Quarterly"
-      }
+        "previous": "ቀዳሚ",
+        "quarterly": "ሩብ ዓመት"
+      },
+      "metricsName": "ሜትሪክስ",
+      "status": {
+        "completed": "ተጠናቋል",
+        "inprogress": "በሂደት ላይ",
+        "pending": "በመጠባበቅ ላይ",
+        "unknown": "—"
+      },
+       "charts": {
+        "goalProgress": "የግብ ሂደት"
+      },
+      "goals": {
+        "weight": "ጠቅላላ የግብ ክብደት"
+      },
+      "goalStatus": {
+        "inProgress": "በሂደት ላይ",
+        "completed": "ተጠናቋል"
+      },
+      "task": {
+        "weight": "ጠቅላላ የተግባር ክብደት"
+      },
+      "dataTable": "የውሂብ ሰንጠረዥ"
     },
     "table": {
       "title": "ርዕስ",

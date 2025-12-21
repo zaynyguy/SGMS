@@ -615,12 +615,12 @@ const App = () => {
             <div class="timeline-content">
               <div class="timeline-header">
                 <span class="report-id">#${escapeHtml(String(r.id))}</span>
-                <span class="status-pill status-${String(r.status || "").toLowerCase()}">${escapeHtml(String(r.status || "—"))}</span>
+                <span class="status-pill status-${String(r.status || "").toLowerCase()}">${escapeHtml(String(r.status || "unknown").toLowerCase())}</span>
                 <span class="report-date">${r.createdAt ? escapeHtml(new Date(r.createdAt).toLocaleDateString()) : ""}</span>
               </div>
               <div class="report-text">${escapeHtml(r.narrative || "")}</div>
-              ${r.metrics ? `<div class="report-meta">Metrics: ${escapeHtml(JSON.stringify(r.metrics))}</div>` : ''}
-            </div>
+              ${r.metrics ? `<div class="report-meta">${escapeHtml(t("reports.master.metricsName"))}: ${escapeHtml(JSON.stringify(r.metrics))}</div>` : ''}     
+              </div>
           </div>
         `).join("");
 
@@ -648,7 +648,7 @@ const App = () => {
                 <span class="progress-text">${escapeHtml(String(task.progress ?? 0))}%</span>
                 ${createProgressBar(task.progress, 'sm')}
               </div>
-              <span class="badge-weight">w: ${escapeHtml(String(task.weight ?? "-"))}</span>
+              ${escapeHtml(t("reports.master.task.weight"))}: ${escapeHtml(String(task.weight ?? "-"))}
             </div>
           </div>
           <div class="activities-grid">
@@ -660,24 +660,35 @@ const App = () => {
 
     return `
       <div class="goal-section">
-        <div class="goal-banner">
-          <div class="goal-info">
-            <h2>${escapeHtml(`${goalNum}. ${g.title}`)}</h2>
-            <div class="goal-tags">
-              <span class="tag">${escapeHtml(String(g.status || "In Progress"))}</span>
-              <span class="tag">Weight: ${escapeHtml(String(g.weight ?? "-"))}</span>
-            </div>
-          </div>
-          <div class="goal-chart">
-            <div class="chart-label">Goal Progress</div>
-            <div class="chart-val">${escapeHtml(String(goalProgress))}%</div>
-            ${createProgressBar(goalProgress, 'md')}
-          </div>
-        </div>
-        <div class="goal-content">
-          ${tasksHtml}
-        </div>
+  <div class="goal-banner">
+    <div class="goal-info">
+      <h2>${escapeHtml(`${goalNum}. ${g.title}`)}</h2>
+
+      <div class="goal-tags">
+        <span class="tag">
+          ${escapeHtml(g.status)}
+        </span>
+        <span class="tag">
+          ${escapeHtml(t("reports.master.goals.weight"))}: ${escapeHtml(String(g.weight ?? "-"))}
+        </span>
       </div>
+    </div>
+
+    <div class="goal-chart">
+      <div class="chart-label">
+        ${escapeHtml(t("reports.master.charts.goalProgress"))}
+      </div>
+      <div class="chart-val">
+        ${escapeHtml(String(goalProgress))}%
+      </div>
+      ${createProgressBar(goalProgress, "md")}
+    </div>
+  </div>
+
+  <div class="goal-content">
+    ${tasksHtml}
+  </div>
+</div>
     `;
   }).join("");
 
@@ -1244,7 +1255,7 @@ const App = () => {
     URL.revokeObjectURL(url);
   }
   
-  async function exportPDF() {
+  function exportPDF() {
     if (!master) return alert(t("reports.master.loadFirstAlert"));
     const w = window.open("", "_blank");
     w.document.write(generateHtmlForPrint());

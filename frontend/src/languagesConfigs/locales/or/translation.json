@@ -336,6 +336,7 @@
       "selectQuarters": "Kudhaama filadhu", 
       "yearLabel": "Waggaa", 
       "noMonthsAssigned": "Ji'oonni hin ramadamne",
+      "groupSearchLabel": "Garee barbaadi",
       "granularities": {
         "monthly": "Ji'a ji'aan",
         "quarterly": "Kurmaana kurmaanaan",
@@ -347,7 +348,28 @@
         "current": "Yeroo ammaa",
         "previous": "Kana dura",
         "quarterly": "Kurmaana kurmaana"
-      }
+      },
+      "metricsName": "Safartuuwwan",
+      "status": {
+        "completed": "Xumurameera",
+        "inprogress": "Adeemsa Irra Jira",
+        "pending": "Eeggataa kan jiru",
+        "unknown": "—"
+      },
+       "charts": {
+        "goalProgress": "Adeemsa Galma"
+      },
+      "goals": {
+        "weight": "Ulfaatina Galma Waliigalaa"
+      },
+      "goalStatus": {
+        "inProgress": "Adeemsa Irra Jira",
+        "completed": "Xumurameera"
+      },
+      "task": {
+        "weight": "Ulfaatina Hojii Waliigalaa"
+      },
+      "dataTable": "Gabatee Daataa"
     },
     "table": {
       "title": "Mata-duree",

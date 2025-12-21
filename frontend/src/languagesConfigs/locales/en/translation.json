@@ -335,6 +335,7 @@
       "selectQuarters": "Select quarters",
       "yearLabel": "Year",
       "noMonthsAssigned": "No months assigned",
+      "groupSearchLabel": "Search Group",
       "granularities": {
         "monthly": "Monthly",
         "quarterly": "Quarterly",
@@ -346,7 +347,28 @@
         "current": "Current",
         "previous": "Previous",
         "quarterly": "Quarterly"
-      }
+      },
+      "metricsName": "Metrics",
+      "status": {
+        "completed": "Completed",
+        "inprogress": "In Progress",
+        "pending": "Pending",
+        "unknown": "—"
+      },
+       "charts": {
+        "goalProgress": "Goal Progress"
+      },
+      "goals": {
+        "weight": "Total Goal Weight"
+      },
+      "goalStatus": {
+        "inProgress": "In Progress",
+        "completed": "Completed"
+      },
+      "task": {
+        "weight": "Total Task Weight"
+      },
+      "dataTable": "Data Table"
     },
     "table": {
       "title": "Title",
