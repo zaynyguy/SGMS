@@ -722,7 +722,7 @@ const handleSaveUser = async (e) => {
           </div>
         </div>
       )}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="min-w-7xl mx-auto px-4 py-6">
         <div className="mb-6">
   <div className="md3-container surface-elevation-3">
     <div className="bg-[var(--surface-container-low)] dark:bg-gray-800">
