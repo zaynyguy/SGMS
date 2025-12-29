@@ -359,7 +359,7 @@ export default function NotificationsPage() {
         }
       `}</style>
       
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="min-w-7xl mx-auto p-4">
         {/* Card-style Header with Material 3 elevation */}
         <div className="mb-6">
           <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 shadow-xl p-4">

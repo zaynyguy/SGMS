@@ -12,7 +12,7 @@ import { markAllNotificationsRead } from "../api/notifications";
 import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
 import { useNavigate } from "react-router-dom";
-import { Home } from "lucide-react";
+import { Home, Trophy, ListChecks, List, FileText, Users, PieChartIcon, ClipboardCheck, AlertCircle, Bell } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import useProjectApi from "../hooks/useProjectApi";
 
@@ -263,224 +263,216 @@ const App = () => {
 
   /* --- Charts (enhanced with animations) --- */
   /* GroupBarChart - large rounded bars, gridlines, compact ticks, drop-in */
-  const GroupBarChart = ({ data = [], height = 320, limit = null, barWidth = 72, gap = 28, yLabel = "Population" }) => {
+  const GroupBarChart = ({
+  data = [],
+  height = 320,
+  limit = null,
+  barWidth = 72,
+  gap = 28,
+  yLabel = "Progress (%)"
+}) => {
   const [animated, setAnimated] = useState(false);
+  const [tooltip, setTooltip] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    content: ""
+  });
+
   useEffect(() => {
-    // trigger animation on data change
     setAnimated(false);
     const t = setTimeout(() => setAnimated(true), 40);
     return () => clearTimeout(t);
   }, [data]);
+
   if (!Array.isArray(data) || data.length === 0) {
-    return <div className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">No chart data</div>;
+    return (
+      <div className="text-sm text-[var(--on-surface-variant)]">
+        No chart data
+      </div>
+    );
   }
+
   const display = limit ? data.slice(0, limit) : data;
-  const values = display.map((d) => Math.max(0, Number(d.value ?? d.progress ?? d.count ?? 0)));
+  const values = display.map(d =>
+    Math.max(0, Number(d.value ?? d.progress ?? 0))
+  );
   const maxValue = Math.max(1, ...values);
-  const itemCount = display.length;
-  // Calculate dimensions
-  const chartPadding = { top: 40, right: 20, bottom: 60, left: 60 };
-  const chartWidth = itemCount * (barWidth + gap) - gap;
-  const svgWidth = Math.max(chartPadding.left + chartWidth + chartPadding.right, 300);
-  const svgHeight = chartPadding.top + height + chartPadding.bottom;
-  const innerHeight = height;
-  // Calculate y-axis ticks (5 ticks including 0)
+
+  /* Dimensions */
+  const padding = { top: 40, right: 20, bottom: 95, left: 60 }; // ↑ Increased bottom padding slightly
+  const chartWidth = display.length * (barWidth + gap) - gap;
+  const svgWidth = Math.max(padding.left + chartWidth + padding.right, 320);
+  const svgHeight = padding.top + height + padding.bottom;
+
+  /* Axis ticks */
   const ticks = 5;
-  const tickValues = new Array(ticks).fill(0).map((_, i) => Math.round((maxValue * (ticks - 1 - i)) / (ticks - 1)));
-  // Format numbers compactly
+  const tickValues = Array.from({ length: ticks }, (_, i) =>
+    Math.round((maxValue * (ticks - 1 - i)) / (ticks - 1))
+  );
+
   const formatValue = (n) => {
-    if (n >= 1000000) return `${(n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1)}M`;
-    if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}K`;
-    return String(n);
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return `${n}`;
   };
-  // Get color for each bar (using a cohesive palette)
-  const getColorForIndex = (index) => {
-    const colors = [
-      '#5470C6', // Blue
-      '#91CC75', // Green
-      '#FAC858', // Yellow
-      '#EE6666', // Red
-      '#73C0DE', // Cyan
-      '#3BA272', // Teal
-      '#FC8452'  // Orange
-    ];
-    return colors[index % colors.length];
-  };
-  // Handle tooltip display
-  const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
-  const handleMouseMove = (e, name, value, color) => {
+
+  const getColor = (i) => `hsl(${(i * 47) % 360}, 70%, 55%)`;
+
+  const handleMouseMove = (e, label, value, color) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
     setTooltip({
       visible: true,
-      x: x + 10,
-      y: y + 10,
+      x: e.clientX - rect.left + 12,
+      y: e.clientY - rect.top + 12,
       content: `
-        <div style="padding: 6px; background: var(--surface-container-low); border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-          <div style="color: ${color}; font-weight: 500; margin-bottom: 4px;">${name}</div>
-          <div style="font-weight: 600;">${formatValue(value)}%</div>
-          <div style="color: var(--on-surface-variant); font-size: 11px; margin-top: 2px;">${yLabel}</div>
+        <div style="
+          padding:6px;
+          background:var(--surface-container);
+          border-radius:6px;
+          box-shadow:0 4px 12px rgba(0,0,0,.15);
+          font-size:12px">
+          <div style="color:${color};font-weight:600">${label}</div>
+          <div style="margin-top:2px">${formatValue(value)}%</div>
         </div>
       `
     });
   };
-  const handleMouseLeave = () => {
-    setTooltip({ visible: false, x: 0, y: 0, content: '' });
-  };
+
   return (
-    <div className="w-full overflow-x-auto" role="img" aria-label={`${yLabel} bar chart`} style={{ position: 'relative' }}>
+    <div className="w-full overflow-x-auto relative">
       <svg
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         preserveAspectRatio="xMidYMid meet"
-        className="w-full"
-        aria-hidden={false}
-        onMouseLeave={handleMouseLeave}
+        className="block min-w-max"
+        onMouseLeave={() => setTooltip({ visible: false })}
       >
-        {/* Grid lines and background */}
+        {/* Background */}
         <rect
-          x={chartPadding.left - 10}
-          y={chartPadding.top - 10}
-          width={svgWidth - chartPadding.left - chartPadding.right + 20}
-          height={innerHeight + 20}
-          rx="4"
+          x={padding.left - 10}
+          y={padding.top - 10}
+          width={svgWidth - padding.left - padding.right + 20}
+          height={height + 20}
+          rx="6"
           className="fill-gray-200 dark:fill-gray-900"
           stroke="var(--outline-variant)"
-          strokeWidth="1"
         />
-        {/* Horizontal grid lines */}
+
+        {/* Grid & Y-axis */}
         {tickValues.map((tv, i) => {
-          const y = chartPadding.top + (innerHeight * i) / (ticks - 1);
+          const y = padding.top + (height * i) / (ticks - 1);
           return (
             <g key={i}>
               <line
-                x1={chartPadding.left}
-                x2={svgWidth - chartPadding.right}
+                x1={padding.left}
+                x2={svgWidth - padding.right}
                 y1={y}
                 y2={y}
-                stroke={i === ticks - 1 ? "var(--outline)" : "var(--outline-variant)"}
-                strokeDasharray={i === ticks - 1 ? "0" : "2,2"}
-                strokeWidth={i === ticks - 1 ? "1.5" : "1"}
-                className="dark:stroke-[var(--outline-variant)]"
+                stroke="var(--outline-variant)"
+                strokeDasharray="2,2"
               />
               <text
-                x={chartPadding.left - 12}
+                x={padding.left - 10}
                 y={y + 4}
-                fontSize="11"
                 textAnchor="end"
-                fontFamily="Inter, system-ui, sans-serif"
+                fontSize="11"
                 className="fill-black dark:fill-white"
               >
-                {formatValue(tv, true)}
+                {formatValue(tv)}
               </text>
             </g>
           );
         })}
-        {/* Y-axis title */}
+
+        {/* Y-axis label */}
         <text
-          x={16}
-          y={chartPadding.top + innerHeight / 2}
+          x={18}
+          y={padding.top + height / 2}
+          transform={`rotate(-90 18 ${padding.top + height / 2})`}
           textAnchor="middle"
-          transform={`rotate(-90 16 ${chartPadding.top + innerHeight / 2})`}
           fontSize="12"
-          fontWeight="500"
-          fontFamily="Inter, system-ui, sans-serif"
+          fontWeight="600"
           className="fill-black dark:fill-white"
         >
           {yLabel}
         </text>
-        {/* X-axis title */}
-        <text
-          x={svgWidth / 2}
-          y={svgHeight - 12}
-          textAnchor="middle"
-          fontSize="12"
-          fontWeight="500"
-          fontFamily="Inter, system-ui, sans-serif"
-          className="fill-black dark:fill-white"
-        >
-          {t("dashboard.groupChart.xAxisTitle", "Groups")}
-        </text>
-        {/* Bars group */}
-        <g transform={`translate(${chartPadding.left}, ${chartPadding.top})`}>
+
+        {/* Bars */}
+        <g transform={`translate(${padding.left},${padding.top})`}>
           {display.map((d, i) => {
-            const val = values[i];
+            const value = values[i];
+            const barHeight = (value / maxValue) * height;
+            const barY = height - barHeight;
+            const color = d.color ?? getColor(i);
+            const label = d.name ?? `Item ${i + 1}`;
             const x = i * (barWidth + gap);
-            const proportion = val / maxValue;
-            const barHeight = innerHeight * proportion;
-            const barY = innerHeight - barHeight;
-            const color = d.color || getColorForIndex(i);
-            const label = d.name ?? d.label ?? d.title ?? `#${i + 1}`;
+
             return (
-              <g 
-                key={i} 
+              <g
+                key={i}
                 transform={`translate(${x},0)`}
-                onMouseMove={(e) => handleMouseMove(e, label, val, color)}
-                onMouseLeave={handleMouseLeave}
+                onMouseMove={(e) =>
+                  handleMouseMove(e, label, value, color)
+                }
               >
-                {/* Bar with shadow effect */}
                 <rect
                   x={0}
                   y={barY}
                   width={barWidth}
                   height={barHeight}
                   fill={color}
-                  stroke={color}
-                  strokeWidth="1"
-                  className="transition-all duration-300 hover:opacity-90"
-                  style={{ 
-                    filter: animated ? 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' : 'none',
-                    cursor: 'pointer'
+                  className="transition-all duration-500"
+                  style={{
+                    filter: animated
+                      ? "drop-shadow(0 4px 6px rgba(0,0,0,.15))"
+                      : "none"
                   }}
-                  onClick={() => setHoveredBar(i)}
-                  aria-valuenow={val}
-                  aria-valuemin={0}
-                  aria-valuemax={maxValue}
-                  aria-label={`${label}: ${formatValue(val, true)}`}
                 />
-                {/* Value label on top of bar */}
+
+                {/* Value label */}
                 <text
                   x={barWidth / 2}
-                  y={Math.max(20, barY - 8)}
+                  y={Math.max(14, barY - 6)}
+                  textAnchor="middle"
                   fontSize="11"
                   fontWeight="600"
-                  textAnchor="middle"
-                  fontFamily="Inter, system-ui, sans-serif"
                   className="fill-black dark:fill-white"
                 >
-                  {formatValue(val, true)}
+                  {formatValue(value)}
                 </text>
-                {/* X-axis label below bar */}
-                {/* <text
-                  x={barWidth / 2}
-                  y={innerHeight + 26}
-                  fontSize="11"
-                  textAnchor="middle"
-                  fontFamily="Inter, system-ui, sans-serif"
-                  className="fill-black dark:fill-white"
-                  style={{ 
-                    maxWidth: `${barWidth}px`, 
-                    overflow: 'hidden', 
-                    textOverflow: 'ellipsis', 
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {label}
-                </text> */}
+
+                {/* X-axis label — ✅ NO TRUNCATION */}
+                {/* X-axis label — wrapped if >12 chars */}
+<text
+  x={barWidth / 2}
+  y={height + 24} // Slightly higher to accommodate two lines
+  textAnchor="middle"
+  fontSize="11"
+  className="fill-black dark:fill-white"
+>
+  {label.length > 12 ? (
+    <>
+      <tspan x={barWidth / 2} dy="0">{label.substring(0, 12)}</tspan>
+      <tspan x={barWidth / 2} dy="1.2em">{label.substring(12, 24)}</tspan>
+      <tspan x={barWidth / 2} dy="1.2em">{label.substring(24, 48)}</tspan>
+      <tspan x={barWidth / 2} dy="1.2em">{label.substring(48, 96)}</tspan>
+      <tspan x={barWidth / 2} dy="1.2em">{label.substring(96, 144)}</tspan>
+    </>
+  ) : (
+    <tspan x={barWidth / 2} dy="0">{label}</tspan>
+  )}
+</text>
               </g>
             );
           })}
         </g>
       </svg>
-      {/* Tooltip that appears on hover */}
+
+      {/* Tooltip */}
       {tooltip.visible && (
-        <div 
-          className="absolute z-10 pointer-events-none"
-          style={{ 
-            left: `${tooltip.x}px`, 
-            top: `${tooltip.y}px`,
-            maxWidth: '250px'
-          }}
+        <div
+          className="absolute z-20 pointer-events-none"
+          style={{ left: tooltip.x, top: tooltip.y }}
           dangerouslySetInnerHTML={{ __html: tooltip.content }}
         />
       )}
@@ -972,7 +964,7 @@ const App = () => {
   const goToGoals = () => navigate("/project?tab=goals");
   const goToTasks = () => navigate("/project?tab=tasks");
   const goToActivities = () => navigate("/project?tab=activities");
-  const goToPendingReports = () => navigate("/report?status=Pending");
+  const goToPendingReports = () => navigate("/report/review");
   const goToNotifications = () => navigate("/notification");
   const goToAudit = () => {
     if (!hasAuditPerm) {
@@ -1104,7 +1096,7 @@ const App = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 24px 24px rgba(0,0,0,0.18); 
         }
       `}</style>
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="min-w-7xl mx-auto px-4 py-6">
         {/* Card-style Header */}
         <div className="mb-6">
   <div className="rounded-2xl bg-[var(--surface-container-low)] dark:bg-gray-800 surface-elevation-3 px-4 py-4">
@@ -1172,7 +1164,11 @@ const App = () => {
           {/* KPI cards */}
           <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Goals Card */}
-            <Card title={t("dashboard.cards.goals.title")} onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}>
+            <Card title={<div className="flex items-center gap-2">
+                            <Trophy className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+                            {t("dashboard.cards.goals.title")}
+                          </div>
+                        } onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}>
               {loading ? (
                 <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
               ) : (
@@ -1201,8 +1197,16 @@ const App = () => {
               )}
             </Card>
             {/* Tasks Card */}
-            <Card title={t("dashboard.cards.tasks.title")} onClick={goToTasks} ariaLabel={t("dashboard.cards.tasks.aria")}>
-              {loading ? (
+<Card
+  title={
+    <div className="flex items-center gap-2">
+      <ListChecks className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      {t("dashboard.cards.tasks.title")}
+    </div>
+  }
+  onClick={goToTasks}
+  ariaLabel={t("dashboard.cards.tasks.aria")}
+>              {loading ? (
                 <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
               ) : (
                 <div className="transition-all duration-300">
@@ -1216,8 +1220,16 @@ const App = () => {
               )}
             </Card>
             {/* Activities Card */}
-            <Card title={t("dashboard.cards.activities.title")} onClick={goToActivities} ariaLabel={t("dashboard.cards.activities.aria")}>
-              {loading ? (
+<Card
+  title={
+    <div className="flex items-center gap-2">
+      <List className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      {t("dashboard.cards.activities.title")}
+    </div>
+  }
+  onClick={goToActivities}
+  ariaLabel={t("dashboard.cards.activities.aria")}
+>              {loading ? (
                 <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
               ) : (
                 <div className="transition-all duration-300">
@@ -1231,8 +1243,16 @@ const App = () => {
               )}
             </Card>
             {/* Pending Reports Card */}
-            <Card title={t("dashboard.cards.pendingReports.title")} onClick={goToPendingReports} ariaLabel={t("dashboard.cards.pendingReports.aria")}>
-              {loading ? (
+<Card
+  title={
+    <div className="flex items-center gap-2">
+      <FileText className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      {t("dashboard.cards.pendingReports.title")}
+    </div>
+  }
+  onClick={goToPendingReports}
+  ariaLabel={t("dashboard.cards.pendingReports.aria")}
+>              {loading ? (
                 <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
               ) : (
                 <div className="transition-all duration-300">
@@ -1246,20 +1266,52 @@ const App = () => {
           </div>
           {/* Charts */}
           <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-5">
-            <Card title={t("dashboard.groupProgress")} onClick={() => setShowGroupModal(true)} className="p-4 flex flex-col justify-between h-full">
-              {loading ? (<LoadingSkeleton className="h-28 transition-all duration-300" />) : (<div className="mt-3 transition-all duration-300"><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={5} barWidth={80} gap={30} yLabel="Office progress" height={320}/></div>)}
+<Card
+  title={
+    <div className="flex items-center gap-2">
+      <Users className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      {t("dashboard.groupProgress")}
+    </div>
+  }
+  onClick={() => setShowGroupModal(true)}
+  className="p-4 flex flex-col justify-between h-full"
+>              {loading ? (<LoadingSkeleton className="h-28 transition-all duration-300" />) : (<div className="mt-3 transition-all duration-300"><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={5} barWidth={80} gap={30} yLabel="Office progress" height={320}/></div>)}
             </Card>
-            <Card title={t("dashboard.topTasks")} onClick={() => setShowTasksModal(true)} className="p-4">
-              {loading ? (<LoadingSkeleton className="h-28 transition-all duration-300" />) : (<TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />)}
+<Card
+  title={
+    <div className="flex items-center gap-2">
+      <ListChecks className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      {t("dashboard.topTasks")}
+    </div>
+  }
+  onClick={() => setShowTasksModal(true)}
+  className="p-4"
+>              {loading ? (<LoadingSkeleton className="h-28 transition-all duration-300" />) : (<TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />)}
             </Card>
-            <Card title={t("dashboard.reportsDistribution1")} onClick={() => navigate("/report")} className="p-4" ariaLabel={t("dashboard.reportsDistribution.aria")}>
-              {loading ? <LoadingSkeleton className="h-28 transition-all duration-300" /> : <div className="flex justify-center transition-all duration-300"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
+<Card
+  title={
+    <div className="flex items-center gap-2">
+      <PieChartIcon className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      {t("dashboard.reportsDistribution1")}
+    </div>
+  }
+  onClick={goToPendingReports}
+  className="p-4"
+  ariaLabel={t("dashboard.reportsDistribution.aria")}
+>              {loading ? <LoadingSkeleton className="h-28 transition-all duration-300" /> : <div className="flex justify-center transition-all duration-300"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
             </Card>
           </div>
           {hasAuditPerm && (
             <div className="lg:col-span-12 transition-all duration-300">
-              <Card title={t("dashboard.audit.title")} onClick={goToAudit}>
-                <AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} />
+<Card
+  title={
+    <div className="flex items-center gap-2">
+      <ClipboardCheck className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      {t("dashboard.audit.title")}
+    </div>
+  }
+  onClick={goToAudit}
+>                <AuditPanel logs={dashboardData.auditLogs} loading={loading} auditPermDenied={auditPermDenied} t={t} />
               </Card>
             </div>
           )}
@@ -1267,15 +1319,19 @@ const App = () => {
           <div className="lg:col-span-8 transition-all duration-300">
             <Card
               title={
-                <div className="flex items-center justify-between h-6 min-w-0 transition-all duration-300">
-                  <span className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 truncate transition-all duration-300">
-                    {t("dashboard.overdueTitle")}
-                  </span>
-                  <span className="text-sm font-medium bg-[var(--error-container)] dark:bg-red-900 text-[var(--on-error-container)] dark:text-red-200 ml-2 px-2 py-0.5 rounded-full transition-all duration-300">
-                    {(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}
-                  </span>
-                </div>
-              }
+  <div className="flex items-center justify-between h-6 min-w-0 transition-all duration-300">
+    <div className="flex items-center gap-2 min-w-0">
+      <AlertCircle className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      <span className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 truncate transition-all duration-300">
+        {t("dashboard.overdueTitle")}
+      </span>
+    </div>
+
+    <span className="text-sm font-medium bg-[var(--error-container)] dark:bg-red-900 text-[var(--on-error-container)] dark:text-red-200 ml-2 px-2 py-0.5 rounded-full transition-all duration-300">
+      {(dashboardData.overdueRows || []).length} {t("dashboard.tasks")}
+    </span>
+  </div>
+}
               headerActions={
                 <div className="flex items-center gap-2 transition-all duration-300">
                   <button 
@@ -1291,8 +1347,15 @@ const App = () => {
             </Card>
           </div>
           <div className="lg:col-span-4 transition-all duration-300">
-            <Card title={t("dashboard.notifications.title")} onClick={goToNotifications}>
-              <NotificationsPanel
+<Card
+  title={
+    <div className="flex items-center gap-2">
+      <Bell className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+      {t("dashboard.notifications.title")}
+    </div>
+  }
+  onClick={goToNotifications}
+>              <NotificationsPanel
                 notifications={dashboardData.notifications}
                 unread={unread}
                 loading={loading}
@@ -1305,9 +1368,48 @@ const App = () => {
           </div>
         </div>
         {/* Modals */}
-        <Modal open={showGroupModal} onClose={() => setShowGroupModal(false)} title={t("dashboard.groupProgress")}>
-          {loading ? <LoadingSkeleton className="h-36 transition-all duration-300" /> : <div className="overflow-x-auto transition-all duration-300"><div className="flex gap-5 items-end pb-4 transition-all duration-300">{(dashboardData.groups || []).map((g, idx) => (<div key={g.groupId ?? g.id ?? idx} className="flex flex-col items-center min-w-[80px] transition-all duration-300"><div className="w-10 h-32 bg-[var(--surface-container)] dark:bg-gray-700 rounded-xl overflow-hidden flex items-end transition-all duration-1000"><div style={{ height: `${Math.max(6, Math.round((Number(g.value ?? g.progress ?? 0) / Math.max(1, ...((dashboardData.groups || []).map(x=>Number(x.value ?? x.progress ?? 0)))))*100))}%`, background: g.color }} className="w-full transition-all duration-1000 ease-out" /></div><div className="text-sm text-center text-[var(--on-surface)] dark:text-white mt-2 break-words max-w-[100px] min-h-[2.5rem] flex items-center justify-center transition-all duration-300">{g.name}</div><div className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mt-1 transition-all duration-300">{Math.round(Number(g.value ?? g.progress ?? 0))}%</div></div>))}</div></div>}
-        </Modal>
+<Modal
+  open={showGroupModal}
+  onClose={() => setShowGroupModal(false)}
+  title={t("dashboard.groupProgress")}
+>
+  {loading ? (
+    <LoadingSkeleton className="h-80" />
+  ) : (
+    <div
+      style={{
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        paddingBottom: '8px', // Optional: adds a little spacing if scrollbar appears
+        // Prevent vertical overflow from scrollbar
+        WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+      }}
+    >
+      <div
+        style={{
+          // Calculate minimum width based on number of groups
+          // Only apply if you have more than 7 groups
+          minWidth:
+            dashboardData.groups.length > 7
+              ? `${(72 + 28) * dashboardData.groups.length}px`
+              : '100%',
+          // 72 = barWidth, 28 = gap → total per group = 100px
+          // You might adjust if padding/margin exists
+        }}
+      >
+        <GroupBarChart
+          data={dashboardData.groups}
+          height={320}
+          barWidth={72}
+          gap={28}
+          yLabel={t("dashboard.groupChart.yAxisTitle", "Progress (%)")}
+        />
+      </div>
+    </div>
+  )}
+</Modal>
+
+
         <Modal open={showTasksModal} onClose={() => setShowTasksModal(false)} title={t("dashboard.topTasks")}>
           {loading ? (<LoadingSkeleton className="h-36 transition-all duration-300" />) : (<div className="space-y-4 transition-all duration-300"><TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={dashboardData.taskBars.length || 1000} /></div>)}
         </Modal>

@@ -168,6 +168,8 @@
       "toggle": "ዝርዝሮችን ቀያይር"
     },
     "form": {
+      "picture": "የቢሮ ፎቶ",
+      "pictureHint":"PNG, JPG up to 5MB",
       "title": {
         "create": "ቡድን ይፍጠሩ",
         "edit": "ቡድን አርትዕ"
@@ -685,6 +687,7 @@
     },
 
     "sections": {
+      "goals": "ግብ",
       "tasks": "ተግባራት",
       "activities": "እንቅስቃሴዎች"
     },

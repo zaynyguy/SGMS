@@ -169,6 +169,8 @@
       "toggle": "Bal'ina jijjiiri"
     },
     "form": {
+      "picture": "Suuraa waajjira",
+      "pictureHint":"PNG, JPG up to 5MB",
       "title": {
         "create": "Garee uumuu",
         "edit": "Garee gulaaluu"
@@ -688,6 +690,7 @@
     },
 
     "sections": {
+      "goals": "Galma",
       "tasks": "Hojiiwwan",
       "activities": "Gochaalee"
     },

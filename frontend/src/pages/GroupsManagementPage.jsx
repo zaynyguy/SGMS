@@ -848,7 +848,7 @@ function GroupsManager() {
           max-height: 1000px;
         }
       `}</style>
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="min-w-7xl mx-auto px-4 py-6">
         <header className="mb-6">
   <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
     <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
@@ -893,7 +893,7 @@ function GroupsManager() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center justify-center w-full sm:w-auto rounded-xl bg-green-900 dark:bg-indigo-900 px-4 py-2.5 text-sm font-medium text-white dark:text-indigo-200 shadow-md transition-all duration-200 hover:bg-indigo-700 hover:shadow-lg gap-2"
+              className="inline-flex items-center justify-center w-full sm:w-auto rounded-xl bg-green-900 dark:bg-indigo-900 px-4 py-2.5 text-sm font-medium text-white dark:text-indigo-200 shadow-md transition-all duration-200 hover:bg-green-700 hover:dark:bg-indigo-700 hover:shadow-lg gap-2"
             >
               <Plus size={18} aria-hidden="true" />
               <span>{t("groups.newGroup")}</span>

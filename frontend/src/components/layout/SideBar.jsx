@@ -165,7 +165,7 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
       icon: <Target size={20} />,
       label: t("sidebar.menu.projectManagement"),
     },
-    (hasPermission("manage_reports") || hasPermission("view_reports")) && {
+    (hasPermission("manage_reports")) && {
       key: "reports",
       icon: <FileText size={20} />,
       label: t("sidebar.menu.reports"),

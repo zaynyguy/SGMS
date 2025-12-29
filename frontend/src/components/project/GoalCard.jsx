@@ -1,6 +1,6 @@
 import React, { memo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, ChevronDown, Edit, Trash2, Calendar, CheckSquare, Plus as PlusIcon } from "lucide-react";
+import { ChevronRight, ChevronDown, Edit, Trash2, Calendar, ListChecks, Plus as PlusIcon, Trophy } from "lucide-react";
 import ProgressBar from "../ui/ProgressBar";
 import StatusBadge from "../ui/StatusBadge";
 import TaskList from "./TaskList";
@@ -161,18 +161,18 @@ function GoalCard({
       }
     };
   }, [isExpanded]);
-
+  
   const handleToggleGoal = (goal) => {
     setIsAnimating(true);
     toggleGoal(goal);
   };
-
+  
   return (
     <article
-      key={goal.id}
-      className={`bg-[var(--surface-container-low)] dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-700 rounded-2xl mb-5 overflow-hidden transition-all duration-300 shadow-2xl hover:shadow-md ${
-        mounted ? 'animate-fade-in' : ''
-      }`}
+    key={goal.id}
+    className={`bg-[var(--surface-container-low)] dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-700 rounded-2xl mb-5 overflow-hidden transition-all duration-300 shadow-2xl hover:shadow-md ${
+      mounted ? 'animate-fade-in' : ''
+    }`}
       role="region"
       aria-labelledby={`goal-${goal.id}-title`}
       style={{
@@ -254,17 +254,17 @@ function GoalCard({
           from {
             opacity: 0;
             transform: translateY(8px);
-          }
-          to {
+            }
+            to {
             opacity: 1;
             transform: translateY(0);
-          }
-        }
+            }
+            }
         .animate-fade-in {
           animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        @keyframes slideInUp {
+          }
+          
+          @keyframes slideInUp {
           from {
             opacity: 0;
             transform: translateY(16px);
@@ -273,31 +273,36 @@ function GoalCard({
             opacity: 1;
             transform: translateY(0);
           }
-        }
+          }
         .animate-slide-in-up {
           animation: slideInUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        .surface-elevation-1 { 
+          }
+          
+          .surface-elevation-1 { 
           box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04); 
           border: 1px solid var(--outline-variant);
-        }
-        .surface-elevation-2 { 
-          box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06); 
-          border: 1px solid var(--outline-variant);
+          }
+          .surface-elevation-2 { 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06); 
+            border: 1px solid var(--outline-variant);
         }
         .surface-elevation-3 { 
           box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08); 
           border: 1px solid var(--outline-variant);
         }
       `}</style>
-
+      <div className="flex mt-2 ml-4 md:ml-5 pt-4 border-b border-[var(--outline-variant)] dark:border-gray-700">
+        <h4 className="text-base font-semibold text-[var(--on-surface)] dark:text-white flex items-center gap-2">
+          <Trophy className="h-5 w-5 text-green-800 dark:text-indigo-600" /> {t("project.sections.goals") || "Goals"}
+        </h4>
+        <p className="border-t border-[var(--outline-variant)] dark:border-gray-700"></p>
+      </div>
       <div className="p-4 md:p-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0 flex-1">
             <button
               onClick={() => handleToggleGoal(goal)}
-              className="p-2 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200 hidden sm:block"
+              className="p-2 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200"
               aria-label={t("project.actions.toggleGoal") || "Toggle"}
               title={t("project.actions.toggleGoal") || "Toggle"}
             >
@@ -335,7 +340,7 @@ function GoalCard({
 
           <div className="flex items-center gap-3 mt-4 md:mt-0">
             <div className="flex flex-col md:flex-row md:items-center items-end gap-2 ml-2">
-              <div className="md:hidden">
+              {/* <div className="md:hidden">
                 <button
                   onClick={() => handleToggleGoal(goal)}
                   className="p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200"
@@ -343,7 +348,7 @@ function GoalCard({
                 >
                   {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 </button>
-              </div>
+              </div> */}
 
               <div className="hidden md:flex flex-col items-end text-sm text-[var(--on-surface-variant)] dark:text-gray-400 mr-3 w-36">
                 <div className="w-full">
@@ -412,7 +417,7 @@ function GoalCard({
             <div className="mt-6 pt-4 border-t border-[var(--outline-variant)] dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-base font-semibold text-[var(--on-surface)] dark:text-white flex items-center gap-2">
-                  <CheckSquare className="h-5 w-5 text-green-800 dark:text-indigo-600" /> {t("project.sections.tasks") || "Tasks"}
+                  <ListChecks className="h-5 w-5 text-green-800 dark:text-indigo-600" /> {t("project.sections.tasks") || "Tasks"}
                 </h4>
                 <div>
                   {canManageGTA && (

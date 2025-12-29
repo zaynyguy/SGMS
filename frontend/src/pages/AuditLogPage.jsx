@@ -429,7 +429,7 @@ const App = ({ showToast: propShowToast }) => {
           border: 1px solid var(--outline-variant);
         }
       `}</style>
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="min-w-7xl mx-auto px-4 py-6">
         {/* Header card */}
         <div className="mb-6">
           <div className="rounded-2xl bg-[var(--surface-container-low)] dark:bg-gray-800 dark:border-gray-800 surface-elevation-3 px-4 py-4">

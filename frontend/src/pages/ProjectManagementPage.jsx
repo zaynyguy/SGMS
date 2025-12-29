@@ -7,7 +7,7 @@ import GoalCard from "../components/project/GoalCard";
 import PaginationFooter from "../components/project/PaginationFooter";
 import GenericModal from "../components/project/GenericModal";
 import SubmitReportModal from "../components/SubmitReportModal";
-import { Target, ArrowUpDown, RefreshCcw, Plus, X, Search } from "lucide-react";
+import { Target, ArrowUpDown, RefreshCcw, Plus, Search } from "lucide-react";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import Toast from "../components/common/Toast";
 
@@ -816,7 +816,7 @@ const openSubmitModal = useCallback(
           animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="min-w-7xl mx-auto px-4 py-6">
         <header className="mb-6">
           {/* Header container with MD3 container styling */}
           <div className="md3-container dark:border-gray-700 surface-elevation-1">

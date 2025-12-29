@@ -168,6 +168,8 @@
       "toggle": "Toggle details"
     },
     "form": {
+      "picture": "Office picture",
+      "pictureHint":"PNG, JPG up to 5MB",
       "title": {
         "create": "Create Office",
         "edit": "Edit Office"
@@ -686,6 +688,7 @@
     },
 
     "sections": {
+      "goals": "Goal",
       "tasks": "Tasks",
       "activities": "Activities"
     },

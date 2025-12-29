@@ -449,7 +449,7 @@ const App = ({ reportId }) => {
   const shortContext = (at) => at.activityTitle || at.taskTitle || at.goalTitle || at.groupName || "";
 
   return (
-    <div className={`min-h-screen bg-[var(--background)] dark:bg-gray-900 font-sans transition-colors duration-300 ${mounted ? 'animate-fade-in' : ''}`}
+    <div className={`min-h-screen bg-slate-100 dark:bg-gray-900 font-sans transition-colors duration-300 ${mounted ? 'animate-fade-in' : ''}`}
       style={{
         "--primary": m3Colors.primary,
         "--on-primary": m3Colors.onPrimary,
@@ -534,7 +534,7 @@ const App = ({ reportId }) => {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="min-w-7xl mx-auto p-4">
         {/* Header Card with Material 3 elevation */}
         <div className="mb-6">
           <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 shadow-2xl p-4">
@@ -553,7 +553,7 @@ const App = ({ reportId }) => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 z-50">
                   <TopBar />
                 </div>
               </div>

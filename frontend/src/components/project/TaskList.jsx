@@ -386,7 +386,7 @@ function TaskList({
                 <button
                   type="button"
                   onClick={() => handleToggleTask(goal, task)}
-                  className="p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 hidden sm:block task-btn task-icon-rotate"
+                  className="p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 task-btn task-icon-rotate"
                   aria-label={t("project.actions.toggleTask") || "Toggle task"}
                   aria-expanded={taskIsExpanded}
                 >
@@ -408,7 +408,7 @@ function TaskList({
                       <span className="text-[var(--on-surface)] dark:text-white">{task.title}</span>
                     </div>
 
-                    <div className="sm:hidden flex items-center gap-2 ml-2">
+                    {/* <div className="sm:hidden flex items-center gap-2 ml-2">
                       <button
                         type="button"
                         onClick={() => handleToggleTask(goal, task)}
@@ -422,7 +422,7 @@ function TaskList({
                           <ChevronRight className="h-5 w-5" />
                         )}
                       </button>
-                    </div>
+                    </div> */}
                   </div>
 
                   <div className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400 mt-1 break-words task-fade-in" style={{ animationDelay: `${index * 60 + 50}ms` }}>
