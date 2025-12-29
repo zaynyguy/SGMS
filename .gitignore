@@ -1,11 +1,1 @@
 .env
-# copy to .env and fill real secrets locally
-POSTGRES_USER=sgms_user
-POSTGRES_PASSWORD=1234
-POSTGRES_DB=sgms_db
-
-JWT_SECRET=replace_with_long_secret
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
-
-ADVISORY_LOCK_KEY=9876543210
