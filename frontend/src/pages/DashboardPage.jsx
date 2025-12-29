@@ -1096,7 +1096,7 @@ const App = () => {
           box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 24px 24px rgba(0,0,0,0.18); 
         }
       `}</style>
-      <div className="min-w-7xl mx-auto px-4 py-6">
+      <div className="min-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         {/* Card-style Header */}
         <div className="mb-6">
   <div className="rounded-2xl bg-[var(--surface-container-low)] dark:bg-gray-800 surface-elevation-3 px-4 py-4">

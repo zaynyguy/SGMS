@@ -816,16 +816,12 @@ const openSubmitModal = useCallback(
           animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
-<<<<<<< HEAD
-      <div className="min-w-7xl mx-auto px-4 py-6">
-=======
-      <div className="max-w-7xl mx-auto px-4 py-6 bg-[var(--on-primary)] dark:bg-gray-900 transition-colors duration-300">
->>>>>>> 48546e28f1cd96c0e57405a93eaf2e5767236c70
+      <div className="min-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <header className="mb-6">
           {/* Header container with MD3 container styling */}
-          <div className="md3-container dark:border-gray-700 surface-elevation-1">
+          <div className="md3-container dark:border-gray-700 surface-elevation-3">
             <div className="bg-[var(--surface-container-low)] dark:bg-gray-800">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-5 py-4 bg-[var(--on-primary)] dark:bg-gray-900 transition-colors duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 px-5 py-4 bg-[var(--on-primary)] dark:bg-gray-800 transition-colors duration-300">
                 <div className="flex min-w-0 gap-4 items-center">
                   <div className="md3-icon-container bg-green-200 dark:bg-indigo-900">
                     <Target className="h-6 w-6 text-green-800 dark:text-indigo-200 transition-transform duration-300 hover:scale-110" />

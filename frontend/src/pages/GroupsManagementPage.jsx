@@ -848,7 +848,7 @@ function GroupsManager() {
           max-height: 1000px;
         }
       `}</style>
-      <div className="min-w-7xl mx-auto px-4 py-6">
+      <div className="min-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <header className="mb-6">
   <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl">
     <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">

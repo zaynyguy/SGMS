@@ -533,7 +533,7 @@ const App = () => {
         </div>
       </div>
 
-      <div className="min-w-8xl mx-auto px-4 mb-6">
+      <div className="min-w-8xl mx-auto px-4 mb-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <div className='overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl'>
           <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="px-5 py-4">

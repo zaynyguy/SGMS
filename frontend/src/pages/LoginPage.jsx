@@ -66,7 +66,7 @@ const LoginPage = () => {
   const togglePasswordVisibility = () => setShowPassword((s) => !s);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 p-4 font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 transition-colors duration-300 p-4 font-sans">
       {/* Global / always-present style block so animations exist on mobile too.
           Mobile uses a stronger/faster animation to make movement noticeable. */}
       <style>{`
