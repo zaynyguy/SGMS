@@ -579,7 +579,7 @@ const App = ({ permissions, readonly = false }) => {
             document.body
           )}
         <div className="mb-6">
-          <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-2xl dark:border-gray-800 surface-elevation-3 px-4 py-4">
+          <div className="bg-[var(--on-primary)] dark:bg-gray-800 rounded-2xl dark:border-gray-800 surface-elevation-3 px-4 py-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex min-w-0 gap-4 items-center">
                 <div className="p-3 rounded-xl bg-[var(--primary-container)] dark:bg-indigo-900">
@@ -602,7 +602,7 @@ const App = ({ permissions, readonly = false }) => {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-2xl dark:border-gray-800 surface-elevation-3 p-4 sm:p-6">
+        <div className="bg-[var(--on-primary)] dark:bg-gray-800 rounded-2xl dark:border-gray-800 surface-elevation-3 p-4 sm:p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full">
               <div className="flex-1 min-w-0">
@@ -615,7 +615,7 @@ const App = ({ permissions, readonly = false }) => {
                     onChange={(e) => setSearch(e.target.value)}
                     onKeyDown={onSearchKeyDown}
                     placeholder={t("reports.search.placeholder")}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white text-base placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 transition-all duration-300"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--on-primary)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white text-base placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 transition-all duration-300"
                   />
                 </div>
               </div>
@@ -626,14 +626,14 @@ const App = ({ permissions, readonly = false }) => {
                     setPage(1);
                     loadReports({ page: 1, q: search });
                   }}
-                  className="px-4 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-300 flex items-center justify-center gap-2 surface-elevation-1 whitespace-nowrap"
+                  className="px-4 py-2.5 rounded-full  bg-[var(--on-primary)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-300 flex items-center justify-center gap-2 surface-elevation-1 whitespace-nowrap"
                 >
                   <Search className="h-4 w-4" />
                   <span className="text-base">{t("reports.search.button")}</span>
                 </button>
                 <button
                   onClick={handleRefresh}
-                  className="px-4 py-2.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-300 flex items-center justify-center gap-2 surface-elevation-1 whitespace-nowrap"
+                  className="px-4 py-2.5 rounded-full  bg-[var(--on-primary)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 transition-all duration-300 flex items-center justify-center gap-2 surface-elevation-1 whitespace-nowrap"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-80 transition-transform duration-300 hover:rotate-180">
                     <path d="M21 12A9 9 0 1 0 6 20.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -670,7 +670,7 @@ const App = ({ permissions, readonly = false }) => {
                   setPage(1);
                   setGroupFilter(e.target.value);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-[var(--surface-container-low)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-300 text-sm"
+                className="px-3 py-1.5 rounded-xl  bg-[var(--on-primary)] dark:bg-gray-700 border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)] hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-300 text-sm"
                 aria-label={t("reports.filters.groupLabel", "Group")}
               >
                 {groups && groups.length > 0
