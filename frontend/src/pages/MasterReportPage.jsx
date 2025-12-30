@@ -336,267 +336,643 @@ const App = () => {
   };
 
   function generateHtmlForPrint() {
-    const data = master || { goals: [] };
-    const columnsHtml = periodHeadersHtml; // Use memoized headers
-    const rowsHtml = tableRows
-      .map((row) => {
-        const titleWithNumber = `${row.number}. ${row.title}`;
-        const padding = row.type === "goal" ? '6px' : (row.type === "task" ? '16px' : '28px');
-        const weight = row.type === 'goal' ? '700' : '400';
-        // Non-activity rows
-        if (row.type !== "activity") {
-          const emptyQuarterlyCells = granularity === "quarterly" ? periodColumns.length * 3 : periodColumns.length;
-          const emptyCells = Array(emptyQuarterlyCells + 1).fill(0).map(() => `<td style="padding:6px;border:1px solid #ddd">—</td>`).join(""); // +1 for yearly progress
-          return `<tr><td style="padding:6px;border:1px solid #ddd;font-weight:${weight};padding-left:${padding}">${escapeHtml(
-            titleWithNumber
-          )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
-            String(row.weight)
-          )}</td><td style="padding:6px;border:1px solid #ddd">—</td><td style="padding:6px;border:1px solid #ddd">—</td><td style="padding:6px;border:1px solid #ddd">—</td>${emptyCells}</tr>`;
-        }
-        // Activity row
-        const mk = pickMetricForActivity(row.activity, null);
-        const { targetVal, prevVal, currentVal } = getOverallMetrics(row.activity, mk);
-        // Calculate Yearly Progress
-        const targetNum = toNumberOrNull(targetVal);
-        const currentNum = toNumberOrNull(currentVal);
-        let yearlyProgressPct = null;
-        if (targetNum !== null && currentNum !== null) {
-          if (targetNum > 0) yearlyProgressPct = (currentNum / targetNum) * 100;
-          else if (targetNum === 0) yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
-        }
-        const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(2)}%`;
-        const quarterlyCellsHtml = periodCellsHtml(row); // This already includes the yearly cell, let's fix that.
-        // --- Recalculate periodCellsHtml just for this function ---
-        const yearlyProgressCell = `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
-        let periodCells = "";
-        if (granularity === "quarterly") {
-          periodCells = periodColumns.map(p => {
-            const { goal, record, progress } = getQuarterlyStats(row.activity, p, mk);
-            const displayProgress = progress === null ? '-' : `${progress.toFixed(2)}%`;
-            return [
-              `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(goal ?? "-"))}</td>`,
-              `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(record ?? "-"))}</td>`,
-              `<td style="padding:6px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
-            ].join("");
-          }).join("");
-        } else {
-          // Monthly or Annual
-          periodCells = periodColumns.map((p) => {
-              const v = getLatestMetricValueInPeriod(row.activity, p, granularity, mk);
-              if (v === null || v === undefined) return `<td style="padding:6px;border:1px solid #ddd">—</td>`;
-              let dv = v;
-              if (typeof dv === "object") {
-                try {
-                  const k = Object.keys(dv || {})[0];
-                  if (k) dv = dv[k]; else dv = JSON.stringify(dv);
-                } catch (e) { dv = JSON.stringify(dv); }
-              }
-              return `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
-            }).join("");
-        }
-        // --- End recalculation ---
-        return `<tr><td style="padding:6px;border:1px solid #ddd;padding-left:${padding}">${escapeHtml(
-          titleWithNumber
-        )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
-          String(row.weight)
-        )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
-          mk ?? "-"
-        )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
-          String(targetVal ?? "-")
-        )}</td><td style="padding:6px;border:1px solid #ddd">${escapeHtml(
-          String(prevVal ?? "-")
-        )}</td>${yearlyProgressCell}${periodCells}</tr>`;
-      })
-      .join("");
-    const title = t("reports.master.title");
-    const groupLabel = t("reports.master.groupLabel");
-    const narratives = t("reports.master.narratives");
-    const dataTable = t("reports.master.dataTable");
-    const generated = t("reports.master.generatedAt", {
-      date: new Date().toLocaleString(),
-    });
-    // --- UPDATED NARRATIVE SECTION ---
-    // (This now includes quarterlyGoals)
-    const narrativesHtml = data.goals
-      .map((g, goalIndex) => {
-        const goalNum = `${goalIndex + 1}`;
+  const data = master || { goals: [] };
+  const columnsHtml = periodHeadersHtml;
+  
+  // Premium font stack for a polished look
+  const fontFamily = `'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif`;
+
+  // --- Helper: Visual Progress Bar ---
+  const createProgressBar = (pct, size = 'md') => {
+    const p = Math.max(0, Math.min(100, pct || 0));
+    const colorClass = p >= 100 ? 'bg-success' : (p > 50 ? 'bg-primary' : 'bg-warning');
+    return `
+      <div class="progress-track size-${size}">
+        <div class="progress-fill ${colorClass}" style="width: ${p}%"></div>
+      </div>
+    `;
+  };
+
+  // --- Helper: Generate Table Rows ---
+  const rowsHtml = tableRows.map((row, index) => {
+    const titleWithNumber = `${row.number}. ${row.title}`;
+    const rowClass = row.type === 'goal' ? 'row-goal' : (row.type === 'task' ? 'row-task' : 'row-activity');
+    
+    // Non-activity rows (Headers)
+    if (row.type !== "activity") {
+      const emptyQuarterlyCells = granularity === "quarterly" ? periodColumns.length * 3 : periodColumns.length;
+      const emptyCells = Array(emptyQuarterlyCells + 1).fill(0).map(() => `<td class="cell-empty"></td>`).join("");
+
+      return `
+        <tr class="${rowClass}">
+          <td class="cell-title">
+            <div class="title-wrapper">${escapeHtml(titleWithNumber)}</div>
+          </td>
+          <td class="cell-center font-medium opacity-70">${escapeHtml(String(row.weight))}</td>
+          <td class="cell-empty" colspan="4"></td> 
+          ${emptyCells}
+        </tr>`;
+    }
+
+    // Activity row logic
+    const mk = pickMetricForActivity(row.activity, null);
+    const { targetVal, prevVal, currentVal } = getOverallMetrics(row.activity, mk);
+
+    // Calculate Yearly Progress
+    const targetNum = toNumberOrNull(targetVal);
+    const currentNum = toNumberOrNull(currentVal);
+    let yearlyProgressPct = null;
+
+    if (targetNum !== null && currentNum !== null) {
+      if (targetNum > 0) yearlyProgressPct = (currentNum / targetNum) * 100;
+      else if (targetNum === 0) yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
+    }
+
+    const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(1)}%`;
+    const yearlyProgressClass = yearlyProgressPct >= 100 ? 'text-success font-bold' : '';
+
+    // Period Cells Logic
+    let periodCells = "";
+    if (granularity === "quarterly") {
+      periodCells = periodColumns.map(p => {
+        const { goal, record, progress } = getQuarterlyStats(row.activity, p, mk);
+        const displayProgress = progress === null ? '' : `${progress.toFixed(0)}%`;
+        const progressColor = (progress || 0) >= 100 ? 'text-success' : 'text-muted';
+        
         return `
-<div style="margin-bottom:10px;padding:8px;border:1px solid #eee;border-radius:4px;background:#fbfbfb" class="print-goal-narrative">
-<div style="font-weight:700;font-size:13px">${escapeHtml(
-          `${goalNum}. ${g.title}`
-        )} <span style="font-weight:400;color:#6b7280">• ${escapeHtml(
-          String(g.status || "—")
-        )} • ${escapeHtml(String(g.progress ?? 0))}% • weight: ${escapeHtml(
-          String(g.weight ?? "-")
-        )}</span></div>
-<div style="margin-top:6px;padding-left:6px">
-${(g.tasks || [])
-          .map((task, taskIndex) => {
-            const taskNum = `${goalNum}.${taskIndex + 1}`;
-            return `
-<div style="margin-bottom:6px">
-<div style="font-weight:600">${escapeHtml(
-              `${taskNum}. ${task.title}`
-            )} <span style="color:#6b7280">(${escapeHtml(
-              String(task.progress ?? 0)
-            )}%) • weight: ${escapeHtml(String(task.weight ?? "-"))}</span></div>
-${(task.activities || [])
-              .map((activity, activityIndex) => {
-                const activityNum = `${taskNum}.${activityIndex + 1}`;
-                return `
-<div style="margin-left:12px;margin-top:4px;padding:6px;border:1px solid #f1f5f9;border-radius:3px;background:#fff">
-<div style="font-weight:600">${escapeHtml(
-                  `${activityNum}. ${activity.title}`
-                )}</div>
-<div style="color:#6b7280;margin-top:4px;font-size:11px;"><strong>${escapeHtml(
-                  t("reports.master.targetLabel")
-                )}:</strong> ${
-                  activity.targetMetric
-                    ? escapeHtml(JSON.stringify(activity.targetMetric))
-                    : "-"
-                }</div>
-{/* --- ADDED CURRENT METRIC --- */}
-<div style="color:#6b7280;margin-top:3px;font-size:11px;"><strong>${escapeHtml(
-                  t("reports.master.currentLabel", "Current")
-                )}:</strong> ${
-                  activity.currentMetric
-                    ? escapeHtml(JSON.stringify(activity.currentMetric))
-                    : "-"
-                }</div>
-<div style="color:#6b7280;margin-top:3px;font-size:11px;"><strong>${escapeHtml(
-                  t("reports.master.previousLabel", "Previous")
-                )}:</strong> ${
-                  activity.previousMetric
-                    ? escapeHtml(JSON.stringify(activity.previousMetric))
-                    : "-"
-                }</div>
-<div style="color:#6b7280;margin-top:3px;font-size:11px;"><strong>${escapeHtml(
-                  t("reports.master.quarterlyGoals", "Quarterly Goals")
-                )}:</strong> ${
-                  activity.quarterlyGoals
-                    ? escapeHtml(JSON.stringify(activity.quarterlyGoals))
-                    : "-"
-                }</div>
-<div style="margin-top:6px">${(activity.reports || [])
-                  .map(
-                    (r) =>
-                      `<div style="padding:4px;border-top:1px dashed #eee"><strong>#${escapeHtml(
-                        String(r.id)
-                      )}</strong> • ${escapeHtml(String(r.status || "—"))} • ${
-                        r.createdAt
-                          ? escapeHtml(new Date(r.createdAt).toLocaleString())
-                          : ""
-                      }<div class="narrative" style="margin-top:4px">${escapeHtml(
-                        r.narrative || ""
-                      )}</div></div>`
-                  )
-                  .join("")}</div>
+          <td class="cell-sub-val">${escapeHtml(String(goal ?? ""))}</td>
+          <td class="cell-sub-val font-medium">${escapeHtml(String(record ?? ""))}</td>
+          <td class="cell-sub-val ${progressColor} text-xs">${escapeHtml(displayProgress)}</td>
+        `;
+      }).join("");
+    } else {
+      periodCells = periodColumns.map((p) => {
+        const v = getLatestMetricValueInPeriod(row.activity, p, granularity, mk);
+        if (v === null || v === undefined) return `<td class="cell-empty"></td>`;
+
+        let dv = v;
+        if (typeof dv === "object") {
+          try {
+            const k = Object.keys(dv || {})[0];
+            if (k) dv = dv[k]; else dv = JSON.stringify(dv);
+          } catch (e) { dv = JSON.stringify(dv); }
+        }
+        return `<td class="cell-number">${escapeHtml(String(dv))}</td>`;
+      }).join("");
+    }
+
+    return `
+      <tr class="${rowClass}">
+        <td class="cell-title indent-activity">
+          <span class="activity-dot"></span>
+          ${escapeHtml(titleWithNumber)}
+        </td>
+        <td class="cell-center text-muted">${escapeHtml(String(row.weight))}</td>
+        <td class="cell-center"><span class="badge-mini">${escapeHtml(mk ?? "")}</span></td>
+        <td class="cell-number font-medium">${escapeHtml(String(targetVal ?? "-"))}</td>
+        <td class="cell-number text-muted">${escapeHtml(String(prevVal ?? "-"))}</td>
+        <td class="cell-number ${yearlyProgressClass}">${escapeHtml(displayYearlyProgress)}</td>
+        ${periodCells}
+      </tr>`;
+  }).join("");
+
+  // --- Helper: Generate Narratives ---
+  const narrativesHtml = data.goals.map((g, goalIndex) => {
+    const goalNum = `${goalIndex + 1}`;
+    const goalProgress = g.progress ?? 0;
+
+    const tasksHtml = (g.tasks || []).map((task, taskIndex) => {
+      const taskNum = `${goalNum}.${taskIndex + 1}`;
+      
+      const activitiesHtml = (task.activities || []).map((activity, activityIndex) => {
+        const activityNum = `${taskNum}.${activityIndex + 1}`;
+        
+        // Stat items
+        const metricItems = [
+          { label: t("reports.master.metrics.target"), value: activity.targetMetric, icon: '🎯' },
+          { label: t("reports.master.metrics.current"), value: activity.currentMetric, icon: '⚡' },
+          { label: t("reports.master.metrics.previous"), value: activity.previousMetric, icon: '⏮️' },
+          { label: t("reports.master.metrics.quarterly"), value: activity.quarterlyGoals, icon: '📅' }
+        ].map(item => `
+          <div class="stat-item">
+            <div class="stat-content">
+              <div class="stat-label">${escapeHtml(item.label)}</div>
+              <div class="stat-value">${item.value ? escapeHtml(JSON.stringify(item.value)) : "—"}</div>
+            </div>
+          </div>
+        `).join("");
+
+        // Reports Timeline
+        const reportsList = (activity.reports || []).map(r => `
+          <div class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+              <div class="timeline-header">
+                <span class="report-id">#${escapeHtml(String(r.id))}</span>
+                <span class="status-pill status-${String(r.status || "").toLowerCase()}">${escapeHtml(String(r.status || "unknown").toLowerCase())}</span>
+                <span class="report-date">${r.createdAt ? escapeHtml(new Date(r.createdAt).toLocaleDateString()) : ""}</span>
+              </div>
+              <div class="report-text">${escapeHtml(r.narrative || "")}</div>
+              ${r.metrics ? `<div class="report-meta">${escapeHtml(t("reports.master.metricsName"))}: ${escapeHtml(JSON.stringify(r.metrics))}</div>` : ''}     
+              </div>
+          </div>
+        `).join("");
+
+        return `
+          <div class="card activity-card">
+            <div class="card-header-activity">
+              <span class="activity-title">${escapeHtml(`${activityNum} ${activity.title}`)}</span>
+            </div>
+            <div class="card-body">
+              <div class="stats-grid">
+                ${metricItems}
+              </div>
+              ${reportsList ? `<div class="timeline-container">${reportsList}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="task-block">
+          <div class="task-title-row">
+            <h3>${escapeHtml(`${taskNum} ${task.title}`)}</h3>
+            <div class="task-meta">
+              <div class="progress-micro-wrapper">
+                <span class="progress-text">${escapeHtml(String(task.progress ?? 0))}%</span>
+                ${createProgressBar(task.progress, 'sm')}
+              </div>
+              ${escapeHtml(t("reports.master.task.weight"))}: ${escapeHtml(String(task.weight ?? "-"))}
+            </div>
+          </div>
+          <div class="activities-grid">
+            ${activitiesHtml}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="goal-section">
+  <div class="goal-banner">
+    <div class="goal-info">
+      <h2>${escapeHtml(`${goalNum}. ${g.title}`)}</h2>
+
+      <div class="goal-tags">
+        <span class="tag">
+          ${escapeHtml(g.status)}
+        </span>
+        <span class="tag">
+          ${escapeHtml(t("reports.master.goals.weight"))}: ${escapeHtml(String(g.weight ?? "-"))}
+        </span>
+      </div>
+    </div>
+
+    <div class="goal-chart">
+      <div class="chart-label">
+        ${escapeHtml(t("reports.master.charts.goalProgress"))}
+      </div>
+      <div class="chart-val">
+        ${escapeHtml(String(goalProgress))}%
+      </div>
+      ${createProgressBar(goalProgress, "md")}
+    </div>
+  </div>
+
+  <div class="goal-content">
+    ${tasksHtml}
+  </div>
 </div>
-`;
-              })
-              .join("")}
-</div>
-`;
-          })
-          .join("")}
-</div>
-</div>
-`;
-      })
-      .join("");
-    return `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>${escapeHtml(title)}</title>
-<style>
-body{font-family:Inter,Arial,Helvetica,sans-serif;padding:16px;color:#111;background:#fff}
-h1{font-size:20px;margin-bottom:3px}
-h2{font-size:14px;color:#374151}
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ddd;padding:6px;font-size:12px;vertical-align:top}
-th{background:#f3f4f6}
-.goal-row td{background:#eef2ff}
-.task-row td{background:#f8fafc}
-.narrative { white-space: pre-wrap; line-height:1.4; padding:8px; background:#fff; border-radius:4px; border:1px solid #eee; }
-{/* --- POLISHED PRINT STYLES (WITH PAGE BREAKS) --- */}
-@media print {
-body {
--webkit-print-color-adjust: exact;
-background: #ffffff !important;
+    `;
+  }).join("");
+
+  const title = t("reports.master.title");
+  const groupLabel = t("reports.master.groupLabel");
+  const narratives = t("reports.master.narratives");
+  const dataTable = t("reports.master.dataTable");
+  const generated = t("reports.master.generatedAt", { date: new Date().toLocaleString() });
+
+  return `<!doctype html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <title>${escapeHtml(title)}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      :root {
+        --primary: #4f46e5;       /* Indigo 600 */
+        --primary-light: #eef2ff; /* Indigo 50 */
+        --success: #10b981;       /* Emerald 500 */
+        --warning: #f59e0b;       /* Amber 500 */
+        --danger: #ef4444;        /* Red 500 */
+        --gray-900: #111827;
+        --gray-700: #374151;
+        --gray-500: #6b7280;
+        --gray-200: #e5e7eb;
+        --gray-50: #f9fafb;
+        --border: #e2e8f0;
+      }
+      
+      * { box-sizing: border-box; }
+      
+      body {
+        font-family: ${fontFamily};
+        color: var(--gray-900);
+        line-height: 1.5;
+        background: #fff;
+        margin: 0;
+        padding: 40px;
+        padding-bottom: 60px; /* Space for footer */
+        -webkit-print-color-adjust: exact;
+        overflow-wrap: break-word; /* Ensure text wraps */
+        word-break: break-word; /* Prevent overflow */
+        position: relative;
+        min-height: 100vh;
+      }
+
+      /* --- Report Header --- */
+      header {
+        margin-bottom: 40px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid var(--gray-900);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      header h1 {
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.02em;
+        background: -webkit-linear-gradient(45deg, var(--primary), #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        flex: 1;
+      }
+      .logo-container {
+        flex-shrink: 0;
+        margin-left: 20px;
+      }
+      .logo-img {
+        height: 60px;
+        width: auto;
+        object-fit: contain;
+      }
+
+      /* --- Footer --- */
+      footer {
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        font-size: 11px;
+        color: var(--gray-500);
+        width: 100%;
+      }
+      .footer-meta {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .footer-sep {
+        color: var(--gray-200);
+      }
+      .footer-val {
+        color: var(--gray-900);
+        font-weight: 600;
+      }
+
+      /* --- Section Headers --- */
+      section { margin-bottom: 50px; }
+      section h2.section-title {
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--gray-500);
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 5px;
+      }
+
+      /* --- Narrative: Goal Banner --- */
+      .goal-section {
+        margin-bottom: 40px;
+        page-break-inside: avoid;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      }
+      .goal-banner {
+        background: linear-gradient(135deg, var(--gray-900) 0%, #1e293b 100%);
+        color: white;
+        padding: 20px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .goal-info h2 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+        word-wrap: break-word;
+      }
+      .goal-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+      .tag {
+        background: rgba(255,255,255,0.2);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .goal-chart {
+        text-align: right;
+        min-width: 120px;
+      }
+      .chart-label { font-size: 10px; opacity: 0.7; text-transform: uppercase; }
+      .chart-val { font-size: 20px; font-weight: 700; color: var(--success); }
+
+      /* --- Narrative: Task Block --- */
+      .goal-content { padding: 20px; background: var(--gray-50); }
+      .task-block { margin-bottom: 30px; }
+      .task-block:last-child { margin-bottom: 0; }
+      
+      .task-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: wrap;
+      }
+      .task-title-row h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--gray-700); word-wrap: break-word; }
+      .task-meta { display: flex; align-items: center; gap: 15px; font-size: 12px; }
+      
+      .progress-micro-wrapper { display: flex; align-items: center; gap: 8px; width: 100px; }
+      .progress-text { font-weight: 600; min-width: 30px; text-align: right; }
+      .badge-weight { background: var(--gray-200); padding: 2px 6px; border-radius: 4px; color: var(--gray-700); font-weight: 600; }
+
+      /* --- Narrative: Activity Cards --- */
+      .activities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      .activity-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0;
+        transition: transform 0.2s;
+        /* Prevent card overflow */
+        max-width: 100%;
+      }
+      .card-header-activity {
+        padding: 10px 12px;
+        background: #fff;
+        border-bottom: 1px solid var(--gray-50);
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--primary);
+        word-wrap: break-word;
+      }
+      .card-body { padding: 12px; }
+
+      /* Stats Grid */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .stat-item {
+        background: var(--gray-50);
+        padding: 8px;
+        border-radius: 4px;
+        display: flex;
+        gap: 8px;
+        align-items: flex-start; /* Align top in case of wrapping */
+      }
+      .stat-icon { font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+      .stat-content { overflow: hidden; width: 100%; }
+      .stat-label { font-size: 9px; text-transform: uppercase; color: var(--gray-500); font-weight: 600; margin-bottom: 2px; }
+      /* allow wrapping for long values (json/urls) */
+      .stat-value { 
+        font-size: 12px; 
+        font-family: monospace; 
+        font-weight: 600; 
+        color: var(--gray-900); 
+        white-space: normal; /* Was nowrap */
+        word-break: break-all; /* Ensure JSON breaks */
+        line-height: 1.2;
+      }
+
+      /* Timeline Reports */
+      .timeline-container {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--border);
+      }
+      .timeline-item {
+        position: relative;
+        padding-left: 16px;
+        margin-bottom: 10px;
+      }
+      .timeline-item:last-child { margin-bottom: 0; }
+      .timeline-marker {
+        position: absolute;
+        left: 0;
+        top: 6px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--gray-200);
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px var(--gray-300);
+      }
+      .timeline-header {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        font-size: 11px;
+        margin-bottom: 2px;
+        flex-wrap: wrap;
+      }
+      .report-id { font-weight: 700; color: var(--gray-400); }
+      .status-pill { padding: 1px 6px; border-radius: 99px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+      .status-completed { background: #dcfce7; color: #166534; }
+      .status-pending { background: #fef9c3; color: #854d0e; }
+      .status-late { background: #fee2e2; color: #991b1b; }
+      
+      .report-text { 
+        font-size: 13px; 
+        color: var(--gray-700); 
+        line-height: 1.4; 
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+      }
+      .report-meta { 
+        font-size: 10px; 
+        color: var(--gray-400); 
+        margin-top: 2px; 
+        font-family: monospace; 
+        word-break: break-all; 
+      }
+
+      /* --- Progress Bars --- */
+      .progress-track { background: rgba(0,0,0,0.1); border-radius: 99px; overflow: hidden; width: 100%; }
+      .progress-fill { height: 100%; transition: width 0.3s ease; }
+      .size-sm { height: 6px; }
+      .size-md { height: 8px; }
+      .bg-success { background: var(--success); }
+      .bg-primary { background: var(--success); } /* Use success for green vibe */
+      .bg-warning { background: var(--warning); }
+
+      /* --- Data Table --- */
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 12px;
+        table-layout: fixed; /* Force column widths to respect page */
+      }
+      thead th {
+        background: var(--gray-50);
+        color: var(--gray-500);
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        padding: 10px 8px;
+        border-bottom: 2px solid var(--border);
+        text-align: left;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      tbody td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+        word-wrap: break-word; /* Wrap long content */
+      }
+      
+      /* Row Styling */
+      .row-goal td {
+        background: var(--gray-50);
+        font-weight: 700;
+        color: var(--gray-900);
+        padding-top: 20px;
+        border-bottom: 2px solid var(--border);
+      }
+      .row-task td {
+        background: #fff;
+        font-weight: 600;
+        color: var(--gray-700);
+      }
+      
+      /* Cell Styling */
+      /* Assign relative widths to help table-layout: fixed */
+      .cell-title { width: 30%; word-wrap: break-word; }
+      .cell-center { text-align: center; }
+      .cell-number { text-align: right; font-family: monospace; font-size: 12px; }
+      .cell-sub-val { text-align: right; font-family: monospace; font-size: 11px; padding: 4px; border: none; border-bottom: 1px solid var(--border); }
+      
+      .title-wrapper { font-weight: 700; word-wrap: break-word; }
+      .indent-activity { padding-left: 24px; position: relative; }
+      .activity-dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: var(--primary);
+        border-radius: 50%;
+        margin-right: 8px;
+        opacity: 0.5;
+        flex-shrink: 0;
+      }
+      
+      .badge-mini { background: var(--primary-light); color: var(--primary); padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; display: inline-block; }
+      
+      .font-medium { font-weight: 500; }
+      .font-bold { font-weight: 700; }
+      .text-muted { color: var(--gray-500); }
+      .text-success { color: var(--success); }
+      .text-xs { font-size: 10px; }
+      .opacity-70 { opacity: 0.7; }
+
+      /* --- Print Media Query --- */
+      @media print {
+        body { padding: 0; max-width: none; }
+        .goal-section { break-inside: avoid; box-shadow: none; border: 1px solid #000; }
+        .goal-banner { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact; }
+        .progress-fill { -webkit-print-color-adjust: exact; }
+        .activity-card { border: 1px solid #ccc; break-inside: avoid; }
+        header { border-bottom: 2px solid #000; }
+        thead th { border-bottom: 2px solid #000; color: #000; }
+        .tag, .stat-item, .badge-mini { border: 1px solid #ddd; }
+        .chart-val { color: var(--success) !important; }
+        
+        /* Force footer to bottom of every page */
+        footer {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: #fff;
+          padding: 10px 0;
+          border-top: 1px solid #000;
+        }
+        /* ensure content doesn't overlap footer */
+        body { padding-bottom: 50px; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>${escapeHtml(title)}</h1>
+      <div class="logo-container">
+        <img src="/src/assets/logo.png" alt="Logo" class="logo-img">
+      </div>
+    </header>
+
+    <section>
+      <h2 class="section-title">${escapeHtml(narratives)}</h2>
+      ${narrativesHtml}
+    </section>
+
+    <section style="margin-top: 60px;">
+      <h2 class="section-title">${escapeHtml(dataTable)}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="cell-title">${escapeHtml(t("reports.table.title"))}</th>
+            <th class="cell-center" style="width: 8%">${escapeHtml(t("reports.table.weight"))}</th>
+            <th class="cell-center" style="width: 8%">${escapeHtml(t("reports.table.metric"))}</th>
+            <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.previous", "Prev"))}</th>
+            <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.target"))}</th>
+            <th>${columnsHtml}</th>
+            <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.yearlyProgress", "YTD %"))}</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </section>
+
+    <footer>
+      <div class="footer-meta">
+        <span>Group: <span class="footer-val">${escapeHtml(String(groupSearchTerm || "All"))}</span></span>
+        <span class="footer-sep">•</span>
+        <span>Date: <span class="footer-val">${escapeHtml(generated)}</span></span>
+        <span class="footer-sep">•</span>
+      </div>
+    </footer>
+  </body>
+  </html>`;
 }
-/* Force all text to black and backgrounds to white, remove shadows */
-* {
-color: #000000 !important;
-background: #ffffff !important;
-text-shadow: none !important;
-box-shadow: none !important;
-border-color: #ddd !important; /* Default border color */
-}
-table {
-width: 100%;
-border-collapse: collapse;
-table-layout: auto; /* Allow table to be 100% */
-}
-th, td {
-border: 1px solid #999 !important; /* Ensure table borders are visible */
-white-space: nowrap; /* Prevent ugly wrapping in table cells */
-}
-th {
-border-bottom: 2px solid #000 !important; /* Heavier border for table header */
-}
-/* Page break hints */
-section {
-page-break-after: always; /* Try to put table on new page */
-}
-section:last-of-type {
-page-break-after: auto; /* Don't add blank page at end */
-}
-.print-goal-narrative,
-tr {
-page-break-inside: avoid !important; /* Don't split narrative blocks or table rows */
-}
-.narrative {
-border: 1px dashed #999 !important;
-page-break-inside: avoid;
-}
-/* Differentiate goal narrative sections with a solid border */
-.print-goal-narrative {
-border: 2px solid #000 !important;
-padding: 8px;
-margin-top: 10px;
-}
-}
-</style>
-</head>
-<body>
-<p style="margin-top:2px;margin-bottom:6px">${escapeHtml(
-      groupLabel
-    )}: ${escapeHtml(String(groupSearchTerm || "All"))} • ${escapeHtml(
-      generated
-    )}</p>
-<section>
-<h2>${escapeHtml(narratives)}</h2>
-${narrativesHtml}
-</section>
-<section style="margin-top:14px">
-<h2>${escapeHtml(dataTable)}</h2>
-<table>
-<thead><tr><th>${escapeHtml(t("reports.table.title"))}</th><th>${escapeHtml(
-      t("reports.table.weight")
-    )}</th><th>${escapeHtml(t("reports.table.metric"))}</th><th>${escapeHtml(
-      t("reports.table.target")
-    )}</th><th>${escapeHtml(
-      t("reports.table.previous", "Previous")
-    )}</th><th>${escapeHtml(
-      t("reports.table.yearlyProgress", "Yearly Progress %") /* ADDED */
-    )}</th>${columnsHtml}</tr></thead>
-<tbody>${rowsHtml}</tbody>
-</table>
-</section>
-</body>
-</html>`;
-  }
 
   function exportCSV() {
     if (!master) return alert(t("reports.master.loadFirstAlert"));
@@ -706,7 +1082,8 @@ ${narrativesHtml}
           .join(",")
       )
       .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
