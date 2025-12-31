@@ -280,7 +280,7 @@
     "noReports4": "No reports found",
     "noReports5": "No reports found.",
     "footer": {
-      "systemName": "SGMS"
+      "systemName": "Officemate"
     },
     "status2": {
       "Approved": "Approved",
@@ -575,7 +575,8 @@
       "groupManagement": "Group Management",
       "reportReview": "Report Review",
       "masterReport": "Master Report",
-      "chats": "Chat"
+      "chats": "Chat",
+      "Download": "Download"
     },
     "logoAlt": "Company logo",
     "appName": "Officemate",
@@ -702,7 +703,9 @@
       "rollLabel": "Roll number (optional)",
       "optional": "(optional)",
       "previousMetrics": "Previous Metrics",
-      "selectedFiles": "Selected files:"
+      "selectedFiles": "Selected files:",
+      "quickInfo": "Quick info",
+      "totalTarget": "Total target"
     },
 
     "placeholders": {
