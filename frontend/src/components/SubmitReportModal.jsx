@@ -1,5 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { Loader, UploadCloud, Paperclip, X } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Loader,
+  UploadCloud,
+  Paperclip,
+  X,
+  CheckCircle,
+  Activity,
+  FileText,
+  PlusSquare,
+  AlertCircle,
+} from "lucide-react";
 
 /**
  * Props:
@@ -20,15 +30,16 @@ export default function SubmitReportInline({
   const [narrative, setNarrative] = useState("");
   const [metricsArray, setMetricsArray] = useState([]); // Start empty, populate in useEffect
   const [newStatus, setNewStatus] = useState("");
+  const [userSelectedStatus, setUserSelectedStatus] = useState(false);
   const [files, setFiles] = useState([]); // [{ id, file }]
   const [localErr, setLocalErr] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [badgePulse, setBadgePulse] = useState(false);
 
   const backdropRef = React.useRef(null);
   const modalRef = React.useRef(null);
 
-  // Safe parse: object | stringified JSON -> object (or original value)
   const safeParseJson = (v) => {
     if (v === null || v === undefined) return null;
     if (typeof v === "object") return v;
@@ -44,7 +55,6 @@ export default function SubmitReportInline({
     return v;
   };
 
-  // Robust numeric extractor: handles "100", 100, { value: "100" }, etc.
   const extractNumeric = (v) => {
     if (v === null || v === undefined || v === "") return null;
     if (typeof v === "number" && Number.isFinite(v)) return v;
@@ -70,11 +80,9 @@ export default function SubmitReportInline({
     return null;
   };
 
-  // Helper to generate a unique ID for React keys
   const generateId = () =>
     `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-  // Animation management
   useEffect(() => {
     if (data) {
       setIsVisible(true);
@@ -82,7 +90,7 @@ export default function SubmitReportInline({
       requestAnimationFrame(() => {
         if (backdropRef.current && modalRef.current) {
           backdropRef.current.style.opacity = "1";
-          modalRef.current.style.transform = "scale(1) translateY(0)";
+          modalRef.current.style.transform = "translateY(0) scale(1)";
           modalRef.current.style.opacity = "1";
         }
       });
@@ -90,7 +98,7 @@ export default function SubmitReportInline({
       setIsAnimating(true);
       if (backdropRef.current && modalRef.current) {
         backdropRef.current.style.opacity = "0";
-        modalRef.current.style.transform = "scale(0.95) translateY(10px)";
+        modalRef.current.style.transform = "translateY(10px) scale(0.97)";
         modalRef.current.style.opacity = "0";
       }
       const timer = setTimeout(() => {
@@ -101,12 +109,12 @@ export default function SubmitReportInline({
     }
   }, [data, isVisible]);
 
-  // Populate metricsArray from incoming data (robust parsing)
   useEffect(() => {
     if (!data) return;
 
     setNarrative("");
     setNewStatus("");
+    setUserSelectedStatus(false);
     setFiles([]);
     setLocalErr(null);
 
@@ -141,7 +149,7 @@ export default function SubmitReportInline({
         return {
           id: generateId(),
           key: key,
-          value: "", // incremental value to report — left empty for user input
+          value: "", // replacement value to report — left empty for user input
           target: targetVal !== null ? targetVal : null,
           current: currentVal,
           isPredefined: true, // Key is from targetMetric and should be readonly
@@ -171,7 +179,6 @@ export default function SubmitReportInline({
     data,
   ]);
 
-  // File input handling
   const onFileChange = (e) => {
     setLocalErr(null);
     const incoming = Array.from(e.target.files || []).map((f) => ({
@@ -232,9 +239,28 @@ export default function SubmitReportInline({
   const removeMetricRow = (idx) =>
     setMetricsArray((p) => p.filter((_, i) => i !== idx));
 
-  // Derived totals for overall hint (unchanged)
   const { totalTarget, totalCurrent, totalAvailable, isNumericTarget } =
-    (() => {
+    useMemo(() => {
+      if (metricsArray && metricsArray.length > 0) {
+        let tSum = 0;
+        let cSum = 0;
+        for (const m of metricsArray) {
+          if (!m) continue;
+          const target = m.target !== undefined && m.target !== null ? m.target : null;
+          const curr = Number(m.current) || 0;
+          const reported = extractNumeric(m.value);
+          const newCurrent = reported !== null ? reported : curr; // REPLACEMENT semantics
+          if (target !== null) tSum += target;
+          cSum += newCurrent;
+        }
+        return {
+          totalTarget: tSum,
+          totalCurrent: cSum,
+          totalAvailable: Math.max(0, tSum - cSum),
+          isNumericTarget: tSum > 0,
+        };
+      }
+
       const rawTargets = safeParseJson(
         data?.targetMetric ?? data?.activity?.targetMetric ?? {}
       );
@@ -260,13 +286,84 @@ export default function SubmitReportInline({
         totalAvailable: Math.max(0, totalT - totalC),
         isNumericTarget: totalT > 0,
       };
-    })();
+    }, [metricsArray, data]);
+
+  const suggestedStatus = useMemo(() => {
+    let hasAnyTarget = false;
+    let anyProgress = false;
+    let allTargetsMet = true;
+
+    if (!metricsArray || metricsArray.length === 0) return "To Do";
+
+    for (const m of metricsArray) {
+      if (!m) continue;
+      const reported = extractNumeric(m.value); // replacement if present
+      const curr = Number(m.current) || 0;
+      const target = m.target !== undefined ? m.target : null;
+
+      const newCurrent = reported !== null ? reported : curr;
+
+      if (target !== null && target !== undefined) {
+        hasAnyTarget = true;
+        if (newCurrent < target) {
+          allTargetsMet = false;
+        }
+        if (newCurrent > 0) anyProgress = true;
+      } else {
+        if (newCurrent > 0) anyProgress = true;
+        allTargetsMet = false;
+      }
+    }
+
+    if (hasAnyTarget) {
+      if (allTargetsMet) return "Done";
+      if (anyProgress) return "In Progress";
+      return "To Do";
+    } else {
+      if (anyProgress) return "In Progress";
+      return "To Do";
+    }
+  }, [metricsArray]);
+
+  // List of over-target metric ids for inline hints
+  const overTargetMap = useMemo(() => {
+    const map = new Map();
+    if (!metricsArray) return map;
+    for (const m of metricsArray) {
+      if (!m) continue;
+      const reported = extractNumeric(m.value);
+      const target = m.target !== undefined ? m.target : null;
+      if (target !== null && reported !== null && reported > target) {
+        map.set(m.id, { reported, target });
+      }
+    }
+    return map;
+  }, [metricsArray]);
+
+  const hasExceeded = overTargetMap.size > 0;
+
+  // Auto-apply suggestedStatus unless user manually selected a status
+  useEffect(() => {
+    if (!userSelectedStatus) {
+      setNewStatus(suggestedStatus);
+    }
+    setBadgePulse(true);
+    const t = setTimeout(() => setBadgePulse(false), 900);
+    return () => clearTimeout(t);
+  }, [suggestedStatus, userSelectedStatus]);
+
+  useEffect(() => {
+    if (data) {
+      setUserSelectedStatus(false);
+      setNewStatus(suggestedStatus);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
     setLocalErr(null);
 
-    // Validate: key is required if value is provided
     const hasInvalid = metricsArray.some(
       (m) => m && String(m.key).trim() === "" && String(m.value).trim() !== ""
     );
@@ -278,7 +375,6 @@ export default function SubmitReportInline({
       return;
     }
 
-    // Validate: value must be a number if provided
     const hasNaN = metricsArray.some(
       (m) =>
         m && String(m.value).trim() !== "" && extractNumeric(m.value) === null
@@ -291,27 +387,21 @@ export default function SubmitReportInline({
       return;
     }
 
-    // Prepare files as File[] for onSubmit
     const rawFiles = files.map((f) => f.file);
 
-    // IMPORTANT: Send exactly what the user entered (replace semantics).
-    // Build metrics object mapping key -> entered value (string).
-    // Skip rows with empty key or empty value.
     const metricsObj = {};
     for (const m of metricsArray) {
       if (!m) continue;
       const key = String(m.key || "").trim();
       if (key === "") continue;
-      // If user didn't enter a value, skip sending that metric.
       if (String(m.value ?? "").trim() === "") continue;
-      // Send exactly the typed value (no accumulation).
       metricsObj[key] = String(m.value);
     }
 
     await onSubmit({
       activityId,
       narrative,
-      metricsArray, // keep sending the array for debugging/UI if needed
+      metricsArray,
       metrics_data: Object.keys(metricsObj).length
         ? JSON.stringify(metricsObj)
         : null,
@@ -322,21 +412,28 @@ export default function SubmitReportInline({
     });
   };
 
-  // We removed exceed-check / disable logic per your request — always allow submit (subject to validation above)
   if (!isVisible && !isAnimating) return null;
+
+  // header badge label: if any exceeded -> show "Warning" (red), else show status
+  const headerBadge = hasExceeded ? "Warning" : newStatus;
+  const headerIsWarning = hasExceeded;
 
   return (
     <>
       <style>{`
-        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px) scale(0.95);} to { opacity: 1; transform: translateY(0) scale(1);} }
-        @keyframes slideOutDown { to { opacity: 0; transform: translateY(20px) scale(0.95);} }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(20px) scale(0.97);} to { opacity: 1; transform: translateY(0) scale(1);} }
         @keyframes shake { 0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);} }
-        @keyframes fileAppear { from { opacity:0; transform:translateX(-10px);} to {opacity:1; transform:translateX(0);} }
+        @keyframes pulseBadge { 0% { transform: scale(1); opacity: 1;} 50% { transform: scale(1.06); opacity: 0.95 } 100% { transform: scale(1); opacity: 1 } }
+        .badgePulse { animation: pulseBadge 0.9s ease; }
+        .rowFade { transition: transform 200ms ease, box-shadow 200ms ease; }
+        .rowFade:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(15,23,42,0.06); }
+        .btnFloat { transition: transform 160ms ease; }
+        .btnFloat:hover { transform: translateY(-2px) scale(1.01); }
       `}</style>
 
       <div
         ref={backdropRef}
-        className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out"
+        className="fixed inset-0 bg-black/45 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out"
         role="presentation"
         onClick={onClose}
         style={{ opacity: 0, pointerEvents: isAnimating ? "auto" : "none" }}
@@ -345,7 +442,7 @@ export default function SubmitReportInline({
           ref={modalRef}
           onSubmit={handleSubmit}
           encType="multipart/form-data"
-          className="w-full max-w-2xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transform transition-all duration-300 ease-out"
+          className="w-full max-w-3xl bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transform transition-all duration-300 ease-out"
           role="dialog"
           aria-modal="true"
           aria-labelledby="submit-report-title"
@@ -353,32 +450,82 @@ export default function SubmitReportInline({
           onKeyDown={(e) => {
             if (e.key === "Escape") onClose();
           }}
-          style={{ transform: "scale(0.95) translateY(10px)", opacity: 0 }}
+          style={{ transform: "translateY(10px) scale(0.97)", opacity: 0 }}
         >
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
-            <h3
-              id="submit-report-title"
-              className="text-lg font-semibold text-gray-900 dark:text-white"
-            >
-              {t("project.modal.submitReport") || "Submit Report"}
-            </h3>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("project.actions.close") || "Close"}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full p-1 transition-all duration-200 transform hover:scale-110 hover:rotate-90 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <X className="h-5 w-5" />
-            </button>
+          <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between flex-shrink-0 bg-gradient-to-r from-white/60 to-indigo-50 dark:from-gray-900/60 dark:to-indigo-900/30">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-indigo-600 text-white shadow-sm">
+                <Activity className="h-5 w-5" />
+              </div>
+              <div>
+                <h3
+                  id="submit-report-title"
+                  className="text-lg font-semibold text-gray-900 dark:text-white"
+                >
+                  {t("project.modal.submitReport") || "Submit Report"}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("project.modal.subtitle") ||
+                    "Add narrative, attach files, and update metrics"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${
+                  headerIsWarning
+                    ? "bg-red-100 text-red-800 dark:bg-red-900/30"
+                    : newStatus === "Done"
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30"
+                    : newStatus === "In Progress"
+                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30"
+                    : "bg-gray-100 text-gray-800 dark:bg-gray-800/60"
+                } ${badgePulse ? "badgePulse" : ""}`}
+                title={headerIsWarning ? "Warning: reported value exceeds target" : `Status: ${newStatus}`}
+                aria-live="polite"
+              >
+                {headerIsWarning ? (
+                  <AlertCircle className="h-4 w-4" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                <span>{headerBadge}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label={t("project.actions.close") || "Close"}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white rounded-full p-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-400 btnFloat"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
-          <div className="px-6 py-5 space-y-4 overflow-y-auto">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t("project.labels.activity")}
-              </label>
-              <div className="mt-1 text-sm font-mono p-2 bg-gray-100 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-200">
-                {activityId}
+          <div className="px-6 py-6 space-y-5 overflow-y-auto">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("project.labels.activity")}
+                </label>
+                <div className="mt-2 text-sm font-mono p-2 bg-gray-50 dark:bg-gray-800 rounded text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-gray-800">
+                  {activityId}
+                </div>
+              </div>
+
+              <div className="w-44 text-right">
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("project.labels.quickInfo") || "Quick info"}
+                </div>
+                <div className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-200">
+                  <FileText className="inline h-4 w-4 mr-1 -mt-0.5" />
+                  {isNumericTarget ? totalTarget : "-"}
+                  <div className="text-xs text-gray-400">
+                    {t("project.hints.totalTarget") || "Total target"}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -394,12 +541,12 @@ export default function SubmitReportInline({
                 value={narrative}
                 onChange={(e) => setNarrative(e.target.value)}
                 rows={4}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="mt-2 w-full px-3 py-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
               />
             </div>
 
             {isNumericTarget && (
-              <div className="p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-800 dark:text-indigo-300 text-sm">
+              <div className="p-2 rounded-md bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 text-indigo-900 dark:text-indigo-300 text-sm">
                 {t("project.hints.overallHint", {
                   target: totalTarget,
                   used: totalCurrent,
@@ -413,14 +560,20 @@ export default function SubmitReportInline({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t("project.labels.metrics")}
               </label>
-              <div className="mt-2 space-y-3">
+              <div className="mt-3 space-y-3">
                 {metricsArray.map((m, idx) => {
+                  const reported = extractNumeric(m.value);
+                  const displayedCurrent = reported !== null ? reported : (m.current || 0);
                   const remaining =
-                    m.target !== null ? m.target - (m.current || 0) : null;
+                    m.target !== null && m.target !== undefined
+                      ? m.target - displayedCurrent
+                      : null;
+                  const exceeded = m.target !== null && reported !== null && reported > m.target;
+
                   return (
                     <div
                       key={m.id}
-                      className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg space-y-2 bg-white dark:bg-gray-800"
+                      className="p-3 border border-gray-100 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 rowFade"
                     >
                       <div className="flex gap-2 items-center">
                         <input
@@ -432,10 +585,10 @@ export default function SubmitReportInline({
                           onChange={(e) =>
                             updateMetricRow(idx, "key", e.target.value)
                           }
-                          className={`flex-1 px-2 py-1 border rounded-lg text-sm ${
+                          className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
                             m.isPredefined
-                              ? "bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed"
-                              : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600"
+                              ? "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-800 cursor-not-allowed"
+                              : "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700"
                           }`}
                         />
                         <input
@@ -444,34 +597,33 @@ export default function SubmitReportInline({
                           min={0}
                           placeholder={
                             t("project.placeholders.metricValueReport") ||
-                            "Value to Report"
+                            "Value to Report (will replace)"
                           }
                           value={m.value}
                           onChange={(e) =>
                             updateMetricRow(idx, "value", e.target.value)
                           }
-                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-1 focus:ring-blue-500 dark:focus:ring-blue-400"
+                          className="w-44 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
                         />
                         <button
                           type="button"
                           onClick={() => removeMetricRow(idx)}
-                          className="p-2 text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          aria-label={
-                            t("project.actions.removeShort") || "Remove"
-                          }
+                          className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                          aria-label={t("project.actions.removeShort") || "Remove"}
                         >
                           <X className="h-4 w-4" />
                         </button>
                       </div>
 
-                      {m.isPredefined && m.target !== null && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 pl-1">
-                          {t("project.hints.metricRemaining", {
-                            current: m.current,
-                            target: m.target,
-                            remaining,
-                          }) ||
-                            `Current: ${m.current} / ${m.target} (Remaining: ${remaining})`}
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 pl-1">
+                        {`Current (after change): ${displayedCurrent} / ${m.target !== null ? m.target : "-"}${
+                          remaining !== null ? ` (Remaining: ${remaining})` : ""
+                        }`}
+                      </div>
+
+                      {exceeded && (
+                        <div className="mt-2 text-xs text-red-700 dark:text-red-200 pl-1">
+                          <span className="font-medium">Warning:</span> reported value ({reported}) exceeds target ({m.target}).
                         </div>
                       )}
                     </div>
@@ -482,27 +634,15 @@ export default function SubmitReportInline({
               <button
                 type="button"
                 onClick={addMetricRow}
-                className="flex items-center justify-center gap-2 mt-3 px-4 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors w-full"
+                className="flex items-center justify-center gap-2 mt-4 px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:shadow-sm transition btnFloat"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
+                <PlusSquare className="h-4 w-4" />
                 {t("project.actions.addMetric") || "Add Metric"}
               </button>
 
               {localErr && (
                 <div
-                  className="text-xs text-red-500 mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800"
+                  className="text-xs text-red-600 mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800"
                   style={{ animation: "shake 0.4s ease-in-out" }}
                 >
                   {localErr}
@@ -510,97 +650,104 @@ export default function SubmitReportInline({
               )}
             </div>
 
-            <div>
-              <label
-                htmlFor="newStatus"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                {t("project.fields.newStatus")} {t("project.labels.optional")}
-              </label>
-              <select
-                id="newStatus"
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="">
-                  {t("project.status.noChange") || "(No Change)"}
-                </option>
-                <option value="To Do">
-                  {t("project.status.toDo") || "To Do"}
-                </option>
-                <option value="In Progress">
-                  {t("project.status.inProgress") || "In Progress"}
-                </option>
-                <option value="Done">
-                  {t("project.status.completed") || "Done"}
-                </option>
-              </select>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="newStatus"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  {t("project.fields.newStatus")} {t("project.labels.optional")}
+                </label>
+                <select
+                  id="newStatus"
+                  value={newStatus}
+                  onChange={(e) => {
+                    setNewStatus(e.target.value);
+                    setUserSelectedStatus(true);
+                  }}
+                  className="mt-2 w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                >
+                  <option value="">
+                    {t("project.status.noChange") || "(No Change)"}
+                  </option>
+                  <option value="To Do">
+                    {t("project.status.toDo") || "To Do"}
+                  </option>
+                  <option value="In Progress">
+                    {t("project.status.inProgress") || "In Progress"}
+                  </option>
+                  <option value="Done">
+                    {t("project.status.completed") || "Done"}
+                  </option>
+                </select>
+                {/* removed duplicate suggested-status text */}
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                {t("project.labels.attachments")}
-              </label>
-              <label
-                htmlFor="file-upload"
-                className="mt-2 flex justify-center items-center gap-2 px-6 py-4 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700/50"
-              >
-                <UploadCloud className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-                <span className="text-sm text-gray-600 dark:text-gray-300">
-                  {t("project.actions.uploadFiles") ||
-                    "Click to upload files (max 5)"}
-                </span>
-              </label>
-              <input
-                id="file-upload"
-                type="file"
-                multiple
-                onChange={onFileChange}
-                className="hidden"
-              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("project.labels.attachments")}
+                </label>
+                <label
+                  htmlFor="file-upload"
+                  className="mt-2 flex justify-center items-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700"
+                >
+                  <UploadCloud className="h-5 w-5 text-gray-500 dark:text-gray-300" />
+                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                    {t("project.actions.uploadFiles") ||
+                      "Click to upload files (max 5)"}
+                  </span>
+                </label>
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  onChange={onFileChange}
+                  className="hidden"
+                />
 
-              {files.length > 0 && (
-                <div className="mt-3 space-y-1">
-                  <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t("project.labels.selectedFiles") || "Selected files:"}
-                  </h4>
-                  <ul className="text-xs text-gray-700 dark:text-gray-200 space-y-1">
-                    {files.map((f, index) => (
-                      <li
-                        key={f.id}
-                        className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg"
-                      >
-                        <Paperclip className="h-3 w-3 flex-shrink-0" />
-                        <span className="flex-1 truncate">{f.file.name}</span>
-                        <span className="text-gray-500 dark:text-gray-400">
-                          ({Math.round(f.file.size / 1024)} KB)
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(f.id)}
-                          className="ml-2 p-1 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/20 text-gray-600"
+                {files.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                      <Paperclip className="inline h-3 w-3 mr-1" />
+                      {t("project.labels.selectedFiles") || "Selected files:"}
+                    </h4>
+                    <ul className="text-xs text-gray-700 dark:text-gray-200 space-y-1">
+                      {files.map((f) => (
+                        <li
+                          key={f.id}
+                          className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-800"
                         >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                          <Paperclip className="h-3 w-3 flex-shrink-0" />
+                          <span className="flex-1 truncate">{f.file.name}</span>
+                          <span className="text-gray-500 dark:text-gray-400">
+                            ({Math.round(f.file.size / 1024)} KB)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(f.id)}
+                            className="ml-2 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                {t("project.hints.maxAttachments", { max: 5 }) ||
-                  "Max 5 attachments."}
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {t("project.hints.maxAttachments", { max: 5 }) ||
+                    "Max 5 attachments."}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-gray-800">
+          <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3 bg-gray-50 dark:bg-gray-900">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-white text-gray-700 text-sm font-medium"
+              className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-sm font-medium btnFloat"
             >
               {t("project.actions.cancel") || "Cancel"}
             </button>
@@ -608,11 +755,23 @@ export default function SubmitReportInline({
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 flex items-center"
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2 btnFloat"
             >
-              {loading ? (
-                <Loader className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
+              {loading ? <Loader className="h-4 w-4 animate-spin" /> : null}
+              <svg
+                className="h-4 w-4 -ml-0.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5 12h14M12 5l7 7-7 7"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
               {t("project.actions.submit") || "Submit"}
             </button>
           </div>
