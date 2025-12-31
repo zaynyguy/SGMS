@@ -960,5 +960,20 @@
     "open": "Open",
     "viewAll": "View all",
     "refresh": "Refresh"
+  },
+  "chat": {
+    "title": "Messages",
+    "recent": "Chats",
+    "loading": "Loading chats…",
+    "noConversations": "No conversations yet. Start a new chat to begin messaging.",
+    "startNewChat": "Start new chat",
+    "noMessagesYet": "No messages yet. Send a message to start the conversation.",
+    "activeNow": "Active",
+    "placeholder": "Type a message…",
+    "selectConversation": "Select a conversation to start chatting.",
+    "chooseConversation": "Choose an existing chat from the left or start a new one.",
+    "New Message": "New Message",
+    "loadingUsers": "Loading users…",
+    "noUsersFound": "No users found."
   }
 }
