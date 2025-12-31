@@ -1,50 +1,48 @@
-const { exec } = require("child_process");
-const fs = require("fs");
+const { spawn } = require("child_process");
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 
-// ===== CONFIGURE THIS =====
+// ===== CONFIG =====
 const connectionString = process.env.DATABASE_URL;
-const outputFile = path.resolve("./full_dump.sql"); // output file path
-// Optional: custom pg_dump path in .env
-// PG_DUMP_PATH="C:\\Program Files\\PostgreSQL\\17\\bin\\pg_dump.exe"
-// ===========================
+const outputFile = path.resolve("./full_dump.dump");
 
-// Validate connection string
+// Optional custom pg_dump path (Windows)
+const pgDumpPath =
+  process.env.PG_DUMP_PATH ||
+  (process.platform === "win32"
+    ? "pg_dump.exe"
+    : "pg_dump");
+
+// ==================
+
 if (!connectionString) {
-  console.error("❌ DATABASE_URL is missing in .env file");
+  console.error("❌ DATABASE_URL is missing in .env");
   process.exit(1);
 }
 
-console.log("Starting full database export from Neon/PostgreSQL...");
+console.log("📦 Starting safe PostgreSQL export (custom format)...");
 
-// Detect pg_dump binary
-const pgDumpPath = process.env.PG_DUMP_PATH
-  ? process.env.PG_DUMP_PATH
-  : process.platform === "win32"
-  ? "pg_dump.exe"  // Windows
-  : "pg_dump";     // macOS/Linux
+const args = [
+  connectionString,
+  "-F", "c",                 // custom (binary) format
+  "--no-owner",
+  "--no-privileges",
+  "-f", outputFile            // pg_dump writes directly
+];
 
-// Final dump command
-const dumpCommand = `${pgDumpPath} "${connectionString}" -F p --no-owner --no-privileges`;
+const dump = spawn(pgDumpPath, args, { stdio: "inherit" });
 
-const child = exec(dumpCommand, { maxBuffer: 1024 * 1024 * 200 }); // 200MB buffer
-
-const writeStream = fs.createWriteStream(outputFile);
-child.stdout.pipe(writeStream);
-
-child.stderr.on("data", (data) =>
-  console.error("pg_dump:", data.toString())
-);
-
-child.on("exit", (code) => {
+dump.on("close", (code) => {
   if (code === 0) {
-    console.log(`\n✅ Export complete! File saved at: ${outputFile}\n`);
-    console.log("To restore later, run:");
+    console.log("\n✅ Export complete!");
+    console.log(`📁 File: ${outputFile}\n`);
+    console.log("Restore with:");
     console.log(
-      `  psql "postgresql://USER:PASSWORD@HOST:PORT/DBNAME?sslmode=require" -f full_dump.sql\n`
+      `pg_restore -d "postgres://USER:PASSWORD@HOST:PORT/DBNAME" \\\n` +
+      `  --no-owner --no-privileges ${outputFile}\n`
     );
   } else {
-    console.error(`\n❌ pg_dump exited with code ${code}`);
+    console.error(`\n❌ pg_dump failed with exit code ${code}`);
+    process.exit(code);
   }
 });
