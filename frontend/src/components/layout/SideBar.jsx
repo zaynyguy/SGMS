@@ -1,5 +1,6 @@
+// src/components/layout/Sidebar.jsx
 import React, { useState, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -25,21 +26,18 @@ import AuthenticatedImage from "../common/AuthenticatedImage";
 const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) => {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
-  // Dark mode state
   const [darkMode, setDarkMode] = useState(false);
-  
-  // Toggle dark mode
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
 
-  // Material 3 color system - light theme
   const lightColors = {
-    primary: "#10B981", // Green 40
+    primary: "#10B981",
     onPrimary: "#FFFFFF",
-    primaryContainer: "#BBF7D0", // Light green container
-    onPrimaryContainer: "#047857", // Dark green text on container
+    primaryContainer: "#BBF7D0",
+    onPrimaryContainer: "#047857",
     secondary: "#4F7AE6",
     onSecondary: "#FFFFFF",
     secondaryContainer: "#DBE6FD",
@@ -72,9 +70,8 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
     surfaceContainerHighest: "#EEF2F7",
   };
 
-  // Material 3 color system - dark theme
   const darkColors = {
-    primary: "#4ADE80", // Lighter green for dark mode
+    primary: "#4ADE80",
     onPrimary: "#002115",
     primaryContainer: "#003925",
     onPrimaryContainer: "#BBF7D0",
@@ -111,17 +108,13 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
     horizantalactivebar: "#1E3A8A"
   };
 
-  // Select colors based on dark mode
   const m3Colors = darkMode ? darkColors : lightColors;
 
-  // Context (will exist if you wrapped app with SidebarProvider)
   const { sidebarOpen: ctxOpen, toggleSidebar: ctxToggle, closeSidebar: ctxClose } = useSidebar();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
-
-  // New: track which parent menu is open
   const [openMenu, setOpenMenu] = useState(null);
 
   const location = useLocation();
@@ -139,9 +132,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
 
   const hasPermission = (permission) => user?.permissions?.includes(permission);
 
-  /* -----------------------------
-     Menu items with children for Access and Report
-     ----------------------------- */
   const mainMenuItems = [
     {
       key: "dashboard",
@@ -208,15 +198,11 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
       };
     });
 
-  /* Auto-open parent if current path matches a child */
   useEffect(() => {
     const found = mainMenuItems.find((it) => it.children && it.children.some((ch) => location.pathname.startsWith(ch.to)));
     if (found) setOpenMenu(found.key);
   }, [location.pathname]);
 
-  /* -----------------------------
-  Effective mobile state & handlers
-  ----------------------------- */
   const effectiveMobileOpen = typeof mobileIsOpen === "boolean" ? mobileIsOpen : ctxOpen;
   const handleMobileToggle = () => {
     if (typeof onToggle === "function") return onToggle();
@@ -248,9 +234,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
     return "U";
   };
 
-  /* -----------------------------
-  MenuItem component (supports children)
-  ----------------------------- */
   const MenuItem = ({ item, showExpanded }) => {
     const [isFilling, setIsFilling] = useState(false);
     const hasChildren = Array.isArray(item.children) && item.children.length > 0;
@@ -263,9 +246,19 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
 
     const toggleMenu = (e) => {
       e?.preventDefault();
-      if (hasChildren) {
-        setOpenMenu((cur) => (cur === item.key ? null : item.key));
+      if (!hasChildren) {
+        if (item.to) navigate(item.to);
+        return;
       }
+      setOpenMenu((cur) => {
+        const opening = cur !== item.key;
+        if (opening && item.children && item.children[0] && item.children[0].to) {
+          try {
+            navigate(item.children[0].to);
+          } catch (err) {}
+        }
+        return opening ? item.key : null;
+      });
     };
 
     return hasChildren ? (
@@ -340,23 +333,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
               } ${showExpanded ? "justify-start" : "justify-center"}`}
               aria-label={item.label}
             >
-              {/* <div
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: "4px",
-                  transformOrigin: "left",
-                  transform: isActive ? "scaleX(1)" : "scaleX(0)",
-                  transition: "transform 350ms cubic-bezier(.22,.9,.31,.99)",
-                  background: isActive ? darkMode ? m3Colors.horizantalactivebar : m3Colors.primary : darkMode ? m3Colors.primary : m3Colors.horizantalactivebar,
-                  pointerEvents: "none",
-                  zIndex: 0,
-                }}
-              /> */}
-
               <div style={{ zIndex: 1 }} className="flex items-center">
                 <div className={`flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-lg transition-all duration-200`}>
                   {React.cloneElement(item.icon, { size: 20 })}
@@ -412,7 +388,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
       "--surface-container-high": m3Colors.surfaceContainerHigh,
       "--surface-container-highest": m3Colors.surfaceContainerHighest,
     }}>
-      {/* Mobile overlay */}
       {isMobile && effectiveMobileOpen && (
         <div 
           className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 transition-opacity duration-300" 
@@ -421,7 +396,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
         />
       )}
 
-      {/* Sidebar */}
       <div
         className={`fixed h-full bg-[var(--surface-container-low)] dark:bg-gray-800 border-r border-[var(--outline)]/[0.12] dark:border-gray-700 transition-all duration-300 z-50 ${sidebarWidth} ${
           isMobile && !effectiveMobileOpen ? "translate-x-[-100%]" : "translate-x-0"
@@ -430,7 +404,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
         onMouseLeave={handleMouseLeave}
       >
         <div className="flex flex-col h-full overflow-hidden">
-          {/* Logo */}
           <div className="flex items-center justify-center p-3 h-16 border-b border-[var(--outline)]/[0.12] dark:border-gray-700 bg-[var(--background)] dark:bg-gray-800">
               <div className="flex items-center min-w-0 transition-all duration-300">
                 <div className={`${showExpanded ? 'mr-2' : 'mx-auto'} flex-shrink-0`}> 
@@ -452,14 +425,12 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
               </div>
           </div>
 
-          {/* Menu Items */}
           <nav className="flex-1 py-2 bg-[var(--background)] dark:bg-gray-800 space-y-1 overflow-y-auto px-2">
             {mainMenuItems.map((item, idx) => {
               return <MenuItem key={`main-${item.key || idx}`} item={item} showExpanded={showExpanded} />;
             })}
           </nav>
 
-          {/* User Info */}
           <div className="mt-auto p-3 bg-[var(--background)] dark:bg-gray-800 border-t border-[var(--outline)]/[0.12] dark:border-gray-700">
             <div className={`flex items-center gap-3 ${showExpanded ? "justify-start" : "justify-center"}`}>
               <div className={`flex items-center ${showExpanded ? "min-w-0" : "justify-center"}`}>
@@ -484,7 +455,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
               </div>
             </div>
 
-            {/* Logout Button */}
             <div className="mt-3">
               <button
                 onClick={logout}
@@ -503,7 +473,6 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
         </div>
       </div>
 
-      {/* Main Content */}
       <div className={`transition-all duration-300 ${contentMargin} min-h-screen bg-white dark:bg-gray-900`}>
         {children}
       </div>
