@@ -573,7 +573,8 @@
       "roleManagement": "ሚና አስተዳደር",
       "groupManagement": "የቡድን አስተዳደር",
       "reportReview": "ሪፖርት ግምገማ",
-      "masterReport": "ማስተር ሪፖርት"
+      "masterReport": "ማስተር ሪፖርት",
+      "chats": "ቻት"
     },
     "logoAlt": "የኩባንያ አርማ",
     "appName": "SGMS",
@@ -814,8 +815,8 @@
   },
   "login": {
     "company_logo_alt": "የኩባንያ አርማ",
-    "title": "እንኳን ተመለሱ",
-    "subtitle": "የከተማ ልማት እና ግንባታ ቤሩ",
+    "title": "Officemate",
+    "subtitle": "Welcome back",
     "form_title": "ወደ መለያህ ግባ",
     "username_label": "የተጠቃሚ ስም",
     "username_placeholder": "የተጠቃሚ ስምህን አስገባ",

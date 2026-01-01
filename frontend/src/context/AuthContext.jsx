@@ -1,6 +1,10 @@
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { loginUser as apiLoginUser, logoutUser as apiLogoutUser } from "../api/auth";
+import {
+  loginUser as apiLoginUser,
+  logoutUser as apiLogoutUser,
+} from "../api/auth";
+import { initSocket, disconnectSocket } from "../services/socketService";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 const AuthContext = createContext(null);
@@ -21,7 +25,8 @@ function persistUserToStorage(userObj) {
     const existing = normalizeStoredUserRaw();
     const merged = { ...existing, ...userObj };
     // Never persist darkMode coming from server here — callers should not pass it.
-    if (Object.prototype.hasOwnProperty.call(merged, "darkMode")) delete merged.darkMode;
+    if (Object.prototype.hasOwnProperty.call(merged, "darkMode"))
+      delete merged.darkMode;
     localStorage.setItem("user", JSON.stringify(merged));
   } catch (e) {
     // ignore storage errors
@@ -30,10 +35,19 @@ function persistUserToStorage(userObj) {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem("authToken") || null);
+  const [token, setToken] = useState(
+    () => localStorage.getItem("authToken") || null
+  );
   const [loading, setLoading] = useState(true);
   const { i18n } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (user && user.id) {
+      initSocket(user.id);
+    }
+    return () => disconnectSocket();
+  }, [user]);
 
   useEffect(() => {
     const stored = normalizeStoredUserRaw();
@@ -41,17 +55,18 @@ export const AuthProvider = ({ children }) => {
       setUser(stored);
       if (stored.language) i18n.changeLanguage(stored.language);
     }
-    // Do NOT apply any theme here — ThemeProvider is the single source of truth.
     if (token) window.__ACCESS_TOKEN = token;
     setLoading(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, i18n]);
 
   const fetchMe = useCallback(async (accessToken) => {
     try {
       const resp = await fetch(`${API_URL}/api/auth/me`, {
         method: "GET",
-        headers: { Accept: "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+        headers: {
+          Accept: "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         credentials: "include",
       });
       if (!resp.ok) return null;
@@ -79,7 +94,9 @@ export const AuthProvider = ({ children }) => {
         username: fullUser?.username,
         name: fullUser?.name,
         role: fullUser?.role,
-        permissions: Array.isArray(fullUser?.permissions) ? fullUser.permissions : [],
+        permissions: Array.isArray(fullUser?.permissions)
+          ? fullUser.permissions
+          : [],
         language: fullUser?.language,
         profilePicture: fullUser?.profilePicture || fullUser?.profilePic || "",
       };
@@ -101,64 +118,64 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     window.__ACCESS_TOKEN = null;
+    disconnectSocket(); // ADDED
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
     try {
       await apiLogoutUser();
-    } catch (_) {
-      // ignore
-    }
+    } catch (_) {}
   }, []);
 
-  const tryRefresh = useCallback(
-    async () => {
-      if (refreshing) return false;
-      setRefreshing(true);
-      try {
-        const r = await fetch(`${API_URL}/api/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-        if (!r.ok) {
-          setRefreshing(false);
-          await logout();
-          return false;
-        }
-        const data = await r.json();
-        const newToken = data.token;
-        let newUser = data.user;
-        if (!newUser || !Array.isArray(newUser.permissions)) {
-          const me = await fetchMe(newToken);
-          if (me) newUser = me;
-        }
-
-        const safeUser = {
-          id: newUser?.id,
-          username: newUser?.username,
-          name: newUser?.name,
-          role: newUser?.role,
-          permissions: Array.isArray(newUser?.permissions) ? newUser.permissions : [],
-          language: newUser?.language,
-          profilePicture: newUser?.profilePicture || "",
-        };
-
-        window.__ACCESS_TOKEN = newToken;
-        localStorage.setItem("authToken", newToken);
-        persistUserToStorage(safeUser);
-        setToken(newToken);
-        setUser(safeUser);
-        if (safeUser?.language) i18n.changeLanguage(safeUser.language);
-
-        setRefreshing(false);
-        return true;
-      } catch (err) {
-        console.error("Refresh failed", err);
+  const tryRefresh = useCallback(async () => {
+    if (refreshing) return false;
+    setRefreshing(true);
+    try {
+      const r = await fetch(`${API_URL}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      if (!r.ok) {
         setRefreshing(false);
         await logout();
         return false;
       }
-    },
-    [refreshing, logout, fetchMe, i18n]
-  );
+      const data = await r.json();
+      const newToken = data.token;
+      let newUser = data.user;
+      if (!newUser || !Array.isArray(newUser.permissions)) {
+        const me = await fetchMe(newToken);
+        if (me) newUser = me;
+      }
+
+      const safeUser = {
+        id: newUser?.id,
+        username: newUser?.username,
+        name: newUser?.name,
+        role: newUser?.role,
+        permissions: Array.isArray(newUser?.permissions)
+          ? newUser.permissions
+          : [],
+        language: newUser?.language,
+        profilePicture: newUser?.profilePicture || "",
+      };
+
+      window.__ACCESS_TOKEN = newToken;
+      localStorage.setItem("authToken", newToken);
+      persistUserToStorage(safeUser);
+      setToken(newToken);
+      setUser(safeUser);
+      if (safeUser?.language) i18n.changeLanguage(safeUser.language);
+
+      setRefreshing(false);
+      return true;
+    } catch (err) {
+      console.error("Refresh failed", err);
+      setRefreshing(false);
+      await logout();
+      return false;
+    }
+  }, [refreshing, logout, fetchMe, i18n]);
 
   const apiFetch = useCallback(
     async (url, options = {}) => {
@@ -175,7 +192,8 @@ export const AuthProvider = ({ children }) => {
       if (res.status === 401) {
         const ok = await tryRefresh();
         if (!ok) return res;
-        const newAccess = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
+        const newAccess =
+          window.__ACCESS_TOKEN || localStorage.getItem("authToken");
         if (newAccess) headers["Authorization"] = `Bearer ${newAccess}`;
         return fetch(url, {
           ...options,
@@ -188,27 +206,32 @@ export const AuthProvider = ({ children }) => {
     [tryRefresh]
   );
 
-  const updateUser = useCallback((updatedUserData, newToken) => {
-    // Always ignore any 'darkMode' key coming from callers (we keep theme in ThemeContext/localStorage)
-    const sanitized = { ...(updatedUserData || {}) };
-    if (Object.prototype.hasOwnProperty.call(sanitized, "darkMode")) delete sanitized.darkMode;
+  const updateUser = useCallback(
+    (updatedUserData, newToken) => {
+      // Always ignore any 'darkMode' key coming from callers (we keep theme in ThemeContext/localStorage)
+      const sanitized = { ...(updatedUserData || {}) };
+      if (Object.prototype.hasOwnProperty.call(sanitized, "darkMode"))
+        delete sanitized.darkMode;
 
-    const merged = { ...normalizeStoredUserRaw(), ...sanitized };
+      const merged = { ...normalizeStoredUserRaw(), ...sanitized };
 
-    // Ensure merged contains no darkMode
-    if (Object.prototype.hasOwnProperty.call(merged, "darkMode")) delete merged.darkMode;
+      // Ensure merged contains no darkMode
+      if (Object.prototype.hasOwnProperty.call(merged, "darkMode"))
+        delete merged.darkMode;
 
-    setUser(merged);
-    persistUserToStorage(merged);
+      setUser(merged);
+      persistUserToStorage(merged);
 
-    if (newToken) {
-      setToken(newToken);
-      localStorage.setItem("authToken", newToken);
-      window.__ACCESS_TOKEN = newToken;
-    }
+      if (newToken) {
+        setToken(newToken);
+        localStorage.setItem("authToken", newToken);
+        window.__ACCESS_TOKEN = newToken;
+      }
 
-    if (merged?.language) i18n.changeLanguage(merged.language);
-  }, [i18n]);
+      if (merged?.language) i18n.changeLanguage(merged.language);
+    },
+    [i18n]
+  );
 
   const value = {
     user,
@@ -222,7 +245,11 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {

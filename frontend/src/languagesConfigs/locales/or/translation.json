@@ -576,7 +576,8 @@
       "roleManagement": "Hoggansa Gahee",
       "groupManagement": "Bulchiinsa Garee",
       "reportReview": "Gabaasa Gamaaggama",
-      "masterReport": "Gabaasa Master"
+      "masterReport": "Gabaasa Master",
+      "chats": "Waliigala"
     },
     "logoAlt": "Asxaa dhaabbatichaa",
     "appName": "SGMS",
@@ -816,8 +817,8 @@
   },
   "login": {
     "company_logo_alt": "Asxaa dhaabbataa",
-    "title": "Baga nagaan dhufte",
-    "subtitle": "Misooma Magaalaa fi Ijaarsa Berue",
+    "title": "Officemate",
+    "subtitle": "Welcome back",
     "form_title": "Akkaawuntii kee keessa seeni",
     "username_label": "Maqaa fayyadamaa",
     "username_placeholder": "Maqaa Fayyadamaa kee galchi",

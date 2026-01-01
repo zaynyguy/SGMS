@@ -50,6 +50,7 @@ app.use("/api/reports", require("./routes/reportsRoutes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/notifications", require("./routes/notificationsRoutes"));
 app.use("/api/audit", require("./routes/auditRoutes"));
+app.use("/api/chat", require("./routes/chatRoutes"));
 
 app.get("/", (req, res) => {
 res.send("The API server is running...");

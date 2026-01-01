@@ -139,8 +139,8 @@ const LoginPage = () => {
                 />
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-semibold"> {t('login.title')} </h1>
-              <p className="text-slate-200 max-w-xs mx-auto">
+              <h1 className="text-4xl md:text-4xl font-semibold"> {t('login.title')} </h1>
+              <p className="text-slate-200 max-w-xs mx-auto text=3xl">
                 {t('login.subtitle')}
               </p>
             </div>

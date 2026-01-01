@@ -574,7 +574,8 @@
       "roleManagement": "Role Management",
       "groupManagement": "Group Management",
       "reportReview": "Report Review",
-      "masterReport": "Master Report"
+      "masterReport": "Master Report",
+      "chats": "Chat"
     },
     "logoAlt": "Company logo",
     "appName": "SGMS",
@@ -815,8 +816,8 @@
   },
   "login": {
     "company_logo_alt": "Company logo",
-    "title": "Welcome back",
-    "subtitle": "Urban Development and Construction bureau",
+    "title": "Officemate",
+    "subtitle": "Welcome back",
     "form_title": "Log in to your account",
     "username_label": "Username",
     "username_placeholder": "Enter your Username",

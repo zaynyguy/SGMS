@@ -26,7 +26,7 @@ const LanguageSwitcher = ({ value, onChange }) => {
         <option value="en">English</option>
         <option value="am">አማርኛ</option>
         <option value="or">Oromoo</option>
-        <option value="hr">Harari</option>
+
       </select>
     </div>
   );
