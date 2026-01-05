@@ -147,7 +147,7 @@ const ChatPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto h-[calc(100vh-2rem)] flex flex-col">
+      <div className="min-w-7xl mx-auto h-[calc(100vh-2rem)] flex flex-col">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -175,18 +175,18 @@ const ChatPage = () => {
             
             <div className="flex-1 overflow-y-auto">
               {loadingConv ? (
-                <div className="p-4 text-center text-gray-400">Loading...</div>
+                <div className="p-4 text-center text-gray-400">{t("chat.loading", "Loading...")}</div>
               ) : conversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full p-6 text-center">
                   <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-3">
                     <MessageSquare className="text-gray-400" size={24} />
                   </div>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">No conversations yet.</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{t("chat.noConversations", "No conversations yet.")}</p>
                   <button 
                     onClick={handleNewChatClick}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
                   >
-                    Start New Chat
+                    {t("chat.startNewChat", "Start New Chat")}
                   </button>
                 </div>
               ) : (
@@ -205,7 +205,7 @@ const ChatPage = () => {
                           <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleDateString() : ''}</span>
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {c.lastMessage?.content || <span className="italic text-xs opacity-60">No messages yet</span>}
+                          {c.lastMessage?.content || <span className="italic text-xs opacity-60">{t("chat.noMessagesYet", "No messages yet")}</span>}
                         </p>
                       </div>
                       {c.unreadCount > 0 && (
@@ -238,7 +238,7 @@ const ChatPage = () => {
                           <h3 className="font-bold text-gray-800 dark:text-white">{activeMeta.name}</h3>
                           <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">Active</span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{t("chat.active", "Active")}</span>
                           </div>
                         </div>
                       </>
@@ -299,14 +299,14 @@ const ChatPage = () => {
                 <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
                   <MessageSquare size={32} className="opacity-40" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">Select a Conversation</h3>
-                <p className="max-w-xs mx-auto mb-6">Choose an existing chat from the left or start a new one.</p>
+                <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t("chat.selectConversation", "Select a Conversation")}</h3>
+                <p className="max-w-xs mx-auto mb-6">{t("chat.chooseConversation", "Choose an existing chat from the left or start a new one.")}</p>
                 <button 
                   onClick={handleNewChatClick}
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-medium shadow-md"
                 >
                   <UserPlus size={18} />
-                  <span>Start New Chat</span>
+                  <span>{t("chat.startNewChat", "Start New Chat")}</span>
                 </button>
               </div>
             )}
@@ -319,7 +319,7 @@ const ChatPage = () => {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-fade-in border border-gray-100 dark:border-gray-700" style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
             <div className="flex justify-between items-center mb-4 flex-shrink-0">
-              <h3 className="text-xl font-bold dark:text-white">New Message</h3>
+              <h3 className="text-xl font-bold dark:text-white">{t("chat.newMessage", "New Message")}</h3>
               <button onClick={() => setShowNewChatModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition">
                 <Plus className="rotate-45 dark:text-white" size={24} />
               </button>
@@ -327,9 +327,9 @@ const ChatPage = () => {
             
             <div className="flex-1 overflow-y-auto -mx-2 px-2">
               {loadingUsers ? (
-                <div className="py-8 text-center text-gray-500">Loading users...</div>
+                <div className="py-8 text-center text-gray-500">{t("chat.loadingUsers", "Loading users...")}</div>
               ) : availableUsers.length === 0 ? (
-                <div className="py-8 text-center text-gray-500">No other users found.</div>
+                <div className="py-8 text-center text-gray-500">{t("chat.noUsersFound", "No other users found.")}</div>
               ) : (
                 <div className="space-y-2">
                   {availableUsers.map(u => (

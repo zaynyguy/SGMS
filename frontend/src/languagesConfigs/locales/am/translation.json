@@ -280,7 +280,7 @@
     "noReports4": "ምንም ዘገባዎች አልተገኙም።",
     "noReports5": "ምንም ዘገባዎች አልተገኙም።",
     "footer": {
-      "systemName": "SGMS"
+      "systemName": "Officemate"
     },
     "status2": {
       "Approved": "ጸድቋል",
@@ -701,7 +701,9 @@
       "rollLabel": "ጥቅል ቁጥር (ከተፈለገ)",
       "optional": "(ከተፈለገ)",
       "previousMetrics": "ቀዳሚ መለኪያዎች",
-      "selectedFiles": "የተመረጡ ፋይሎች፡"
+      "selectedFiles": "የተመረጡ ፋይሎች፡",
+      "quickInfo": "ፈጣን መረጃ",
+      "totalTarget": "ጠቅላላ ኢላማ"
     },
 
     "placeholders": {
@@ -959,5 +961,20 @@
     "open": "ክፍት",
     "viewAll": "ሁሉንም ይመልከቱ",
     "refresh": "አድስ"
+  },
+  "chat": {
+    "title": "መልእክት",
+    "recent": "ቻት",
+    "loading": "ውይይቶችን በመጫን ላይ…",
+    "noConversations": "እስካሁን ምንም ውይይቶች የሉም። መልእክት መላላኪያ ለመጀመር አዲስ ውይይት ይጀምሩ።",
+    "startNewChat": "አዲስ ቻት ይጀምሩ",
+    "noMessagesYet": "ምንም መልእክቶች አልተላሉም። መልእክት መላላኪያ ለመጀመር መልእክት ይላሉ።",
+    "activeNow": "Active",
+    "placeholder": "መልእክት ይፃፉ…",
+    "selectConversation": "ቻትን ይምረጡ ለመተካት።",
+    "chooseConversation": "ከግራ በኩል ያለውን ነባር ውይይት ይምረጡ ወይም አዲስ ውይይት ይጀምሩ።",
+    "New Message": "መልእክት አዲስ",
+    "loadingUsers": "ተጠቃሚዎችን በመጫን ላይ…",
+    "noUsersFound": "ምንም ተጠቃሚዎች አልተገኙም።"
   }
 }
