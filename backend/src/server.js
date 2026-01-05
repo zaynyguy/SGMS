@@ -33,7 +33,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// scheduleMonthlySnapshots({ schedule: '0 9 1 * *' });
+scheduleMonthlySnapshots({ schedule: '0 9 1 * *' });
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/usersRoutes"));
