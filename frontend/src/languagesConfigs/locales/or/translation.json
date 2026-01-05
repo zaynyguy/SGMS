@@ -132,8 +132,10 @@
     "subtitle": "Garee fi miseensummaa uumuu fi bulchuu.",
     "searchPlaceholder": "Garee maqaa ykn ibsaan barbaadi...",
     "confirmDeleteTitle": "Garee Haquu",
-    "confirmDeleteMessage": "Garee kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{name}}\"",
+    "confirmDeleteMessage": "Garee kana haquu akka barbaaddu mirkaneeffatteettaa? {{groupName}}",
     "membersCount": "miseensota",
+    "noGroupsFound":"Gareen hin argamne. Jalqabuuf garee kee isa jalqabaa uumi.",
+    "namePlaceholder": "Maqaa Waajjira galchi",
     "search": {
       "placeholder": "Garee maqaa ykn ibsaan barbaadi...",
       "aria": "Gareewwan barbaadi"
@@ -217,7 +219,8 @@
       "label": "miseensota",
       "remove": {
         "title": "Miseensa buqqisuu"
-      }
+      },
+      "members": "{{count}} miseensota"
     }
   },
   "reports": {
@@ -281,7 +284,7 @@
     "noReports4": "Gabaasni hin argamne",
     "noReports5": "Gabaasni hin argamne.",
     "footer": {
-      "systemName": "Officemate"
+      "systemName": "SGMS"
     },
     "status2": {
       "Approved": "Mirkanaa'e",
@@ -473,6 +476,8 @@
       "addUser": "Fayyadamaa dabaluu",
       "noUsers": "Fayyadamtoonni hin jiran",
       "noUsersDescription": "Ammatti fayyadamtoonni hin jiran. Jalqabuuf tokko uumi.",
+      "noSearchResults": "Fayyadamtoonni hin argamne", 
+      "noSearchResultsDescription": "Jecha barbaacha biraa yaali ykn gaaffii qulqulleessi.",
       "table": {
         "user": "Fayyadamaan",
         "role": "Ga'ee",
@@ -534,6 +539,7 @@
     "uploading": "Olkaa'aa jira...",
     "upload": "Olkaa'uu",
     "personalInfo": "Odeeffannoo dhuunfaa",
+    "personalInfoDesc": "Odeeffannoo dhuunfaa keessatti jijjiirama.",
     "username": "Maqaa fayyadamaa",
     "usernameHelp": "Maqaan fayyadamaa gulaalamuu hin danda'u",
     "name": "Maqaa guutuu",
@@ -580,7 +586,7 @@
       "chats": "Waliigala"
     },
     "logoAlt": "Asxaa dhaabbatichaa",
-    "appName": "Officemate",
+    "appName": "SGMS",
     "profileAlt": "Suuraa piroofaayilii fayyadamaa",
     "logout": "Ba'aa",
     "openMenu": "Menuu barruu cinaa banaa",
@@ -706,14 +712,16 @@
       "previousMetrics": "Safartuuwwan Duraa",
       "selectedFiles": "Faayilota Filataman:",
       "quickInfo": "Odeeffannoo saffisaa", 
-      "totalTarget": "Galmee waliigalaa"
+      "totalTarget": "Galmee waliigalaa",
+      "quarterlyGoals": "Galmoota Kurmaana Kurmaanaa"
     },
 
     "placeholders": {
       "metricKey": "Furtuu",
       "metricValue": "Gatii",
       "rollNo": "Lakkoofsa Roolii",
-      "metricValueReport": "Gatii Gabaasuudhaaf"
+      "metricValueReport": "Gatii Gabaasuudhaaf",
+      "quarterlyGoal": "galmaaf"
     },
 
     "hints": {
@@ -725,7 +733,13 @@
       "hint": "Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada.",
       "metricRemaining": "Amma: {{current}} / {{target}} (Hafe: {{remaining}})",
       "maxAttachments": "Dabalata baay'inaan 5.",
-      "overallHint": "Kaayyoo Waliigalaa: {{target}}. Adeemsa waliigalaa: {{used}}. Hafe: {{remaining}}."
+      "overallHint": "Kaayyoo Waliigalaa: {{target}}. Adeemsa waliigalaa: {{used}}. Hafe: {{remaining}}.",
+      "totalTarget": "Target waliigalaa",
+      "quarterlyGoals": "Kaayyoowwan kurmaanaaf ramadaman walitti qabaa",
+      "currentAfterChange": "Amma (jijjiirama booda): {{current}} / {{target}}",
+      "remaining": " (Hafe: {{remaining}})",
+      "warningLabel": "Akeekkachiisa:",
+      "exceededWarning": "gatiin gabaafame ({{reported}}) galma ({{target}}) caala."
     },
     "empty": {
       "noGoals": "Kaayyoon hin argamne. Galma kee isa jalqabaa uumi.",
@@ -819,8 +833,8 @@
   },
   "login": {
     "company_logo_alt": "Asxaa dhaabbataa",
-    "title": "Officemate",
-    "subtitle": "Welcome back",
+    "title": "SGMS",
+    "subtitle": "Baga nagaan dhuftan",
     "form_title": "Akkaawuntii kee keessa seeni",
     "username_label": "Maqaa fayyadamaa",
     "username_placeholder": "Maqaa Fayyadamaa kee galchi",
@@ -975,8 +989,9 @@
     "placeholder": "Ergaa barreessi...",
     "selectConversation": "Chatting jalqabuuf haasawa filadhu.",
     "chooseConversation": "Chaat jiru bitaa irraa filadhu ykn haaraa jalqabi.",
-    "New Message": "Ergaa Haaraa",
+    "newMessage": "Ergaa Haaraa",
     "loadingUsers": "Fayyadamtoota fe'aa jira...",
-    "noUsersFound": "Fayyadamtoota hin argamne"
+    "noUsersFound": "Fayyadamtoota hin argamne",
+    "sayHello": "Nagaa jedhaa!"
   }
 }

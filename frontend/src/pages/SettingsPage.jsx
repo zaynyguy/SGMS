@@ -10,6 +10,8 @@ import {
   Palette,
   UserCircle,
   Settings,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import LanguageSwitcher from "../components/common/LanguageSwitcher";
 import Toast from "../components/common/Toast";
@@ -158,9 +160,33 @@ const SettingsPage = () => {
   const [profilePictureFile, setProfilePictureFile] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
   const [uploadingPicture, setUploadingPicture] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const previewObjectUrlRef = useRef(null);
   const fileInputRef = useRef(null);
+
+  // Input validation constants
+  const FULL_NAME_BLOCK_REGEX = /[^\p{L}\s\-']/gu;
+  const MAX_LENGTH = 50; // optional
+
+  const MIN_PASSWORD_LENGTH = 8;
+  const MAX_PASSWORD_LENGTH = 32;
+
+  const handleFullNameChange = (e) => {
+    let value = e.target.value;
+
+    // remove disallowed characters
+    value = value.replace(FULL_NAME_BLOCK_REGEX, "");
+
+    // optional: trim multiple spaces
+    value = value.replace(/\s{2,}/g, " ");
+
+    // optional: enforce max length
+    if (value.length > MAX_LENGTH) return;
+
+    setSettings({ ...settings, name: value });
+  };
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -291,22 +317,56 @@ const SettingsPage = () => {
     }
   };
 
-  const validatePassword = () => {
-    let isValid = true;
-    if (newPassword && !oldPassword) {
+const validatePassword = () => {
+  let isValid = true;
+
+  // If user wants to change password
+  if (newPassword) {
+    if (!oldPassword) {
       setOldPasswordError(
         t("settings.errors.oldPasswordRequired") || "Old password required"
       );
       isValid = false;
-    } else setOldPasswordError("");
-    if (newPassword && newPassword.length < 8) {
+    } else {
+      setOldPasswordError("");
+    }
+
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
       setPasswordError(
         t("settings.errors.passwordTooShort") || "Password too short"
       );
       isValid = false;
-    } else setPasswordError("");
-    return isValid;
-  };
+    } else if (newPassword.length > MAX_PASSWORD_LENGTH) {
+      setPasswordError("Password is too long");
+      isValid = false;
+    } else if (newPassword === oldPassword) {
+      setPasswordError("New password must be different from old password");
+      isValid = false;
+    } else if (/\s/.test(newPassword)) {
+      setPasswordError("Password must not contain spaces");
+      isValid = false;
+    } else if (!/[A-Z]/.test(newPassword)) {
+      setPasswordError("Must contain an uppercase letter");
+      isValid = false;
+    } else if (!/[a-z]/.test(newPassword)) {
+      setPasswordError("Must contain a lowercase letter");
+      isValid = false;
+    } else if (!/[0-9]/.test(newPassword)) {
+      setPasswordError("Must contain a number");
+      isValid = false;
+    } else if (!/[!@#$%^&*(),.?\":{}|<>]/.test(newPassword)) {
+      setPasswordError("Must contain a special character");
+      isValid = false;
+    } else {
+      setPasswordError("");
+    }
+  } else {
+    setPasswordError("");
+    setOldPasswordError("");
+  }
+
+  return isValid;
+};  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -418,6 +478,9 @@ const SettingsPage = () => {
   const gradient = gradientFromString(
     settings.name || settings.username || "user"
   );
+
+  const toggleOldPasswordVisibility = () => setShowOldPassword((s) => !s);
+  const toggleNewPasswordVisibility = () => setShowNewPassword((s) => !s);
 
   return (
     <div
@@ -756,9 +819,7 @@ const SettingsPage = () => {
                     <input
                       type="text"
                       value={settings.name}
-                      onChange={(e) =>
-                        setSettings({ ...settings, name: e.target.value })
-                      }
+                      onChange={handleFullNameChange}
                       className="w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                       placeholder={
                         t("settings.namePlaceholder") || "Your display name"
@@ -818,22 +879,35 @@ const SettingsPage = () => {
                       {t("settings.oldPassword") || "Old password"}
                     </label>
                     <input
-                      type="password"
-                      value={oldPassword}
-                      onChange={(e) => {
-                        setOldPassword(e.target.value);
-                        if (e.target.value && oldPasswordError)
-                          setOldPasswordError("");
-                      }}
-                      placeholder={
-                        t("settings.passwordPlaceholder") || "••••••••"
-                      }
-                      className={`w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ${
-                        oldPasswordError
-                          ? "border-[var(--error)] ring-2 ring-[var(--error-container)]"
-                          : ""
-                      }`}
-                    />
+  type={showOldPassword ? "text" : "password"}
+  value={oldPassword}
+  maxLength={MAX_PASSWORD_LENGTH}
+  autoComplete="current-password"
+  onChange={(e) => {
+    setOldPassword(e.target.value);
+    if (e.target.value && oldPasswordError) setOldPasswordError("");
+  }}
+  onPaste={(e) => e.preventDefault()}
+  onCopy={(e) => e.preventDefault()}
+  onCut={(e) => e.preventDefault()}
+  onKeyDown={(e) => {
+    if (e.key === " ") e.preventDefault();
+  }}
+  placeholder={t("settings.passwordPlaceholder") || "••••••••"}
+  className={`w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ${
+    oldPasswordError
+      ? "border-[var(--error)] ring-2 ring-[var(--error-container)]"
+      : ""
+  }`}
+/>
+<button
+                    type="button"
+                    onClick={toggleOldPasswordVisibility}
+                    aria-label={showOldPassword ? t('login.hide_password') : t('login.show_password')}
+                    className="absolute right-3 top-6 rounded-full p-1 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600"
+                  >
+                    {showOldPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                     {oldPasswordError && (
                       <p className="mt-1 text-sm text-[var(--error)] dark:text-red-400 animate-shake">
                         {oldPasswordError}
@@ -846,26 +920,45 @@ const SettingsPage = () => {
                       {t("settings.newPassword") || "New password"}
                     </label>
                     <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => {
-                        setNewPassword(e.target.value);
-                        if (e.target.value && e.target.value.length < 8)
-                          setPasswordError(
-                            t("settings.errors.passwordTooShort") ||
-                              "Password too short"
-                          );
-                        else setPasswordError("");
-                      }}
-                      placeholder={
-                        t("settings.passwordPlaceholder") || "••••••••"
-                      }
-                      className={`w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ${
-                        passwordError
-                          ? "border-[var(--error)] ring-2 ring-[var(--error-container)]"
-                          : ""
-                      }`}
-                    />
+  type={showNewPassword ? "text" : "password"}
+  value={newPassword}
+  maxLength={MAX_PASSWORD_LENGTH}
+  autoComplete="new-password"
+  onChange={(e) => {
+    const value = e.target.value;
+    if (value.length > MAX_PASSWORD_LENGTH) return;
+
+    setNewPassword(value);
+
+    if (value && value.length < MIN_PASSWORD_LENGTH) {
+      setPasswordError(
+        t("settings.errors.passwordTooShort") || "Password too short"
+      );
+    } else {
+      setPasswordError("");
+    }
+  }}
+  onPaste={(e) => e.preventDefault()}
+  onCopy={(e) => e.preventDefault()}
+  onCut={(e) => e.preventDefault()}
+  onKeyDown={(e) => {
+    if (e.key === " ") e.preventDefault();
+  }}
+  placeholder={t("settings.passwordPlaceholder") || "••••••••"}
+  className={`w-full rounded-2xl py-[10px] px-4 border border-gray-400 transition-all duration-200 ease-linear bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 ${
+    passwordError
+      ? "border-[var(--error)] ring-2 ring-[var(--error-container)]"
+      : ""
+  }`}
+/>
+<button
+                    type="button"
+                    onClick={toggleNewPasswordVisibility}
+                    aria-label={showNewPassword ? t('login.hide_password') : t('login.show_password')}
+                    className="absolute right-3 top-6 rounded-full p-1 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600"
+                  >
+                    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                     {passwordError && (
                       <p className="mt-1 text-sm text-[var(--error)] dark:text-red-400 animate-shake">
                         {passwordError}

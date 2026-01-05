@@ -270,6 +270,22 @@ export default function ProjectManagement() {
     setActivities,
     setTasks,
   } = api;
+  // Input validation regex
+  const SEARCH_BLOCK_REGEX = /[^\p{L}0-9\s\-_():/]/gu;
+  const MAX_LENGTH = 100;
+
+  const handleSearchChange = (e) => {
+  const raw = e.target.value;
+
+  // remove unsafe characters
+  let filtered = raw.replace(SEARCH_BLOCK_REGEX, "");
+
+  // limit length
+  if (filtered.length > MAX_LENGTH) return;
+
+  setSearchTerm(filtered);
+};
+
   // Mount animation
   useEffect(() => {
     requestAnimationFrame(() => setIsMounted(true));
@@ -855,20 +871,21 @@ const openSubmitModal = useCallback(
                       <Search className="h-5 w-5 text-[var(--on-surface-variant)] dark:text-gray-400" />
                     </div>
                     <input
-                      type="search"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          setCurrentPage(1);
-                          loadGoals({ page: 1, pageSize }).catch((err) => {
-                            console.error("loadGoals error:", err);
-                          });
-                        }
-                      }}
-                      placeholder={t("project.searchPlaceholder") || "Search goals..."}
-                      className="w-full pl-10 rounded-2xl text-[var(--on-surface)] dark:text-white bg-white dark:bg-gray-800 placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 border"
-                    />
+  type="search"
+  value={searchTerm}
+  onChange={handleSearchChange}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      setCurrentPage(1);
+      loadGoals({ page: 1, pageSize }).catch((err) => {
+        console.error("loadGoals error:", err);
+      });
+    }
+  }}
+  placeholder={t("project.searchPlaceholder") || "Search goals..."}
+  className="w-full pl-10 rounded-2xl text-[var(--on-surface)] dark:text-white bg-white dark:bg-gray-800 placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 border"
+/>
+
                     {searchTerm && (
                       <button
                         type="button"

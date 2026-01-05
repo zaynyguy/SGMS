@@ -132,8 +132,10 @@
     "subtitle": "Create and manage Offices and membership.",
     "searchPlaceholder": "Search Office by name or description…",
     "confirmDeleteTitle": "Delete Office",
-    "confirmDeleteMessage": "Are you sure you want to delete this Office? \"{{groupName}}\"",
+    "confirmDeleteMessage": "Are you sure you want to delete this Office? {{groupName}}",
     "membersCount": "members",
+    "noGroupsFound":"No groups found. Create your first group to get started.",
+    "namePlaceholder": "Enter Office name",
     "search": {
       "placeholder": "Search Offices by name or description…",
       "aria": "Search Offices"
@@ -216,7 +218,8 @@
       "label": "members",
       "remove": {
         "title": "Remove member"
-      }
+      },
+      "members": "{{count}} members"
     }
   },
   "reports": {
@@ -280,7 +283,7 @@
     "noReports4": "No reports found",
     "noReports5": "No reports found.",
     "footer": {
-      "systemName": "Officemate"
+      "systemName": "SGMS"
     },
     "status2": {
       "Approved": "Approved",
@@ -471,6 +474,8 @@
       "addUser": "Add user",
       "noUsers": "No users",
       "noUsersDescription": "There are no users yet. Create one to get started.",
+      "noSearchResults": "No users found",
+      "noSearchResultsDescription": "Try another search term or clear the query.",
       "table": {
         "user": "User",
         "role": "Role",
@@ -532,7 +537,8 @@
     "pictureHint": "Square image works best (max 5 MB)",
     "uploading": "Uploading...",
     "upload": "Upload",
-    "personalInfo": "Personal info",
+    "personalInfo": "Personal information",
+    "personalInfoDesc": "Update your personal information.",
     "username": "Username",
     "usernameHelp": "Username is not editable",
     "name": "Full name",
@@ -579,7 +585,7 @@
       "Download": "Download"
     },
     "logoAlt": "Company logo",
-    "appName": "Officemate",
+    "appName": "SGMS",
     "profileAlt": "User profile picture",
     "logout": "Log out",
     "openMenu": "Open sidebar menu",
@@ -705,14 +711,16 @@
       "previousMetrics": "Previous Metrics",
       "selectedFiles": "Selected files:",
       "quickInfo": "Quick info",
-      "totalTarget": "Total target"
+      "totalTarget": "Total target",
+      "quarterlyGoals": "Quarterly Goals"
     },
 
     "placeholders": {
       "metricKey": "Key",
       "metricValue": "Value",
       "rollNo": "Roll Number",
-      "metricValueReport": "Value to Report"
+      "metricValueReport": "Value to Report",
+      "quarterlyGoal": "Goal for"
     },
 
     "hints": {
@@ -724,7 +732,13 @@
       "hint": "Optional. Positive integer. If left blank the system will auto-assign.",
       "metricRemaining": "Current: {{current}} / {{target}} (Remaining: {{remaining}})", 
       "maxAttachments": "Max 5 attachments.",
-      "overallHint": "Overall Target: {{target}}. Total progress: {{used}}. Remaining: {{remaining}}."
+      "overallHint": "Overall Target: {{target}}. Total progress: {{used}}. Remaining: {{remaining}}.",
+      "totalTarget": "Total target",
+      "quarterlyGoals": "Define target metrics for each quarter. These should sum up to the yearly target.",
+      "currentAfterChange": "Current (after change): {{current}} / {{target}}",
+      "remaining": " (Remaining: {{remaining}})",
+      "warningLabel": "Warning:",
+      "exceededWarning": "reported value ({{reported}}) exceeds target ({{target}})."
     },
 
     "empty": {
@@ -819,7 +833,7 @@
   },
   "login": {
     "company_logo_alt": "Company logo",
-    "title": "Officemate",
+    "title": "SGMS",
     "subtitle": "Welcome back",
     "form_title": "Log in to your account",
     "username_label": "Username",
@@ -975,8 +989,9 @@
     "placeholder": "Type a message…",
     "selectConversation": "Select a conversation to start chatting.",
     "chooseConversation": "Choose an existing chat from the left or start a new one.",
-    "New Message": "New Message",
+    "newMessage": "New Message",
     "loadingUsers": "Loading users…",
-    "noUsersFound": "No users found."
+    "noUsersFound": "No users found.",
+    "sayHello": "Say Hello!"
   }
 }

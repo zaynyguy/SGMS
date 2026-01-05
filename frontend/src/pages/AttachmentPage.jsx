@@ -326,6 +326,22 @@ const App = ({ reportId }) => {
   const [toDelete, setToDelete] = useState(null);
   const [mounted, setMounted] = useState(false);
 
+  // Input validation constants
+  const MAX_LENGTH = 100;
+  const ATTACHMENT_SEARCH_REGEX = /^[\p{L}0-9\s._\-()]*$/gu;
+
+  const handleAttachmentSearchChange = (e) => {
+    const value = e.target.value;
+
+    // prevent abuse
+    if (value.length > MAX_LENGTH) return;
+
+    // safe characters only
+    if (!ATTACHMENT_SEARCH_REGEX.test(value)) return;
+
+    setSearchTerm(value);
+  };
+
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
     return () => setMounted(false);
@@ -566,14 +582,14 @@ const App = ({ reportId }) => {
             </div>
             <input
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleAttachmentSearchChange}
               placeholder={t("attachments.searchPlaceholder")}
               className="pl-10 pr-10 py-2.5 text-sm w-full rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white transition-all duration-300 ease-in-out focus:bg-[var(--surface-container)] dark:focus:bg-gray-600"
               aria-label={t("attachments.searchAria")}
             />
             {searchTerm && (
               <button
-                onClick={() => setSearchTerm("")}
+                onClick={handleAttachmentSearchChange}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-200 ease-in-out transform hover:scale-110"
                 aria-label={t("attachments.clearSearchAria")}
               >

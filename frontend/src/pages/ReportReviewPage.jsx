@@ -204,6 +204,21 @@ const App = ({ permissions, readonly = false }) => {
   // Toast state
   const [toast, setToast] = useState(null);
   const [mounted, setMounted] = useState(false);
+  // input validation
+  const MAX_LENGTH = 100;
+  const REPORT_SEARCH_REGEX = /^[\p{L}0-9\s._\-:/]*$/gu;
+
+  const handleReportSearchChange = (e) => {
+    const value = e.target.value;
+
+    // prevent abuse
+    if (value.length > MAX_LENGTH) return;
+
+    // allow safe characters only
+    if (!REPORT_SEARCH_REGEX.test(value)) return;
+
+    setSearch(value);
+  };
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -612,7 +627,7 @@ const App = ({ permissions, readonly = false }) => {
                   </div>
                   <input
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={handleReportSearchChange}
                     onKeyDown={onSearchKeyDown}
                     placeholder={t("reports.search.placeholder")}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--on-primary)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white text-base placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 transition-all duration-300"

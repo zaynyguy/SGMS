@@ -146,6 +146,23 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
   const [isLoading, setIsLoading] = useState(false);
   const previewRef = useRef(null);
   const originalPictureUrl = group?.profilePicture || null;
+  const GROUP_NAME_BLOCK_REGEX = /[^\p{L}0-9\s\-_( )]/gu;
+
+const handleGroupNameChange = (e) => {
+  const raw = e.target.value;
+
+  // remove disallowed characters
+  let filtered = raw.replace(GROUP_NAME_BLOCK_REGEX, "");
+
+  // normalize spaces
+  filtered = filtered.replace(/\s{2,}()/g, " ");
+
+  // optional max length
+  if (filtered.length > 50) return;
+
+  setName(filtered);
+};
+
   useEffect(() => {
     setName(group?.name || "");
     setDescription(group?.description || "");
@@ -293,14 +310,18 @@ const GroupFormModal = ({ group, onSave, onClose, t }) => {
               {t("groups.form.labels.name")} *
             </label>
             <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={`w-full px-4 py-2.5 rounded-xl border ${
-                errors.name ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-              } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white`}
-              aria-invalid={!!errors.name}
-            />
+  type="text"
+  value={name}
+  onChange={handleGroupNameChange}
+  className={`w-full px-4 py-2.5 rounded-xl border ${
+    errors.name
+      ? "border-red-500"
+      : "border-gray-300 dark:border-gray-600"
+  } focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-white`}
+  aria-invalid={!!errors.name}
+  placeholder={t("groups.namePlaceholder")}
+/>
+
             {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
           </div>
           <div>
@@ -564,6 +585,20 @@ function GroupsManager() {
   const [groupToDelete, setGroupToDelete] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // Search term handler with character filtering
+  const GROUP_SEARCH_BLOCK_REGEX = /[^\p{L}0-9\s\-_( )]/gu;
+  const MAX_LENGTH = 100;
+
+  const handleGroupSearchChange = (e) => {
+    const raw = e.target.value;
+
+    // remove unwanted characters
+    let filtered = raw.replace(GROUP_SEARCH_BLOCK_REGEX, "");
+
+    if (filtered.length > MAX_LENGTH) return;
+
+    setSearchTerm(filtered);
+  };
   
   // Dark mode state
   const [darkMode, setDarkMode] = useState(false);
@@ -883,7 +918,7 @@ function GroupsManager() {
               type="text"
               placeholder={t("groups.searchPlaceholder")}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleGroupSearchChange}
               className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-10 pr-4 text-base transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
               aria-label={t("groups.searchAria")}
             />
@@ -921,12 +956,12 @@ function GroupsManager() {
                       <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-700">
                           <tr>
-                            <th onClick={() => requestSort("name")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</th>
-                            <th onClick={() => requestSort("memberCount")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Members</th>
-                            <th onClick={() => requestSort("createdAt")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors">Created</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Updated</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                            <th onClick={() => requestSort("name")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors">{t("groups.table.name")}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("groups.table.description")}</th>
+                            <th onClick={() => requestSort("memberCount")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors">{t("groups.table.members")}</th>
+                            <th onClick={() => requestSort("createdAt")} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors">{t("groups.table.created")}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("groups.table.updated")}</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t("groups.table.actions")}</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -954,7 +989,7 @@ function GroupsManager() {
                               <td className="px-6 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400 max-w-md truncate">{g.description || t("groups.noDescription")}</td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span className="px-2 inline-flex text-xs leading-5 font-medium rounded-full bg-green-200 dark:bg-indigo-900 text-green-800 dark:text-indigo-300">
-                                  {g.memberCount || 0} members
+                                  {t("groups.members.members", { count: g.memberCount || 0 })}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-gray-500 dark:text-gray-400">{formatDate(g.createdAt)}</td>
@@ -997,9 +1032,9 @@ function GroupsManager() {
                     </div>
                     <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">{t("groups.noResults")}</h3>
                     <p className="mt-1 text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                      No groups found. Create your first group to get started.
+                      {t("groups.noGroupsFound")}
                     </p>
-                    <div className="mt-6">
+                    <div className="flex justify-center mt-6">
                       <button
                         onClick={openCreateModal}
                         className="px-4 py-2.5 text-sm font-medium rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Edit, Trash2, UserPlus, Users, X, Image, Upload } from "lucide-react";
+import { Edit, Trash2, UserPlus, Users, X, Image, Upload, EyeOff, Eye } from "lucide-react";
 import {
   fetchUsers,
   createUser,
@@ -14,26 +14,6 @@ import AuthenticatedImage from "../components/common/AuthenticatedImage";
 import TopBar from "../components/layout/TopBar";
 
 /* ---------- Helpers ---------- */
-const initialsFromName = (name, fallback) => {
-  const n = (name || "").trim();
-  if (!n) {
-    const u = (fallback || "").trim();
-    return (u[0] || "?").toUpperCase();
-  }
-  const parts = n.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0][0].toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
-
-const gradientFromString = (s) => {
-  let hash = 0;
-  for (let i = 0; i < (s || "").length; i += 1)
-    hash = (hash << 5) - hash + s.charCodeAt(i);
-  const a = Math.abs(hash);
-  const h1 = a % 360;
-  const h2 = (180 + h1) % 360;
-  return `linear-gradient(135deg, hsl(${h1} 70% 60%), hsl(${h2} 70% 40%))`;
-};
 
 const dataURLToFile = (dataURL, filename = "upload.png") => {
   const arr = dataURL.split(",");
@@ -154,9 +134,110 @@ const UsersManagementPage = () => {
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
   const previewRef = useRef(null);
   const [mounted, setMounted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Search state
+  // Search state validation
   const [searchQuery, setSearchQuery] = useState("");
+
+  const MAX_LENGTH = 50;
+  const SEARCH_REGEX = /^[\p{L}0-9\s._-]*$/gu;
+  const USERNAME_ALLOWED_REGEX = /[^\p{L}0-9\s._-]*$/gu;
+  const FULL_NAME_BLOCK_REGEX = /[^\p{L}À-ÖØ-öø-ÿ\s'-]/gu;
+const MAX_PASSWORD_LENGTH = 64;
+
+const handleFormChangePassword = (e) => {
+  const { name, value } = e.target;
+
+  if (name === "password") {
+    // Enforce max length
+    if (value.length > MAX_PASSWORD_LENGTH) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      password: value,
+    }));
+
+    let error = "";
+
+    if (!value) {
+      error = "Password is required";
+    } else if (value.length < 8) {
+      error = "Password must be at least 8 characters";
+    } else if (!/[A-Z]/.test(value)) {
+      error = "Password must contain an uppercase letter";
+    } else if (!/[a-z]/.test(value)) {
+      error = "Password must contain a lowercase letter";
+    } else if (!/[0-9]/.test(value)) {
+      error = "Password must contain a number";
+    } else if (!/[!@#$%^&*(),.?\":{}|<>]/.test(value)) {
+      error = "Password must contain a special character";
+    } else if (/\s/.test(value)) {
+      error = "Password must not contain spaces";
+    }
+
+    setFormErrors((prev) => ({
+      ...prev,
+      password: error,
+    }));
+
+    return;
+  }
+
+  // other fields...
+};
+
+
+
+  const handleFormChangeFullName = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "name") {
+      // Remove disallowed characters
+      const filtered = value.replace(FULL_NAME_BLOCK_REGEX, "");
+
+      setFormData((prev) => ({
+        ...prev,
+        name: filtered,
+      }));
+
+      let error = "";
+
+      setFormErrors((prev) => ({
+        ...prev,
+        name: error,
+      }));
+
+      return;
+    }
+
+    // other fields...
+  };
+
+
+const handleUsernameChange = (e) => {
+  const rawValue = e.target.value;
+
+  // remove disallowed characters
+  const filteredValue = rawValue.replace(USERNAME_ALLOWED_REGEX, "");
+
+  setFormData((prev) => ({
+    ...prev,
+    username: filteredValue.toLowerCase(),
+  }));
+};
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+
+    // max length protection
+    if (value.length > MAX_LENGTH) return;
+
+    // safe characters only
+    if (!SEARCH_REGEX.test(value)) return;
+
+    setSearchQuery(value);
+    setError("");
+  };
 
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
@@ -523,6 +604,9 @@ const handleSaveUser = async (e) => {
     );
   }
 
+  // Password visibility toggle
+  const togglePasswordVisibility = () => setShowPassword((s) => !s);
+
   // Filtering logic for search
   const q = (searchQuery || "").trim().toLowerCase();
   const filteredUsers = !q
@@ -754,17 +838,17 @@ const handleSaveUser = async (e) => {
           <div className="flex-1">
             <div className="relative">
               <input
-                type="search"
-                aria-label={t("admin.users.search")}
-                placeholder={t("admin.users.placeholders.search") || "Search users..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="md3-input w-full pr-10 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              />
+  type="search"
+  aria-label={t("admin.users.search")}
+  placeholder={t("admin.users.placeholders.search") || "Search users..."}
+  value={searchQuery}
+  onChange={handleSearchChange}
+  className="md3-input w-full pr-10 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+/>
               {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
+                  onClick={handleSearchChange}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-[var(--surface-container)] dark:hover:bg-gray-600"
                   aria-label={t("admin.actions.clearSearch") || "Clear search"}
                 >
@@ -1110,7 +1194,7 @@ const handleSaveUser = async (e) => {
                         }`}
                         placeholder={t("admin.users.form.usernamePlaceholder")}
                         value={formData.username}
-                        onChange={handleFormChange}
+                        onChange={handleUsernameChange}
                         disabled={submitting}
                         aria-invalid={!!formErrors.username}
                       />
@@ -1136,7 +1220,7 @@ const handleSaveUser = async (e) => {
                         }`}
                         placeholder={t("admin.users.form.namePlaceholder")}
                         value={formData.name}
-                        onChange={handleFormChange}
+                        onChange={handleFormChangeFullName}
                         disabled={submitting}
                         aria-invalid={!!formErrors.name}
                       />
@@ -1146,7 +1230,7 @@ const handleSaveUser = async (e) => {
                         </p>
                       )}
                     </div>
-                    <div>
+                    <div className="relative">
                       <label
                         htmlFor="password"
                         className="block text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 mb-1"
@@ -1157,23 +1241,41 @@ const handleSaveUser = async (e) => {
                         {!userToEdit && " *"}
                       </label>
                       <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        className={`w-full md3-input bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
-                          formErrors.password ? "border-[var(--error)] ring-2 ring-[var(--error-container)]" : ""
-                        }`}
-                        placeholder={t("admin.users.form.passwordPlaceholder")}
-                        value={formData.password}
-                        onChange={handleFormChange}
-                        disabled={submitting}
-                        aria-invalid={!!formErrors.password}
-                      />
+  id="password"
+  name="password"
+  type={showPassword ? "text" : "password"}
+  maxLength={64}
+  autoComplete="new-password"
+  className={`w-full md3-input bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+    formErrors.password
+      ? "border-[var(--error)] ring-2 ring-[var(--error-container)]"
+      : ""
+  }`}
+  placeholder={t("admin.users.form.passwordPlaceholder")}
+  value={formData.password}
+  onChange={handleFormChangePassword}
+  onPaste={(e) => e.preventDefault()}
+  onCopy={(e) => e.preventDefault()}
+  onCut={(e) => e.preventDefault()}
+  onKeyDown={(e) => {
+    if (e.key === " ") e.preventDefault();
+  }}
+  disabled={submitting}
+  aria-invalid={!!formErrors.password}
+/>
                       {formErrors.password && (
                         <p className="mt-1 text-sm text-[var(--error)] dark:text-red-400">
                           {formErrors.password}
                         </p>
                       )}
+                      <button
+                    type="button"
+                    onClick={togglePasswordVisibility}
+                    aria-label={showPassword ? t('login.hide_password') : t('login.show_password')}
+                    className="absolute right-3 top-6 rounded-full p-1 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                     </div>
                     <div>
                       <label

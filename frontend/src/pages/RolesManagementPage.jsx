@@ -189,6 +189,12 @@ const App = () => {
   const [roleToDelete, setRoleToDelete] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const ROLE_NAME_MIN = 2;
+  const ROLE_NAME_MAX = 50;
+
+  // allow Unicode letters, numbers, spaces, _ -
+  const ROLE_NAME_BLOCK_REGEX = /[^\p{L}0-9\s_-]/gu;
+
   const showToast = (message, semanticType = 'info') => {
     const map = {
       success: 'create',
@@ -252,22 +258,58 @@ const App = () => {
     loadData();
   }, [loadData]);
 
+  const handleRoleNameChange = (e) => {
+    let value = e.target.value;
+
+    // Remove unsafe characters
+    value = value.replace(ROLE_NAME_BLOCK_REGEX, "");
+
+    // Enforce max length
+    if (value.length > ROLE_NAME_MAX) return;
+
+    setNewRoleName(value);
+  };
+
   const handleAddRole = async () => {
-    const name = newRoleName.trim();
+  const name = newRoleName.trim();
+
+    // Frontend validation gate
     if (!name) {
-      setIsAddingRole(false);
-      setNewRoleName('');
+      showToast(t("admin.roles.errors.required") || "Role name is required", "error");
       return;
     }
+
+    if (name.length < ROLE_NAME_MIN) {
+      showToast(
+        t("admin.roles.errors.tooShort") || "Role name is too short",
+        "error"
+      );
+      return;
+    }
+
+    if (name.length > ROLE_NAME_MAX) {
+      showToast(
+        t("admin.roles.errors.tooLong") || "Role name is too long",
+        "error"
+      );
+      return;
+    }
+
     try {
-      await createRole({ name, description: '', permissions: [] });
-      showToast(t('admin.roles.toasts.createSuccess', { name }), 'success');
-      setNewRoleName('');
+      await createRole({ name, description: "", permissions: [] });
+      showToast(
+        t("admin.roles.toasts.createSuccess", { name }),
+        "success"
+      );
+      setNewRoleName("");
       setIsAddingRole(false);
       await loadData();
     } catch (err) {
-      console.error('createRole failed', err);
-      showToast(t('admin.roles.errors.saveError', { error: err?.message || '' }), 'error');
+      console.error("createRole failed", err);
+      showToast(
+        t("admin.roles.errors.saveError", { error: err?.message || "" }),
+        "error"
+      );
     }
   };
 
@@ -595,20 +637,22 @@ const App = () => {
   <div className="flex flex-col gap-3 w-full surface-elevation-2 rounded-xl p-4 mb-3">
     <div className="flex gap-3 w-full">
       <input
-        autoFocus
-        value={newRoleName}
-        onChange={(e) => setNewRoleName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleAddRole();
-          if (e.key === "Escape") {
-            setIsAddingRole(false);
-            setNewRoleName("");
-          }
-        }}
-        placeholder={t("admin.roles.roleNamePlaceholder")}
-        aria-label={t("admin.roles.roleNameAria")}
-        className="flex-1 px-3 py-2.5 text-sm border rounded-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 dark:ring-indigo-500"
-      />
+  autoFocus
+  value={newRoleName}
+  onChange={handleRoleNameChange}
+  maxLength={ROLE_NAME_MAX}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") handleAddRole();
+    if (e.key === "Escape") {
+      setIsAddingRole(false);
+      setNewRoleName("");
+    }
+  }}
+  placeholder={t("admin.roles.roleNamePlaceholder")}
+  aria-label={t("admin.roles.roleNameAria")}
+  className="flex-1 px-3 py-2.5 text-sm border rounded-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 dark:ring-indigo-500"
+/>
+
       <button
         onClick={() => {
           setIsAddingRole(false);
@@ -686,16 +730,20 @@ const App = () => {
                         {isAddingRole && (
                           <div className="flex flex-col gap-3 mb-3 surface-elevation-2 rounded-xl p-4">
                             <input
-                              autoFocus
-                              value={newRoleName}
-                              onChange={(e) => setNewRoleName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleAddRole();
-                                if (e.key === 'Escape') { setIsAddingRole(false); setNewRoleName(''); }
-                              }}
-                              placeholder={t('admin.roles.roleNamePlaceholder')}
-                              className="w-full px-3 py-2.5 text-sm border rounded-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-indigo-600"
-                            />
+  autoFocus
+  value={newRoleName}
+  onChange={handleRoleNameChange}
+  maxLength={ROLE_NAME_MAX}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") handleAddRole();
+    if (e.key === "Escape") {
+      setIsAddingRole(false);
+      setNewRoleName("");
+    }
+  }}
+  placeholder={t("admin.roles.roleNamePlaceholder")}
+  className="w-full px-3 py-2.5 text-sm border rounded-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-indigo-600"
+/>
                             <button onClick={handleAddRole} className="w-full px-4 py-2.5 text-sm bg-green-500 dark:bg-indigo-600 text-white rounded-full font-medium transition duration-200 surface-elevation-1">{t('admin.actions2.create')}</button>
                           </div>
                         )}

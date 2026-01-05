@@ -177,17 +177,17 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
       icon: <ClipboardCheck size={20} />,
       label: t("sidebar.menu.audit"),
     },
-    hasPermission("manage_settings") && {
-      key: "system",
-      to: "/systemsettings",
-      icon: <Settings2Icon size={20} />,
-      label: t("sidebar.menu.systemSettings"),
-    },
     {
       key: "chat",
       to: "/chat",
       icon: <MessageSquare size={20} />,
       label: t("sidebar.menu.chats") || "Chats",
+    },
+    hasPermission("manage_settings") && {
+      key: "system",
+      to: "/systemsettings",
+      icon: <Settings2Icon size={20} />,
+      label: t("sidebar.menu.systemSettings"),
     },
     {
       key: "settings",

@@ -34,6 +34,45 @@ export default function GenericModal({
   const firstFieldRef = useRef(null);
   const modalRef = useRef(null);
 
+  // Input validation constants
+  const TITLE_BLOCK_REGEX = /[^\p{L}0-9\s\-_,.:()/]/gu;
+  const MAX_LENGTH = 200;
+
+  const handleTitleChange = (e) => {
+    let value = e.target.value;
+
+    // remove disallowed characters
+    value = value.replace(TITLE_BLOCK_REGEX, "");
+
+    // optional: limit length
+    if (value.length > MAX_LENGTH) return;
+
+    onLocalChange({ target: { name: "title", value } });
+  };
+
+  // Metric key validation constants
+  const METRIC_KEY_MIN = 2;
+  const METRIC_KEY_MAX = 50;
+
+  // Allows letters, numbers, spaces, and safe symbols
+  const METRIC_KEY_REGEX = /^[\p{L}\p{N} %/_().-]+$/gu;
+
+  // Sanitize metric key by trimming and collapsing spaces
+  const sanitizeMetricKey = (value) =>
+  value.replace(/\s+/gu, " ").trim();
+
+  // Validate metric key and return error message or empty string
+  const validateMetricKey = (value) => {
+    if (!value) return "Metric name is required";
+    if (value.length < METRIC_KEY_MIN)
+      return "Metric name is too short";
+    if (value.length > METRIC_KEY_MAX)
+      return "Metric name is too long";
+    if (!METRIC_KEY_REGEX.test(value))
+      return "Invalid characters in metric name";
+    return "";
+  };
+
   // Animation state management
   useEffect(() => {
     if (modal?.isOpen) {
@@ -909,7 +948,7 @@ transform: translateY(0);
                 ref={firstFieldRef}
                 name="title"
                 value={local.title || ""}
-                onChange={onLocalChange}
+                onChange={handleTitleChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transform focus:scale-[1.02] hover:border-gray-400 dark:hover:border-gray-500"
               />
@@ -1070,13 +1109,17 @@ transform: translateY(0);
                       style={{ animationDelay: `${idx * 50}ms` }}
                     >
                       <input
-                        placeholder={t("project.placeholders.metricKey")}
-                        value={m?.key || ""}
-                        onChange={(e) =>
-                          updatePreviousMetricRow(idx, "key", e.target.value)
-                        }
-                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                      />
+  placeholder={t("project.placeholders.metricKey")}
+  value={m?.key || ""}
+  maxLength={METRIC_KEY_MAX}
+  onChange={(e) => {
+    const raw = e.target.value;
+    const value = sanitizeMetricKey(raw);
+
+    updatePreviousMetricRow(idx, "key", value);
+  }}
+  className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+/>
                       <input
                         type="number"
                         min={0}
@@ -1137,13 +1180,17 @@ transform: translateY(0);
                       style={{ animationDelay: `${idx * 50}ms` }}
                     >
                       <input
-                        placeholder={t("project.placeholders.metricKey")}
-                        value={m?.key || ""}
-                        onChange={(e) =>
-                          updateMetricRow(idx, "key", e.target.value)
-                        }
-                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                      />
+  placeholder={t("project.placeholders.metricKey")}
+  value={m?.key || ""}
+  maxLength={METRIC_KEY_MAX}
+  onChange={(e) => {
+    const raw = e.target.value;
+    const value = sanitizeMetricKey(raw);
+
+    updateMetricRow(idx, "key", value);
+  }}
+  className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+/>
                       <input
                         type="number"
                         min={0}
@@ -1205,7 +1252,7 @@ transform: translateY(0);
                 ref={firstFieldRef}
                 name="title"
                 value={local.title || ""}
-                onChange={onLocalChange}
+                onChange={handleTitleChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
               />
@@ -1320,7 +1367,7 @@ transform: translateY(0);
                 ref={firstFieldRef}
                 name="title"
                 value={local.title || ""}
-                onChange={onLocalChange}
+                onChange={handleTitleChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
               />

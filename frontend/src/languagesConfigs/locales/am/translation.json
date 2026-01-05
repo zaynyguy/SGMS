@@ -132,8 +132,10 @@
     "subtitle": "ቡድኖችን እና አባልነትን ይፍጠሩ እና ያስተዳድሩ።",
     "searchPlaceholder": "ቡድኖችን በስም ወይም በመግለጫ ፈልግ…",
     "confirmDeleteTitle": "ቡድን ሰርዝ",
-    "confirmDeleteMessage": "እርግጠኛ ነዎት ይህን ቡድን መሰረዝ ይፈልጋሉ? \"{{name}}\"",
+    "confirmDeleteMessage": "እርግጠኛ ነዎት ይህን ቡድን መሰረዝ ይፈልጋሉ? {{groupName}}",
     "membersCount": "አባላት",
+    "noGroupsFound":"ምንም ቡድኖች አልተገኙም። ለመጀመር የመጀመሪያውን ቡድንዎን ይፍጠሩ።",
+    "namePlaceholder": "የቢሮ ስም ያስገቡ",
     "search": {
       "placeholder": "ቡድኖችን በስም ወይም በመግለጫ ፈልግ…",
       "aria": "ቡድኖችን ፈልግ"
@@ -216,7 +218,8 @@
       "label": "አባላት",
       "remove": {
         "title": "አባል አስወግድ"
-      }
+      },
+      "members": "{{count}} አባላት"
     }
   },
   "reports": {
@@ -280,7 +283,7 @@
     "noReports4": "ምንም ዘገባዎች አልተገኙም።",
     "noReports5": "ምንም ዘገባዎች አልተገኙም።",
     "footer": {
-      "systemName": "Officemate"
+      "systemName": "SGMS"
     },
     "status2": {
       "Approved": "ጸድቋል",
@@ -471,6 +474,8 @@
       "addUser": "ተጠቃሚ ጨምር",
       "noUsers": "ተጠቃሚዎች የሉም",
       "noUsersDescription": "እስካሁን ምንም ተጠቃሚዎች የሉም። ለመጀመር አንድ ይፍጠሩ።",
+      "noSearchResults": "ተጠቃሚዎች አልተገኙም",
+      "noSearchResultsDescription": "ሌላ የፍለጋ ቃል ይሞክሩ ወይም ጥያቄውን ያጽዱ።",
       "table": {
         "user": "ተጠቃሚ",
         "role": "ሚና",
@@ -532,6 +537,7 @@
     "uploading": "በመስቀል ላይ...",
     "upload": "ስቀል",
     "personalInfo": "የግል መረጃ",
+    "personalInfoDesc": "የግል መረጃዎን ያዘምኑ።",
     "username": "የተጠቃሚ ስም",
     "usernameHelp": "የተጠቃሚ ስም ሊስተካከል አይችልም።",
     "name": "ሙሉ ስም",
@@ -577,7 +583,7 @@
       "chats": "ቻት"
     },
     "logoAlt": "የኩባንያ አርማ",
-    "appName": "Officemate",
+    "appName": "SGMS",
     "profileAlt": "የተጠቃሚ መገለጫ ሥዕል",
     "logout": "ዘግተህ ውጣ",
     "openMenu": "የጎን አሞሌ ምናሌን ይክፈቱ",
@@ -703,14 +709,16 @@
       "previousMetrics": "ቀዳሚ መለኪያዎች",
       "selectedFiles": "የተመረጡ ፋይሎች፡",
       "quickInfo": "ፈጣን መረጃ",
-      "totalTarget": "ጠቅላላ ኢላማ"
+      "totalTarget": "ጠቅላላ ኢላማ",
+      "quarterlyGoals": "የሩብ ዓመት ግቦች"
     },
 
     "placeholders": {
       "metricKey": "ቁልፍ",
       "metricValue": "ዋጋ",
       "rollNo": "ጥቅል ቁጥር",
-      "metricValueReport": "ሪፖርት ለማድረግ የሚያስችል ዋጋ"
+      "metricValueReport": "ሪፖርት ለማድረግ የሚያስችል ዋጋ",
+      "quarterlyGoal": "ግብ ለ"
     },
 
     "hints": {
@@ -722,7 +730,13 @@
       "hint": "ከተፈለገ አዎንታዊ ኢንቲጀር. ባዶ ከሆነ ስርዓቱ በራስ-ሰር ይመድባል።",
       "metricRemaining": "አሁን: {{current}} / {{target}} (ቀሪው: {{remaining}})",
       "maxAttachments": "ቢበዛ 5 አባሪዎች።",
-      "overallHint": "አጠቃላይ ዒላማ፡ {{target}}። ጠቅላላ እድገት፡ {{used}}። የቀረው፡ {{remaining}}።"
+      "overallHint": "አጠቃላይ ዒላማ፡ {{target}}። ጠቅላላ እድገት፡ {{used}}። የቀረው፡ {{remaining}}።",
+      "totalTarget": "ጠቅላላ ኢላማ",
+      "quarterlyGoals": "የሩብ ዓመት ግቦችን ለመግለጽ እና ለመምረጥ ይጠቅማል።",
+      "currentAfterChange": "አሁን (ከዚህ በኋላ): {{current}} / {{target}}",
+      "remaining": " (የቀረው: {{remaining}})",
+      "warningLabel": "ማስጠንቀቂያ:",
+      "exceededWarning": "የተዘገበው እሴት ({{reported}}) ከዒላማው ({{target}}) ይበልጣል።"
     },
 
     "empty": {
@@ -817,8 +831,8 @@
   },
   "login": {
     "company_logo_alt": "የኩባንያ አርማ",
-    "title": "Officemate",
-    "subtitle": "Welcome back",
+    "title": "SGMS",
+    "subtitle": "እንኳን በደህና መጡ",
     "form_title": "ወደ መለያህ ግባ",
     "username_label": "የተጠቃሚ ስም",
     "username_placeholder": "የተጠቃሚ ስምህን አስገባ",
@@ -973,8 +987,9 @@
     "placeholder": "መልእክት ይፃፉ…",
     "selectConversation": "ቻትን ይምረጡ ለመተካት።",
     "chooseConversation": "ከግራ በኩል ያለውን ነባር ውይይት ይምረጡ ወይም አዲስ ውይይት ይጀምሩ።",
-    "New Message": "መልእክት አዲስ",
+    "newMessage": "መልእክት አዲስ",
     "loadingUsers": "ተጠቃሚዎችን በመጫን ላይ…",
-    "noUsersFound": "ምንም ተጠቃሚዎች አልተገኙም።"
+    "noUsersFound": "ምንም ተጠቃሚዎች አልተገኙም።",
+    "sayHello": "ሰላም በሉ!"
   }
 }

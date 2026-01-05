@@ -616,16 +616,25 @@ export default function SubmitReportInline({
                       </div>
 
                       <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 pl-1">
-                        {`Current (after change): ${displayedCurrent} / ${m.target !== null ? m.target : "-"}${
-                          remaining !== null ? ` (Remaining: ${remaining})` : ""
-                        }`}
-                      </div>
+  {t("project.hints.currentAfterChange", {
+    current: displayedCurrent,
+    target: m.target !== null ? m.target : "-",
+    remaining: remaining,
+  })}
+</div>
 
-                      {exceeded && (
-                        <div className="mt-2 text-xs text-red-700 dark:text-red-200 pl-1">
-                          <span className="font-medium">Warning:</span> reported value ({reported}) exceeds target ({m.target}).
-                        </div>
-                      )}
+{exceeded && (
+  <div className="mt-2 text-xs text-red-700 dark:text-red-200 pl-1">
+    <span className="font-medium">
+      {t("project.hints.warningLabel")}
+    </span>{" "}
+    {t("project.hints.exceededWarning", {
+      reported: reported,
+      target: m.target,
+    })}
+  </div>
+)}
+
                     </div>
                   );
                 })}

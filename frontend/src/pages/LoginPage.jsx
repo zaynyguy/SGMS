@@ -16,6 +16,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const usernameRegex = /^[\p{L}0-9._]{3,30}$/gu;
 
   const emailRef = useRef(null);
 
@@ -23,6 +24,35 @@ const LoginPage = () => {
     // autofocus email for keyboard users
     if (emailRef.current) emailRef.current.focus();
   }, []);
+
+  // Input validation handlers
+  const handleUsernameChange = (e) => {
+  const value = e.target.value.trimStart(); // prevent leading spaces
+  setUsername(value);
+
+  if (!value) {
+    setError("Username is required");
+  } else if (value.length < 3) {
+    setError("Username must be at least 3 characters");
+  } else if (!usernameRegex.test(value)) {
+    setError("Only letters, numbers, dot and underscore allowed");
+  } else {
+    setError("");
+  }
+};
+
+const handlePasswordChange = (e) => {
+  const value = e.target.value;
+  setPassword(value);
+
+  if (!value) {
+    setError("Password is required");
+  } else if (value.length < 8) {
+    setError("Password must be at least 8 characters");
+  } else {
+    setError("");
+  }
+};
 
   // Restart animation on mount for browsers that delay animations for offscreen content.
   useEffect(() => {
@@ -178,19 +208,26 @@ const LoginPage = () => {
                     <User size={16} /> <span>{t('login.username_label')}</span>
                   </label>
                   <input
-                    ref={emailRef}
-                    id="name"
-                    name="name"
-                    type="text"
-                    inputMode="text"
-                    autoComplete="off"
-                    placeholder={t('login.username_placeholder')}
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    className="mt-2 block w-full rounded-lg border-2 border-slate-50 dark:border-slate-600 px-4 py-3 bg-transparent focus:outline-none focus:ring-2 focus:ring-green-400 dark:focus:ring-blue-400 dark:text-white"
-                    aria-label={t('login.username_label')}
-                  />
+  ref={emailRef}
+  id="name"
+  name="name"
+  type="text"
+  inputMode="text"
+  autoComplete="off"
+  placeholder={t('login.username_placeholder')}
+  value={username}
+  onChange={handleUsernameChange}
+  required
+  aria-invalid={!!error}
+  aria-describedby="username-error"
+  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 bg-transparent
+    ${error
+      ? "border-red-500 focus:ring-red-400"
+      : "border-slate-50 dark:border-slate-600 focus:ring-green-400 dark:focus:ring-blue-400"}
+    focus:outline-none focus:ring-2 dark:text-white`}
+  aria-label={t('login.username_label')}
+/>
+
                 </div>
 
                 <div className="relative">
@@ -198,18 +235,23 @@ const LoginPage = () => {
                     <Lock size={16} /> <span>{t('login.password_label')}</span>
                   </label>
                   <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    placeholder={t('login.password_placeholder')}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="mt-2 block w-full rounded-lg border-2 border-slate-50 dark:border-slate-600 px-4 py-3 bg-transparent focus:outline-none focus:ring-2 focus:ring-green-400 dark:focus:ring-blue-400 dark:text-white"
-                    aria-label={t('login.password_label')}
-                  />
-
+  id="password"
+  name="password"
+  type={showPassword ? "text" : "password"}
+  autoComplete="current-password"
+  placeholder={t("login.password_placeholder")}
+  value={password}
+  onChange={handlePasswordChange}
+  required
+  aria-invalid={!!error}
+  aria-describedby="password-error"
+  className={`mt-2 block w-full rounded-lg border-2 px-4 py-3 bg-transparent
+    ${error
+      ? "border-red-500 focus:ring-red-400"
+      : "border-slate-50 dark:border-slate-600 focus:ring-green-400 dark:focus:ring-blue-400"}
+    focus:outline-none focus:ring-2 dark:text-white`}
+  aria-label={t("login.password_label")}
+/>
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}

@@ -150,6 +150,22 @@ const App = ({ showToast: propShowToast }) => {
   const [toast, setToast] = useState(null);
   const [mounted, setMounted] = useState(false);
 
+  // input validation constants
+  const MAX_LENGTH = 120;
+  const AUDIT_SEARCH_REGEX = /^[\p{L}0-9\s._\-:/@]*$/gu;
+
+  const handleAuditSearchChange = (e) => {
+    const value = e.target.value;
+
+    // prevent abuse
+    if (value.length > MAX_LENGTH) return;
+
+    // safe characters only
+    if (!AUDIT_SEARCH_REGEX.test(value)) return;
+
+    setSearchQuery(value);
+  };
+
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
     return () => setMounted(false);
@@ -485,7 +501,7 @@ const App = ({ showToast: propShowToast }) => {
                 placeholder={t("audit.searchPlaceholder")}
                 className="block w-full pl-10 pr-3.5 py-2.5 text-sm border border-[var(--outline-variant)] dark:border-gray-600 rounded-xl leading-5 bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white placeholder-[var(--on-surface-variant)] dark:placeholder-gray-400 transition-all duration-300"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={handleAuditSearchChange}
                 aria-label={t("audit.searchAria")}
               />
             </div>
