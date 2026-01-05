@@ -17,7 +17,8 @@ import {
   ChevronDown,
   Shield,
   Layers,
-  Table2
+  Table2,
+  MessageSquare
 } from "lucide-react";
 import companyLogo from "../../assets/logo.png";
 import { useSidebar } from "../../context/SidebarContext";
@@ -181,6 +182,12 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
       to: "/systemsettings",
       icon: <Settings2Icon size={20} />,
       label: t("sidebar.menu.systemSettings"),
+    },
+    {
+      key: "chat",
+      to: "/chat",
+      icon: <MessageSquare size={20} />,
+      label: t("sidebar.menu.chats") || "Chats",
     },
     {
       key: "settings",

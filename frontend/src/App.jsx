@@ -2,7 +2,7 @@
 import React, { Suspense } from "react";
 import { Routes, Route, BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import { SidebarProvider } from "./context/SidebarContext"; 
+import { SidebarProvider } from "./context/SidebarContext";
 
 import ProtectedRoute from "./components/layout/PrivateRoute";
 import MainLayout from "./components/layout/MainLayout";
@@ -21,6 +21,7 @@ import MasterReportPage from "./pages/MasterReportPage";
 import ProjectManagement from "./pages/ProjectManagementPage";
 import AttachmentManager from "./pages/AttachmentPage";
 import NotificationsPanel from "./pages/NotificationPage";
+import ChatPage from "./pages/ChatPage";
 
 function App() {
   return (
@@ -45,8 +46,8 @@ function App() {
               >
                 {/* No special permissions needed */}
                 <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/settings" element={<UserSettingsPage />} />{" "}
-                
+                <Route path="/settings" element={<UserSettingsPage />} />
+                <Route path="/chat" element={<ChatPage />} />
                 <Route
                   path="/systemsettings"
                   element={
@@ -63,48 +64,46 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-<Route
-  path="/accessmanagement/usermanagement"
-  element={
-    <ProtectedRoute requiredPermission="manage_access">
-      <UserManagementPage />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/accessmanagement/rolemanagement"
-  element={
-    <ProtectedRoute requiredPermission="manage_access">
-      <RoleManagementPage />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/accessmanagement/groupmanagement"
-  element={
-    <ProtectedRoute requiredPermission="manage_access">
-      <GroupManagementPage />
-    </ProtectedRoute>
-  }
-/>
-
-<Route
-  path="/report/review"
-  element={
-    <ProtectedRoute requiredPermission="manage_reports">
-      <ReportReviewPage />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/report/master"
-  element={
-    <ProtectedRoute requiredPermission="manage_reports">
-      <MasterReportPage />
-    </ProtectedRoute>
-  }
-/>
-
+                <Route
+                  path="/accessmanagement/usermanagement"
+                  element={
+                    <ProtectedRoute requiredPermission="manage_access">
+                      <UserManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/accessmanagement/rolemanagement"
+                  element={
+                    <ProtectedRoute requiredPermission="manage_access">
+                      <RoleManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/accessmanagement/groupmanagement"
+                  element={
+                    <ProtectedRoute requiredPermission="manage_access">
+                      <GroupManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/report/review"
+                  element={
+                    <ProtectedRoute requiredPermission="manage_reports">
+                      <ReportReviewPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/report/master"
+                  element={
+                    <ProtectedRoute requiredPermission="manage_reports">
+                      <MasterReportPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/project"
                   element={
@@ -130,6 +129,7 @@ function App() {
                   }
                 />
               </Route>
+              
 
               {/* Add a 404 Not Found page here if you want */}
             </Routes>

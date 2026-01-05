@@ -281,7 +281,7 @@
     "noReports4": "Gabaasni hin argamne",
     "noReports5": "Gabaasni hin argamne.",
     "footer": {
-      "systemName": "SGMS jechuun ni danda'ama"
+      "systemName": "Officemate"
     },
     "status2": {
       "Approved": "Mirkanaa'e",
@@ -576,10 +576,11 @@
       "roleManagement": "Hoggansa Gahee",
       "groupManagement": "Bulchiinsa Garee",
       "reportReview": "Gabaasa Gamaaggama",
-      "masterReport": "Gabaasa Master"
+      "masterReport": "Gabaasa Master",
+      "chats": "Waliigala"
     },
     "logoAlt": "Asxaa dhaabbatichaa",
-    "appName": "SGMS",
+    "appName": "Officemate",
     "profileAlt": "Suuraa piroofaayilii fayyadamaa",
     "logout": "Ba'aa",
     "openMenu": "Menuu barruu cinaa banaa",
@@ -703,7 +704,9 @@
       "rollLabel": "Lakkoofsa roll (dirqama)",
       "optional": "(dirqama)",
       "previousMetrics": "Safartuuwwan Duraa",
-      "selectedFiles": "Faayilota Filataman:"
+      "selectedFiles": "Faayilota Filataman:",
+      "quickInfo": "Odeeffannoo saffisaa", 
+      "totalTarget": "Galmee waliigalaa"
     },
 
     "placeholders": {
@@ -816,8 +819,8 @@
   },
   "login": {
     "company_logo_alt": "Asxaa dhaabbataa",
-    "title": "Baga nagaan dhufte",
-    "subtitle": "Misooma Magaalaa fi Ijaarsa Berue",
+    "title": "Officemate",
+    "subtitle": "Welcome back",
     "form_title": "Akkaawuntii kee keessa seeni",
     "username_label": "Maqaa fayyadamaa",
     "username_placeholder": "Maqaa Fayyadamaa kee galchi",
@@ -960,5 +963,20 @@
     "open": "Banaa",
     "viewAll": "Hunda ilaali",
     "refresh": "Haaromsuu"
+  },
+    "chat": {
+    "title": "Waliigala",
+    "recent": "Waliigala Dhiheenya",
+    "loading": "Fe'aa jira...",
+    "noConversations": "Hanga ammaatti haasawa hin jiru. Ergaa erguu jalqabuuf marii haaraa jalqabi.",
+    "startNewChat": "Chat haaraa jalqabi",
+    "noMessagesYet": "Ammatti ergaan hin jiru. Haasaa jalqabuuf ergaa ergaa.",
+    "activeNow": "Active",
+    "placeholder": "Ergaa barreessi...",
+    "selectConversation": "Chatting jalqabuuf haasawa filadhu.",
+    "chooseConversation": "Chaat jiru bitaa irraa filadhu ykn haaraa jalqabi.",
+    "New Message": "Ergaa Haaraa",
+    "loadingUsers": "Fayyadamtoota fe'aa jira...",
+    "noUsersFound": "Fayyadamtoota hin argamne"
   }
 }

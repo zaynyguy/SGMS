@@ -3,9 +3,9 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-const LANG_ORDER = ["en", "am", "or", "hr"];
-const LABELS = { en: "English", am: "አማርኛ", or: "Afaan Oromoo", hr: "Harari" };
-const ABBR = { en: "EN", am: "አም", or: "OR", hr: "ሃረ" };
+const LANG_ORDER = ["en", "am", "or"];
+const LABELS = { en: "English", am: "አማርኛ", or: "Afaan Oromoo"};
+const ABBR = { en: "EN", am: "አም", or: "OR" };
 const STORAGE_KEY = "i18nextLng";
 
 /* --- Icons --- */
