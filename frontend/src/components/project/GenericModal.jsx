@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Loader } from "lucide-react";
+import { Loader, Activity } from "lucide-react";
 
 /**
  * A generic modal for creating and editing Goals, Tasks, and Activities.
@@ -734,6 +734,12 @@ export default function GenericModal({
       // CREATE ACTIVITY
       if (modal.type === "createActivity") {
         const { goalId, taskId } = resolveIds(modal.data || {});
+        // Enforce single target metric (client-side validation)
+        const nonEmptyTargets = (Array.isArray(local.targetMetrics) ? local.targetMetrics.filter(m => m && String(m.key || "").trim() !== "") : []).length;
+        if (nonEmptyTargets > 1) {
+          setInlineError(t("project.errors.singleTargetMetric") || "Only one target metric allowed per activity.");
+          return;
+        }
         const payload = { ...local };
         // MODIFIED: Convert all metric arrays to objects
         payload.quarterlyGoals = quarterlyGoalsToObject(local.quarterlyGoals);
@@ -760,6 +766,12 @@ export default function GenericModal({
           return;
         }
         const payload = { ...local };
+        // Enforce single target metric (client-side validation)
+        const nonEmptyTargetsEdit = (Array.isArray(local.targetMetrics) ? local.targetMetrics.filter(m => m && String(m.key || "").trim() !== "") : []).length;
+        if (nonEmptyTargetsEdit > 1) {
+          setInlineError(t("project.errors.singleTargetMetric") || "Only one target metric allowed per activity.");
+          return;
+        }
         // MODIFIED: Convert all metric arrays to objects
         payload.quarterlyGoals = quarterlyGoalsToObject(local.quarterlyGoals);
         payload.targetMetric = metricsToObject(local.targetMetrics);
@@ -875,20 +887,29 @@ transform: translateY(0);
           animation: "slideUp 0.3s ease-out forwards",
         }}
       >
-        {/* Enhanced header with gradient border */}
+        {/* Enhanced header matching Submit modal style */}
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
-          <h3
-            id="generic-modal-title"
-            className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200"
-          >
-            {modal.type === "createGoal" && t("project.modal.createGoal")}
-            {modal.type === "editGoal" && t("project.modal.editGoal")}
-            {modal.type === "createTask" && t("project.modal.createTask")}
-            {modal.type === "editTask" && t("project.modal.editTask")}
-            {modal.type === "createActivity" &&
-              t("project.modal.createActivity")}
-            {modal.type === "editActivity" && t("project.modal.editActivity")}
-          </h3>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-11 h-11 rounded-lg bg-indigo-600 text-white shadow-sm">
+              <Activity className="h-5 w-5" />
+            </div>
+            <div>
+              <h3
+                id="generic-modal-title"
+                className="text-lg font-semibold text-gray-900 dark:text-white transition-colors duration-200"
+              >
+                {modal.type === "createGoal" && t("project.modal.createGoal")}
+                {modal.type === "editGoal" && t("project.modal.editGoal")}
+                {modal.type === "createTask" && t("project.modal.createTask")}
+                {modal.type === "editTask" && t("project.modal.editTask")}
+                {modal.type === "createActivity" && t("project.modal.createActivity")}
+                {modal.type === "editActivity" && t("project.modal.editActivity")}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t("project.modal.subtitle") || "Create or edit items — fill fields and save."}
+              </p>
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => setModal({ isOpen: false, type: null, data: null })}
@@ -1061,66 +1082,34 @@ transform: translateY(0);
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
                   {t("project.labels.previousMetrics", "Previous Metrics")}
                 </label>
-                <div className="mt-2 space-y-2">
-                  {(Array.isArray(local.previousMetrics)
-                    ? local.previousMetrics
-                    : [{ id: "empty-prev-0", key: "", value: "" }]
-                  ).map((m, idx) => (
-                    <div
-                      key={m.id}
-                      className="flex gap-2 metric-row-enter transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1 rounded"
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                    >
-                      <input
-                        placeholder={t("project.placeholders.metricKey")}
-                        value={m?.key || ""}
-                        onChange={(e) =>
-                          updatePreviousMetricRow(idx, "key", e.target.value)
-                        }
-                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.0000001"
-                        placeholder={t("project.placeholders.metricValue")}
-                        value={m?.value || ""}
-                        onChange={(e) =>
-                          updatePreviousMetricRow(idx, "value", e.target.value)
-                        }
-                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removePreviousMetricRow(idx)}
-                        className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-all duration-200 transform hover:scale-105 active:scale-95"
-                        aria-label={t("project.actions.remove")}
-                      >
-                        {t("project.actions.removeShort")}
-                      </button>
-                    </div>
-                  ))}
+                <div className="mt-2">
+                  {/* Only a single previous metric is allowed — show first entry only */}
+                  {(() => {
+                    const arr = Array.isArray(local.previousMetrics)
+                      ? local.previousMetrics
+                      : [{ id: "empty-prev-0", key: "", value: "" }];
+                    const m = arr[0] || { id: "empty-prev-0", key: "", value: "" };
+                    return (
+                      <div className="flex gap-2 p-1 rounded">
+                        <input
+                          placeholder={t("project.placeholders.metricKey")}
+                          value={m?.key || ""}
+                          onChange={(e) => updatePreviousMetricRow(0, "key", e.target.value)}
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.0000001"
+                          placeholder={t("project.placeholders.metricValue")}
+                          value={m?.value || ""}
+                          onChange={(e) => updatePreviousMetricRow(0, "value", e.target.value)}
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
-                <button
-                  type="button"
-                  onClick={addPreviousMetricRow}
-                  className="w-full mt-2 px-3 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded text-sm transition-all duration-200 transform hover:scale-100 active:scale-95 flex items-center justify-center gap-1"
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  {t("project.actions.addMetric")}
-                </button>
               </div>
 
               {/* Enhanced Target Metrics Section */}
@@ -1148,65 +1137,33 @@ transform: translateY(0);
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
                   {t("project.labels.targetMetrics")}
                 </label>
-                <div className="mt-2 space-y-2">
-                  {(Array.isArray(local.targetMetrics)
-                    ? local.targetMetrics
-                    : [{ id: "empty-0", key: "", value: "" }]
-                  ).map((m, idx) => (
-                    <div
-                      key={m.id}
-                      className="flex gap-2 metric-row-enter transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 p-1 rounded"
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                    >
-                      <input
-                        placeholder={t("project.placeholders.metricKey")}
-                        value={m?.key || ""}
-                        onChange={(e) =>
-                          updateMetricRow(idx, "key", e.target.value)
-                        }
-                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        placeholder={t("project.placeholders.metricValue")}
-                        value={m?.value || ""}
-                        onChange={(e) =>
-                          updateMetricRow(idx, "value", e.target.value)
-                        }
-                        className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeMetricRow(idx)}
-                        className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-all duration-200 transform hover:scale-105 active:scale-95"
-                        aria-label={t("project.actions.remove")}
-                      >
-                        {t("project.actions.removeShort")}
-                      </button>
-                    </div>
-                  ))}
+                <div className="mt-2">
+                  {/* Only a single target metric is allowed — show first entry only */}
+                  {(() => {
+                    const arr = Array.isArray(local.targetMetrics)
+                      ? local.targetMetrics
+                      : [{ id: "empty-0", key: "", value: "" }];
+                    const m = arr[0] || { id: "empty-0", key: "", value: "" };
+                    return (
+                      <div className="flex gap-2 p-1 rounded">
+                        <input
+                          placeholder={t("project.placeholders.metricKey")}
+                          value={m?.key || ""}
+                          onChange={(e) => updateMetricRow(0, "key", e.target.value)}
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder={t("project.placeholders.metricValue")}
+                          value={m?.value || ""}
+                          onChange={(e) => updateMetricRow(0, "value", e.target.value)}
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
-                <button
-                  type="button"
-                  onClick={addMetricRow}
-                  className="w-full mt-2 px-3 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded text-sm transition-all duration-200 transform hover:scale-100 active:scale-95 flex items-center justify-center gap-1"
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  {t("project.actions.addMetric")}
-                </button>
                 {jsonError && (
                   <div className="text-xs text-red-500 mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded transition-all duration-200">
                     {jsonError}

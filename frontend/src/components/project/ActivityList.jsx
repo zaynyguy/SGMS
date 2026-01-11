@@ -368,6 +368,15 @@ function ActivityCard({
             <h4 className="text-xs font-semibold text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wide mb-2">
               {tr("project.fields.metrics", "Metrics")}
             </h4>
+            <div className="flex items-center justify-between mb-2">
+              <div />
+              <div className="text-xs text-[var(--on-surface-variant)] dark:text-gray-400">
+                {tr("project.labels.metricType", "Metric Type")}: 
+                <span className="ml-2 inline-block px-2 py-0.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white text-xs font-medium">
+                  {activity.metricType || activity.metric_type || 'Plus'}
+                </span>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 p-4 bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white rounded-xl border border-[var(--outline-variant)] dark:border-gray-600">
               {renderMetricSummary(
                 activity.previousMetric,
