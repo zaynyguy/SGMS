@@ -371,21 +371,25 @@ function TaskList({
             : null;
 
         return (
-          <div
-            key={task.id}
-            className={`p-3 bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1${
-              taskIsExpanded ? "task-expanded" : ""
-            }`}
-            style={{
-              animationDelay: `${index * 60}ms`,
-              transitionDelay: `${index * 20}ms`,
-            }}
-          >
+            <div
+              key={task.id}
+              className={`p-3 bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1${
+                taskIsExpanded ? "task-expanded" : ""
+              }`}
+              style={{
+                animationDelay: `${index * 60}ms`,
+                transitionDelay: `${index * 20}ms`,
+              }}
+              onClick={() => handleToggleTask(goal, task)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { handleToggleTask(goal, task); } }}
+            >
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 min-w-0">
               <div className="flex items-start gap-3 min-w-0 flex-1">
                 <button
                   type="button"
-                  onClick={() => handleToggleTask(goal, task)}
+                  onClick={(e) => { e.stopPropagation(); handleToggleTask(goal, task); }}
                   className="p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 task-btn task-icon-rotate"
                   aria-label={t("project.actions.toggleTask") || "Toggle task"}
                   aria-expanded={taskIsExpanded}
@@ -438,7 +442,7 @@ function TaskList({
                   <div className="hidden sm:flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => onEditTask && onEditTask(goal.id, task)}
+                      onClick={(e) => { e.stopPropagation(); onEditTask && onEditTask(goal.id, task); }}
                       className="p-2 text-blue-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 rounded-full task-btn task-pulse"
                       title={(t("project.actions.edit") || "Edit") + (task.title ? `: ${task.title}` : "")}
                       aria-label={(t("project.actions.edit") || "Edit") + (task.title ? `: ${task.title}` : "")}
@@ -447,7 +451,7 @@ function TaskList({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
+                      onClick={(e) => { e.stopPropagation(); onDeleteTask && onDeleteTask(goal.id, task.id); }}
                       className="p-2 text-[var(--error)] dark:text-red-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 rounded-full task-btn"
                       title={(t("project.actions.delete") || "Delete") + (task.title ? `: ${task.title}` : "")}
                       aria-label={(t("project.actions.delete") || "Delete") + (task.title ? `: ${task.title}` : "")}
@@ -463,7 +467,7 @@ function TaskList({
               <div className="inline-flex sm:hidden items-center gap-1 mt-2 task-fade-in" style={{ animationDelay: `${index * 60 + 100}ms` }}>
                 <button
                   type="button"
-                  onClick={() => onEditTask && onEditTask(goal.id, task)}
+                  onClick={(e) => { e.stopPropagation(); onEditTask && onEditTask(goal.id, task); }}
                   className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-[var(--outline-variant)] dark:border-gray-600 rounded-md text-sm dark:text-white task-btn task-pulse"
                   title={t("project.actions.edit") || "Edit task"}
                 >
@@ -471,7 +475,7 @@ function TaskList({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onDeleteTask && onDeleteTask(goal.id, task.id)}
+                  onClick={(e) => { e.stopPropagation(); onDeleteTask && onDeleteTask(goal.id, task.id); }}
                   className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-[var(--outline-variant)] dark:border-gray-600 rounded-md text-sm text-[var(--error)] dark:text-red-400 task-btn"
                   title={t("project.actions.delete") || "Delete task"}
                 >

@@ -217,6 +217,7 @@ export default function ProjectManagement() {
   // Animation states
   const [isMounted, setIsMounted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   // Toast
   const [toast, setToast] = useState(null);
   const showToast = useCallback((message, type = "create") => {
@@ -298,10 +299,13 @@ export default function ProjectManagement() {
   }, [user]);
   /* ----------------- Load initial data ----------------- */
   useEffect(() => {
-    loadGoals({ page: currentPage, pageSize, silent: true }).catch((e) => {
-      console.error("loadGoals error:", e);
-      showToast(e?.message || t("project.errors.loadGoals"), "error");
-    });
+    setInitialLoading(true);
+    loadGoals({ page: currentPage, pageSize, silent: true })
+      .catch((e) => {
+        console.error("loadGoals error:", e);
+        showToast(e?.message || t("project.errors.loadGoals"), "error");
+      })
+      .finally(() => setInitialLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, loadGoals]);
   /* ----------------- Show toasts on API success/error ----------------- */
@@ -988,7 +992,7 @@ const openSubmitModal = useCallback(
           </div>
         </header>
         <main className="space-y-4">
-          {isLoadingGoals ? (
+          {(isLoadingGoals || initialLoading) ? (
             <div className="space-y-4 animate-fade-in">
               <SkeletonCard rows={2} />
               <SkeletonCard rows={3} />
