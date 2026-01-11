@@ -23,8 +23,8 @@ const ChatPage = () => {
 
   const styles = {
     card: "bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden",
-    input: "w-full rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 dark:text-white",
-    activeItem: "bg-green-50 dark:bg-gray-700 border-l-4 border-green-500",
+    input: "w-full rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-blue-500 dark:text-white",
+    activeItem: "bg-green-50 dark:bg-blue-900 border-l-4 border-green-500 dark:border-blue-500",
     item: "hover:bg-gray-50 dark:hover:bg-gray-700 border-l-4 border-transparent cursor-pointer transition-all",
   };
 
@@ -148,16 +148,24 @@ const ChatPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors duration-300">
       <div className="min-w-7xl mx-auto h-[calc(100vh-2rem)] flex flex-col">
-        {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-              <MessageSquare className="text-green-600 dark:text-green-300" size={24} />
+        {/* Header (top-bar card applied below) */}
+          {/* Header */}
+          <div className="mb-4">
+            <div className="rounded-2xl bg-[var(--surface-container-low)] dark:bg-gray-800 surface-elevation-3 px-4 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="p-3 rounded-xl bg-[var(--primary-container)] dark:bg-indigo-900 surface-elevation-2">
+                  <MessageSquare className="h-6 w-6 text-[var(--on-primary-container)] dark:text-indigo-200" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-bold text-[var(--on-surface)] dark:text-white truncate transition-colors duration-300">{t("chat.title", "Messages")}</h1>
+                  <p className="mt-0.5 text-base text-[var(--on-surface-variant)] dark:text-gray-400 max-w-2xl">{t("chat.subtitle", "Chat with colleagues")}</p>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                <TopBar />
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{t("chat.title", "Messages")}</h1>
           </div>
-          <TopBar />
-        </div>
 
         <div className={`${styles.card} flex-1 flex`}>
           {/* Sidebar List */}
@@ -166,7 +174,7 @@ const ChatPage = () => {
               <span className="font-semibold text-gray-700 dark:text-gray-200">{t("chat.recent", "Chats")}</span>
               <button 
                 onClick={handleNewChatClick} 
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition text-green-600 dark:text-green-400"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition text-green-600 dark:text-blue-400"
                 title="New Chat"
               >
                 <Plus size={20} />
@@ -184,7 +192,7 @@ const ChatPage = () => {
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{t("chat.noConversations", "No conversations yet.")}</p>
                   <button 
                     onClick={handleNewChatClick}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                    className="px-4 py-2 bg-green-600 dark:bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 dark:hover:bg-blue-700 transition"
                   >
                     {t("chat.startNewChat", "Start New Chat")}
                   </button>
@@ -209,7 +217,7 @@ const ChatPage = () => {
                         </p>
                       </div>
                       {c.unreadCount > 0 && (
-                        <span className="w-5 h-5 bg-green-500 text-white text-xs flex items-center justify-center rounded-full flex-shrink-0">
+                        <span className="w-5 h-5 bg-green-500 dark:bg-blue-500 text-white text-xs flex items-center justify-center rounded-full flex-shrink-0">
                           {c.unreadCount}
                         </span>
                       )}
@@ -259,7 +267,7 @@ const ChatPage = () => {
                         <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[85%] md:max-w-[70%] p-3 rounded-2xl shadow-sm ${
                             isMe 
-                              ? 'bg-green-600 text-white rounded-br-none' 
+                              ? 'bg-green-600 dark:bg-blue-600 text-white rounded-br-none' 
                               : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-100 dark:border-gray-700'
                           }`}>
                             <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
@@ -287,7 +295,7 @@ const ChatPage = () => {
                     <button 
                       type="submit" 
                       disabled={!inputText.trim()}
-                      className="p-3 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex-shrink-0"
+                      className="p-3 bg-green-600 dark:bg-blue-600 hover:bg-green-700 dark:hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex-shrink-0"
                     >
                       <Send size={20} />
                     </button>
@@ -303,7 +311,7 @@ const ChatPage = () => {
                 <p className="max-w-xs mx-auto mb-6">{t("chat.chooseConversation", "Choose an existing chat from the left or start a new one.")}</p>
                 <button 
                   onClick={handleNewChatClick}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition font-medium shadow-md"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 dark:bg-blue-600 text-white rounded-xl hover:bg-green-700 dark:hover:bg-blue-700 transition font-medium shadow-md"
                 >
                   <UserPlus size={18} />
                   <span>{t("chat.startNewChat", "Start New Chat")}</span>

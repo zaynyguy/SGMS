@@ -20,6 +20,7 @@ import Toast from "../components/common/Toast";
 import { rawFetch } from "../api/auth";
 import AuthenticatedImage from "../components/common/AuthenticatedImage";
 import TopBar from "../components/layout/TopBar";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 // Material Design 3 color system - light theme
 const lightColors = {
@@ -909,7 +910,9 @@ function GroupsManager() {
         <main className="mt-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+              <div>
+                <LoadingSpinner size={40} color={'#4f46e5'} />
+              </div>
             </div>
           ) : (
             <>

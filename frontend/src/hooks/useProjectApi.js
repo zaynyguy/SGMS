@@ -37,6 +37,8 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
   // ---- dedupe / concurrency helpers
   const inFlightTaskLoads = useRef(new Map()); // goalId -> Promise
   const inFlightActivityLoads = useRef(new Map()); // taskId -> Promise
+  // Simple cache for goals to avoid showing loading spinner on quick navigation
+  const goalsCacheRef = useRef({ data: null, ts: 0 });
 
   // small concurrency pool: limits number of concurrent iterator() executions
   async function asyncPool(items, iterator, concurrency = 3) {
@@ -252,14 +254,42 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
   // loadGoals: fetch goals (REMOVED prefetching for tasks/activities)
   const loadGoals = useCallback(
     async (opts = {}) => {
-      setIsLoadingGoals(true);
       setError(null);
+      const page = opts.page ?? currentPage;
+      const size = opts.pageSize ?? pageSize;
+      const silent = Boolean(opts.silent);
+
+      // If we have cached goals and caller requested silent or cache is fresh, return cached immediately
+      const now = Date.now();
+      const cache = goalsCacheRef.current;
+      const cacheFresh = cache && cache.ts && now - cache.ts < (opts.ttl || 30_000);
+      if (cache && cache.data && (silent || cacheFresh)) {
+        // populate from cache immediately
+        try {
+          setGoals(cache.data);
+        } catch (_) {}
+        // If cache is stale, trigger background refresh to update
+        if (!cacheFresh) {
+          (async () => {
+            try {
+              const respBg = await fetchGoals(page, size);
+              const rowsBg = respBg?.rows ?? respBg ?? [];
+              goalsCacheRef.current = { data: rowsBg, ts: Date.now() };
+              setGoals(rowsBg);
+            } catch (e) {
+              console.error("background loadGoals error:", e);
+            }
+          })();
+        }
+        return cache.data;
+      }
+
+      if (!silent) setIsLoadingGoals(true);
       try {
-        const page = opts.page ?? currentPage;
-        const size = opts.pageSize ?? pageSize;
         const resp = await fetchGoals(page, size);
         const rows = resp?.rows ?? resp ?? [];
         setGoals(rows);
+        goalsCacheRef.current = { data: rows, ts: Date.now() };
 
         return rows;
       } catch (err) {
@@ -268,7 +298,7 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
         setGoals([]);
         throw err;
       } finally {
-        setIsLoadingGoals(false);
+        if (!silent) setIsLoadingGoals(false);
       }
     },
     [currentPage, pageSize]

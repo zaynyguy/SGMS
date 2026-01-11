@@ -298,7 +298,7 @@ export default function ProjectManagement() {
   }, [user]);
   /* ----------------- Load initial data ----------------- */
   useEffect(() => {
-    loadGoals({ page: currentPage, pageSize }).catch((e) => {
+    loadGoals({ page: currentPage, pageSize, silent: true }).catch((e) => {
       console.error("loadGoals error:", e);
       showToast(e?.message || t("project.errors.loadGoals"), "error");
     });
