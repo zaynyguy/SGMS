@@ -179,6 +179,8 @@ export default function SubmitReportInline({
     data,
   ]);
 
+  const metricType = (data && (data.metricType || data.activity?.metricType)) || 'Plus';
+
   const onFileChange = (e) => {
     setLocalErr(null);
     const incoming = Array.from(e.target.files || []).map((f) => ({
@@ -249,7 +251,10 @@ export default function SubmitReportInline({
           const target = m.target !== undefined && m.target !== null ? m.target : null;
           const curr = Number(m.current) || 0;
           const reported = extractNumeric(m.value);
-          const newCurrent = reported !== null ? reported : curr; // REPLACEMENT semantics
+          // For cumulative metric types (Plus/Minus) the reported value adds to current
+          const newCurrent = (metricType === 'Plus' || metricType === 'Minus')
+            ? curr + (reported !== null ? reported : 0)
+            : (reported !== null ? reported : curr);
           if (target !== null) tSum += target;
           cSum += newCurrent;
         }
@@ -282,6 +287,7 @@ export default function SubmitReportInline({
       );
       return {
         totalTarget: totalT,
+        // When activity-level metricType isn't known here, fallback to raw sums
         totalCurrent: totalC,
         totalAvailable: Math.max(0, totalT - totalC),
         isNumericTarget: totalT > 0,
@@ -297,11 +303,12 @@ export default function SubmitReportInline({
 
     for (const m of metricsArray) {
       if (!m) continue;
-      const reported = extractNumeric(m.value); // replacement if present
+      const reported = extractNumeric(m.value);
       const curr = Number(m.current) || 0;
       const target = m.target !== undefined ? m.target : null;
-
-      const newCurrent = reported !== null ? reported : curr;
+      const newCurrent = (metricType === 'Plus' || metricType === 'Minus')
+        ? curr + (reported !== null ? reported : 0)
+        : (reported !== null ? reported : curr);
 
       if (target !== null && target !== undefined) {
         hasAnyTarget = true;
@@ -333,8 +340,13 @@ export default function SubmitReportInline({
       if (!m) continue;
       const reported = extractNumeric(m.value);
       const target = m.target !== undefined ? m.target : null;
-      if (target !== null && reported !== null && reported > target) {
-        map.set(m.id, { reported, target });
+      // For cumulative metrics, check proposed total (current + reported)
+      const curr = Number(m.current) || 0;
+      const proposed = (metricType === 'Plus' || metricType === 'Minus')
+        ? curr + (reported !== null ? reported : 0)
+        : (reported !== null ? reported : curr);
+      if (target !== null && proposed !== null && proposed > target) {
+        map.set(m.id, { reported: proposed, target });
       }
     }
     return map;
@@ -563,7 +575,10 @@ export default function SubmitReportInline({
               <div className="mt-3 space-y-3">
                 {metricsArray.map((m, idx) => {
                   const reported = extractNumeric(m.value);
-                  const displayedCurrent = reported !== null ? reported : (m.current || 0);
+                  const curr = Number(m.current) || 0;
+                  const displayedCurrent = (metricType === 'Plus' || metricType === 'Minus')
+                    ? curr + (reported !== null ? reported : 0)
+                    : (reported !== null ? reported : curr);
                   const remaining =
                     m.target !== null && m.target !== undefined
                       ? m.target - displayedCurrent

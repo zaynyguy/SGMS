@@ -251,6 +251,8 @@ export default function GenericModal({
         targetMetrics: parseMetricData(
           source.targetMetric ?? source.targetMetrics
         ),
+        // metricType: store metric type for activity creation/edit
+        metricType: source.metricType || source.metric_type || 'Plus',
         // MODIFICATION: Add quarterlyGoals from source
         quarterlyGoals: {
           q1: qGoals.q1 ?? "",
@@ -1122,6 +1124,26 @@ transform: translateY(0);
               </div>
 
               {/* Enhanced Target Metrics Section */}
+              <div className="mt-4">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("project.labels.metricType", "Metric Type")}
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  {t("project.hints.metricType", "Choose how reported values are interpreted: accumulate (Plus/Minus) or snapshot (Increase/Decrease/Maintain).")}
+                </p>
+                <select
+                  name="metricType"
+                  value={local.metricType || 'Plus'}
+                  onChange={(e) => setLocal((p) => ({ ...(p||{}), metricType: e.target.value }))}
+                  className="w-48 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+                >
+                  <option value="Plus">Plus (Accumulate)</option>
+                  <option value="Minus">Minus (Accumulate)</option>
+                  <option value="Increase">Increase (Snapshot)</option>
+                  <option value="Decrease">Decrease (Snapshot)</option>
+                  <option value="Maintain">Maintain (Snapshot)</option>
+                </select>
+              </div>
               <div className="transition-all duration-300">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
                   {t("project.labels.targetMetrics")}
