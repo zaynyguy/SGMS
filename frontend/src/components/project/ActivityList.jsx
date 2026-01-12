@@ -243,13 +243,19 @@ function ActivityCard({
   };
 
   return (
-    <div className={`relative bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1 transition-all duration-300 transform hover:-translate-y-0.5 group ${isExpanded ? 'shadow-md' : ''}`}>
+    <div
+      className={`relative bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1 transition-all duration-300 transform hover:-translate-y-0.5 group ${isExpanded ? 'shadow-md' : ''}`}
+      onClick={(e) => { e.stopPropagation(); setIsExpanded((v) => !v); }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setIsExpanded((v) => !v); } }}
+    >
       {/* Activity Header Row */}
       <div className="flex items-start justify-between gap-2 p-3">
         <div className="flex items-start gap-2 min-w-0 flex-1">
           <button
             type="button"
-            onClick={() => setIsExpanded((e) => !e)}
+            onClick={(e) => { e.stopPropagation(); setIsExpanded((v) => !v); }}
             className="p-1.5 text-[var(--on-surface-variant)] dark:text-gray-400 hover:text-[var(--on-surface)] dark:hover:text-white rounded-full hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200 flex-shrink-0"
             title={
               isExpanded
@@ -302,7 +308,7 @@ function ActivityCard({
             <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
               <button
                 type="button"
-                onClick={() => onEditActivity && onEditActivity(activity)}
+                onClick={(e) => { e.stopPropagation(); onEditActivity && onEditActivity(activity); }}
                 className="p-1.5 text-blue-600 hover:bg-blue-600/30 rounded-full transition-all duration-200"
                 title={tr("project.actions.edit") || "Edit activity"}
               >
@@ -310,9 +316,7 @@ function ActivityCard({
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  onDeleteActivity && onDeleteActivity(activity.id)
-                }
+                onClick={(e) => { e.stopPropagation(); onDeleteActivity && onDeleteActivity(activity.id); }}
                 className="p-1.5 text-[var(--error)] dark:text-red-400 hover:bg-[var(--error-container)]/[0.1] dark:hover:bg-red-900/[0.3] rounded-full transition-all duration-200"
                 title={tr("project.actions.delete") || "Delete activity"}
               >
@@ -323,7 +327,7 @@ function ActivityCard({
           {reportingActive && (
             <button
               type="button"
-              onClick={() => openSubmitModal && openSubmitModal(activity.id)}
+              onClick={(e) => { e.stopPropagation(); openSubmitModal && openSubmitModal(activity.id); }}
               disabled={!canSubmitReport}
               className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-[var(--on-primary)] dark:text-white rounded-full text-xs hover:bg-[var(--primary-container)] dark:hover:bg-green-600 disabled:opacity-50 transition-all duration-300"
             >
@@ -368,6 +372,15 @@ function ActivityCard({
             <h4 className="text-xs font-semibold text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wide mb-2">
               {tr("project.fields.metrics", "Metrics")}
             </h4>
+            <div className="flex items-center justify-between mb-2">
+              <div />
+              <div className="text-xs text-[var(--on-surface-variant)] dark:text-gray-400">
+                {tr("project.labels.metricType", "Metric Type")}: 
+                <span className="ml-2 inline-block px-2 py-0.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white text-xs font-medium">
+                  {activity.metricType || activity.metric_type || 'Plus'}
+                </span>
+              </div>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 p-4 bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white rounded-xl border border-[var(--outline-variant)] dark:border-gray-600">
               {renderMetricSummary(
                 activity.previousMetric,

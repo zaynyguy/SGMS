@@ -1,6 +1,8 @@
+// backend/src/controllers/activitiesController.js
 const db = require("../db");
 const notificationService = require("../services/notificationService");
 const { logAudit } = require("../helpers/audit");
+
 const EPS = 1e-9;
 
 // Parsing helpers
@@ -9,11 +11,13 @@ function toNumberOrNull(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
+
 function toIntOrNull(v) {
   if (v === null || v === undefined || v === "") return null;
   const n = parseInt(String(v), 10);
   return Number.isInteger(n) ? n : null;
 }
+
 function toBoolean(v) {
   if (v === true || v === false) return v;
   if (typeof v === "string") {
@@ -23,6 +27,7 @@ function toBoolean(v) {
   }
   return Boolean(v);
 }
+
 function safeParseJson(v) {
   if (v === null || v === undefined) return null;
   if (typeof v === "object") return v;
@@ -30,7 +35,6 @@ function safeParseJson(v) {
     try {
       return v.trim() === "" ? null : JSON.parse(v);
     } catch {
-      // not JSON, return the raw string
       return v;
     }
   }
@@ -50,7 +54,6 @@ exports.getActivitiesByTask = async (req, res) => {
   const taskId = toIntOrNull(req.params.taskId);
   if (!taskId) return res.status(400).json({ message: "Invalid taskId" });
 
-  // MODIFIED: Read quarter from query string
   const quarter = toIntOrNull(req.query.quarter);
   if (quarter && (quarter < 1 || quarter > 4)) {
     return res
@@ -63,15 +66,13 @@ exports.getActivitiesByTask = async (req, res) => {
       Array.isArray(req.user?.permissions) &&
       req.user.permissions.includes("manage_gta");
 
-    // MODIFIED: Build query dynamically to support filtering
     let baseQueryStr = `
-SELECT a.*, t."goalId", gl."groupId", g.name AS "groupName"
-FROM "Activities" a
-JOIN "Tasks" t ON a."taskId" = t.id
-JOIN "Goals" gl ON t."goalId" = gl.id
-JOIN "Groups" g ON gl."groupId" = g.id
-`;
-
+      SELECT a.*, t."goalId", gl."groupId", g.name AS "groupName"
+      FROM "Activities" a
+      JOIN "Tasks" t ON a."taskId" = t.id
+      JOIN "Goals" gl ON t."goalId" = gl.id
+      JOIN "Groups" g ON gl."groupId" = g.id
+    `;
     const params = [taskId];
     const whereClauses = [`a."taskId" = $1`];
 
@@ -81,21 +82,19 @@ JOIN "Groups" g ON gl."groupId" = g.id
       whereClauses.push(`ug."userId" = $${params.length}`);
     }
 
-    // MODIFIED: Add quarterly filter if provided
     if (quarter) {
       const qKey = `q${quarter}`;
       params.push(qKey);
-      // This query checks if the JSON key (e.g., 'q1') exists and has a numeric value > 0
       whereClauses.push(
         `COALESCE((a."quarterlyGoals"->>$${params.length})::numeric, 0) > 0`
       );
     }
 
     const finalQuery = `
-${baseQueryStr}
-WHERE ${whereClauses.join(" AND ")}
-ORDER BY COALESCE(a."rollNo", 999999), a."createdAt" DESC
-`;
+      ${baseQueryStr}
+      WHERE ${whereClauses.join(" AND ")}
+      ORDER BY COALESCE(a."rollNo", 999999), a."createdAt" DESC
+    `;
 
     const { rows } = await db.query(finalQuery, params);
     return res.json(rows);
@@ -111,7 +110,6 @@ exports.createActivity = async (req, res) => {
   const taskId = toIntOrNull(req.params.taskId);
   if (!taskId) return res.status(400).json({ message: "Invalid taskId" });
 
-  // MODIFIED: Added quarterlyGoals
   const {
     title,
     description,
@@ -120,7 +118,8 @@ exports.createActivity = async (req, res) => {
     targetMetric,
     previousMetric,
     rollNo,
-    quarterlyGoals, // Added
+    quarterlyGoals,
+    metricType, // ADDED
   } = req.body;
 
   if (!title || String(title).trim() === "") {
@@ -129,8 +128,11 @@ exports.createActivity = async (req, res) => {
 
   const parsedTargetMetric = safeParseJson(targetMetric);
   const parsedPreviousMetric = safeParseJson(previousMetric);
-  // MODIFIED: Parse quarterlyGoals
   const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
+  
+  // Validate Metric Type
+  const validTypes = ['Plus', 'Minus', 'Increase', 'Decrease', 'Maintain'];
+  const safeMetricType = validTypes.includes(metricType) ? metricType : 'Plus';
 
   try {
     const activity = await db.tx(async (client) => {
@@ -147,6 +149,7 @@ exports.createActivity = async (req, res) => {
 
       const taskWeight = parseFloat(t.rows[0].weight) || 0;
       const newWeight = toNumberOrNull(weight);
+
       if (newWeight === null) {
         const err = new Error("Activity weight must be a number");
         err.status = 400;
@@ -172,11 +175,11 @@ exports.createActivity = async (req, res) => {
         throw err;
       }
 
-      // rollNo handling (optional)
+      // rollNo handling
       let insertRes;
       const rn = toIntOrNull(rollNo);
+
       if (rn !== null) {
-        // uniqueness check per task
         const dup = await client.query(
           `SELECT id FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2`,
           [taskId, rn]
@@ -187,12 +190,11 @@ exports.createActivity = async (req, res) => {
           throw err;
         }
 
-        // MODIFIED: Added "quarterlyGoals"
         insertRes = await client.query(
           `INSERT INTO "Activities"
-("taskId", "rollNo", title, description, "dueDate", "weight", "targetMetric", "previousMetric", "quarterlyGoals", "createdAt", "updatedAt")
-VALUES ($1,$2,$3,$4,$5,$6,$7, $8, $9, NOW(), NOW())
-RETURNING *`,
+           ("taskId", "rollNo", title, description, "dueDate", "weight", "targetMetric", "previousMetric", "quarterlyGoals", "metricType", "createdAt", "updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6,$7, $8, $9, $10, NOW(), NOW())
+           RETURNING *`,
           [
             taskId,
             rn,
@@ -202,16 +204,16 @@ RETURNING *`,
             newWeight,
             parsedTargetMetric ?? null,
             parsedPreviousMetric ?? null,
-            parsedQuarterlyGoals ?? null, // Added
+            parsedQuarterlyGoals ?? null,
+            safeMetricType, // Insert metricType
           ]
         );
       } else {
-        // MODIFIED: Added "quarterlyGoals"
         insertRes = await client.query(
           `INSERT INTO "Activities"
-("taskId", title, description, "dueDate", "weight", "targetMetric", "previousMetric", "quarterlyGoals", "createdAt", "updatedAt")
-VALUES ($1,$2,$3,$4,$5,$6, $7, $8, NOW(), NOW())
-RETURNING *`,
+           ("taskId", title, description, "dueDate", "weight", "targetMetric", "previousMetric", "quarterlyGoals", "metricType", "createdAt", "updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6, $7, $8, $9, NOW(), NOW())
+           RETURNING *`,
           [
             taskId,
             String(title).trim(),
@@ -220,7 +222,8 @@ RETURNING *`,
             newWeight,
             parsedTargetMetric ?? null,
             parsedPreviousMetric ?? null,
-            parsedQuarterlyGoals ?? null, // Added
+            parsedQuarterlyGoals ?? null,
+            safeMetricType, // Insert metricType
           ]
         );
       }
@@ -240,6 +243,7 @@ RETURNING *`,
             title: newActivity.title,
             taskId: newActivity.taskId,
             rollNo: newActivity.rollNo,
+            metricType: newActivity.metricType,
           },
           client,
           req,
@@ -288,7 +292,6 @@ exports.updateActivity = async (req, res) => {
   if (!activityId)
     return res.status(400).json({ message: "Invalid activityId" });
 
-  // MODIFIED: Added quarterlyGoals
   const {
     title,
     description,
@@ -297,12 +300,12 @@ exports.updateActivity = async (req, res) => {
     weight,
     targetMetric,
     previousMetric,
-    quarterlyGoals, // Added
+    quarterlyGoals,
     isDone,
     rollNo,
+    metricType, // ADDED
   } = req.body;
 
-  // fetch before snapshot (for audit)
   const bRes = await db.query('SELECT * FROM "Activities" WHERE id=$1', [
     activityId,
   ]);
@@ -319,10 +322,9 @@ exports.updateActivity = async (req, res) => {
         e.status = 404;
         throw e;
       }
-
       const existing = c.rows[0];
 
-      // rollNo uniqueness (if provided)
+      // rollNo uniqueness
       const rn = toIntOrNull(rollNo);
       if (
         rollNo !== undefined &&
@@ -357,7 +359,6 @@ exports.updateActivity = async (req, res) => {
         throw err;
       }
 
-      // get task weight locked
       const tRes = await client.query(
         'SELECT weight FROM "Tasks" WHERE id=$1 FOR UPDATE',
         [existing.taskId]
@@ -385,10 +386,8 @@ exports.updateActivity = async (req, res) => {
 
       const parsedTargetMetric = safeParseJson(targetMetric);
       const parsedPreviousMetric = safeParseJson(previousMetric);
-      // MODIFIED: Parse quarterlyGoals
       const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
 
-      // sanitize incoming strings: convert empty string -> null, trim where appropriate
       const safeTitle = nullIfEmpty(title)
         ? String(nullIfEmpty(title)).trim()
         : null;
@@ -396,38 +395,46 @@ exports.updateActivity = async (req, res) => {
         ? String(nullIfEmpty(description)).trim()
         : null;
       const safeStatus = nullIfEmpty(status);
-      const safeDueDate = nullIfEmpty(dueDate); // empty string => null (this fixes DateTimeParseError)
+      const safeDueDate = nullIfEmpty(dueDate);
       const safeIsDone = isDone === undefined ? null : toBoolean(isDone);
+      
+      // Validate Metric Type
+      const validTypes = ['Plus', 'Minus', 'Increase', 'Decrease', 'Maintain'];
+      let safeMetricType = null;
+      if (metricType !== undefined) {
+         safeMetricType = validTypes.includes(metricType) ? metricType : existing.metricType;
+      }
 
-      // MODIFIED: Added "previousMetric" = COALESCE($10, ...) and "quarterlyGoals" = COALESCE($11, ...)
+      // Update query including metricType
       const r = await client.query(
         `UPDATE "Activities"
-SET "rollNo" = COALESCE($1, "rollNo"),
-title=$2, description=$3, status=COALESCE($4, status),
-"dueDate"=$5, "weight"=$6,
-"targetMetric"=COALESCE($7, "targetMetric"),
-"isDone"=COALESCE($8, "isDone"), "updatedAt"=NOW(),
-"previousMetric"=COALESCE($10, "previousMetric"),
-"quarterlyGoals"=COALESCE($11, "quarterlyGoals")
-WHERE id=$9
-RETURNING *`,
+         SET "rollNo" = COALESCE($1, "rollNo"),
+             title=$2, description=$3, status=COALESCE($4, status),
+             "dueDate"=$5, "weight"=$6,
+             "targetMetric"=COALESCE($7, "targetMetric"),
+             "isDone"=COALESCE($8, "isDone"), "updatedAt"=NOW(),
+             "previousMetric"=COALESCE($10, "previousMetric"),
+             "quarterlyGoals"=COALESCE($11, "quarterlyGoals"),
+             "metricType"=COALESCE($12, "metricType")
+         WHERE id=$9
+         RETURNING *`,
         [
           rn !== null ? rn : null,
           safeTitle ?? null,
           safeDescription ?? null,
           safeStatus ?? null,
-          safeDueDate, // <--- safe (null if empty string)
+          safeDueDate,
           newWeight,
           parsedTargetMetric ?? null,
           safeIsDone,
           activityId,
           parsedPreviousMetric ?? null,
-          parsedQuarterlyGoals ?? null, // Added
+          parsedQuarterlyGoals ?? null,
+          safeMetricType, // $12
         ]
       );
 
       if (!r.rows || !r.rows[0]) throw new Error("Failed to update activity");
-
       const updatedActivity = r.rows[0];
 
       try {
@@ -467,7 +474,6 @@ RETURNING *`,
     if (err && err.status === 400)
       return res.status(400).json({ message: err.message });
     if (err && err.code === "22P02") {
-      // Postgres invalid_text_representation (coercion failure)
       return res.status(400).json({ message: "Invalid input type provided." });
     }
     return res
@@ -491,7 +497,6 @@ exports.deleteActivity = async (req, res) => {
         e.status = 404;
         throw e;
       }
-
       const toDelete = a.rows[0];
 
       const r = await client.query(
@@ -513,7 +518,6 @@ exports.deleteActivity = async (req, res) => {
       } catch (e) {
         console.error("ACTIVITY_DELETED audit failed (in-tx):", e);
       }
-
       return deletedRow;
     });
 

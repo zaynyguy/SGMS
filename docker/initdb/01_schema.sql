@@ -34,6 +34,13 @@ BEGIN
   END IF;
 END$$;
 
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'metric_type') THEN
+    CREATE TYPE metric_type AS ENUM ('Plus', 'Minus', 'Increase', 'Decrease', 'Maintain');
+  END IF;
+END$$;
+
 
 -- Roles & permissions
 CREATE TABLE IF NOT EXISTS "Roles" (
@@ -162,6 +169,7 @@ CREATE TABLE IF NOT EXISTS "Activities" (
   "targetMetric" JSONB DEFAULT '{}'::jsonb,
   "currentMetric" JSONB DEFAULT '{}'::jsonb,
   "quarterlyGoals" JSONB DEFAULT '{}'::jsonb,
+  "metricType" metric_type NOT NULL DEFAULT 'Plus',
   "progress" INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
   "weight" NUMERIC NOT NULL DEFAULT 0,
   "isDone" BOOLEAN DEFAULT false,
@@ -476,9 +484,17 @@ DECLARE
   v_act RECORD;
   v_target JSONB;
   v_current JSONB;
+  v_prev JSONB;
+  v_metric_type metric_type;
   k TEXT;
+    
   sum_current NUMERIC := 0;
   sum_target NUMERIC := 0;
+    
+  val_current NUMERIC;
+  val_target NUMERIC;
+  val_prev NUMERIC;
+    
   key_val NUMERIC;
   v_new_progress INT := 0;
   snap_month DATE := date_trunc('month', now())::date;
@@ -495,43 +511,112 @@ BEGIN
   END IF;
 
   v_target := COALESCE(v_act."targetMetric", '{}'::jsonb);
-  v_current := p_metrics;
+  v_prev   := COALESCE(v_act."previousMetric", '{}'::jsonb);
+  v_current := COALESCE(v_act."currentMetric", '{}'::jsonb);
+  v_metric_type := COALESCE(v_act."metricType", 'Plus');
 
-  FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-    BEGIN
-      key_val := (v_current ->> k)::numeric;
-      IF key_val IS NOT NULL THEN sum_current := sum_current + key_val; END IF;
-    EXCEPTION WHEN others THEN END;
-  END LOOP;
+  IF v_metric_type = 'Plus' OR v_metric_type = 'Minus' THEN
 
-  FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-    BEGIN
-      key_val := (v_target ->> k)::numeric;
-      IF key_val IS NOT NULL THEN sum_target := sum_target + key_val; END IF;
-    EXCEPTION WHEN others THEN END;
-  END LOOP;
+    FOR k IN SELECT jsonb_object_keys(p_metrics) LOOP
+      BEGIN
+        key_val := (p_metrics ->> k)::numeric;
+        IF key_val IS NOT NULL THEN
+          val_current := COALESCE((v_current ->> k)::numeric, 0);
+          v_current := jsonb_set(v_current, ARRAY[k], to_jsonb(val_current + key_val));
+        END IF;
+      EXCEPTION WHEN others THEN END;
+    END LOOP;
 
-  IF sum_target IS NOT NULL AND sum_target > 0 THEN
-    v_new_progress := LEAST(100, ROUND((sum_current / sum_target) * 100));
-    UPDATE "Activities"
-    SET "currentMetric" = v_current,
-        "progress" = v_new_progress,
-        "updatedAt" = NOW()
-    WHERE id = p_activity_id;
-  ELSE
-    UPDATE "Activities"
-    SET "currentMetric" = v_current,
-        "updatedAt" = NOW()
-    WHERE id = p_activity_id;
+    sum_current := 0;
+    sum_target := 0;
+
+    FOR k IN SELECT jsonb_object_keys(v_current) LOOP
+      val_current := (v_current ->> k)::numeric;
+      sum_current := sum_current + COALESCE(val_current, 0);
+    END LOOP;
+
+    FOR k IN SELECT jsonb_object_keys(v_target) LOOP
+      val_target := (v_target ->> k)::numeric;
+      sum_target := sum_target + COALESCE(val_target, 0);
+    END LOOP;
+
+    IF sum_target > 0 THEN
+      v_new_progress := LEAST(100, ROUND((sum_current / sum_target) * 100));
+    ELSE
+      v_new_progress := 0;
+    END IF;
+
+  ELSIF v_metric_type = 'Increase' THEN
+
+    v_current := p_metrics; 
+
+    sum_current := 0;
+    sum_target := 0;
+    val_prev := 0;
+
+    FOR k IN SELECT jsonb_object_keys(v_current) LOOP
+      sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
+    END LOOP;
+        
+    FOR k IN SELECT jsonb_object_keys(v_target) LOOP
+      sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
+    END LOOP;
+        
+    FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
+      val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
+    END LOOP;
+
+    IF (sum_target - val_prev) > 0 THEN
+      v_new_progress := LEAST(100, ROUND( ((sum_current - val_prev) / (sum_target - val_prev)) * 100 ));
+      v_new_progress := GREATEST(0, v_new_progress);
+    ELSE
+      v_new_progress := 100;
+    END IF;
+
+  ELSIF v_metric_type = 'Decrease' THEN
+
+    v_current := p_metrics;
+
+    sum_current := 0;
+    sum_target := 0;
+    val_prev := 0;
+
+    FOR k IN SELECT jsonb_object_keys(v_current) LOOP
+      sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
+    END LOOP;
+    FOR k IN SELECT jsonb_object_keys(v_target) LOOP
+      sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
+    END LOOP;
+    FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
+      val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
+    END LOOP;
+
+    IF (val_prev - sum_target) > 0 THEN
+      v_new_progress := LEAST(100, ROUND( ((val_prev - sum_current) / (val_prev - sum_target)) * 100 ));
+      v_new_progress := GREATEST(0, v_new_progress);
+    ELSE
+      v_new_progress := 100;
+    END IF;
+
+  ELSIF v_metric_type = 'Maintain' THEN
+
+    v_current := p_metrics;
+    v_new_progress := 100;
   END IF;
 
+  UPDATE "Activities"
+  SET "currentMetric" = v_current,
+    "progress" = v_new_progress,
+    "updatedAt" = NOW()
+  WHERE id = p_activity_id;
+
   INSERT INTO "ProgressHistory"
-    (entity_type, entity_id, group_id, progress, metrics, recorded_at, snapshot_month)
+  (entity_type, entity_id, group_id, progress, metrics, recorded_at, snapshot_month)
   VALUES
-    ('Activity', p_activity_id,
-     (SELECT gl."groupId" FROM "Activities" a JOIN "Tasks" t ON a."taskId" = t.id JOIN "Goals" gl ON t."goalId" = gl.id WHERE a.id = p_activity_id),
-     COALESCE(v_new_progress, 0),
-     v_current, NOW(), snap_month)
+  ('Activity', p_activity_id,
+   (SELECT gl."groupId" FROM "Activities" a JOIN "Tasks" t ON a."taskId" = t.id JOIN "Goals" gl ON t."goalId" = gl.id WHERE a.id = p_activity_id),
+   COALESCE(v_new_progress, 0),
+   v_current, NOW(), snap_month)
   ON CONFLICT (entity_type, entity_id, snapshot_month)
   DO UPDATE SET metrics = EXCLUDED.metrics, progress = EXCLUDED.progress, recorded_at = NOW();
 

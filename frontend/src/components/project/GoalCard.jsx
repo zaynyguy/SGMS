@@ -311,7 +311,13 @@ function GoalCard({
 
             <div 
               className="min-w-0 flex-1 cursor-pointer"
-              onClick={() => setSelectedGoal(goal)}
+              onClick={() => {
+                setSelectedGoal && setSelectedGoal(goal);
+                handleToggleGoal(goal);
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setSelectedGoal && setSelectedGoal(goal); handleToggleGoal(goal); } }}
             >
               <div className="flex items-start justify-between">
                 <h3 id={`goal-${goal.id}-title`} className="text-xl font-bold text-[var(--on-surface)] dark:text-white break-words flex items-center gap-2">

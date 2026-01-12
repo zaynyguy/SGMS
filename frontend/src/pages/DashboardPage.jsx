@@ -11,6 +11,7 @@ import {
 import { markAllNotificationsRead } from "../api/notifications";
 import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { useNavigate } from "react-router-dom";
 import { Home, Trophy, ListChecks, List, FileText, Users, PieChartIcon, ClipboardCheck, AlertCircle, Bell } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -577,7 +578,7 @@ const App = () => {
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden className="transition-all duration-1000 transform hover:scale-110">
             <circle cx={cx} cy={cy} r={r} fill={fill} stroke="#fff" strokeWidth="1" className="dark:stroke-[var(--surface-container-low)] transition-all duration-300" />
             <circle cx={cx} cy={cy} r={innerR} fill="#fff" className="dark:fill-[var(--surface-container-low)] transition-all duration-300" />
-            <text x={cx} y={cy} textAnchor="middle" dy="5" fontSize="14" className="fill-current text-[var(--on-surface)] dark:text-white font-semibold transition-all duration-300">
+            <text x={cx} y={cy} textAnchor="middle" dy="5" fontSize="14" fill={"var(--on-surface)"} fontWeight={600} style={{transition: 'color 200ms'}}>
               {total}
             </text>
           </svg>
@@ -636,7 +637,7 @@ const App = () => {
             );
           })}
           <circle cx={cx} cy={cy} r={innerR} className="fill-white dark:fill-gray-800 transition-all duration-300" />
-          <text x={cx} y={cy} textAnchor="middle" dy="5" fontSize="14" className="fill-current text-[var(--on-surface)] dark:text-white font-semibold transition-all duration-300">
+          <text x={cx} y={cy} textAnchor="middle" dy="5" fontSize="14" fill={"var(--on-surface)"} fontWeight={600} style={{transition: 'color 200ms'}}>
             {total}
           </text>
         </svg>
@@ -1086,6 +1087,15 @@ const App = () => {
         .animate-slide-in-up {
           animation: slideInUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        @keyframes appear {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .appear-child {
+          opacity: 0;
+          transform: translateY(8px);
+          animation: appear 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
         .surface-elevation-1 { 
           box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04); 
         }
@@ -1164,40 +1174,40 @@ const App = () => {
           {/* KPI cards */}
           <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Goals Card */}
-            <Card title={<div className="flex items-center gap-2">
-                            <Trophy className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
-                            {t("dashboard.cards.goals.title")}
-                          </div>
-                        } onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}>
-              {loading ? (
-                <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
-              ) : (
-                <div className="transition-all duration-300">
-                  <div className="text-3xl font-bold text-[var(--on-surface)] dark:text-white transition-all duration-300">
-                    {hasGoalPercent ? `${overall_goal_progress.toFixed(2)}%` : goalsTotal > 0 ? `${goalsFinished} of ${goalsTotal}` : "-"}
-                    <sub className="text-xs ml-1 transition-all duration-300">{t("dashboard.percentage")}</sub>
-                  </div>
-                  {goalsTotal > 0 && (
-                    <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 mt-1 transition-all duration-300">
-                      {`${goalsFinished} ${t("dashboard.cards.goals.outOf")} ${goalsTotal} ${t("dashboard.cards.goals.title").toLowerCase()} ${t("dashboard.cards.goals.haveBeenDone")}`}
+              <Card title={<div className="flex items-center gap-2">
+                              <Trophy className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
+                              {t("dashboard.cards.goals.title")}
+                            </div>
+                          } onClick={goToGoals} ariaLabel={t("dashboard.cards.goals.aria")}>
+                {loading ? (
+                  <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
+                ) : (
+                  <div className="transition-all duration-300 appear-child" style={{animationDelay: '50ms'}}>
+                    <div className="text-3xl font-bold text-[var(--on-surface)] dark:text-white transition-all duration-300">
+                      {hasGoalPercent ? `${overall_goal_progress.toFixed(2)}%` : goalsTotal > 0 ? `${goalsFinished} of ${goalsTotal}` : "-"}
+                      <sub className="text-xs ml-1 transition-all duration-300">{t("dashboard.percentage")}</sub>
                     </div>
-                  )}
-                  <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 mt-1 transition-all duration-300">
-                    {goalDelta ? (
-                      <span className={`transition-all duration-300 ${
-                        goalDelta.startsWith("+") ? "text-[var(--primary)] dark:text-green-400" : "text-[var(--error)] dark:text-red-400"
-                      }`}>
-                        {goalDelta} {t("dashboard.cards.goals.fromLast")}
-                      </span>
-                    ) : (
-                      t("dashboard.cards.goals.noComparison") || "Overall goal progress"
+                    {goalsTotal > 0 && (
+                      <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 mt-1 transition-all duration-300">
+                        {`${goalsFinished} ${t("dashboard.cards.goals.outOf")} ${goalsTotal} ${t("dashboard.cards.goals.title").toLowerCase()} ${t("dashboard.cards.goals.haveBeenDone")}`}
+                      </div>
                     )}
+                    <div className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 mt-1 transition-all duration-300">
+                      {goalDelta ? (
+                        <span className={`transition-all duration-300 ${
+                          goalDelta.startsWith("+") ? "text-[var(--primary)] dark:text-green-400" : "text-[var(--error)] dark:text-red-400"
+                        }`}>
+                          {goalDelta} {t("dashboard.cards.goals.fromLast")}
+                        </span>
+                      ) : (
+                        t("dashboard.cards.goals.noComparison") || "Overall goal progress"
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </Card>
+                )}
+              </Card>
             {/* Tasks Card */}
-<Card
+            <Card
   title={
     <div className="flex items-center gap-2">
       <ListChecks className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
@@ -1209,7 +1219,7 @@ const App = () => {
 >              {loading ? (
                 <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
               ) : (
-                <div className="transition-all duration-300">
+                <div className="transition-all duration-300 appear-child" style={{animationDelay: '140ms'}}>
                   <div className="text-3xl font-bold text-[var(--on-surface)] dark:text-white transition-all duration-300">
                     {hasTaskPercent ? `${overall_task_progress.toFixed(2)}%` : tasksTotal > 0 ? `${tasksFinished} of ${tasksTotal}` : "-"}
                     <sub className="text-xs ml-1 transition-all duration-300">{t("dashboard.percentage")}</sub>
@@ -1220,7 +1230,7 @@ const App = () => {
               )}
             </Card>
             {/* Activities Card */}
-<Card
+            <Card
   title={
     <div className="flex items-center gap-2">
       <List className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
@@ -1232,7 +1242,7 @@ const App = () => {
 >              {loading ? (
                 <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
               ) : (
-                <div className="transition-all duration-300">
+                <div className="transition-all duration-300 appear-child" style={{animationDelay: '230ms'}}>
                   <div className="text-3xl font-bold text-[var(--on-surface)] dark:text-white transition-all duration-300">
                     {hasActivityPercent ? `${overall_activity_progress.toFixed(2)}%` : activitiesTotal > 0 ? `${activitiesFinished} of ${activitiesTotal}` : "-"}
                     <sub className="text-xs ml-1 transition-all duration-300">{t("dashboard.percentage")}</sub>
@@ -1243,7 +1253,7 @@ const App = () => {
               )}
             </Card>
             {/* Pending Reports Card */}
-<Card
+            <Card
   title={
     <div className="flex items-center gap-2">
       <FileText className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
@@ -1255,7 +1265,7 @@ const App = () => {
 >              {loading ? (
                 <LoadingSkeleton className="h-8 w-24 transition-all duration-300" />
               ) : (
-                <div className="transition-all duration-300">
+                <div className="transition-all duration-300 appear-child" style={{animationDelay: '320ms'}}>
                   <div className="text-3xl font-bold text-[var(--on-surface)] dark:text-white transition-all duration-300">
                     {pending_reports ?? 0}
                   </div>
@@ -1266,7 +1276,7 @@ const App = () => {
           </div>
           {/* Charts */}
           <div className="lg:col-span-12 grid grid-cols-1 md:grid-cols-3 gap-5">
-<Card
+          <Card
   title={
     <div className="flex items-center gap-2">
       <Users className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
@@ -1275,9 +1285,9 @@ const App = () => {
   }
   onClick={() => setShowGroupModal(true)}
   className="p-4 flex flex-col justify-between h-full"
->              {loading ? (<LoadingSkeleton className="h-28 transition-all duration-300" />) : (<div className="mt-3 transition-all duration-300"><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={5} barWidth={80} gap={30} yLabel="Office progress" height={320}/></div>)}
+          >              {loading ? (<LoadingSkeleton className="h-28 transition-all duration-300" />) : (<div className="mt-3 transition-all duration-300 appear-child" style={{animationDelay: '60ms'}}><GroupBarChart data={(dashboardData.groupBars || []).map((g) => ({ name: g.name, progress: g.progress, value: g.progress, color: g.color }))} limit={5} barWidth={80} gap={30} yLabel="Office progress" height={320}/></div>)}
             </Card>
-<Card
+          <Card
   title={
     <div className="flex items-center gap-2">
       <ListChecks className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
@@ -1286,9 +1296,9 @@ const App = () => {
   }
   onClick={() => setShowTasksModal(true)}
   className="p-4"
->              {loading ? (<LoadingSkeleton className="h-28 transition-all duration-300" />) : (<TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} />)}
+          >              {loading ? (<LoadingSkeleton className="h-28 transition-all duration-300" />) : (<div className="appear-child" style={{animationDelay: '140ms'}}><TaskBarChart items={(dashboardData.taskBars || []).map((x) => ({ label: x.label ?? x.name, progress: Number(x.progress ?? x.value ?? 0), color: x.color }))} maxItems={4} /></div>)}
             </Card>
-<Card
+          <Card
   title={
     <div className="flex items-center gap-2">
       <PieChartIcon className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
@@ -1298,7 +1308,7 @@ const App = () => {
   onClick={goToPendingReports}
   className="p-4"
   ariaLabel={t("dashboard.reportsDistribution.aria")}
->              {loading ? <LoadingSkeleton className="h-28 transition-all duration-300" /> : <div className="flex justify-center transition-all duration-300"><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
+          >              {loading ? <LoadingSkeleton className="h-28 transition-all duration-300" /> : <div className="flex justify-center transition-all duration-300 appear-child" style={{animationDelay: '240ms'}}><PieChart slices={(dashboardData.reportsPie || []).map((r) => ({ value: r.count, label: r.label, color: r.color }))} /></div>}
             </Card>
           </div>
           {hasAuditPerm && (

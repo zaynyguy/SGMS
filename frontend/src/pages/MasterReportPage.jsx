@@ -2056,7 +2056,12 @@ function ActivityRow({
       }}
     >
       <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-600'} pl-5`}>
-        <div>{`${number} ${activity.title}`}</div>
+        <div className="flex items-center gap-2">
+          <div>{`${number} ${activity.title}`}</div>
+          <div className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
+            {activity.metricType || activity.metric_type || 'Plus'}
+          </div>
+        </div>
       </td>
       <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 text-center w-16`}>
         <div>{activity.weight ?? "-"}</div>

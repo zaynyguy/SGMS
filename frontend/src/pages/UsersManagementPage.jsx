@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { useTranslation } from "react-i18next";
 import { Edit, Trash2, UserPlus, Users, X, Image, Upload } from "lucide-react";
 import {
@@ -518,7 +519,9 @@ const handleSaveUser = async (e) => {
           "--background": m3Colors.background,
         }}
       >
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--primary)]" />
+        <div>
+          <LoadingSpinner size={40} color={'var(--primary)'} />
+        </div>
       </section>
     );
   }

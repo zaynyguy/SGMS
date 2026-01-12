@@ -17,6 +17,7 @@ import { api } from "../api/auth";
 import TopBar from "../components/layout/TopBar";
 import { useTheme } from "../context/ThemeContext";
 import AuthenticatedImage from "../components/common/AuthenticatedImage";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 
 /* ---------- Helpers (unchanged) ---------- */
 const formatBytes = (n) => {
@@ -401,7 +402,9 @@ const SettingsPage = () => {
           }
         `}</style>
         <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--primary)] mb-4" />
+          <div className="mb-4">
+            <LoadingSpinner size={40} color={'var(--primary)'} />
+          </div>
           <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
             {t("settings.loading") || "Loading..."}
           </p>

@@ -1,3 +1,4 @@
+// backend/src/controllers/reportController.js
 const db = require("../db");
 const path = require("path");
 const fs = require("fs");
@@ -19,26 +20,26 @@ function hasPermission(req, perm) {
 }
 
 /* helper: fetch enriched report row */
-// MODIFIED: Added activity's target and current metrics for context on review page
 async function fetchReportWithGroup(reportId) {
   const q = `
-SELECT r.*, u.name as user_name,
-a.title as activity_title,
-a."targetMetric" as activity_target_metric,
-a."currentMetric" as activity_current_metric,
-t.title as task_title,
-g.title as goal_title,
-g."groupId" as group_id,
-gr.name as group_name
-FROM "Reports" r
-LEFT JOIN "Users" u ON r."userId" = u.id
-LEFT JOIN "Activities" a ON r."activityId" = a.id
-LEFT JOIN "Tasks" t ON a."taskId" = t.id
-LEFT JOIN "Goals" g ON t."goalId" = g.id
-LEFT JOIN "Groups" gr ON g."groupId" = gr.id
-WHERE r.id = $1
-LIMIT 1
-`;
+    SELECT r.*, u.name as user_name,
+      a.title as activity_title,
+      a."targetMetric" as activity_target_metric,
+      a."currentMetric" as activity_current_metric,
+      a."metricType" as activity_metric_type,
+      t.title as task_title,
+      g.title as goal_title,
+      g."groupId" as group_id,
+      gr.name as group_name
+    FROM "Reports" r
+    LEFT JOIN "Users" u ON r."userId" = u.id
+    LEFT JOIN "Activities" a ON r."activityId" = a.id
+    LEFT JOIN "Tasks" t ON a."taskId" = t.id
+    LEFT JOIN "Goals" g ON t."goalId" = g.id
+    LEFT JOIN "Groups" gr ON g."groupId" = gr.id
+    WHERE r.id = $1
+    LIMIT 1
+  `;
   const { rows } = await db.query(q, [reportId]);
   return rows[0] || null;
 }
@@ -65,7 +66,7 @@ exports.submitReport = async (req, res) => {
   const { activityId } = req.params;
   const { narrative, metrics_data, new_status } = req.body;
 
-  // early check: reporting enabled (keeps your existing logic)
+  // early check: reporting enabled
   try {
     const { rows } = await db.query(
       `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
@@ -95,7 +96,7 @@ exports.submitReport = async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // parse metrics_data early so we can validate against the activity's target/current
+    // parse metrics_data early
     let parsedMetrics = null;
     if (metrics_data) {
       if (typeof metrics_data === "string") {
@@ -103,7 +104,6 @@ exports.submitReport = async (req, res) => {
           parsedMetrics =
             metrics_data.trim() === "" ? null : JSON.parse(metrics_data);
         } catch (e) {
-          // If it's not JSON, keep raw (but we won't validate non-objects)
           parsedMetrics = metrics_data;
         }
       } else {
@@ -111,34 +111,33 @@ exports.submitReport = async (req, res) => {
       }
     }
 
-    // === VALIDATION: ensure incoming numeric metric *replacement* won't exceed target ===
-    // *** MODIFICATION START ***
-    // The logic here was changed from accumulation validation (existing + incoming)
-    // to replacement validation (incoming) to match the database sp_SubmitReport function.
+    // === VALIDATION: ensure incoming numeric metrics respect metricType logic ===
     if (
       parsedMetrics &&
       typeof parsedMetrics === "object" &&
       Object.keys(parsedMetrics).length > 0
     ) {
-      // lock the activity row so targetMetric won't race
+      // lock activity row
       const actQ = await client.query(
-        `SELECT "targetMetric" FROM "Activities" WHERE id = $1 FOR UPDATE`,
+        `SELECT "targetMetric", "currentMetric", "metricType" FROM "Activities" WHERE id = $1 FOR UPDATE`,
         [activityId]
       );
+
       if (!actQ.rows[0]) {
         await client.query("ROLLBACK");
         return res.status(404).json({ error: "Activity not found." });
       }
-      const activityRow = actQ.rows[0];
-      // We only need the targetMetric for replacement validation
-      const targetMetric = activityRow.targetMetric || {};
 
-      const violations = []; // collect keys that would exceed target
+      const activityRow = actQ.rows[0];
+      const targetMetric = activityRow.targetMetric || {};
+      const currentMetric = activityRow.currentMetric || {};
+      const metricType = activityRow.metricType || 'Plus'; // Default
+
+      const violations = [];
 
       const extractNumeric = (v) => {
         if (v === null || typeof v === "undefined") return null;
         if (typeof v === "number") return v;
-        // attempt to unwrap simple objects like { value: 5 } or { key: 5 }
         if (typeof v === "object") {
           const ks = Object.keys(v || {});
           for (const k of ks) {
@@ -156,14 +155,11 @@ exports.submitReport = async (req, res) => {
       for (const k of Object.keys(parsedMetrics)) {
         const incomingRaw = parsedMetrics[k];
         const incoming = extractNumeric(incomingRaw);
-        if (incoming === null) {
-          // Non-numeric incoming: skip target validation (we only enforce numeric matrices)
-          continue;
-        }
+
+        if (incoming === null) continue; // Skip non-numeric
 
         // determine target for that key
         let targetVal = null;
-        // if targetMetric is scalar numeric (e.g. 14), use it
         const scalarTarget = extractNumeric(targetMetric);
         if (scalarTarget !== null) {
           targetVal = scalarTarget;
@@ -173,27 +169,58 @@ exports.submitReport = async (req, res) => {
           k in targetMetric
         ) {
           targetVal = extractNumeric(targetMetric[k]);
-        } else if (
-          targetMetric &&
-          typeof targetMetric === "object" &&
-          "target" in targetMetric
+        }
+
+        // determine current for that key (needed for Cumulative types)
+        let currentVal = 0;
+        if (
+          currentMetric &&
+          typeof currentMetric === "object" &&
+          k in currentMetric
         ) {
-          // support shape like { target: 14 }
-          targetVal = extractNumeric(targetMetric.target);
+          currentVal = extractNumeric(currentMetric[k]) || 0;
         }
 
         if (targetVal !== null) {
-          // *** THE FIX ***
-          // Check if the new value *itself* exceeds the target.
-          // (Changed from: existing + incoming > targetVal)
-          if (incoming > targetVal) {
-            violations.push({
-              key: k,
-              // existing: undefined, // Not relevant for replacement validation
-              incoming,
-              target: targetVal,
-              wouldBe: incoming, // The new value *is* what it "would be"
-            });
+          // --- LOGIC PER METRIC TYPE ---
+          
+          if (metricType === 'Plus' || metricType === 'Minus') {
+            // CUMULATIVE: We validate that (Current + Incoming) <= Target
+            // For Minus, Target usually implies "Total Amount to Reduce".
+            if ((currentVal + incoming) > targetVal) {
+              violations.push({
+                key: k,
+                incoming,
+                current: currentVal,
+                target: targetVal,
+                type: metricType,
+                wouldBe: currentVal + incoming,
+                message: `Cumulative total would exceed target.`
+              });
+            }
+          } 
+          else if (metricType === 'Increase') {
+            // INCREASE: Snapshot. Input replaces Current.
+            // Usually, exceeding target in "Increase" is GOOD (e.g. Sales > Target).
+            // But if validation is strictly "Do not exceed target", we check:
+            // if (incoming > targetVal) ...
+            // Typically reporting systems allow exceeding for "Increase".
+            // If you want to BLOCK it:
+            /*
+            if (incoming > targetVal) {
+               violations.push({ ... });
+            }
+            */
+            // For now, let's assume exceeding is allowed for Increase unless strictly capped.
+          }
+          else if (metricType === 'Decrease') {
+             // DECREASE: Snapshot. Input replaces Current.
+             // Target is floor (e.g. 2%). Input (4%) is valid. Input (1%) is valid (better than target).
+             // No validation needed usually.
+          }
+          else if (metricType === 'Maintain') {
+             // MAINTAIN: Input replaces Current.
+             // Usually no strict validation unless physically impossible.
           }
         }
       }
@@ -201,19 +228,17 @@ exports.submitReport = async (req, res) => {
       if (violations.length) {
         await client.query("ROLLBACK");
         return res.status(400).json({
-          error: "Submitted metrics would exceed activity target(s).",
+          error: "Submitted metrics validation failed.",
           details: violations,
         });
       }
     }
     // === end validation ===
-    // *** MODIFICATION END ***
 
-    // INSERT the report (unchanged behaviour) - we use parsedMetrics (possibly {} or null)
     const reportResult = await client.query(
       `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status, "createdAt", "updatedAt")
-VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+       RETURNING *`,
       [
         activityId,
         req.user.id,
@@ -224,7 +249,7 @@ RETURNING *`,
     );
     const report = reportResult.rows[0];
 
-    // attachments size validation & upload (unchanged from your existing code)
+    // attachments handling
     if (req.files && req.files.length) {
       const attachmentSettings = await getAttachmentSettings();
       const maxSizeMb = Number(
@@ -233,6 +258,7 @@ RETURNING *`,
           10
       );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
+
       const oversized = req.files.filter((f) => {
         try {
           const stats = fs.statSync(f.path);
@@ -241,6 +267,7 @@ RETURNING *`,
           return true;
         }
       });
+
       if (oversized.length) {
         for (const f of req.files) {
           try {
@@ -260,9 +287,10 @@ RETURNING *`,
         try {
           const uploaded = await uploadFile(file);
           uploadedFiles.push({ uploaded, originalFile: file });
+
           const insertRes = await client.query(
             `INSERT INTO "Attachments"("reportId", "fileName", "filePath", "fileType", "provider", "publicId", "createdAt")
-VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
+             VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
             [
               report.id,
               uploaded.fileName || file.originalname,
@@ -278,7 +306,6 @@ VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
           // cleanup uploaded files already done later; rollback now
           for (const entry of uploadedFiles) {
             try {
-              // Only remove files we stored locally
               if (entry.uploaded && entry.uploaded.provider === "local") {
                 try {
                   const fname = path.basename(
@@ -333,17 +360,17 @@ VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
       }
     }
 
-    // notify managers and assignee (best-effort) - unchanged
+    // notify managers and assignee
     try {
       const recipients = new Set();
       try {
         const permRes = await db.query(
-          `SELECT DISTINCT u.id
-FROM "Users" u
-JOIN "Roles" r ON u."roleId" = r.id
-JOIN "RolePermissions" rp ON rp."roleId" = r.id
-JOIN "Permissions" p ON p.id = rp."permissionId"
-WHERE p.name = $1`,
+          `SELECT DISTINCT u.id 
+           FROM "Users" u
+           JOIN "Roles" r ON u."roleId" = r.id
+           JOIN "RolePermissions" rp ON rp."roleId" = r.id
+           JOIN "Permissions" p ON p.id = rp."permissionId"
+           WHERE p.name = $1`,
           ["manage_reports"]
         );
         for (const r of permRes.rows) if (r && r.id) recipients.add(r.id);
@@ -357,9 +384,9 @@ WHERE p.name = $1`,
       try {
         const actRes = await db.query(
           `SELECT a.title AS activity_title, t."assigneeId" AS task_assignee
-FROM "Activities" a
-LEFT JOIN "Tasks" t ON t.id = a."taskId"
-WHERE a.id = $1 LIMIT 1`,
+           FROM "Activities" a
+           LEFT JOIN "Tasks" t ON t.id = a."taskId"
+           WHERE a.id = $1 LIMIT 1`,
           [activityId]
         );
         const arow = actRes.rows[0];
@@ -463,12 +490,12 @@ exports.reviewReport = async (req, res) => {
 
     const { rows: updatedRows } = await client.query(
       `UPDATE "Reports"
-SET status = $1,
-"adminComment" = COALESCE($2, "adminComment"),
-"resubmissionDeadline" = COALESCE($3, "resubmissionDeadline"),
-"updatedAt" = NOW()
-WHERE id = $4
-RETURNING *`,
+       SET status = $1,
+           "adminComment" = COALESCE($2, "adminComment"),
+           "resubmissionDeadline" = COALESCE($3, "resubmissionDeadline"),
+           "updatedAt" = NOW()
+       WHERE id = $4
+       RETURNING *`,
       [status, adminComment || null, resubmissionDeadline || null, reportId]
     );
     const updatedReport = updatedRows[0];
@@ -489,9 +516,8 @@ RETURNING *`,
       console.error("REPORT_REVIEWED audit failed (in-tx):", e);
     }
 
-    // On approval: apply metrics (idempotent), update activity status if requested
+    // On approval: apply metrics, update activity status
     if (status === "Approved") {
-      // parse metrics_data to JSON if stored as string
       let metricsObj = updatedReport.metrics_data || {};
       if (typeof metricsObj === "string") {
         try {
@@ -501,18 +527,18 @@ RETURNING *`,
         }
       }
 
-      // Apply metrics only if not already applied and there's meaningful metrics
       if (
         !updatedReport.applied &&
         metricsObj &&
         Object.keys(metricsObj).length
       ) {
         try {
-          // Note: Your accumulate_metrics function is already set to REPLACE, not accumulate.
+          // This calls the UPDATED accumulate_metrics SQL function
           await client.query(
             `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int)`,
             [updatedReport.activityId, metricsObj, req.user.id]
           );
+
           await client.query(
             `UPDATE "Reports" SET applied = true, "appliedBy" = $1, "appliedAt" = NOW() WHERE id = $2`,
             [req.user.id, reportId]
@@ -522,44 +548,33 @@ RETURNING *`,
             "Failed to apply metrics via accumulate_metrics:",
             applyErr
           );
-          // don't fail entire transaction just because accumulation failed; surface error
-          // choose to rollback to be safe
           await client.query("ROLLBACK");
-          return res
-            .status(500)
-            .json({ error: "Failed to apply report metrics." });
+          return res.status(500).json({ error: "Failed to apply report metrics." });
         }
 
-        // After applying metrics, update progress history for this activity for the current month.
+        // Post-apply snapshot
         try {
           const { snapshotActivity } = require("../jobs/monthlySnapshot");
-          // run best-effort (don't block response on failure)
           setImmediate(async () => {
             try {
               await snapshotActivity(updatedReport.activityId);
             } catch (e) {
-              console.error(
-                "post-apply snapshotActivity failed (background):",
-                e && e.message ? e.message : e
-              );
+              console.error("post-apply snapshotActivity failed:", e);
             }
           });
         } catch (e) {
-          console.error(
-            "Failed to trigger post-apply snapshotActivity:",
-            e && e.message ? e.message : e
-          );
+          console.error("Failed to trigger post-apply snapshotActivity:", e);
         }
       }
 
-      // If new_status provided on the report, update activity status accordingly
+      // Update status if provided
       if (updatedReport.new_status) {
         await client.query(
           `UPDATE "Activities"
-SET status = $1::"activity_status",
-"isDone" = CASE WHEN $1::"activity_status"='Done' THEN true ELSE "isDone" END,
-"updatedAt" = NOW()
-WHERE id = $2`,
+           SET status = $1::"activity_status",
+               "isDone" = CASE WHEN $1::"activity_status"='Done' THEN true ELSE "isDone" END,
+               "updatedAt" = NOW()
+           WHERE id = $2`,
           [updatedReport.new_status, updatedReport.activityId]
         );
       }
@@ -612,7 +627,6 @@ exports.getAllReports = async (req, res) => {
 
     const rebuiltParams = [pageSize, offset];
     const rebuiltWhereClauses = [];
-
     const pushParam = (val) => {
       rebuiltParams.push(val);
       return `$${rebuiltParams.length}`;
@@ -654,27 +668,27 @@ exports.getAllReports = async (req, res) => {
       ? "WHERE " + rebuiltWhereClauses.join(" AND ")
       : "";
 
-    // MODIFIED: Added a."targetMetric" and a."currentMetric"
     const sql = `
-SELECT r.*, u.name as user_name,
-a.title as activity_title,
-a."targetMetric" as activity_target_metric,
-a."currentMetric" as activity_current_metric,
-t.title as task_title,
-g.title as goal_title,
-g."groupId" as group_id,
-gr.name as group_name,
-COUNT(*) OVER() AS total_count
-FROM "Reports" r
-LEFT JOIN "Users" u ON r."userId" = u.id
-LEFT JOIN "Activities" a ON r."activityId" = a.id
-LEFT JOIN "Tasks" t ON a."taskId" = t.id
-LEFT JOIN "Goals" g ON t."goalId" = g.id
-LEFT JOIN "Groups" gr ON g."groupId" = gr.id
-${rebuiltWhere}
-ORDER BY r."createdAt" DESC
-LIMIT $1 OFFSET $2
-`;
+      SELECT r.*, u.name as user_name,
+        a.title as activity_title,
+        a."targetMetric" as activity_target_metric,
+        a."currentMetric" as activity_current_metric,
+        a."metricType" as activity_metric_type,
+        t.title as task_title,
+        g.title as goal_title,
+        g."groupId" as group_id,
+        gr.name as group_name,
+        COUNT(*) OVER() AS total_count
+      FROM "Reports" r
+      LEFT JOIN "Users" u ON r."userId" = u.id
+      LEFT JOIN "Activities" a ON r."activityId" = a.id
+      LEFT JOIN "Tasks" t ON a."taskId" = t.id
+      LEFT JOIN "Goals" g ON t."goalId" = g.id
+      LEFT JOIN "Groups" gr ON g."groupId" = gr.id
+      ${rebuiltWhere}
+      ORDER BY r."createdAt" DESC
+      LIMIT $1 OFFSET $2
+    `;
 
     const { rows } = await db.query(sql, rebuiltParams);
     const total = rows.length ? Number(rows[0].total_count || 0) : 0;
@@ -694,59 +708,61 @@ exports.generateMasterReport = async (req, res) => {
   try {
     const rows = await db.query(
       `
-SELECT g.id as goal_id,
-g.title as goal_title,
-g.progress as goal_progress,
-g.status as goal_status,
-g.weight as goal_weight,
-t.id as task_id,
-t.title as task_title,
-t.progress as task_progress,
-t.status as task_status,
-t.weight as task_weight,
-t."assigneeId" as task_assignee,
-a.id as activity_id,
-a.title as activity_title,
-a.description as activity_description,
-a."currentMetric",
-a."targetMetric",
-a."previousMetric",
-a."quarterlyGoals",
-a.weight as activity_weight,
-a."isDone" as activity_done,
-a.status as activity_status,
-r.id as report_id,
-r.narrative as report_narrative,
-r.status as report_status,
-r.metrics_data as report_metrics,
-r."new_status" as report_new_status,
-r."createdAt" as report_createdAt,
-at.id as attachment_id,
-at."fileName" as attachment_name,
-at."filePath" as attachment_path,
-at."fileType" as attachment_type
-FROM "Goals" g
-LEFT JOIN "Tasks" t ON t."goalId" = g.id
-LEFT JOIN "Activities" a ON a."taskId" = t.id
--- Only join reports that have been Approved so Pending/Rejected don't affect master report
-LEFT JOIN "Reports" r ON r."activityId" = a.id AND r.status = 'Approved'
-LEFT JOIN "Attachments" at ON at."reportId" = r.id
-${groupId ? 'WHERE g."groupId" = $1' : ""}
-ORDER BY g.id, t.id, a.id, r.id
-`,
+      SELECT g.id as goal_id,
+             g.title as goal_title,
+             g.progress as goal_progress,
+             g.status as goal_status,
+             g.weight as goal_weight,
+             t.id as task_id,
+             t.title as task_title,
+             t.progress as task_progress,
+             t.status as task_status,
+             t.weight as task_weight,
+             t."assigneeId" as task_assignee,
+             a.id as activity_id,
+             a.title as activity_title,
+             a.description as activity_description,
+             a."currentMetric",
+             a."targetMetric",
+             a."previousMetric",
+             a."quarterlyGoals",
+             a."metricType",
+             a.weight as activity_weight,
+             a."isDone" as activity_done,
+             a.status as activity_status,
+             r.id as report_id,
+             r.narrative as report_narrative,
+             r.status as report_status,
+             r.metrics_data as report_metrics,
+             r."new_status" as report_new_status,
+             r."createdAt" as report_createdAt,
+             at.id as attachment_id,
+             at."fileName" as attachment_name,
+             at."filePath" as attachment_path,
+             at."fileType" as attachment_type
+      FROM "Goals" g
+      LEFT JOIN "Tasks" t ON t."goalId" = g.id
+      LEFT JOIN "Activities" a ON a."taskId" = t.id
+      -- Only join reports that have been Approved so Pending/Rejected don't affect master report
+      LEFT JOIN "Reports" r ON r."activityId" = a.id AND r.status = 'Approved'
+      LEFT JOIN "Attachments" at ON at."reportId" = r.id
+      ${groupId ? 'WHERE g."groupId" = $1' : ""}
+      ORDER BY g.id, t.id, a.id, r.id
+      `,
       groupId ? [groupId] : []
     );
 
     const raw = rows.rows || [];
 
+    // Fetch history
     const phRowsQ = await db.query(
       `
-SELECT entity_id::int as activity_id, snapshot_month, progress, metrics, recorded_at
-FROM "ProgressHistory"
-WHERE lower(entity_type) = 'activity'
-${groupId ? "AND group_id = $1" : ""}
-ORDER BY entity_id, snapshot_month
-`,
+      SELECT entity_id::int as activity_id, snapshot_month, progress, metrics, recorded_at
+      FROM "ProgressHistory"
+      WHERE lower(entity_type) = 'activity'
+      ${groupId ? "AND group_id = $1" : ""}
+      ORDER BY entity_id, snapshot_month
+      `,
       groupId ? [groupId] : []
     );
 
@@ -756,8 +772,7 @@ ORDER BY entity_id, snapshot_month
       if (!historyByActivity[aid]) historyByActivity[aid] = [];
       historyByActivity[aid].push({
         snapshot_month: r.snapshot_month,
-        progress:
-          typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
+        progress: typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
         metrics: r.metrics || {},
         recorded_at: r.recorded_at,
       });
@@ -767,12 +782,12 @@ ORDER BY entity_id, snapshot_month
     if (Object.keys(historyByActivity).length === 0) {
       for (const row of raw) {
         if (!row.activity_id || !row.report_id) continue;
-        // SAFETY: ensure only approved reports are used (case-insensitive check)
         if (
           row.report_status &&
           String(row.report_status).toLowerCase() !== "approved"
         )
           continue;
+
         const actId = row.activity_id;
         const createdAt =
           row.report_createdat ||
@@ -780,6 +795,7 @@ ORDER BY entity_id, snapshot_month
           row.createdat ||
           row.createdAt;
         const metrics = row.report_metrics || {};
+
         if (!historyByActivity[actId]) historyByActivity[actId] = [];
         historyByActivity[actId].push({
           reportId: row.report_id,
@@ -790,27 +806,27 @@ ORDER BY entity_id, snapshot_month
       }
     }
 
-    // Build breakdowns from snapshots (or later use report-based grouping)
+    // Build breakdowns
     const breakdowns = {};
     for (const [actId, snaps] of Object.entries(historyByActivity)) {
       const numericActId = Number(actId);
       breakdowns[numericActId] = { monthly: {}, quarterly: {}, annual: {} };
 
-      // We'll dedupe/aggregate by month: keep the latest snapshot per month (by recorded_at)
       const monthlyLatest = new Map();
-
       for (const snap of snaps) {
         const dateStr = snap.snapshot_month || snap.recorded_at || snap.date;
         const d = new Date(dateStr);
         if (isNaN(d)) continue;
+
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
-        const monthKey = `${year}-${String(month).padStart(2, "0")}`; // YYYY-MM (zero-padded)
+        const monthKey = `${year}-${String(month).padStart(2, "0")}`;
         const quarterKey = `${year}-Q${Math.floor((month - 1) / 3) + 1}`;
         const yearKey = `${year}`;
 
         const recordedAt = snap.recorded_at ? new Date(snap.recorded_at) : d;
         const existing = monthlyLatest.get(monthKey);
+
         if (
           !existing ||
           (recordedAt &&
@@ -828,6 +844,7 @@ ORDER BY entity_id, snapshot_month
 
       for (const entry of monthlyLatest.values()) {
         const { snap, dateStr, monthKey, quarterKey, yearKey } = entry;
+
         if (!breakdowns[numericActId].monthly[monthKey])
           breakdowns[numericActId].monthly[monthKey] = [];
         breakdowns[numericActId].monthly[monthKey].push({
@@ -857,85 +874,53 @@ ORDER BY entity_id, snapshot_month
       }
     }
 
-    // Build hierarchical master JSON using your existing helper
     const masterJson = generateReportJson(raw);
 
-    // === FIX: ATTACH previousMetric, quarterlyGoals, AND currentMetric ===
-    // Build maps from raw rows to pick the first non-null value for each activity
+    // Inject metrics & metricType
+    const activityMetricTypeById = {};
     const activityPreviousById = {};
     const activityQuarterlyGoalsById = {};
-    const activityCurrentMetricById = {}; // <-- ADDED
+    const activityCurrentMetricById = {};
 
     for (const row of raw) {
       const aid = Number(row.activity_id);
       if (!aid) continue;
 
-      // Populate previousMetric
       if (!activityPreviousById[aid]) {
-        const candidate =
-          row.activity_previous_metric ??
-          row.previousmetric ??
-          row.previous_metric ??
-          row["previousMetric"] ??
-          row["previous_metric"] ??
-          row.previousMetric ??
-          null;
-        if (candidate !== null && typeof candidate !== "undefined") {
-          activityPreviousById[aid] = candidate;
-        }
+        const candidate = row.previousMetric || row.previous_metric || null;
+        if (candidate) activityPreviousById[aid] = candidate;
       }
-
-      // Populate quarterlyGoals
       if (!activityQuarterlyGoalsById[aid]) {
-        const candidate =
-          row.quarterlygoals ??
-          row["quarterlyGoals"] ??
-          row.quarterlyGoals ??
-          null;
-        if (candidate !== null && typeof candidate !== "undefined") {
-          activityQuarterlyGoalsById[aid] = candidate;
-        }
+        const candidate = row.quarterlyGoals || row.quarterly_goals || null;
+        if (candidate) activityQuarterlyGoalsById[aid] = candidate;
       }
-
-      // <-- ADDED: Populate currentMetric
       if (!activityCurrentMetricById[aid]) {
-        const candidate =
-          row.currentmetric ??
-          row["currentMetric"] ??
-          row.currentMetric ??
-          null;
-        if (candidate !== null && typeof candidate !== "undefined") {
-          activityCurrentMetricById[aid] = candidate;
-        }
+        const candidate = row.currentMetric || row.current_metric || null;
+        if (candidate) activityCurrentMetricById[aid] = candidate;
+      }
+      if (!activityMetricTypeById[aid]) {
+        const candidate = row.metricType || row.metric_type || "Plus";
+        activityMetricTypeById[aid] = candidate;
       }
     }
 
-    // Inject all metrics onto activity objects
     for (const goal of masterJson.goals || []) {
       for (const task of goal.tasks || []) {
         for (const activity of task.activities || []) {
-          // Add previousMetric
           if (activityPreviousById[activity.id] && !activity.previousMetric) {
             activity.previousMetric = activityPreviousById[activity.id];
           }
-
-          // Add quarterlyGoals
-          if (
-            activityQuarterlyGoalsById[activity.id] &&
-            !activity.quarterlyGoals
-          ) {
+          if (activityQuarterlyGoalsById[activity.id] && !activity.quarterlyGoals) {
             activity.quarterlyGoals = activityQuarterlyGoalsById[activity.id];
           }
-
-          // <-- ADDED: Add currentMetric
-          if (
-            activityCurrentMetricById[activity.id] &&
-            !activity.currentMetric
-          ) {
+          if (activityCurrentMetricById[activity.id] && !activity.currentMetric) {
             activity.currentMetric = activityCurrentMetricById[activity.id];
           }
+          // Inject Metric Type
+          if (activityMetricTypeById[activity.id]) {
+            activity.metricType = activityMetricTypeById[activity.id];
+          }
 
-          // Attach history exactly as before (unchanged behavior)
           activity.history = breakdowns[activity.id] || {
             monthly: {},
             quarterly: {},
@@ -944,7 +929,6 @@ ORDER BY entity_id, snapshot_month
         }
       }
     }
-    // === end fix ===
 
     if (
       format === "html" ||
@@ -955,6 +939,7 @@ ORDER BY entity_id, snapshot_month
       const html = generateReportHtml(raw);
       return res.set("Content-Type", "text/html").send(html);
     }
+
     return res.json(masterJson);
   } catch (err) {
     console.error(

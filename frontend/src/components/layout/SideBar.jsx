@@ -207,7 +207,7 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
 
   useEffect(() => {
     const found = mainMenuItems.find((it) => it.children && it.children.some((ch) => location.pathname.startsWith(ch.to)));
-    if (found) setOpenMenu(found.key);
+    setOpenMenu(found ? found.key : null);
   }, [location.pathname]);
 
   const effectiveMobileOpen = typeof mobileIsOpen === "boolean" ? mobileIsOpen : ctxOpen;

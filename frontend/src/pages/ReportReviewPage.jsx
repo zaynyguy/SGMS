@@ -54,7 +54,7 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
       {!expanded ? (
         <>
           <button
-            onClick={() => setExpanded(true)}
+            onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
             aria-expanded={expanded}
             className="px-2 py-0.5 rounded-full bg-[var(--surface-container-low)] dark:bg-gray-700 text-sm text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-100"
             title="Show full path"
@@ -87,8 +87,8 @@ function BreadcrumbsCompact({ group_name, goal_title, task_title, activity_title
         </span>
       )}
       {expanded && (
-        <button
-          onClick={() => setExpanded(false)}
+          <button
+            onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
           className="ml-1 px-2 py-0.5 rounded-full bg-[var(--surface-container-low)] dark:bg-gray-700 text-sm text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-200 transform hover:scale-[1.02] active:scale-100"
           title="Collapse path"
         >
@@ -687,11 +687,10 @@ const App = ({ permissions, readonly = false }) => {
           <div className="space-y-4">
             {loading ? (
               Array.from({ length: Math.min(5, pageSize) }).map((_, i) => (
-                <div 
-                  key={`skeleton-${i}`} 
-                  className="border border-[var(--outline-variant)] dark:border-gray-700 rounded-xl overflow-hidden animate-pulse surface-elevation-1"
-                  style={{ animationDelay: `${i * 60}ms` }}
-                >
+                  <div 
+                    key={`skeleton-${i}`} 
+                    className="border border-[var(--outline-variant)] dark:border-gray-700 rounded-xl overflow-hidden surface-elevation-1"
+                  >
                   <div className="flex items-center justify-between p-4 bg-[var(--surface-container-low)] dark:bg-gray-800">
                     <div className="min-w-0 w-full">
                       <div className="flex items-center gap-3">
@@ -729,7 +728,7 @@ const App = ({ permissions, readonly = false }) => {
                         </div>
                       )}
                       <div className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 transition-colors duration-200 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700">
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setExpanded(expanded === r.id ? null : r.id)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setExpanded(expanded === r.id ? null : r.id); }}>
                           <div className="flex flex-wrap items-center gap-2">
                             <div className="text-lg font-semibold text-[var(--on-surface)] dark:text-white transition-colors duration-200 hover:text-[var(--primary)] dark:hover:text-green-400">
                               Report #{r.id}
