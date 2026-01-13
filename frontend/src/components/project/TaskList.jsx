@@ -293,7 +293,7 @@ function TaskList({
   }
 
   return (
-    <div className="space-y-3 task-list-container  rounded-xl bg-gray-50 dark:bg-gray-900">
+    <div className="space-y-3 task-list-container  rounded-xl bg-gray-50 dark:bg-gray-800">
       <style>{`
         :root {
           --primary: ${m3Colors.primary};

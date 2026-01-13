@@ -594,7 +594,7 @@ function ActivityList({
   }
 
   return (
-    <div className={`space-y-3 rounded-xl bg-gray-50 dark:bg-gray-900 ${mounted ? 'animate-fade-in' : ''}`}>
+    <div className={`space-y-3 rounded-xl bg-gray-50 dark:bg-gray-800 ${mounted ? 'animate-fade-in' : ''}`}>
       <style>{`
         :root {
           --primary: ${m3Colors.primary};

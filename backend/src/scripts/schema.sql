@@ -1,3 +1,66 @@
+-- This script clears the database by dropping all user-defined objects
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  -- 1. Drop all triggers
+  FOR r IN
+    SELECT tgname, tgrelid::regclass AS table_name
+    FROM pg_trigger
+    WHERE NOT tgisinternal
+  LOOP
+    EXECUTE 'DROP TRIGGER IF EXISTS ' || quote_ident(r.tgname) || ' ON ' || r.table_name || ' CASCADE';
+  END LOOP;
+
+  -- 2. Drop all functions and procedures
+  FOR r IN
+    SELECT oid::regprocedure AS func
+    FROM pg_proc
+    WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+  LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || r.func || ' CASCADE';
+  END LOOP;
+
+  -- 3. Drop all views
+  FOR r IN
+    SELECT viewname
+    FROM pg_views
+    WHERE schemaname = 'public'
+  LOOP
+    EXECUTE 'DROP VIEW IF EXISTS ' || quote_ident(r.viewname) || ' CASCADE';
+  END LOOP;
+
+  -- 4. Drop all tables (CASCADE removes FK constraints, indexes, etc.)
+  FOR r IN
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+  LOOP
+    EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+  END LOOP;
+
+  -- 5. Drop all sequences
+  FOR r IN
+    SELECT sequence_name
+    FROM information_schema.sequences
+    WHERE sequence_schema = 'public'
+  LOOP
+    EXECUTE 'DROP SEQUENCE IF EXISTS ' || quote_ident(r.sequence_name) || ' CASCADE';
+  END LOOP;
+
+  -- 6. Drop all custom types (ENUMs, etc.)
+  FOR r IN
+    SELECT typname
+    FROM pg_type t
+    JOIN pg_namespace ns ON ns.oid = t.typnamespace
+    WHERE t.typtype = 'e'  -- enum types only
+      AND ns.nspname = 'public'
+  LOOP
+    EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+  END LOOP;
+
+END $$;
+
 SET client_min_messages TO WARNING;
 SET search_path = public;
 
@@ -271,6 +334,39 @@ BEGIN
   NEW."updatedAt" = NOW();
   RETURN NEW;
 END; $$ LANGUAGE plpgsql;
+
+
+CREATE TABLE IF NOT EXISTS "ChatConversations" (
+  "id" SERIAL PRIMARY KEY,
+  "type" VARCHAR(20) NOT NULL DEFAULT 'dm', -- 'dm' or 'group'
+  "name" VARCHAR(255), -- Null for DMs, required for named groups
+  "lastMessageAt" TIMESTAMPTZ DEFAULT NOW(),
+  "createdAt" TIMESTAMPTZ DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+CREATE TABLE IF NOT EXISTS "ChatParticipants" (
+  "conversationId" INTEGER NOT NULL REFERENCES "ChatConversations"("id") ON DELETE CASCADE,
+  "userId" INTEGER NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
+  "joinedAt" TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY ("conversationId", "userId")
+);
+
+
+CREATE TABLE IF NOT EXISTS "ChatMessages" (
+  "id" SERIAL PRIMARY KEY,
+  "conversationId" INTEGER NOT NULL REFERENCES "ChatConversations"("id") ON DELETE CASCADE,
+  "senderId" INTEGER NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
+  "content" TEXT NOT NULL,
+  "isRead" BOOLEAN DEFAULT FALSE, -- Simple read receipt
+  "createdAt" TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_chat_participants_user ON "ChatParticipants"("userId");
+CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON "ChatMessages"("conversationId");
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON "ChatMessages"("createdAt");
 
 DO $$
 BEGIN
@@ -632,3 +728,4 @@ BEGIN
     RETURN v_report_id;
 END;
 $$ LANGUAGE plpgsql;
+
