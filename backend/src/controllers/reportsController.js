@@ -131,7 +131,7 @@ exports.submitReport = async (req, res) => {
       const activityRow = actQ.rows[0];
       const targetMetric = activityRow.targetMetric || {};
       const currentMetric = activityRow.currentMetric || {};
-      const metricType = activityRow.metricType || 'Plus'; // Default
+      const metricType = activityRow.metricType || "Plus"; // Default
 
       const violations = [];
 
@@ -183,11 +183,11 @@ exports.submitReport = async (req, res) => {
 
         if (targetVal !== null) {
           // --- LOGIC PER METRIC TYPE ---
-          
-          if (metricType === 'Plus' || metricType === 'Minus') {
+
+          if (metricType === "Plus" || metricType === "Minus") {
             // CUMULATIVE: We validate that (Current + Incoming) <= Target
             // For Minus, Target usually implies "Total Amount to Reduce".
-            if ((currentVal + incoming) > targetVal) {
+            if (currentVal + incoming > targetVal) {
               violations.push({
                 key: k,
                 incoming,
@@ -195,11 +195,10 @@ exports.submitReport = async (req, res) => {
                 target: targetVal,
                 type: metricType,
                 wouldBe: currentVal + incoming,
-                message: `Cumulative total would exceed target.`
+                message: `Cumulative total would exceed target.`,
               });
             }
-          } 
-          else if (metricType === 'Increase') {
+          } else if (metricType === "Increase") {
             // INCREASE: Snapshot. Input replaces Current.
             // Usually, exceeding target in "Increase" is GOOD (e.g. Sales > Target).
             // But if validation is strictly "Do not exceed target", we check:
@@ -212,15 +211,13 @@ exports.submitReport = async (req, res) => {
             }
             */
             // For now, let's assume exceeding is allowed for Increase unless strictly capped.
-          }
-          else if (metricType === 'Decrease') {
-             // DECREASE: Snapshot. Input replaces Current.
-             // Target is floor (e.g. 2%). Input (4%) is valid. Input (1%) is valid (better than target).
-             // No validation needed usually.
-          }
-          else if (metricType === 'Maintain') {
-             // MAINTAIN: Input replaces Current.
-             // Usually no strict validation unless physically impossible.
+          } else if (metricType === "Decrease") {
+            // DECREASE: Snapshot. Input replaces Current.
+            // Target is floor (e.g. 2%). Input (4%) is valid. Input (1%) is valid (better than target).
+            // No validation needed usually.
+          } else if (metricType === "Maintain") {
+            // MAINTAIN: Input replaces Current.
+            // Usually no strict validation unless physically impossible.
           }
         }
       }
@@ -549,7 +546,9 @@ exports.reviewReport = async (req, res) => {
             applyErr
           );
           await client.query("ROLLBACK");
-          return res.status(500).json({ error: "Failed to apply report metrics." });
+          return res
+            .status(500)
+            .json({ error: "Failed to apply report metrics." });
         }
 
         // Post-apply snapshot
@@ -772,7 +771,8 @@ exports.generateMasterReport = async (req, res) => {
       if (!historyByActivity[aid]) historyByActivity[aid] = [];
       historyByActivity[aid].push({
         snapshot_month: r.snapshot_month,
-        progress: typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
+        progress:
+          typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
         metrics: r.metrics || {},
         recorded_at: r.recorded_at,
       });
@@ -907,14 +907,14 @@ exports.generateMasterReport = async (req, res) => {
     function sumNumericValues(obj) {
       if (!obj) return 0;
       try {
-        if (typeof obj === 'number') return obj;
-        if (typeof obj === 'string') {
-          const n = Number(String(obj).replace(/,/g, '').trim());
+        if (typeof obj === "number") return obj;
+        if (typeof obj === "string") {
+          const n = Number(String(obj).replace(/,/g, "").trim());
           return Number.isFinite(n) ? n : 0;
         }
-        if (typeof obj === 'object') {
+        if (typeof obj === "object") {
           return Object.values(obj).reduce((s, v) => {
-            const n = Number(String(v).replace(/,/g, '').trim());
+            const n = Number(String(v).replace(/,/g, "").trim());
             return s + (Number.isFinite(n) ? n : 0);
           }, 0);
         }
@@ -930,10 +930,16 @@ exports.generateMasterReport = async (req, res) => {
           if (activityPreviousById[activity.id] && !activity.previousMetric) {
             activity.previousMetric = activityPreviousById[activity.id];
           }
-          if (activityQuarterlyGoalsById[activity.id] && !activity.quarterlyGoals) {
+          if (
+            activityQuarterlyGoalsById[activity.id] &&
+            !activity.quarterlyGoals
+          ) {
             activity.quarterlyGoals = activityQuarterlyGoalsById[activity.id];
           }
-          if (activityCurrentMetricById[activity.id] && !activity.currentMetric) {
+          if (
+            activityCurrentMetricById[activity.id] &&
+            !activity.currentMetric
+          ) {
             activity.currentMetric = activityCurrentMetricById[activity.id];
           }
           // Inject Metric Type
@@ -943,19 +949,24 @@ exports.generateMasterReport = async (req, res) => {
 
           // compute quarterlyTotal (year-to-date) based on metricType and history
           try {
-            const metricType = (activity.metricType || activityMetricTypeById[activity.id] || 'Plus');
+            const metricType =
+              activity.metricType ||
+              activityMetricTypeById[activity.id] ||
+              "Plus";
 
             let ytd = null; // null means no recorded data
             const hist = breakdowns[activity.id] || { quarterly: {} };
 
-            if (metricType === 'Plus' || metricType === 'Minus') {
+            if (metricType === "Plus" || metricType === "Minus") {
               // Cumulative: sum latest metrics for each quarter (only from history)
               let sum = 0;
               let found = false;
               for (const entries of Object.values(hist.quarterly || {})) {
                 if (!Array.isArray(entries) || entries.length === 0) continue;
                 const latest = entries[entries.length - 1];
-                const nv = sumNumericValues(latest.metrics || latest.metrics_data || 0);
+                const nv = sumNumericValues(
+                  latest.metrics || latest.metrics_data || 0
+                );
                 if (nv) {
                   sum += nv;
                   found = true;
@@ -967,10 +978,13 @@ exports.generateMasterReport = async (req, res) => {
               const qKeys = Object.keys(hist.quarterly || {});
               if (qKeys.length) {
                 qKeys.sort();
-                const latestEntries = hist.quarterly[qKeys[qKeys.length - 1]] || [];
+                const latestEntries =
+                  hist.quarterly[qKeys[qKeys.length - 1]] || [];
                 if (latestEntries.length) {
                   const latest = latestEntries[latestEntries.length - 1];
-                  const nv = sumNumericValues(latest.metrics || latest.metrics_data || {});
+                  const nv = sumNumericValues(
+                    latest.metrics || latest.metrics_data || {}
+                  );
                   if (nv || nv === 0) ytd = nv;
                 }
               }
@@ -989,9 +1003,14 @@ exports.generateMasterReport = async (req, res) => {
           // compute yearly progress percent if possible (YTD vs targetMetric)
           try {
             const targetSum = sumNumericValues(activity.targetMetric || {});
-            if (activity.quarterlyTotal !== null && typeof activity.quarterlyTotal !== 'undefined') {
+            if (
+              activity.quarterlyTotal !== null &&
+              typeof activity.quarterlyTotal !== "undefined"
+            ) {
               const ytdVal = Number(activity.quarterlyTotal) || 0;
-              activity.yearlyProgress = targetSum ? Math.round((ytdVal / targetSum) * 100) : null;
+              activity.yearlyProgress = targetSum
+                ? Math.round((ytdVal / targetSum) * 100)
+                : null;
             } else {
               activity.yearlyProgress = null;
             }

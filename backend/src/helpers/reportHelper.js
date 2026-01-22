@@ -150,10 +150,10 @@ function generateReportHtml(rows, breakdowns = {}) {
             id: activityId,
             title: r.activity_title || "—",
             description: r.activity_description || "",
-                currentMetric: r.currentMetric ?? r.currentmetric ?? {},
-                targetMetric: r.targetMetric ?? r.targetmetric ?? {},
-                quarterlyGoals: r.quarterlyGoals ?? r.quarterlygoals ?? {},
-                metricType: r.metricType ?? r.metric_type ?? 'Plus',
+            currentMetric: r.currentMetric ?? r.currentmetric ?? {},
+            targetMetric: r.targetMetric ?? r.targetmetric ?? {},
+            quarterlyGoals: r.quarterlyGoals ?? r.quarterlygoals ?? {},
+            metricType: r.metricType ?? r.metric_type ?? "Plus",
             previousMetric: r.previousMetric ?? r.previousmetric ?? {},
             status: r.activity_status || "—",
             weight:
@@ -161,11 +161,11 @@ function generateReportHtml(rows, breakdowns = {}) {
                 ? Number(r.activity_weight)
                 : 0,
             isDone: !!r.activity_done,
-                history: (breakdowns && breakdowns[activityId]) || {
-                  monthly: {},
-                  quarterly: {},
-                  annual: {},
-                },
+            history: (breakdowns && breakdowns[activityId]) || {
+              monthly: {},
+              quarterly: {},
+              annual: {},
+            },
             // reports map to collect multiple approved reports and attachments
             _reports: new Map(),
           });
@@ -442,18 +442,23 @@ function generateReportHtml(rows, breakdowns = {}) {
 
                 // compute a year-to-date / quarterly total value based on metricType and available history
                 try {
-                  const metricType = a.metricType || 'Plus';
+                  const metricType = a.metricType || "Plus";
                   let ytd = null;
-                  const hist = (breakdowns && breakdowns[a.id]) || { quarterly: {} };
+                  const hist = (breakdowns && breakdowns[a.id]) || {
+                    quarterly: {},
+                  };
 
-                  if (metricType === 'Plus' || metricType === 'Minus') {
+                  if (metricType === "Plus" || metricType === "Minus") {
                     // cumulative: sum latest metrics for each quarter if present
                     let sum = 0;
                     let found = false;
                     for (const entries of Object.values(hist.quarterly || {})) {
-                      if (!Array.isArray(entries) || entries.length === 0) continue;
+                      if (!Array.isArray(entries) || entries.length === 0)
+                        continue;
                       const latest = entries[entries.length - 1];
-                      const nv = toNumeric(latest.metrics || latest.metrics_data || 0);
+                      const nv = toNumeric(
+                        latest.metrics || latest.metrics_data || 0
+                      );
                       if (nv || nv === 0) {
                         sum += nv;
                         found = true;
@@ -465,23 +470,38 @@ function generateReportHtml(rows, breakdowns = {}) {
                     const qKeys = Object.keys(hist.quarterly || {});
                     if (qKeys.length) {
                       qKeys.sort();
-                      const latestEntries = hist.quarterly[qKeys[qKeys.length - 1]] || [];
+                      const latestEntries =
+                        hist.quarterly[qKeys[qKeys.length - 1]] || [];
                       if (latestEntries.length) {
                         const latest = latestEntries[latestEntries.length - 1];
-                        const nv = toNumeric(latest.metrics || latest.metrics_data || {});
+                        const nv = toNumeric(
+                          latest.metrics || latest.metrics_data || {}
+                        );
                         if (nv || nv === 0) ytd = nv;
                       }
                     }
                   }
 
-                  const targetSum = Object.values(a.targetMetric || {}).reduce((s, v) => s + toNumeric(v), 0);
-                  const progressPercent = (ytd !== null && targetSum) ? Math.round((ytd / targetSum) * 100) : null;
+                  const targetSum = Object.values(a.targetMetric || {}).reduce(
+                    (s, v) => s + toNumeric(v),
+                    0
+                  );
+                  const progressPercent =
+                    ytd !== null && targetSum
+                      ? Math.round((ytd / targetSum) * 100)
+                      : null;
 
                   html += `
                     <div class="metric-key">Quarterly Total</div>
-                    <div class="metric-value">${escapeHtml(ytd !== null ? String(ytd) : '—')}</div>
+                    <div class="metric-value">${escapeHtml(
+                      ytd !== null ? String(ytd) : "—"
+                    )}</div>
                     <div class="metric-key">Yearly %</div>
-                    <div class="metric-value">${escapeHtml(progressPercent !== null ? String(progressPercent) + '%' : '—')}</div>`;
+                    <div class="metric-value">${escapeHtml(
+                      progressPercent !== null
+                        ? String(progressPercent) + "%"
+                        : "—"
+                    )}</div>`;
                 } catch (e) {
                   // ignore errors in numeric coercion
                 }
@@ -522,14 +542,14 @@ function generateReportJson(rows, breakdowns = {}) {
   function sumNumericValuesLocal(obj) {
     if (!obj) return 0;
     try {
-      if (typeof obj === 'number') return obj;
-      if (typeof obj === 'string') {
-        const n = Number(String(obj).replace(/,/g, '').trim());
+      if (typeof obj === "number") return obj;
+      if (typeof obj === "string") {
+        const n = Number(String(obj).replace(/,/g, "").trim());
         return Number.isFinite(n) ? n : 0;
       }
-      if (typeof obj === 'object') {
+      if (typeof obj === "object") {
         return Object.values(obj).reduce((s, v) => {
-          const n = Number(String(v).replace(/,/g, '').trim());
+          const n = Number(String(v).replace(/,/g, "").trim());
           return s + (Number.isFinite(n) ? n : 0);
         }, 0);
       }
@@ -680,35 +700,51 @@ function generateReportJson(rows, breakdowns = {}) {
         let quarterlyTotal = 0;
         try {
           const qg = act.quarterlyGoals || {};
-          const metricType = act.metricType || 'Plus';
+          const metricType = act.metricType || "Plus";
           const hist = (breakdowns && breakdowns[act.id]) || { quarterly: {} };
 
-          if (metricType === 'Plus' || metricType === 'Minus') {
+          if (metricType === "Plus" || metricType === "Minus") {
             for (const entries of Object.values(hist.quarterly || {})) {
               if (!Array.isArray(entries) || entries.length === 0) continue;
               const latest = entries[entries.length - 1];
-              quarterlyTotal += sumNumericValuesLocal(latest.metrics || latest.metrics_data || 0);
+              quarterlyTotal += sumNumericValuesLocal(
+                latest.metrics || latest.metrics_data || 0
+              );
             }
-            if (!quarterlyTotal) quarterlyTotal = Object.values(qg).reduce((s, v) => s + sumNumericValuesLocal(v), 0);
+            if (!quarterlyTotal)
+              quarterlyTotal = Object.values(qg).reduce(
+                (s, v) => s + sumNumericValuesLocal(v),
+                0
+              );
           } else {
             const qKeys = Object.keys(hist.quarterly || {});
             if (qKeys.length) {
               qKeys.sort();
-              const latestEntries = hist.quarterly[qKeys[qKeys.length - 1]] || [];
+              const latestEntries =
+                hist.quarterly[qKeys[qKeys.length - 1]] || [];
               if (latestEntries.length) {
                 const latest = latestEntries[latestEntries.length - 1];
-                quarterlyTotal = sumNumericValuesLocal(latest.metrics || latest.metrics_data || {});
+                quarterlyTotal = sumNumericValuesLocal(
+                  latest.metrics || latest.metrics_data || {}
+                );
               }
             }
-            if (!quarterlyTotal) quarterlyTotal = Object.values(qg).reduce((s, v) => s + sumNumericValuesLocal(v), 0);
-            if (!quarterlyTotal) quarterlyTotal = sumNumericValuesLocal(act.currentMetric || {});
+            if (!quarterlyTotal)
+              quarterlyTotal = Object.values(qg).reduce(
+                (s, v) => s + sumNumericValuesLocal(v),
+                0
+              );
+            if (!quarterlyTotal)
+              quarterlyTotal = sumNumericValuesLocal(act.currentMetric || {});
           }
         } catch (e) {
           quarterlyTotal = 0;
         }
 
         const targetSum = sumNumericValuesLocal(act.targetMetric || {});
-        const yearlyProgress = targetSum ? Math.round((quarterlyTotal / targetSum) * 100) : null;
+        const yearlyProgress = targetSum
+          ? Math.round((quarterlyTotal / targetSum) * 100)
+          : null;
 
         activitiesOut.push({
           id: act.id,
