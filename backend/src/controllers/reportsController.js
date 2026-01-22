@@ -904,6 +904,26 @@ exports.generateMasterReport = async (req, res) => {
       }
     }
 
+    function sumNumericValues(obj) {
+      if (!obj) return 0;
+      try {
+        if (typeof obj === 'number') return obj;
+        if (typeof obj === 'string') {
+          const n = Number(String(obj).replace(/,/g, '').trim());
+          return Number.isFinite(n) ? n : 0;
+        }
+        if (typeof obj === 'object') {
+          return Object.values(obj).reduce((s, v) => {
+            const n = Number(String(v).replace(/,/g, '').trim());
+            return s + (Number.isFinite(n) ? n : 0);
+          }, 0);
+        }
+      } catch (e) {
+        return 0;
+      }
+      return 0;
+    }
+
     for (const goal of masterJson.goals || []) {
       for (const task of goal.tasks || []) {
         for (const activity of task.activities || []) {
@@ -921,11 +941,63 @@ exports.generateMasterReport = async (req, res) => {
             activity.metricType = activityMetricTypeById[activity.id];
           }
 
+          // compute quarterlyTotal (year-to-date) based on metricType and history
+          try {
+            const metricType = (activity.metricType || activityMetricTypeById[activity.id] || 'Plus');
+
+            let ytd = null; // null means no recorded data
+            const hist = breakdowns[activity.id] || { quarterly: {} };
+
+            if (metricType === 'Plus' || metricType === 'Minus') {
+              // Cumulative: sum latest metrics for each quarter (only from history)
+              let sum = 0;
+              let found = false;
+              for (const entries of Object.values(hist.quarterly || {})) {
+                if (!Array.isArray(entries) || entries.length === 0) continue;
+                const latest = entries[entries.length - 1];
+                const nv = sumNumericValues(latest.metrics || latest.metrics_data || 0);
+                if (nv) {
+                  sum += nv;
+                  found = true;
+                }
+              }
+              if (found) ytd = sum;
+            } else {
+              // Snapshot types (Increase/Decrease/Maintain): use latest quarter snapshot only (no fallbacks)
+              const qKeys = Object.keys(hist.quarterly || {});
+              if (qKeys.length) {
+                qKeys.sort();
+                const latestEntries = hist.quarterly[qKeys[qKeys.length - 1]] || [];
+                if (latestEntries.length) {
+                  const latest = latestEntries[latestEntries.length - 1];
+                  const nv = sumNumericValues(latest.metrics || latest.metrics_data || {});
+                  if (nv || nv === 0) ytd = nv;
+                }
+              }
+            }
+
+            activity.quarterlyTotal = ytd;
+          } catch (e) {
+            activity.quarterlyTotal = null;
+          }
+
           activity.history = breakdowns[activity.id] || {
             monthly: {},
             quarterly: {},
             annual: {},
           };
+          // compute yearly progress percent if possible (YTD vs targetMetric)
+          try {
+            const targetSum = sumNumericValues(activity.targetMetric || {});
+            if (activity.quarterlyTotal !== null && typeof activity.quarterlyTotal !== 'undefined') {
+              const ytdVal = Number(activity.quarterlyTotal) || 0;
+              activity.yearlyProgress = targetSum ? Math.round((ytdVal / targetSum) * 100) : null;
+            } else {
+              activity.yearlyProgress = null;
+            }
+          } catch (e) {
+            activity.yearlyProgress = null;
+          }
         }
       }
     }
@@ -936,7 +1008,7 @@ exports.generateMasterReport = async (req, res) => {
         req.headers.accept.includes("text/html") &&
         !req.query.format)
     ) {
-      const html = generateReportHtml(raw);
+      const html = generateReportHtml(raw, breakdowns);
       return res.set("Content-Type", "text/html").send(html);
     }
 

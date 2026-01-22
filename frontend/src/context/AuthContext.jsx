@@ -43,6 +43,8 @@ export const AuthProvider = ({ children }) => {
   const [refreshing, setRefreshing] = useState(false);
   // Single shared promise used to serialize refresh attempts across callers
   const refreshPromiseRef = useRef(null);
+  // Timer to proactively refresh access token before expiry
+  const refreshTimerRef = useRef(null);
   // Track in-flight fetch controllers so we can abort them on logout
   const pendingControllersRef = useRef(new Set());
 
@@ -61,6 +63,38 @@ export const AuthProvider = ({ children }) => {
     }
     if (token) window.__ACCESS_TOKEN = token;
     setLoading(false);
+
+    // schedule proactive refresh when token changes
+    try {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+      if (token) {
+        const parts = String(token).split('.');
+        if (parts.length === 3) {
+          try {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            const exp = payload && payload.exp ? Number(payload.exp) : null;
+            if (exp) {
+              const nowSec = Math.floor(Date.now() / 1000);
+              const buffer = Number(process.env.VITE_TOKEN_REFRESH_BUFFER_SEC || 60);
+              const msUntil = (exp - nowSec - buffer) * 1000;
+              if (msUntil > 0) {
+                refreshTimerRef.current = setTimeout(() => {
+                  // call tryRefresh but ignore result
+                  tryRefresh();
+                }, msUntil);
+              }
+            }
+          } catch (e) {
+            // ignore parse errors
+          }
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
   }, [token, i18n]);
 
   const fetchMe = useCallback(async (accessToken) => {
@@ -125,6 +159,10 @@ export const AuthProvider = ({ children }) => {
     disconnectSocket(); // ADDED
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
+    if (refreshTimerRef.current) {
+      try { clearTimeout(refreshTimerRef.current); } catch (_) {}
+      refreshTimerRef.current = null;
+    }
     // Abort any in-flight requests
     try {
       for (const c of Array.from(pendingControllersRef.current || [])) {
@@ -193,6 +231,33 @@ export const AuthProvider = ({ children }) => {
       } finally {
         setRefreshing(false);
         refreshPromiseRef.current = null;
+        // reschedule proactive refresh based on new token
+        try {
+          if (refreshTimerRef.current) {
+            clearTimeout(refreshTimerRef.current);
+            refreshTimerRef.current = null;
+          }
+          const newToken = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
+          if (newToken) {
+            const parts = String(newToken).split('.');
+            if (parts.length === 3) {
+              try {
+                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                const exp = payload && payload.exp ? Number(payload.exp) : null;
+                if (exp) {
+                  const nowSec = Math.floor(Date.now() / 1000);
+                  const buffer = Number(process.env.VITE_TOKEN_REFRESH_BUFFER_SEC || 60);
+                  const msUntil = (exp - nowSec - buffer) * 1000;
+                  if (msUntil > 0) {
+                    refreshTimerRef.current = setTimeout(() => {
+                      tryRefresh();
+                    }, msUntil);
+                  }
+                }
+              } catch (e) {}
+            }
+          }
+        } catch (e) {}
       }
     })();
 

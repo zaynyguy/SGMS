@@ -47,7 +47,7 @@
     "table": {
       "file": "ፋይል",
       "type": "ዓይነት",
-            "context": "አውድ",
+      "context": "አውድ",
       "uploaded": "ተጭኗል",
       "actions": "ድርጊቶች"
     },
@@ -67,13 +67,13 @@
     "title": "የኦዲት መዝገብ",
     "subtitle": "የስርዓት ክስተቶች፣ ደህንነት እና የተጠቃሚ እንቅስቃሴ የዘመን ቅደም ተከተል መዝገብ ይመልከቱ።",
     "loadFailed": "የኦዲት ምዝግብ ማስታወሻዎችን መጫን አልተሳካም።",
-    "pageInfo": "ገጽ {{page}} የ{{totalPages}}", 
-"prev": "የቀደመው ገጽ", 
-"pageFooter": "{{showing}} ምዝግብ ማስታወሻዎች ላይ — ገጽ {{page}}/{{totalPages}} ({{total}} አጠቃላይ)", 
-"first": "የመጀመሪያ ገጽ", 
-"gotoPage": "ወደ ገጽ ሂድ", 
-"next": "ቀጣይ ገጽ", 
-"last": "የመጨረሻ ገጽ",
+    "pageInfo": "ገጽ {{page}} የ{{totalPages}}",
+    "prev": "የቀደመው ገጽ",
+    "pageFooter": "{{showing}} ምዝግብ ማስታወሻዎች ላይ — ገጽ {{page}}/{{totalPages}} ({{total}} አጠቃላይ)",
+    "first": "የመጀመሪያ ገጽ",
+    "gotoPage": "ወደ ገጽ ሂድ",
+    "next": "ቀጣይ ገጽ",
+    "last": "የመጨረሻ ገጽ",
     "exportCsv": "CSV ወደ ውጪ ላክ",
     "csv": {
       "filename": "ኦዲት-ምዝግብ ማስታወሻዎች.csv"
@@ -169,7 +169,7 @@
     },
     "form": {
       "picture": "የቢሮ ፎቶ",
-      "pictureHint":"PNG, JPG up to 5MB",
+      "pictureHint": "PNG, JPG up to 5MB",
       "title": {
         "create": "ቡድን ይፍጠሩ",
         "edit": "ቡድን አርትዕ"
@@ -239,7 +239,7 @@
       "pending": "በመጠባበቅ ላይ",
       "approved": "ጸድቋል",
       "rejected": "ውድቅ ተደርጓል",
-            "groupAll": "ሁሉም ቡድኖች"
+      "groupAll": "ሁሉም ቡድኖች"
     },
     "pagination": {
       "showingPage": "ገጽ {{page}} የ{{totalPages}} — {{total}} ንጥሎች",
@@ -280,7 +280,7 @@
     "noReports4": "ምንም ዘገባዎች አልተገኙም።",
     "noReports5": "ምንም ዘገባዎች አልተገኙም።",
     "footer": {
-      "systemName": "Officemate"
+      "systemName": "SGMS"
     },
     "status2": {
       "Approved": "ጸድቋል",
@@ -291,7 +291,7 @@
       "title": "ሪፖርቶችን ይገምግሙ",
       "subtitle": "የቀረቡ ሪፖርቶችን ማጽደቅ ወይም ውድቅ አድርግ"
     },
-        "activityContext": {
+    "activityContext": {
       "title": "የእንቅስቃሴ አውድ",
       "target": "የእንቅስቃሴ ኢላማ",
       "current": "የእንቅስቃሴ ወቅታዊ (ከሪፖርቱ በፊት)",
@@ -357,7 +357,7 @@
         "pending": "በመጠባበቅ ላይ",
         "unknown": "—"
       },
-       "charts": {
+      "charts": {
         "goalProgress": "የግብ ሂደት"
       },
       "goals": {
@@ -577,7 +577,7 @@
       "chats": "ቻት"
     },
     "logoAlt": "የኩባንያ አርማ",
-    "appName": "Officemate",
+    "appName": "SGMS",
     "profileAlt": "የተጠቃሚ መገለጫ ሥዕል",
     "logout": "ዘግተህ ውጣ",
     "openMenu": "የጎን አሞሌ ምናሌን ይክፈቱ",
@@ -633,7 +633,7 @@
       "label": "መደርደር",
       "title": "ርዕስ",
       "created": "የተፈጠረበት ቀን",
-      "rollNo":"ጥቅል ቁጥር",
+      "rollNo": "ጥቅል ቁጥር",
       "ascending": "መወጣጫ",
       "descending": "መውረድ",
       "asc": "A–Z",
@@ -682,7 +682,7 @@
       "status": "ሁኔታ",
       "previous": "ቀዳሚ",
       "target": "ዒላማ",
-      "current":"የአሁኑ",
+      "current": "የአሁኑ",
       "metrics": "ሜትሪክስ",
       "quarterlyGoals": "የሩብ ዓመት ግቦች"
     },
@@ -754,7 +754,7 @@
       "weightExceedsTask": "ክብደትን ወደ {{newWeight}} ማዋቀር አልተቻለም። የተግባር አጠቃላይ {{taskWeight}} ነው እና {{used}} አስቀድሞ ጥቅም ላይ ውሏል። ይገኛል፡ {{available}}።",
       "modalSubmit": "የሞዳል ቅጽ ማስገባት አልተሳካም።",
       "metricKeyMissing": "እሴት ሲቀርብ የሜትሪክ ቁልፎች ባዶ ሊሆኑ አይችሉም።",
-            "maxAttachments": "ቢበዛ 5 አባሪዎች ይፈቀዳሉ። ተጨማሪ ፋይሎች ችላ ተብለዋል።"
+      "maxAttachments": "ቢበዛ 5 አባሪዎች ይፈቀዳሉ። ተጨማሪ ፋይሎች ችላ ተብለዋል።"
     },
 
     "toasts": {
@@ -817,7 +817,7 @@
   },
   "login": {
     "company_logo_alt": "የኩባንያ አርማ",
-    "title": "Officemate",
+    "title": "SGMS",
     "subtitle": "Welcome back",
     "form_title": "ወደ መለያህ ግባ",
     "username_label": "የተጠቃሚ ስም",
@@ -858,21 +858,21 @@
         "fromLast": "ከመጨረሻው ጊዜ",
         "noComparison": "አጠቃላይ የግብ ግስጋሴ",
         "outOf": "ከ",
-        "haveBeenDone":"ተደርገዋል።"
+        "haveBeenDone": "ተደርገዋል።"
       },
       "tasks": {
         "title": "ተግባራት",
         "aria": "ክፍት ተግባራት",
         "subtitle": "አጠቃላይ የተግባር ሂደት",
         "outOf": "ከ",
-        "haveBeenDone":"ተደርገዋል።"
+        "haveBeenDone": "ተደርገዋል።"
       },
       "activities": {
         "title": "እንቅስቃሴዎች",
         "aria": "ክፍት እንቅስቃሴዎች",
         "subtitle": "አጠቃላይ የእንቅስቃሴ ሂደት",
         "outOf": "ከ",
-        "haveBeenDone":"ተደርገዋል።"
+        "haveBeenDone": "ተደርገዋል።"
       },
       "pendingReports": {
         "title": "በመጠባበቅ ላይ ያሉ ሪፖርቶች",
@@ -918,9 +918,9 @@
     "unread": "ያልተነበቡ ማሳወቂያዎች",
     "markAll": "ሁሉንም እንደተነበቡ ምልክት ያድርጉበት",
     "toasts": {
-    "markedRead": "ማሳወቂያ በተሳካ ሁኔታ እንደተነበበ ምልክት ተደርጎበታል!",
-    "markAllRead": "ሁሉም ማሳወቂያዎች በተሳካ ሁኔታ እንደተነበቡ ምልክት ተደርጎባቸዋል!"
-  },
+      "markedRead": "ማሳወቂያ በተሳካ ሁኔታ እንደተነበበ ምልክት ተደርጎበታል!",
+      "markAllRead": "ሁሉም ማሳወቂያዎች በተሳካ ሁኔታ እንደተነበቡ ምልክት ተደርጎባቸዋል!"
+    },
     "filter": {
       "label": "ማጣሪያ:",
       "all": "ሁሉም",

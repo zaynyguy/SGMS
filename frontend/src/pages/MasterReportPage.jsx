@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Loader, Download, Printer, Table2, ChevronRight, Moon, Sun } from "lucide-react";
 import { fetchMasterReport } from "../api/reports";
 import { useTranslation } from "react-i18next";
@@ -109,6 +109,58 @@ const App = () => {
   const [error, setError] = useState(null);
   const [granularity, setGranularity] = useState("quarterly");
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Refs for synchronized top scrollbar
+  const tableWrapRef = useRef(null);
+  const topScrollRef = useRef(null);
+
+  useEffect(() => {
+    const wrap = tableWrapRef.current;
+    const top = topScrollRef.current;
+    if (!wrap || !top) return;
+
+    // inner filler element inside top scroll container to match table width
+    let filler = top.querySelector('.top-scroll-filler');
+    function updateFillerWidth() {
+      const table = wrap.querySelector('table');
+      if (!table) return;
+      const w = table.scrollWidth;
+      if (!filler) {
+        filler = document.createElement('div');
+        filler.className = 'top-scroll-filler';
+        filler.style.height = '1px';
+        filler.style.width = `${w}px`;
+        top.appendChild(filler);
+      } else {
+        filler.style.width = `${w}px`;
+      }
+    }
+
+    updateFillerWidth();
+
+    const onWrapScroll = () => {
+      if (top && wrap) top.scrollLeft = wrap.scrollLeft;
+    };
+    const onTopScroll = () => {
+      if (top && wrap) wrap.scrollLeft = top.scrollLeft;
+    };
+
+    wrap.addEventListener('scroll', onWrapScroll, { passive: true });
+    top.addEventListener('scroll', onTopScroll, { passive: true });
+    window.addEventListener('resize', updateFillerWidth);
+
+    // Mutation observer in case table content changes width
+    const mo = new MutationObserver(updateFillerWidth);
+    const tableEl = wrap.querySelector('table');
+    if (tableEl) mo.observe(tableEl, { childList: true, subtree: true, attributes: true });
+
+    return () => {
+      wrap.removeEventListener('scroll', onWrapScroll);
+      top.removeEventListener('scroll', onTopScroll);
+      window.removeEventListener('resize', updateFillerWidth);
+      if (mo) mo.disconnect();
+    };
+  }, [master, granularity]);
 
   // --- STATE FOR GROUP DROPDOWN ---
   const [groupSearchTerm, setGroupSearchTerm] = useState(
@@ -286,21 +338,40 @@ const App = () => {
     const a = row.activity;
     const mk = pickMetricForActivity(a, null);
 
-    // --- Yearly Progress Cell (must be calculated first) ---
-    const { targetVal, prevVal, currentVal } = getOverallMetrics(a, mk);
-    const targetNum = toNumberOrNull(targetVal);
-    const currentNum = toNumberOrNull(currentVal);
+    // --- Quarterly Total & Yearly Progress (prefer recorded history) ---
+    let quarterlyTotalVal = a.quarterlyTotal !== undefined ? a.quarterlyTotal : null;
+    const recSum = computeQuarterlyRecordsSum(a, mk);
+    if (recSum !== null) quarterlyTotalVal = recSum;
+    const displayQuarterlyTotal = quarterlyTotalVal === null ? '-' : String(quarterlyTotalVal);
+    // compute yearly percent locally when quarterlyTotal is present
     let yearlyProgressPct = null;
-    if (targetNum !== null && currentNum !== null) {
-      if (targetNum > 0) {
-        yearlyProgressPct = (currentNum / targetNum) * 100;
-      } else if (targetNum === 0) {
-        yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
+    if (quarterlyTotalVal !== null) {
+      // compute target sum (sum numeric entries if object)
+      let targetSum = null;
+      try {
+        const tg = a.targetMetric;
+        if (tg && typeof tg === 'object') {
+          targetSum = Object.values(tg).reduce((s, v) => {
+            const n = Number(String(v).replace(/,/g, '').trim());
+            return s + (Number.isFinite(n) ? n : 0);
+          }, 0);
+        } else if (typeof a.targetMetric === 'number') {
+          targetSum = a.targetMetric;
+        }
+      } catch (e) {
+        targetSum = null;
+      }
+      if (targetSum !== null) {
+        if (targetSum > 0) yearlyProgressPct = (Number(quarterlyTotalVal) / targetSum) * 100;
+        else yearlyProgressPct = Number(quarterlyTotalVal) > 0 ? 100 : 0;
       }
     }
-    const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(2)}%`;
+    // prefer backend value if provided
+    if (a.yearlyProgress !== undefined && a.yearlyProgress !== null) yearlyProgressPct = a.yearlyProgress;
+    const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${Number(yearlyProgressPct).toFixed(2)}%`;
+    const quarterlyTotalCell = `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(displayQuarterlyTotal)}</td>`;
     const yearlyProgressCell = `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
-    // --- End Yearly ---
+    // --- End Quarterly/Yearly ---
 
     if (granularity === "quarterly") {
       const quarterlyCells = periodColumns.map(p => {
@@ -316,7 +387,7 @@ const App = () => {
           `<td style="padding:6px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
         ].join("");
       }).join("");
-      return yearlyProgressCell + quarterlyCells;
+      return quarterlyTotalCell + yearlyProgressCell + quarterlyCells;
     }
     // Monthly or Annual
     const periodCells = periodColumns
@@ -339,7 +410,7 @@ const App = () => {
         return `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
       })
       .join("");
-    return yearlyProgressCell + periodCells;
+    return quarterlyTotalCell + yearlyProgressCell + periodCells;
   };
 
   function generateHtmlForPrint() {
@@ -383,15 +454,10 @@ const App = () => {
       const mk = pickMetricForActivity(row.activity, null);
       const { targetVal, prevVal, currentVal } = getOverallMetrics(row.activity, mk);
 
-      // Calculate Yearly Progress
-      const targetNum = toNumberOrNull(targetVal);
-      const currentNum = toNumberOrNull(currentVal);
-      let yearlyProgressPct = null;
-      if (targetNum !== null && currentNum !== null) {
-        if (targetNum > 0) yearlyProgressPct = (currentNum / targetNum) * 100;
-        else if (targetNum === 0) yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
-      }
-      const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(1)}%`;
+      // Use backend-provided quarterlyTotal and yearlyProgress when available
+      const quarterlyTotalVal = row.activity && row.activity.quarterlyTotal !== undefined ? row.activity.quarterlyTotal : null;
+      const yearlyProgressPct = row.activity && row.activity.yearlyProgress !== undefined ? row.activity.yearlyProgress : null;
+      const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${Number(yearlyProgressPct).toFixed(1)}%`;
       const yearlyProgressClass = yearlyProgressPct >= 100 ? 'text-success font-bold' : '';
 
       // Period Cells Logic
@@ -430,8 +496,9 @@ const App = () => {
         </td>
         <td class="cell-center text-muted">${escapeHtml(String(row.weight))}</td>
         <td class="cell-center"><span class="badge-mini">${escapeHtml(mk ?? "")}</span></td>
-        <td class="cell-number font-medium">${escapeHtml(String(targetVal ?? "-"))}</td>
-        <td class="cell-number text-muted">${escapeHtml(String(prevVal ?? "-"))}</td>
+        <td class="cell-number font-medium">${escapeHtml(String(prevVal ?? "-"))}</td>
+        <td class="cell-number text-muted">${escapeHtml(String(targetVal ?? "-"))}</td>
+        <td class="cell-number">${escapeHtml(String(quarterlyTotalVal !== null ? String(quarterlyTotalVal) : '-'))}</td>
         <td class="cell-number ${yearlyProgressClass}">${escapeHtml(displayYearlyProgress)}</td>
         ${periodCells}
       </tr>`;
@@ -934,8 +1001,9 @@ const App = () => {
                  <th class="cell-center" style="width: 8%">${escapeHtml(t("reports.table.metric"))}</th>
                  <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.previous", "Prev"))}</th>
                  <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.target"))}</th>
+                 <th style="text-align:right; width: 12%">${escapeHtml(t("reports.table.quarterlyTotal", "Quarterly Total"))}</th>
+                 <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.yearlyProgress", "Yearly %"))}</th>
                  <th>${columnsHtml}</th>
-                 <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.yearlyProgress", "YTD %"))}</th>
                </tr>
              </thead>
              <tbody>${rowsHtml}</tbody>
@@ -982,16 +1050,18 @@ const App = () => {
       t("reports.table.activity", "Activity"),
       t("reports.table.weight", "Weight"),
       t("reports.table.metric", "Metric"),
-      t("reports.table.target", "Target"),
       t("reports.table.previous", "Previous"),
-      t("reports.table.yearlyProgress", "Yearly Progress %"), // ADDED
+      t("reports.table.target", "Target"),
+      t("reports.table.quarterlyTotal", "Quarterly Total"),
+      t("reports.table.yearlyProgress", "Yearly %"),
       ...periodHeaders,
     ];
 
     const rows = [];
     // MODIFIED: Added 1 more empty cell for Yearly Progress
     const emptyPeriodCells = periodHeaders.map(() => "");
-    const emptyGoalTaskRow = ["", "", "", "", "", ...emptyPeriodCells];
+    // placeholders for: activityNum, activity, weight, metric, prev, target, quarterlyTotal, yearlyProgress + period cells
+    const emptyGoalTaskRow = ["", "", "", "", "", "", "", "", "", "", "", ...emptyPeriodCells];
 
     master.goals.forEach((g, goalIndex) => {
       const goalNum = `${goalIndex + 1}`;
@@ -1010,16 +1080,11 @@ const App = () => {
           const mk = pickMetricForActivity(a, null);
           const { targetVal, prevVal, currentVal } = getOverallMetrics(a, mk); // MODIFIED
 
-          // Calculate Yearly Progress
-          const targetNum = toNumberOrNull(targetVal);
-          const currentNum = toNumberOrNull(currentVal);
-          let yearlyProgressPct = null;
-          if (targetNum !== null && currentNum !== null) {
-            if (targetNum > 0) yearlyProgressPct = (currentNum / targetNum) * 100;
-            else if (targetNum === 0) yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
-          }
-          const displayYearlyProgress = yearlyProgressPct === null ? '' : `${yearlyProgressPct.toFixed(2)}%`;
-          // End Yearly Progress
+          // Prefer summing recorded quarter metrics when available; otherwise fall back to backend value
+          const recSum = computeQuarterlyRecordsSum(a, mk);
+          const quarterlyTotalVal = recSum !== null ? recSum : (a.quarterlyTotal !== undefined && a.quarterlyTotal !== null ? a.quarterlyTotal : null);
+          const displayQuarterlyTotal = quarterlyTotalVal !== null ? String(quarterlyTotalVal) : "";
+          const displayYearlyProgress = a.yearlyProgress !== undefined && a.yearlyProgress !== null ? `${Number(a.yearlyProgress).toFixed(2)}%` : "";
 
           const periodVals = [];
           if (granularity === "quarterly") {
@@ -1049,8 +1114,7 @@ const App = () => {
             });
           }
           rows.push([
-            "", "", "", "", activityNum, a.title, a.weight ?? "", mk ?? "", targetVal ?? "", prevVal ?? "",
-            displayYearlyProgress, // ADDED
+            "", "", "", "", activityNum, a.title, a.weight ?? "", mk ?? "", prevVal ?? "", targetVal ?? "", displayQuarterlyTotal, displayYearlyProgress,
             ...periodVals,
           ]);
         });
@@ -1508,7 +1572,15 @@ const App = () => {
               {t("reports.table.titleFull")}
             </h2>
             {/* MODIFIED: added overflow-x-auto to this container specifically so only the table slides */}
-            <div className="overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1">
+            {/* Top synchronized scrollbar (click/drag here to scroll horizontally) */}
+            <div
+              ref={topScrollRef}
+              className="overflow-x-auto" 
+              style={{ marginBottom: 6, WebkitOverflowScrolling: 'touch' }}
+              aria-hidden="true"
+            />
+
+            <div ref={tableWrapRef} className="overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1">
               <table className="min-w-full">
                 <thead className="bg-gray-300 dark:bg-gray-700">
                   <tr>
@@ -1526,6 +1598,13 @@ const App = () => {
                     </th>
                     <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
                       {t("reports.table.targe", "2018")}
+                    </th>
+                    {/* Quarterly Total and Yearly % (backend-provided) */}
+                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                      {t("reports.table.quarterlyTotal", "Quarterly Total")}
+                    </th>
+                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                      {t("reports.table.yearlyProgress", "Yearly %")}
                     </th>
                     {/* --- Dynamic Headers for Quarterly/Monthly/Annual --- */}
                     {granularity === "quarterly" ? periodColumns.map(p => {
@@ -1551,10 +1630,7 @@ const App = () => {
                         {granularity === "monthly" ? fmtMonthKey(p) : p}
                       </th>
                     ))}
-                    {/* ADDED: Yearly Progress % Header */}
-                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
-                      {t("reports.table.yearlyProgress", "Yearly Progress%")}
-                    </th>
+                    {/* Yearly Progress header moved above (after Target) */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--outline-variant)] dark:divide-gray-600 bg-gray-100 dark:bg-gray-700">
@@ -1582,7 +1658,10 @@ const App = () => {
                           <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
                             —
                           </td>
-                          {/* ADDED: Empty cell for Yearly Progress */}
+                          {/* ADDED: Empty cells for Quarterly Total and Yearly % (moved before period cols) */}
+                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
+                            —
+                          </td>
                           <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
                             —
                           </td>
@@ -1615,7 +1694,7 @@ const App = () => {
                     <tr>
                       <td
                         className="p-6 text-center text-gray-600 dark:text-gray-400 text-base"
-                        colSpan={6 + (granularity === 'quarterly' ? periodColumns.length * 3 : periodColumns.length)}
+                        colSpan={8 + (granularity === 'quarterly' ? periodColumns.length * 3 : periodColumns.length)}
                       >
                         {t("reports.table.noData")}
                       </td>
@@ -1913,6 +1992,24 @@ function parseNumberForPct(x) {
   return toNumberOrNull(x); // Use updated helper
 }
 
+// Sum recorded metric values across all quarters from activity.history
+function computeQuarterlyRecordsSum(activity, metricKey) {
+  if (!activity || !activity.history || !activity.history.quarterly) return null;
+  const quarters = Object.keys(activity.history.quarterly || {});
+  if (!quarters.length) return null;
+  let sum = 0;
+  let foundAny = false;
+  for (const q of quarters) {
+    const v = getLatestMetricValueInPeriod(activity, q, 'quarterly', metricKey);
+    const n = toNumberOrNull(v);
+    if (n !== null) {
+      sum += n;
+      foundAny = true;
+    }
+  }
+  return foundAny ? sum : null;
+}
+
 function getLatestMetricValueInPeriod(
   activity,
   periodKey,
@@ -2076,6 +2173,33 @@ function ActivityRow({
         <div>{typeof targetVal === 'number' ? targetVal.toLocaleString() : targetVal ?? "-"}</div>
       </td>
 
+      {/* NEW: Quarterly Total column (prefer recorded records sum) */}
+      <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}>
+        <div>{(() => {
+          const rec = computeQuarterlyRecordsSum(activity, metricKey);
+          const val = rec !== null ? rec : (activity.quarterlyTotal !== undefined ? activity.quarterlyTotal : null);
+          return typeof val === 'number' ? val.toLocaleString() : (val ?? '-');
+        })()}</div>
+      </td>
+
+      {/* NEW: Progress between Target and Quarterly Total (display as percent) */}
+      {(() => {
+        const tg = toNumberOrNull(targetVal);
+        const rec = computeQuarterlyRecordsSum(activity, metricKey);
+        const ytd = (rec !== null ? rec : (toNumberOrNull(activity.quarterlyTotal) || toNumberOrNull(currentVal))) || 0;
+        let pct = null;
+        if (tg !== null) {
+          if (tg > 0) pct = (ytd / tg) * 100;
+          else pct = ytd > 0 ? 100 : 0;
+        }
+        const disp = pct === null ? '-' : `${pct.toFixed(2)}%`;
+        return (
+          <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}>
+            <div>{disp}</div>
+          </td>
+        );
+      })()}
+
       {/* --- NEW: Dynamic Cells for Quarterly --- */}
       {granularity === "quarterly" ? periods.map(p => {
         // MODIFIED: 'variance' is now 'progress'
@@ -2128,10 +2252,7 @@ function ActivityRow({
         );
       })}
 
-      {/* Yearly Progress % Cell */}
-      <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}>
-        <div>{displayYearlyProgress}</div>
-      </td>
+      {/* Yearly Progress cell moved earlier (after Target) — removed here */}
     </tr>
   );
 }
