@@ -170,7 +170,7 @@ function GoalCard({
   return (
     <article
     key={goal.id}
-    className={`bg-[var(--surface-container-low)] dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-700 rounded-2xl mb-5 overflow-hidden transition-all duration-300 shadow-2xl hover:shadow-md ${
+    className={`bg-white dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-700 rounded-2xl mb-5 overflow-hidden transition-all duration-300 shadow-2xl hover:shadow-md ${
       mounted ? 'animate-fade-in' : ''
     }`}
       role="region"
@@ -420,8 +420,8 @@ function GoalCard({
           }`}
         >
           {(renderContent || isExpanded) && (
-            <div className="mt-6 pt-4 border-t border-[var(--outline-variant)] dark:border-gray-700">
-              <div className="flex items-center justify-between mb-4">
+            <div className="mt-6 pt-4 border-t border-l border-r border-[var(--outline-variant)] dark:border-gray-700 rounded-xl bg-gray-100 dark:bg-gray-700">
+              <div className="flex items-center justify-between mb-2 px-4">
                 <h4 className="text-base font-semibold text-[var(--on-surface)] dark:text-white flex items-center gap-2">
                   <ListChecks className="h-5 w-5 text-green-800 dark:text-indigo-600" /> {t("project.sections.tasks") || "Tasks"}
                 </h4>
