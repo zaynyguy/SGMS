@@ -169,7 +169,7 @@
     },
     "form": {
       "picture": "Office picture",
-      "pictureHint":"PNG, JPG up to 5MB",
+      "pictureHint": "PNG, JPG up to 5MB",
       "title": {
         "create": "Create Office",
         "edit": "Edit Office"
@@ -280,7 +280,7 @@
     "noReports4": "No reports found",
     "noReports5": "No reports found.",
     "footer": {
-      "systemName": "Officemate"
+      "systemName": "SGMS"
     },
     "status2": {
       "Approved": "Approved",
@@ -357,7 +357,7 @@
         "pending": "Pending",
         "unknown": "—"
       },
-       "charts": {
+      "charts": {
         "goalProgress": "Goal Progress"
       },
       "goals": {
@@ -579,7 +579,7 @@
       "Download": "Download"
     },
     "logoAlt": "Company logo",
-    "appName": "Officemate",
+    "appName": "SGMS",
     "profileAlt": "User profile picture",
     "logout": "Log out",
     "openMenu": "Open sidebar menu",
@@ -635,7 +635,7 @@
       "label": "Sort",
       "title": "Title",
       "created": "Created Date",
-      "rollNo":"Roll Number",
+      "rollNo": "Roll Number",
       "ascending": "Ascending",
       "descending": "Descending",
       "asc": "A–Z",
@@ -684,7 +684,7 @@
       "status": "Status",
       "previous": "Previous",
       "target": "Target",
-      "current":"Current",
+      "current": "Current",
       "metrics": "Metrics",
       "quarterlyGoals": "Quarterly Goals"
     },
@@ -722,7 +722,7 @@
       "metrics": "Add metrics as key/value pairs.",
       "attachments": "Max files: server-side limit applies.",
       "hint": "Optional. Positive integer. If left blank the system will auto-assign.",
-      "metricRemaining": "Current: {{current}} / {{target}} (Remaining: {{remaining}})", 
+      "metricRemaining": "Current: {{current}} / {{target}} (Remaining: {{remaining}})",
       "maxAttachments": "Max 5 attachments.",
       "overallHint": "Overall Target: {{target}}. Total progress: {{used}}. Remaining: {{remaining}}."
     },
@@ -819,7 +819,7 @@
   },
   "login": {
     "company_logo_alt": "Company logo",
-    "title": "Officemate",
+    "title": "SGMS",
     "subtitle": "Welcome back",
     "form_title": "Log in to your account",
     "username_label": "Username",

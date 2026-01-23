@@ -47,7 +47,7 @@
     "table": {
       "file": "Dosee",
       "type": "Akaakuu",
-                  "context": "Haala wanta tokkoo",
+      "context": "Haala wanta tokkoo",
       "uploaded": "Olkaa'ameera",
       "actions": "Gochaalee"
     },
@@ -67,13 +67,13 @@
     "title": "Galmee odiitii",
     "subtitle": "Galmee tartiiba yeroo taateewwan sirnaa, nageenyaa fi sochii fayyadamaa ilaali.",
     "loadFailed": "Galmeewwan odiitii fe'uu hin dandeenye",
-    "pageInfo": "Fuula {{page}} kan {{totalPages}}", 
-"prev": "Fuula Duraa", 
-"pageFooter": "Galmeewwan {{showing}} agarsiisaa jira — fuula {{page}}/{{totalPages}} ({{total}} waliigala)", 
-"first": "Fuula Tokkoffaa", 
-"gotoPage": "Gara Fuulaatti Deemi", 
-"next": "Fuula Itti Aanu", 
-"last": "Fuula Dhumaa",
+    "pageInfo": "Fuula {{page}} kan {{totalPages}}",
+    "prev": "Fuula Duraa",
+    "pageFooter": "Galmeewwan {{showing}} agarsiisaa jira — fuula {{page}}/{{totalPages}} ({{total}} waliigala)",
+    "first": "Fuula Tokkoffaa",
+    "gotoPage": "Gara Fuulaatti Deemi",
+    "next": "Fuula Itti Aanu",
+    "last": "Fuula Dhumaa",
     "exportCsv": "CSV erguu",
     "csv": {
       "filename": "odiitii-logs.csv"
@@ -170,7 +170,7 @@
     },
     "form": {
       "picture": "Suuraa waajjira",
-      "pictureHint":"PNG, JPG up to 5MB",
+      "pictureHint": "PNG, JPG up to 5MB",
       "title": {
         "create": "Garee uumuu",
         "edit": "Garee gulaaluu"
@@ -281,7 +281,7 @@
     "noReports4": "Gabaasni hin argamne",
     "noReports5": "Gabaasni hin argamne.",
     "footer": {
-      "systemName": "Officemate"
+      "systemName": "SGMS"
     },
     "status2": {
       "Approved": "Mirkanaa'e",
@@ -322,21 +322,21 @@
       "generatedAt": "Maddisiifame irratti {{date}}",
       "allGroups": "Garee hunda",
       "granularityLabel": "granularity jedhamuun beekama",
-      "currentLabel": "Amma", 
-      "previousText": "Duraa", 
+      "currentLabel": "Amma",
+      "previousText": "Duraa",
       "quarterlyGoals": "Galmoota Kurmaana Kurmaana",
-      "yearRequired": "Maaloo waggaa tokko galchi", 
-      "monthRequired": "Maaloo ji'a filadhu", 
-      "quarterRequired": "Maaloo yoo xiqqaate afurtama tokko filadhu", 
-      "selectMonth": "Ji'a filadhu", 
-      "selectYear": "Bara filadhu", 
-      "assignMonths": "Ji'oota ramadi", 
-      "calendarSystem": "Sirna Kaalaandarii", 
-      "itophiyaa": "Itoophiyaa", 
+      "yearRequired": "Maaloo waggaa tokko galchi",
+      "monthRequired": "Maaloo ji'a filadhu",
+      "quarterRequired": "Maaloo yoo xiqqaate afurtama tokko filadhu",
+      "selectMonth": "Ji'a filadhu",
+      "selectYear": "Bara filadhu",
+      "assignMonths": "Ji'oota ramadi",
+      "calendarSystem": "Sirna Kaalaandarii",
+      "itophiyaa": "Itoophiyaa",
       "gregorian": "Girigooriyaan",
-      "monthLabel": "Ji'a", 
-      "selectQuarters": "Kudhaama filadhu", 
-      "yearLabel": "Waggaa", 
+      "monthLabel": "Ji'a",
+      "selectQuarters": "Kudhaama filadhu",
+      "yearLabel": "Waggaa",
       "noMonthsAssigned": "Ji'oonni hin ramadamne",
       "groupSearchLabel": "Garee barbaadi",
       "granularities": {
@@ -358,7 +358,7 @@
         "pending": "Eeggataa kan jiru",
         "unknown": "—"
       },
-       "charts": {
+      "charts": {
         "goalProgress": "Adeemsa Galma"
       },
       "goals": {
@@ -580,7 +580,7 @@
       "chats": "Waliigala"
     },
     "logoAlt": "Asxaa dhaabbatichaa",
-    "appName": "Officemate",
+    "appName": "SGMS",
     "profileAlt": "Suuraa piroofaayilii fayyadamaa",
     "logout": "Ba'aa",
     "openMenu": "Menuu barruu cinaa banaa",
@@ -636,7 +636,7 @@
       "label": "Sassaabuu",
       "title": "Mata duree",
       "created": "Guyyaa Uumame",
-      "rollNo":"Lakkoofsa Galmee",
+      "rollNo": "Lakkoofsa Galmee",
       "ascending": "Olba'aa",
       "descending": "Gadi bu'aa",
       "asc": "A–Z",
@@ -685,7 +685,7 @@
       "status": "Haala",
       "previous": "Kana dura",
       "target": "Xiyyeeffannoo",
-      "current":"Amma",
+      "current": "Amma",
       "metrics": "Safartuuwwan",
       "quarterlyGoals": "Galmoota Kurmaana Kurmaanaa"
     },
@@ -705,7 +705,7 @@
       "optional": "(dirqama)",
       "previousMetrics": "Safartuuwwan Duraa",
       "selectedFiles": "Faayilota Filataman:",
-      "quickInfo": "Odeeffannoo saffisaa", 
+      "quickInfo": "Odeeffannoo saffisaa",
       "totalTarget": "Galmee waliigalaa"
     },
 
@@ -819,7 +819,7 @@
   },
   "login": {
     "company_logo_alt": "Asxaa dhaabbataa",
-    "title": "Officemate",
+    "title": "SGMS",
     "subtitle": "Welcome back",
     "form_title": "Akkaawuntii kee keessa seeni",
     "username_label": "Maqaa fayyadamaa",
@@ -860,21 +860,21 @@
         "fromLast": "yeroo darbe irraa",
         "noComparison": "Guddina Galma Waliigalaa",
         "outOf": "keessaa bahee",
-        "haveBeenDone":"raawwatamaniiru"
+        "haveBeenDone": "raawwatamaniiru"
       },
       "tasks": {
         "title": "Hojiiwwan",
         "aria": "Hojiiwwan banaa",
         "subtitle": "Adeemsa Hojii Waliigalaa",
         "outOf": "keessaa bahee",
-        "haveBeenDone":"raawwatamaniiru"
+        "haveBeenDone": "raawwatamaniiru"
       },
       "activities": {
         "title": "Gochaalee",
         "aria": "Sochii banaa",
         "subtitle": "Adeemsa Hojii waliigalaa",
         "outOf": "keessaa bahee",
-        "haveBeenDone":"raawwatamaniiru"
+        "haveBeenDone": "raawwatamaniiru"
       },
       "pendingReports": {
         "title": "Gabaasawwan eegamaa jiran",
@@ -920,9 +920,9 @@
     "unread": "beeksisa hin dubbifamne",
     "markAll": "Hunda akka dubbifameetti mallatteessi",
     "toasts": {
-    "markedRead": "Beeksisni akka milkaa'inaan dubbifameetti mallatteeffameera!",
-    "markAllRead": "Beeksisni hundi akka dubbifameetti mallatteeffame milkaa'inaan!"
-  },
+      "markedRead": "Beeksisni akka milkaa'inaan dubbifameetti mallatteeffameera!",
+      "markAllRead": "Beeksisni hundi akka dubbifameetti mallatteeffame milkaa'inaan!"
+    },
     "filter": {
       "label": "Calkala:",
       "all": "Hunda",
@@ -964,7 +964,7 @@
     "viewAll": "Hunda ilaali",
     "refresh": "Haaromsuu"
   },
-    "chat": {
+  "chat": {
     "title": "Waliigala",
     "recent": "Waliigala Dhiheenya",
     "loading": "Fe'aa jira...",

@@ -1,5 +1,13 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Loader, Download, Printer, Table2, ChevronRight, Moon, Sun } from "lucide-react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import {
+  Loader,
+  Download,
+  Printer,
+  Table2,
+  ChevronRight,
+  Moon,
+  Sun,
+} from "lucide-react";
 import { fetchMasterReport } from "../api/reports";
 import { useTranslation } from "react-i18next";
 import { fetchGroups } from "../api/groups";
@@ -110,6 +118,59 @@ const App = () => {
   const [granularity, setGranularity] = useState("quarterly");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Refs for synchronized top scrollbar
+  const tableWrapRef = useRef(null);
+  const topScrollRef = useRef(null);
+
+  useEffect(() => {
+    const wrap = tableWrapRef.current;
+    const top = topScrollRef.current;
+    if (!wrap || !top) return;
+
+    // inner filler element inside top scroll container to match table width
+    let filler = top.querySelector(".top-scroll-filler");
+    function updateFillerWidth() {
+      const table = wrap.querySelector("table");
+      if (!table) return;
+      const w = table.scrollWidth;
+      if (!filler) {
+        filler = document.createElement("div");
+        filler.className = "top-scroll-filler";
+        filler.style.height = "1px";
+        filler.style.width = `${w}px`;
+        top.appendChild(filler);
+      } else {
+        filler.style.width = `${w}px`;
+      }
+    }
+
+    updateFillerWidth();
+
+    const onWrapScroll = () => {
+      if (top && wrap) top.scrollLeft = wrap.scrollLeft;
+    };
+    const onTopScroll = () => {
+      if (top && wrap) wrap.scrollLeft = top.scrollLeft;
+    };
+
+    wrap.addEventListener("scroll", onWrapScroll, { passive: true });
+    top.addEventListener("scroll", onTopScroll, { passive: true });
+    window.addEventListener("resize", updateFillerWidth);
+
+    // Mutation observer in case table content changes width
+    const mo = new MutationObserver(updateFillerWidth);
+    const tableEl = wrap.querySelector("table");
+    if (tableEl)
+      mo.observe(tableEl, { childList: true, subtree: true, attributes: true });
+
+    return () => {
+      wrap.removeEventListener("scroll", onWrapScroll);
+      top.removeEventListener("scroll", onTopScroll);
+      window.removeEventListener("resize", updateFillerWidth);
+      if (mo) mo.disconnect();
+    };
+  }, [master, granularity]);
+
   // --- STATE FOR GROUP DROPDOWN ---
   const [groupSearchTerm, setGroupSearchTerm] = useState(
     t("reports.master.allGroups", "All Groups")
@@ -127,7 +188,9 @@ const App = () => {
 
   // Try to respect system preference initially
   useEffect(() => {
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
     setDarkMode(prefersDark);
   }, []);
 
@@ -254,10 +317,16 @@ const App = () => {
         .map((p) => {
           const label = fmtQuarterKey(p);
           return [
-            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qGoal", "Goal"))} (${escapeHtml(label)})</th>`,
-            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qRecord", "Record"))} (${escapeHtml(label)})</th>`,
+            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(
+              t("reports.table.qGoal", "Goal")
+            )} (${escapeHtml(label)})</th>`,
+            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(
+              t("reports.table.qRecord", "Record")
+            )} (${escapeHtml(label)})</th>`,
             // MODIFIED: Header label changed to "Progress %"
-            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(t("reports.table.qProgress", "Progress %"))} (${escapeHtml(label)})</th>`,
+            `<th style="padding:6px;border:1px solid #ddd;background:#f3f4f6">${escapeHtml(
+              t("reports.table.qProgress", "Progress %")
+            )} (${escapeHtml(label)})</th>`,
           ].join("");
         })
         .join("");
@@ -278,55 +347,94 @@ const App = () => {
   const periodCellsHtml = (row) => {
     const emptyCell = `<td style="padding:6px;border:1px solid #ddd">—</td>`;
     if (row.type === "goal" || row.type === "task") {
-      const numCols = granularity === "quarterly" ? periodColumns.length * 3 : periodColumns.length;
+      const numCols =
+        granularity === "quarterly"
+          ? periodColumns.length * 3
+          : periodColumns.length;
       // Add 1 for the new Yearly Progress % column
-      return Array(numCols + 1).fill(emptyCell).join("");
+      return Array(numCols + 1)
+        .fill(emptyCell)
+        .join("");
     }
     // Activity row
     const a = row.activity;
     const mk = pickMetricForActivity(a, null);
 
-    // --- Yearly Progress Cell (must be calculated first) ---
-    const { targetVal, prevVal, currentVal } = getOverallMetrics(a, mk);
-    const targetNum = toNumberOrNull(targetVal);
-    const currentNum = toNumberOrNull(currentVal);
+    // --- Quarterly Total & Yearly Progress (prefer recorded history) ---
+    let quarterlyTotalVal =
+      a.quarterlyTotal !== undefined ? a.quarterlyTotal : null;
+    const recSum = computeQuarterlyRecordsSum(a, mk);
+    if (recSum !== null) quarterlyTotalVal = recSum;
+    const displayQuarterlyTotal =
+      quarterlyTotalVal === null ? "-" : String(quarterlyTotalVal);
+    // compute yearly percent locally when quarterlyTotal is present
     let yearlyProgressPct = null;
-    if (targetNum !== null && currentNum !== null) {
-      if (targetNum > 0) {
-        yearlyProgressPct = (currentNum / targetNum) * 100;
-      } else if (targetNum === 0) {
-        yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
+    if (quarterlyTotalVal !== null) {
+      // compute target sum (sum numeric entries if object)
+      let targetSum = null;
+      try {
+        const tg = a.targetMetric;
+        if (tg && typeof tg === "object") {
+          targetSum = Object.values(tg).reduce((s, v) => {
+            const n = Number(String(v).replace(/,/g, "").trim());
+            return s + (Number.isFinite(n) ? n : 0);
+          }, 0);
+        } else if (typeof a.targetMetric === "number") {
+          targetSum = a.targetMetric;
+        }
+      } catch (e) {
+        targetSum = null;
+      }
+      if (targetSum !== null) {
+        if (targetSum > 0)
+          yearlyProgressPct = (Number(quarterlyTotalVal) / targetSum) * 100;
+        else yearlyProgressPct = Number(quarterlyTotalVal) > 0 ? 100 : 0;
       }
     }
-    const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(2)}%`;
-    const yearlyProgressCell = `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(displayYearlyProgress)}</td>`;
-    // --- End Yearly ---
+    // prefer backend value if provided
+    if (a.yearlyProgress !== undefined && a.yearlyProgress !== null)
+      yearlyProgressPct = a.yearlyProgress;
+    const displayYearlyProgress =
+      yearlyProgressPct === null
+        ? "-"
+        : `${Number(yearlyProgressPct).toFixed(2)}%`;
+    const quarterlyTotalCell = `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(
+      displayQuarterlyTotal
+    )}</td>`;
+    const yearlyProgressCell = `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(
+      displayYearlyProgress
+    )}</td>`;
+    // --- End Quarterly/Yearly ---
 
     if (granularity === "quarterly") {
-      const quarterlyCells = periodColumns.map(p => {
-        // MODIFIED: 'variance' is now 'progress'
-        const { goal, record, progress } = getQuarterlyStats(a, p, mk);
-        // MODIFIED: Format the percentage value
-        const displayProgress = progress === null ? '-' : `${progress.toFixed(2)}%`;
+      const quarterlyCells = periodColumns
+        .map((p) => {
+          // MODIFIED: 'variance' is now 'progress'
+          const { goal, record, progress } = getQuarterlyStats(a, p, mk);
+          // MODIFIED: Format the percentage value
+          const displayProgress =
+            progress === null ? "-" : `${progress.toFixed(2)}%`;
 
-        return [
-          `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(goal ?? "-"))}</td>`,
-          `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(record ?? "-"))}</td>`,
-          // MODIFIED: Display the formatted percentage
-          `<td style="padding:6px;border:1px solid #ddd;">${escapeHtml(displayProgress)}</td>`
-        ].join("");
-      }).join("");
-      return yearlyProgressCell + quarterlyCells;
+          return [
+            `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(
+              String(goal ?? "-")
+            )}</td>`,
+            `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(
+              String(record ?? "-")
+            )}</td>`,
+            // MODIFIED: Display the formatted percentage
+            `<td style="padding:6px;border:1px solid #ddd;">${escapeHtml(
+              displayProgress
+            )}</td>`,
+          ].join("");
+        })
+        .join("");
+      return quarterlyTotalCell + yearlyProgressCell + quarterlyCells;
     }
     // Monthly or Annual
     const periodCells = periodColumns
       .map((p) => {
-        const v = getLatestMetricValueInPeriod(
-          a,
-          p,
-          granularity,
-          mk
-        );
+        const v = getLatestMetricValueInPeriod(a, p, granularity, mk);
         if (v === null || v === undefined) return emptyCell;
         let dv = v;
         if (typeof dv === "object") {
@@ -334,12 +442,16 @@ const App = () => {
             const k = Object.keys(dv || {})[0];
             if (k) dv = dv[k];
             else dv = JSON.stringify(dv);
-          } catch (e) { dv = JSON.stringify(dv); }
+          } catch (e) {
+            dv = JSON.stringify(dv);
+          }
         }
-        return `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(String(dv))}</td>`;
+        return `<td style="padding:6px;border:1px solid #ddd">${escapeHtml(
+          String(dv)
+        )}</td>`;
       })
       .join("");
-    return yearlyProgressCell + periodCells;
+    return quarterlyTotalCell + yearlyProgressCell + periodCells;
   };
 
   function generateHtmlForPrint() {
@@ -349,9 +461,10 @@ const App = () => {
     const fontFamily = `'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif`;
 
     // --- Helper: Visual Progress Bar ---
-    const createProgressBar = (pct, size = 'md') => {
+    const createProgressBar = (pct, size = "md") => {
       const p = Math.max(0, Math.min(100, pct || 0));
-      const colorClass = p >= 100 ? 'bg-success' : (p > 50 ? 'bg-primary' : 'bg-warning');
+      const colorClass =
+        p >= 100 ? "bg-success" : p > 50 ? "bg-primary" : "bg-warning";
       return `
       <div class="progress-track size-${size}">
         <div class="progress-fill ${colorClass}" style="width: ${p}%"></div>
@@ -360,150 +473,263 @@ const App = () => {
     };
 
     // --- Helper: Generate Table Rows ---
-    const rowsHtml = tableRows.map((row, index) => {
-      const titleWithNumber = `${row.number}. ${row.title}`;
-      const rowClass = row.type === 'goal' ? 'row-goal' : (row.type === 'task' ? 'row-task' : 'row-activity');
+    const rowsHtml = tableRows
+      .map((row, index) => {
+        const titleWithNumber = `${row.number}. ${row.title}`;
+        const rowClass =
+          row.type === "goal"
+            ? "row-goal"
+            : row.type === "task"
+            ? "row-task"
+            : "row-activity";
 
-      // Non-activity rows (Headers)
-      if (row.type !== "activity") {
-        const emptyQuarterlyCells = granularity === "quarterly" ? periodColumns.length * 3 : periodColumns.length;
-        const emptyCells = Array(emptyQuarterlyCells + 1).fill(0).map(() => `<td class="cell-empty"></td>`).join("");
-        return `
+        // Non-activity rows (Headers)
+        if (row.type !== "activity") {
+          const emptyQuarterlyCells =
+            granularity === "quarterly"
+              ? periodColumns.length * 3
+              : periodColumns.length;
+          const emptyCells = Array(emptyQuarterlyCells + 1)
+            .fill(0)
+            .map(() => `<td class="cell-empty"></td>`)
+            .join("");
+          return `
         <tr class="${rowClass}">
           <td class="cell-title">
              <div class="title-wrapper">${escapeHtml(titleWithNumber)}</div>
           </td>
-          <td class="cell-center font-medium opacity-70">${escapeHtml(String(row.weight))}</td>
+          <td class="cell-center font-medium opacity-70">${escapeHtml(
+            String(row.weight)
+          )}</td>
           <td class="cell-empty" colspan="4"></td>
           ${emptyCells}
         </tr>`;
-      }
+        }
 
-      // Activity row logic
-      const mk = pickMetricForActivity(row.activity, null);
-      const { targetVal, prevVal, currentVal } = getOverallMetrics(row.activity, mk);
+        // Activity row logic
+        const mk = pickMetricForActivity(row.activity, null);
+        const { targetVal, prevVal, currentVal } = getOverallMetrics(
+          row.activity,
+          mk
+        );
 
-      // Calculate Yearly Progress
-      const targetNum = toNumberOrNull(targetVal);
-      const currentNum = toNumberOrNull(currentVal);
-      let yearlyProgressPct = null;
-      if (targetNum !== null && currentNum !== null) {
-        if (targetNum > 0) yearlyProgressPct = (currentNum / targetNum) * 100;
-        else if (targetNum === 0) yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
-      }
-      const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(1)}%`;
-      const yearlyProgressClass = yearlyProgressPct >= 100 ? 'text-success font-bold' : '';
+        // Use backend-provided quarterlyTotal and yearlyProgress when available
+        const quarterlyTotalVal =
+          row.activity && row.activity.quarterlyTotal !== undefined
+            ? row.activity.quarterlyTotal
+            : null;
+        const yearlyProgressPct =
+          row.activity && row.activity.yearlyProgress !== undefined
+            ? row.activity.yearlyProgress
+            : null;
+        const displayYearlyProgress =
+          yearlyProgressPct === null
+            ? "-"
+            : `${Number(yearlyProgressPct).toFixed(1)}%`;
+        const yearlyProgressClass =
+          yearlyProgressPct >= 100 ? "text-success font-bold" : "";
 
-      // Period Cells Logic
-      let periodCells = "";
-      if (granularity === "quarterly") {
-        periodCells = periodColumns.map(p => {
-          const { goal, record, progress } = getQuarterlyStats(row.activity, p, mk);
-          const displayProgress = progress === null ? '' : `${progress.toFixed(0)}%`;
-          const progressColor = (progress || 0) >= 100 ? 'text-success' : 'text-muted';
-          return `
+        // Period Cells Logic
+        let periodCells = "";
+        if (granularity === "quarterly") {
+          periodCells = periodColumns
+            .map((p) => {
+              const { goal, record, progress } = getQuarterlyStats(
+                row.activity,
+                p,
+                mk
+              );
+              const displayProgress =
+                progress === null ? "" : `${progress.toFixed(0)}%`;
+              const progressColor =
+                (progress || 0) >= 100 ? "text-success" : "text-muted";
+              return `
             <td class="cell-sub-val">${escapeHtml(String(goal ?? ""))}</td>
-            <td class="cell-sub-val font-medium">${escapeHtml(String(record ?? ""))}</td>
-            <td class="cell-sub-val ${progressColor} text-xs">${escapeHtml(displayProgress)}</td>
+            <td class="cell-sub-val font-medium">${escapeHtml(
+              String(record ?? "")
+            )}</td>
+            <td class="cell-sub-val ${progressColor} text-xs">${escapeHtml(
+                displayProgress
+              )}</td>
           `;
-        }).join("");
-      } else {
-        periodCells = periodColumns.map((p) => {
-          const v = getLatestMetricValueInPeriod(row.activity, p, granularity, mk);
-          if (v === null || v === undefined) return `<td class="cell-empty"></td>`;
-          let dv = v;
-          if (typeof dv === "object") {
-            try {
-              const k = Object.keys(dv || {})[0];
-              if (k) dv = dv[k]; else dv = JSON.stringify(dv);
-            } catch (e) { dv = JSON.stringify(dv); }
-          }
-          return `<td class="cell-number">${escapeHtml(String(dv))}</td>`;
-        }).join("");
-      }
+            })
+            .join("");
+        } else {
+          periodCells = periodColumns
+            .map((p) => {
+              const v = getLatestMetricValueInPeriod(
+                row.activity,
+                p,
+                granularity,
+                mk
+              );
+              if (v === null || v === undefined)
+                return `<td class="cell-empty"></td>`;
+              let dv = v;
+              if (typeof dv === "object") {
+                try {
+                  const k = Object.keys(dv || {})[0];
+                  if (k) dv = dv[k];
+                  else dv = JSON.stringify(dv);
+                } catch (e) {
+                  dv = JSON.stringify(dv);
+                }
+              }
+              return `<td class="cell-number">${escapeHtml(String(dv))}</td>`;
+            })
+            .join("");
+        }
 
-      return `
+        return `
       <tr class="${rowClass}">
         <td class="cell-title indent-activity">
            <span class="activity-dot"></span>
            ${escapeHtml(titleWithNumber)}
         </td>
-        <td class="cell-center text-muted">${escapeHtml(String(row.weight))}</td>
-        <td class="cell-center"><span class="badge-mini">${escapeHtml(mk ?? "")}</span></td>
-        <td class="cell-number font-medium">${escapeHtml(String(targetVal ?? "-"))}</td>
-        <td class="cell-number text-muted">${escapeHtml(String(prevVal ?? "-"))}</td>
-        <td class="cell-number ${yearlyProgressClass}">${escapeHtml(displayYearlyProgress)}</td>
+        <td class="cell-center text-muted">${escapeHtml(
+          String(row.weight)
+        )}</td>
+        <td class="cell-center"><span class="badge-mini">${escapeHtml(
+          mk ?? ""
+        )}</span></td>
+        <td class="cell-number font-medium">${escapeHtml(
+          String(prevVal ?? "-")
+        )}</td>
+        <td class="cell-number text-muted">${escapeHtml(
+          String(targetVal ?? "-")
+        )}</td>
+        <td class="cell-number">${escapeHtml(
+          String(quarterlyTotalVal !== null ? String(quarterlyTotalVal) : "-")
+        )}</td>
+        <td class="cell-number ${yearlyProgressClass}">${escapeHtml(
+          displayYearlyProgress
+        )}</td>
         ${periodCells}
       </tr>`;
-    }).join("");
+      })
+      .join("");
 
     // --- Helper: Generate Narratives ---
-    const narrativesHtml = data.goals.map((g, goalIndex) => {
-      const goalNum = `${goalIndex + 1}`;
-      const goalProgress = g.progress ?? 0;
+    const narrativesHtml = data.goals
+      .map((g, goalIndex) => {
+        const goalNum = `${goalIndex + 1}`;
+        const goalProgress = g.progress ?? 0;
 
-      const tasksHtml = (g.tasks || []).map((task, taskIndex) => {
-        const taskNum = `${goalNum}.${taskIndex + 1}`;
+        const tasksHtml = (g.tasks || [])
+          .map((task, taskIndex) => {
+            const taskNum = `${goalNum}.${taskIndex + 1}`;
 
-        const activitiesHtml = (task.activities || []).map((activity, activityIndex) => {
-          const activityNum = `${taskNum}.${activityIndex + 1}`;
-          
-          // Stat items
-          const metricItems = [
-             { label: t("reports.master.metrics.target"), value: activity.targetMetric, icon: '  🎯  ' },
-             { label: t("reports.master.metrics.current"), value: activity.currentMetric, icon: '  ⚡  ' },
-             { label: t("reports.master.metrics.previous"), value: activity.previousMetric, icon: '  ⏮  ️' },
-             { label: t("reports.master.metrics.quarterly"), value: activity.quarterlyGoals, icon: '  📅  ' }
-          ].map(item => `
+            const activitiesHtml = (task.activities || [])
+              .map((activity, activityIndex) => {
+                const activityNum = `${taskNum}.${activityIndex + 1}`;
+
+                // Stat items
+                const metricItems = [
+                  {
+                    label: t("reports.master.metrics.target"),
+                    value: activity.targetMetric,
+                    icon: "  🎯  ",
+                  },
+                  {
+                    label: t("reports.master.metrics.current"),
+                    value: activity.currentMetric,
+                    icon: "  ⚡  ",
+                  },
+                  {
+                    label: t("reports.master.metrics.previous"),
+                    value: activity.previousMetric,
+                    icon: "  ⏮  ️",
+                  },
+                  {
+                    label: t("reports.master.metrics.quarterly"),
+                    value: activity.quarterlyGoals,
+                    icon: "  📅  ",
+                  },
+                ]
+                  .map(
+                    (item) => `
             <div class="stat-item">
               <div class="stat-content">
                 <div class="stat-label">${escapeHtml(item.label)}</div>
-                <div class="stat-value">${item.value ? escapeHtml(JSON.stringify(item.value)) : "—"}</div>
+                <div class="stat-value">${
+                  item.value ? escapeHtml(JSON.stringify(item.value)) : "—"
+                }</div>
               </div>
             </div>
-          `).join("");
+          `
+                  )
+                  .join("");
 
-          // Reports Timeline
-          const reportsList = (activity.reports || []).map(r => `
+                // Reports Timeline
+                const reportsList = (activity.reports || [])
+                  .map(
+                    (r) => `
             <div class="timeline-item">
               <div class="timeline-marker"></div>
               <div class="timeline-content">
                 <div class="timeline-header">
                   <span class="report-id">#${escapeHtml(String(r.id))}</span>
-                  <span class="status-pill status-${String(r.status || "").toLowerCase()}">${escapeHtml(String(r.status || "unknown").toLowerCase())}</span>
-                  <span class="report-date">${r.createdAt ? escapeHtml(new Date(r.createdAt).toLocaleDateString()) : ""}</span>
+                  <span class="status-pill status-${String(
+                    r.status || ""
+                  ).toLowerCase()}">${escapeHtml(
+                      String(r.status || "unknown").toLowerCase()
+                    )}</span>
+                  <span class="report-date">${
+                    r.createdAt
+                      ? escapeHtml(new Date(r.createdAt).toLocaleDateString())
+                      : ""
+                  }</span>
                 </div>
                 <div class="report-text">${escapeHtml(r.narrative || "")}</div>
-                ${r.metrics ? `<div class="report-meta">${escapeHtml(t("reports.master.metricsName"))}: ${escapeHtml(JSON.stringify(r.metrics))}</div>` : ''}
+                ${
+                  r.metrics
+                    ? `<div class="report-meta">${escapeHtml(
+                        t("reports.master.metricsName")
+                      )}: ${escapeHtml(JSON.stringify(r.metrics))}</div>`
+                    : ""
+                }
               </div>
             </div>
-          `).join("");
+          `
+                  )
+                  .join("");
 
-          return `
+                return `
           <div class="card activity-card">
             <div class="card-header-activity">
-              <span class="activity-title">${escapeHtml(`${activityNum} ${activity.title}`)}</span>
+              <span class="activity-title">${escapeHtml(
+                `${activityNum} ${activity.title}`
+              )}</span>
             </div>
             <div class="card-body">
               <div class="stats-grid">
                 ${metricItems}
               </div>
-              ${reportsList ? `<div class="timeline-container">${reportsList}</div>` : ''}
+              ${
+                reportsList
+                  ? `<div class="timeline-container">${reportsList}</div>`
+                  : ""
+              }
             </div>
           </div>
           `;
-        }).join("");
+              })
+              .join("");
 
-        return `
+            return `
         <div class="task-block">
           <div class="task-title-row">
             <h3>${escapeHtml(`${taskNum} ${task.title}`)}</h3>
             <div class="task-meta">
               <div class="progress-micro-wrapper">
-                 <span class="progress-text">${escapeHtml(String(task.progress ?? 0))}%</span>
-                 ${createProgressBar(task.progress, 'sm')}
+                 <span class="progress-text">${escapeHtml(
+                   String(task.progress ?? 0)
+                 )}%</span>
+                 ${createProgressBar(task.progress, "sm")}
               </div>
-              ${escapeHtml(t("reports.master.task.weight"))}: ${escapeHtml(String(task.weight ?? "-"))}
+              ${escapeHtml(t("reports.master.task.weight"))}: ${escapeHtml(
+              String(task.weight ?? "-")
+            )}
             </div>
           </div>
           <div class="activities-grid">
@@ -511,9 +737,10 @@ const App = () => {
           </div>
         </div>
         `;
-      }).join("");
+          })
+          .join("");
 
-      return `
+        return `
       <div class="goal-section">
         <div class="goal-banner">
           <div class="goal-info">
@@ -523,7 +750,9 @@ const App = () => {
                  ${escapeHtml(g.status)}
                </span>
                <span class="tag">
-                 ${escapeHtml(t("reports.master.goals.weight"))}: ${escapeHtml(String(g.weight ?? "-"))}
+                 ${escapeHtml(t("reports.master.goals.weight"))}: ${escapeHtml(
+          String(g.weight ?? "-")
+        )}
                </span>
             </div>
           </div>
@@ -542,13 +771,16 @@ const App = () => {
         </div>
       </div>
       `;
-    }).join("");
+      })
+      .join("");
 
     const title = t("reports.master.title");
     const groupLabel = t("reports.master.groupLabel");
     const narratives = t("reports.master.narratives");
     const dataTable = t("reports.master.dataTable");
-    const generated = t("reports.master.generatedAt", { date: new Date().toLocaleString() });
+    const generated = t("reports.master.generatedAt", {
+      date: new Date().toLocaleString(),
+    });
 
     return `<!doctype html>
     <html>
@@ -929,13 +1161,28 @@ const App = () => {
           <table>
              <thead>
                <tr>
-                 <th class="cell-title">${escapeHtml(t("reports.table.title"))}</th>
-                 <th class="cell-center" style="width: 8%">${escapeHtml(t("reports.table.weight"))}</th>
-                 <th class="cell-center" style="width: 8%">${escapeHtml(t("reports.table.metric"))}</th>
-                 <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.previous", "Prev"))}</th>
-                 <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.target"))}</th>
+                 <th class="cell-title">${escapeHtml(
+                   t("reports.table.title")
+                 )}</th>
+                 <th class="cell-center" style="width: 8%">${escapeHtml(
+                   t("reports.table.weight")
+                 )}</th>
+                 <th class="cell-center" style="width: 8%">${escapeHtml(
+                   t("reports.table.metric")
+                 )}</th>
+                 <th style="text-align:right; width: 10%">${escapeHtml(
+                   t("reports.table.previous", "Prev")
+                 )}</th>
+                 <th style="text-align:right; width: 10%">${escapeHtml(
+                   t("reports.table.target")
+                 )}</th>
+                 <th style="text-align:right; width: 12%">${escapeHtml(
+                   t("reports.table.quarterlyTotal", "Quarterly Total")
+                 )}</th>
+                 <th style="text-align:right; width: 10%">${escapeHtml(
+                   t("reports.table.yearlyProgress", "Yearly %")
+                 )}</th>
                  <th>${columnsHtml}</th>
-                 <th style="text-align:right; width: 10%">${escapeHtml(t("reports.table.yearlyProgress", "YTD %"))}</th>
                </tr>
              </thead>
              <tbody>${rowsHtml}</tbody>
@@ -943,9 +1190,13 @@ const App = () => {
         </section>
         <footer>
           <div class="footer-meta">
-             <span>Group: <span class="footer-val">${escapeHtml(String(groupSearchTerm || "All"))}</span></span>
+             <span>Group: <span class="footer-val">${escapeHtml(
+               String(groupSearchTerm || "All")
+             )}</span></span>
              <span class="footer-sep">•</span>
-             <span>Date: <span class="footer-val">${escapeHtml(generated)}</span></span>
+             <span>Date: <span class="footer-val">${escapeHtml(
+               generated
+             )}</span></span>
              <span class="footer-sep">•</span>
           </div>
         </footer>
@@ -960,15 +1211,19 @@ const App = () => {
     // --- NEW: Dynamic headers for CSV ---
     const periodHeaders = [];
     if (granularity === "quarterly") {
-      periods.forEach(p => {
+      periods.forEach((p) => {
         const label = fmtQuarterKey(p);
         periodHeaders.push(`${t("reports.table.qGoal", "Goal")} (${label})`);
-        periodHeaders.push(`${t("reports.table.qRecord", "Record")} (${label})`);
+        periodHeaders.push(
+          `${t("reports.table.qRecord", "Record")} (${label})`
+        );
         // MODIFIED: Header label
-        periodHeaders.push(`${t("reports.table.qProgress", "Progress %")} (${label})`);
+        periodHeaders.push(
+          `${t("reports.table.qProgress", "Progress %")} (${label})`
+        );
       });
     } else {
-      periods.forEach(p => {
+      periods.forEach((p) => {
         periodHeaders.push(granularity === "monthly" ? fmtMonthKey(p) : p);
       });
     }
@@ -982,27 +1237,60 @@ const App = () => {
       t("reports.table.activity", "Activity"),
       t("reports.table.weight", "Weight"),
       t("reports.table.metric", "Metric"),
-      t("reports.table.target", "Target"),
       t("reports.table.previous", "Previous"),
-      t("reports.table.yearlyProgress", "Yearly Progress %"), // ADDED
+      t("reports.table.target", "Target"),
+      t("reports.table.quarterlyTotal", "Quarterly Total"),
+      t("reports.table.yearlyProgress", "Yearly %"),
       ...periodHeaders,
     ];
 
     const rows = [];
     // MODIFIED: Added 1 more empty cell for Yearly Progress
     const emptyPeriodCells = periodHeaders.map(() => "");
-    const emptyGoalTaskRow = ["", "", "", "", "", ...emptyPeriodCells];
+    // placeholders for: activityNum, activity, weight, metric, prev, target, quarterlyTotal, yearlyProgress + period cells
+    const emptyGoalTaskRow = [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ...emptyPeriodCells,
+    ];
 
     master.goals.forEach((g, goalIndex) => {
       const goalNum = `${goalIndex + 1}`;
       rows.push([
-        goalNum, g.title, "", "", "", "", g.weight ?? "", "", "", "",
+        goalNum,
+        g.title,
+        "",
+        "",
+        "",
+        "",
+        g.weight ?? "",
+        "",
+        "",
+        "",
         ...emptyGoalTaskRow,
       ]);
       (g.tasks || []).forEach((task, taskIndex) => {
         const taskNum = `${goalNum}.${taskIndex + 1}`;
         rows.push([
-          "", "", taskNum, task.title, "", "", task.weight ?? "", "", "", "",
+          "",
+          "",
+          taskNum,
+          task.title,
+          "",
+          "",
+          task.weight ?? "",
+          "",
+          "",
+          "",
           ...emptyGoalTaskRow,
         ]);
         (task.activities || []).forEach((a, activityIndex) => {
@@ -1010,30 +1298,35 @@ const App = () => {
           const mk = pickMetricForActivity(a, null);
           const { targetVal, prevVal, currentVal } = getOverallMetrics(a, mk); // MODIFIED
 
-          // Calculate Yearly Progress
-          const targetNum = toNumberOrNull(targetVal);
-          const currentNum = toNumberOrNull(currentVal);
-          let yearlyProgressPct = null;
-          if (targetNum !== null && currentNum !== null) {
-            if (targetNum > 0) yearlyProgressPct = (currentNum / targetNum) * 100;
-            else if (targetNum === 0) yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
-          }
-          const displayYearlyProgress = yearlyProgressPct === null ? '' : `${yearlyProgressPct.toFixed(2)}%`;
-          // End Yearly Progress
+          // Prefer summing recorded quarter metrics when available; otherwise fall back to backend value
+          const recSum = computeQuarterlyRecordsSum(a, mk);
+          const quarterlyTotalVal =
+            recSum !== null
+              ? recSum
+              : a.quarterlyTotal !== undefined && a.quarterlyTotal !== null
+              ? a.quarterlyTotal
+              : null;
+          const displayQuarterlyTotal =
+            quarterlyTotalVal !== null ? String(quarterlyTotalVal) : "";
+          const displayYearlyProgress =
+            a.yearlyProgress !== undefined && a.yearlyProgress !== null
+              ? `${Number(a.yearlyProgress).toFixed(2)}%`
+              : "";
 
           const periodVals = [];
           if (granularity === "quarterly") {
-            periods.forEach(p => {
+            periods.forEach((p) => {
               // MODIFIED: 'variance' is now 'progress'
               const { goal, record, progress } = getQuarterlyStats(a, p, mk);
               // MODIFIED: Format as percentage string
-              const displayProgress = progress === null ? "" : `${progress.toFixed(2)}%`;
+              const displayProgress =
+                progress === null ? "" : `${progress.toFixed(2)}%`;
               periodVals.push(goal ?? "");
               periodVals.push(record ?? "");
               periodVals.push(displayProgress);
             });
           } else {
-            periods.forEach(p => {
+            periods.forEach((p) => {
               const v = getLatestMetricValueInPeriod(a, p, granularity, mk);
               if (v === null || v === undefined) {
                 periodVals.push("");
@@ -1049,8 +1342,18 @@ const App = () => {
             });
           }
           rows.push([
-            "", "", "", "", activityNum, a.title, a.weight ?? "", mk ?? "", targetVal ?? "", prevVal ?? "",
-            displayYearlyProgress, // ADDED
+            "",
+            "",
+            "",
+            "",
+            activityNum,
+            a.title,
+            a.weight ?? "",
+            mk ?? "",
+            prevVal ?? "",
+            targetVal ?? "",
+            displayQuarterlyTotal,
+            displayYearlyProgress,
             ...periodVals,
           ]);
         });
@@ -1090,12 +1393,15 @@ const App = () => {
       try {
         w.focus();
         w.print();
-      } catch (e) { }
+      } catch (e) {}
     }, 400);
   }
 
   return (
-    <div className={`min-h-screen bg-[var(--onprimary)] dark:bg-gray-900 font-sans transition-colors duration-300 ${mounted ? 'animate-fade-in' : ''}`}
+    <div
+      className={`min-h-screen bg-[var(--onprimary)] dark:bg-gray-900 font-sans transition-colors duration-300 ${
+        mounted ? "animate-fade-in" : ""
+      }`}
       style={{
         "--primary": m3Colors.primary,
         "--on-primary": m3Colors.onPrimary,
@@ -1225,7 +1531,7 @@ const App = () => {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
           }
       `}</style>
-      
+
       {/* MODIFIED: Changed from min-w-7xl to w-full max-w-7xl to fix horizontal overflow issue */}
       <div className="w-full max-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <div className="mb-6">
@@ -1269,7 +1575,11 @@ const App = () => {
                   {t("reports.master.allGroups", "All Groups")}
                 </option>
                 {allGroups.map((group) => (
-                  <option key={group.id} value={group.id} className="bg-white dark:bg-gray-700">
+                  <option
+                    key={group.id}
+                    value={group.id}
+                    className="bg-white dark:bg-gray-700"
+                  >
                     {group.name}
                   </option>
                 ))}
@@ -1293,7 +1603,11 @@ const App = () => {
                 className="px-4 py-2.5 bg-green-400 dark:bg-green-700 text-green-900 dark:text-green-200 rounded-full shadow-md flex items-center justify-center gap-2 hover:bg-green-300 dark:hover:bg-green-600 transition-all duration-300 surface-elevation-1 disabled:opacity-60"
               >
                 {loading ? (
-                  <Loader className={`h-4 w-4 animate-spin ${isRefreshing ? "scale-125" : "scale-100"}`} />
+                  <Loader
+                    className={`h-4 w-4 animate-spin ${
+                      isRefreshing ? "scale-125" : "scale-100"
+                    }`}
+                  />
                 ) : (
                   t("reports.master.loadButton")
                 )}
@@ -1326,10 +1640,11 @@ const App = () => {
                   <button
                     key={g}
                     onClick={() => setGranularity(g)}
-                    className={`px-4 py-2 rounded-full transition-all duration-300 ${granularity === g
-                      ? "bg-green-400 dark:bg-green-700 text-[var(--on-primary)] dark:text-white shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.5)] scale-105"
-                      : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-white"
-                      }`}
+                    className={`px-4 py-2 rounded-full transition-all duration-300 ${
+                      granularity === g
+                        ? "bg-green-400 dark:bg-green-700 text-[var(--on-primary)] dark:text-white shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.5)] scale-105"
+                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-white"
+                    }`}
                   >
                     {t(`reports.master.granularities.${g}`)}
                   </button>
@@ -1389,107 +1704,150 @@ const App = () => {
                                 </span>
                               </div>
                               <div className="pl-3 mt-2 space-y-3">
-                                {(task.activities || []).map((a, activityIndex) => {
-                                  const activityNum = `${taskNum}.${activityIndex + 1}`;
-                                  return (
-                                    <div
-                                      key={a.id}
-                                      className="p-3 bg-gray-300 dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1 transition-all duration-300 w-full"
-                                      style={{ animationDelay: `${activityIndex * 80}ms` }}
-                                    >
-                                      <div className="flex flex-col gap-3">
-                                        <div className="w-full">
-                                          <div className="flex justify-between items-start">
-                                            <div className="text-base font-medium text-gray-600 dark:text-white">{`${activityNum}. ${a.title}`}</div>
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-white text-xs whitespace-nowrap ml-2">
-                                              {a.status === "Done" ? (
-                                                <span className="text-green-600 dark:text-green-400">  ✓   {t("reports.master.done")}</span>
-                                              ) : (
-                                                <span className="text-purple-600 dark:text-purple-400">● {t("reports.master.open")}</span>
-                                              )}
-                                            </span>
-                                          </div>
-                                          {/* MODIFIED: Updated grid columns to 4 for wide screens to utilize full width */}
-                                          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                            <MetricSection
-                                              title={t("reports.master.targetText")}
-                                              metrics={a.targetMetric}
-                                              t={t}
-                                              darkMode={darkMode}
-                                            />
-                                            <MetricSection
-                                              title={t("reports.master.currentLabel", "Current")}
-                                              metrics={a.currentMetric}
-                                              t={t}
-                                              darkMode={darkMode}
-                                            />
-                                            <MetricSection
-                                              title={t("reports.master.previousText", "Previous")}
-                                              metrics={a.previousMetric}
-                                              t={t}
-                                              darkMode={darkMode}
-                                            />
-                                            <MetricSection
-                                              title={t("reports.master.quarterlyGoals", "Quarterly Goals")}
-                                              metrics={a.quarterlyGoals}
-                                              t={t}
-                                              darkMode={darkMode}
-                                            />
+                                {(task.activities || []).map(
+                                  (a, activityIndex) => {
+                                    const activityNum = `${taskNum}.${
+                                      activityIndex + 1
+                                    }`;
+                                    return (
+                                      <div
+                                        key={a.id}
+                                        className="p-3 bg-gray-300 dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1 transition-all duration-300 w-full"
+                                        style={{
+                                          animationDelay: `${
+                                            activityIndex * 80
+                                          }ms`,
+                                        }}
+                                      >
+                                        <div className="flex flex-col gap-3">
+                                          <div className="w-full">
+                                            <div className="flex justify-between items-start">
+                                              <div className="text-base font-medium text-gray-600 dark:text-white">{`${activityNum}. ${a.title}`}</div>
+                                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-white text-xs whitespace-nowrap ml-2">
+                                                {a.status === "Done" ? (
+                                                  <span className="text-green-600 dark:text-green-400">
+                                                    {" "}
+                                                    ✓ {t("reports.master.done")}
+                                                  </span>
+                                                ) : (
+                                                  <span className="text-purple-600 dark:text-purple-400">
+                                                    ● {t("reports.master.open")}
+                                                  </span>
+                                                )}
+                                              </span>
+                                            </div>
+                                            {/* MODIFIED: Updated grid columns to 4 for wide screens to utilize full width */}
+                                            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                              <MetricSection
+                                                title={t(
+                                                  "reports.master.targetText"
+                                                )}
+                                                metrics={a.targetMetric}
+                                                t={t}
+                                                darkMode={darkMode}
+                                              />
+                                              <MetricSection
+                                                title={t(
+                                                  "reports.master.currentLabel",
+                                                  "Current"
+                                                )}
+                                                metrics={a.currentMetric}
+                                                t={t}
+                                                darkMode={darkMode}
+                                              />
+                                              <MetricSection
+                                                title={t(
+                                                  "reports.master.previousText",
+                                                  "Previous"
+                                                )}
+                                                metrics={a.previousMetric}
+                                                t={t}
+                                                darkMode={darkMode}
+                                              />
+                                              <MetricSection
+                                                title={t(
+                                                  "reports.master.quarterlyGoals",
+                                                  "Quarterly Goals"
+                                                )}
+                                                metrics={a.quarterlyGoals}
+                                                t={t}
+                                                darkMode={darkMode}
+                                              />
+                                            </div>
                                           </div>
                                         </div>
-                                      </div>
-                                      <div className="mt-3">
-                                        <h4 className="text-sm font-medium text-gray-600 dark:text-white mb-2">
-                                          {t("reports.master.reportsTitle", "Reports")}
-                                        </h4>
-                                        {(a.reports || []).length === 0 ? (
-                                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                                            {t("reports.master.noReports")}
-                                          </div>
-                                        ) : (
-                                          <div className="space-y-3">
-                                            {(a.reports || []).map((r, reportIndex) => (
-                                              <div
-                                                key={r.id}
-                                                className="p-3 bg-gray-200 dark:bg-gray-700 rounded-lg border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1 transition-all duration-300"
-                                                style={{ animationDelay: `${reportIndex * 60}ms` }}
-                                              >
-                                                <div className="flex flex-col sm:flex-row sm:justify-between gap-1 mb-2">
-                                                  <div className="text-sm font-medium text-gray-600 dark:text-white">
-                                                    #{r.id} •{" "}
-                                                    <span className="text-gray-600 dark:text-gray-400">
-                                                      {r.status}
-                                                    </span>
-                                                  </div>
-                                                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                                                    {r.createdAt
-                                                      ? new Date(r.createdAt).toLocaleString()
-                                                      : ""}
-                                                  </div>
-                                                </div>
-                                                <div className="text-base text-gray-600 dark:text-gray-300 break-words">
-                                                  {r.narrative || (
-                                                    <em className="text-gray-600 dark:text-gray-400">
-                                                      {t("reports.noNarrative")}
-                                                    </em>
-                                                  )}
-                                                </div>
-                                                {r.metrics && (
-                                                  <div className="mt-3">
-                                                    <div className="text-sm font-medium text-gray-600 dark:text-white mb-1">
-                                                      {t("reports.metrics.title", "Metrics")}
+                                        <div className="mt-3">
+                                          <h4 className="text-sm font-medium text-gray-600 dark:text-white mb-2">
+                                            {t(
+                                              "reports.master.reportsTitle",
+                                              "Reports"
+                                            )}
+                                          </h4>
+                                          {(a.reports || []).length === 0 ? (
+                                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                                              {t("reports.master.noReports")}
+                                            </div>
+                                          ) : (
+                                            <div className="space-y-3">
+                                              {(a.reports || []).map(
+                                                (r, reportIndex) => (
+                                                  <div
+                                                    key={r.id}
+                                                    className="p-3 bg-gray-200 dark:bg-gray-700 rounded-lg border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1 transition-all duration-300"
+                                                    style={{
+                                                      animationDelay: `${
+                                                        reportIndex * 60
+                                                      }ms`,
+                                                    }}
+                                                  >
+                                                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 mb-2">
+                                                      <div className="text-sm font-medium text-gray-600 dark:text-white">
+                                                        #{r.id} •{" "}
+                                                        <span className="text-gray-600 dark:text-gray-400">
+                                                          {r.status}
+                                                        </span>
+                                                      </div>
+                                                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                                                        {r.createdAt
+                                                          ? new Date(
+                                                              r.createdAt
+                                                            ).toLocaleString()
+                                                          : ""}
+                                                      </div>
                                                     </div>
-                                                    <MetricsDisplay metrics={r.metrics} darkMode={darkMode} />
+                                                    <div className="text-base text-gray-600 dark:text-gray-300 break-words">
+                                                      {r.narrative || (
+                                                        <em className="text-gray-600 dark:text-gray-400">
+                                                          {t(
+                                                            "reports.noNarrative"
+                                                          )}
+                                                        </em>
+                                                      )}
+                                                    </div>
+                                                    {r.metrics && (
+                                                      <div className="mt-3">
+                                                        <div className="text-sm font-medium text-gray-600 dark:text-white mb-1">
+                                                          {t(
+                                                            "reports.metrics.title",
+                                                            "Metrics"
+                                                          )}
+                                                        </div>
+                                                        <MetricsDisplay
+                                                          metrics={r.metrics}
+                                                          darkMode={darkMode}
+                                                        />
+                                                      </div>
+                                                    )}
                                                   </div>
-                                                )}
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
+                                                )
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  }
+                                )}
                               </div>
                             </div>
                           );
@@ -1508,7 +1866,18 @@ const App = () => {
               {t("reports.table.titleFull")}
             </h2>
             {/* MODIFIED: added overflow-x-auto to this container specifically so only the table slides */}
-            <div className="overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1">
+            {/* Top synchronized scrollbar (click/drag here to scroll horizontally) */}
+            <div
+              ref={topScrollRef}
+              className="overflow-x-auto"
+              style={{ marginBottom: 6, WebkitOverflowScrolling: "touch" }}
+              aria-hidden="true"
+            />
+
+            <div
+              ref={tableWrapRef}
+              className="overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1"
+            >
               <table className="min-w-full">
                 <thead className="bg-gray-300 dark:bg-gray-700">
                   <tr>
@@ -1527,47 +1896,65 @@ const App = () => {
                     <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
                       {t("reports.table.targe", "2018")}
                     </th>
-                    {/* --- Dynamic Headers for Quarterly/Monthly/Annual --- */}
-                    {granularity === "quarterly" ? periodColumns.map(p => {
-                      const label = fmtQuarterKey(p);
-                      return (
-                        <React.Fragment key={p}>
-                          <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
-                            {t("reports.table.qGoal", "Goal")} ({label})
-                          </th>
-                          <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
-                            {t("reports.table.qRecord", "Record")} ({label})
-                          </th>
-                          <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
-                            {t("reports.table.qProgress", "Progress%")} ({label})
-                          </th>
-                        </React.Fragment>
-                      );
-                    }) : periodColumns.map((p) => (
-                      <th
-                        key={p}
-                        className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white"
-                      >
-                        {granularity === "monthly" ? fmtMonthKey(p) : p}
-                      </th>
-                    ))}
-                    {/* ADDED: Yearly Progress % Header */}
+                    {/* Quarterly Total and Yearly % (backend-provided) */}
                     <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
-                      {t("reports.table.yearlyProgress", "Yearly Progress%")}
+                      {t("reports.table.quarterlyTotal", "Quarterly Total")}
                     </th>
+                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                      {t("reports.table.yearlyProgress", "Yearly %")}
+                    </th>
+                    {/* --- Dynamic Headers for Quarterly/Monthly/Annual --- */}
+                    {granularity === "quarterly"
+                      ? periodColumns.map((p) => {
+                          const label = fmtQuarterKey(p);
+                          return (
+                            <React.Fragment key={p}>
+                              <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                                {t("reports.table.qGoal", "Goal")} ({label})
+                              </th>
+                              <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                                {t("reports.table.qRecord", "Record")} ({label})
+                              </th>
+                              <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                                {t("reports.table.qProgress", "Progress%")} (
+                                {label})
+                              </th>
+                            </React.Fragment>
+                          );
+                        })
+                      : periodColumns.map((p) => (
+                          <th
+                            key={p}
+                            className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white"
+                          >
+                            {granularity === "monthly" ? fmtMonthKey(p) : p}
+                          </th>
+                        ))}
+                    {/* Yearly Progress header moved above (after Target) */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--outline-variant)] dark:divide-gray-600 bg-gray-100 dark:bg-gray-700">
                   {tableRows.map((row, index) => {
                     if (row.type === "goal" || row.type === "task") {
-                      const numEmptyCols = granularity === 'quarterly' ? periodColumns.length * 3 : periodColumns.length;
+                      const numEmptyCols =
+                        granularity === "quarterly"
+                          ? periodColumns.length * 3
+                          : periodColumns.length;
                       return (
                         <tr
                           key={row.id}
-                          className={`${row.type === 'goal' ? 'bg-[var(--primary-container)]/[0.1] dark:bg-gray-900/[0.15]' : 'bg-gray-100 dark:bg-gray-700'} transition-all duration-300`}
+                          className={`${
+                            row.type === "goal"
+                              ? "bg-[var(--primary-container)]/[0.1] dark:bg-gray-900/[0.15]"
+                              : "bg-gray-100 dark:bg-gray-700"
+                          } transition-all duration-300`}
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
-                          <td className={`border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 font-medium text-gray-600 dark:text-white text-sm ${row.type === 'task' ? 'pl-6' : ''}`}>
+                          <td
+                            className={`border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 font-medium text-gray-600 dark:text-white text-sm ${
+                              row.type === "task" ? "pl-6" : ""
+                            }`}
+                          >
                             {`${row.number}. ${row.title}`}
                           </td>
                           <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
@@ -1582,18 +1969,23 @@ const App = () => {
                           <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
                             —
                           </td>
-                          {/* ADDED: Empty cell for Yearly Progress */}
+                          {/* ADDED: Empty cells for Quarterly Total and Yearly % (moved before period cols) */}
                           <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
                             —
                           </td>
-                          {Array(numEmptyCols).fill(0).map((_, i) => (
-                            <td
-                              key={i}
-                              className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm"
-                            >
-                              —
-                            </td>
-                          ))}
+                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
+                            —
+                          </td>
+                          {Array(numEmptyCols)
+                            .fill(0)
+                            .map((_, i) => (
+                              <td
+                                key={i}
+                                className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm"
+                              >
+                                —
+                              </td>
+                            ))}
                         </tr>
                       );
                     } else {
@@ -1615,7 +2007,12 @@ const App = () => {
                     <tr>
                       <td
                         className="p-6 text-center text-gray-600 dark:text-gray-400 text-base"
-                        colSpan={6 + (granularity === 'quarterly' ? periodColumns.length * 3 : periodColumns.length)}
+                        colSpan={
+                          8 +
+                          (granularity === "quarterly"
+                            ? periodColumns.length * 3
+                            : periodColumns.length)
+                        }
                       >
                         {t("reports.table.noData")}
                       </td>
@@ -1635,9 +2032,23 @@ const App = () => {
  * Helper Components
  * ------------------------- */
 const MetricSection = ({ title, metrics, t, darkMode = false }) => (
-  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-200 dark:bg-gray-600 border-gray-600' : 'bg-[var(--surface-container-lowest)] border-[var(--outline-variant)]'} border`}>
-    <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-gray-400' : 'text-[var(--on-surface-variant)]'}`}>{title}:</div>
-    <div className={`${darkMode ? 'text-gray-300' : 'text-gray-600'} text-base`}>
+  <div
+    className={`p-3 rounded-lg ${
+      darkMode
+        ? "bg-gray-200 dark:bg-gray-600 border-gray-600"
+        : "bg-[var(--surface-container-lowest)] border-[var(--outline-variant)]"
+    } border`}
+  >
+    <div
+      className={`text-sm font-medium mb-1 ${
+        darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
+      }`}
+    >
+      {title}:
+    </div>
+    <div
+      className={`${darkMode ? "text-gray-300" : "text-gray-600"} text-base`}
+    >
       {metrics ? <MetricsDisplay metrics={metrics} darkMode={darkMode} /> : "-"}
     </div>
   </div>
@@ -1655,29 +2066,70 @@ const MetricsDisplay = ({ metrics, darkMode = false }) => {
   } catch (err) {
     const s = String(metrics);
     return (
-      <div className={`text-base font-mono break-words p-1.5 rounded border ${darkMode ? 'bg-gray-50 dark:bg-gray-800 border-gray-600 text-gray-300' : 'bg-[var(--surface-container-low)] text-gray-600'}`}>
+      <div
+        className={`text-base font-mono break-words p-1.5 rounded border ${
+          darkMode
+            ? "bg-gray-50 dark:bg-gray-800 border-gray-600 text-gray-300"
+            : "bg-[var(--surface-container-low)] text-gray-600"
+        }`}
+      >
         {s}
       </div>
     );
   }
   if (!obj || typeof obj !== "object") {
-    return <div className={`text-base ${darkMode ? 'text-gray-400' : 'text-[var(--on-surface-variant)]'}`}>—</div>;
+    return (
+      <div
+        className={`text-base ${
+          darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
+        }`}
+      >
+        —
+      </div>
+    );
   }
   const keys = Object.keys(obj);
-  if (keys.length === 0) return <div className={`text-base ${darkMode ? 'text-gray-400' : 'text-[var(--on-surface-variant)]'}`}>—</div>;
+  if (keys.length === 0)
+    return (
+      <div
+        className={`text-base ${
+          darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
+        }`}
+      >
+        —
+      </div>
+    );
   return (
     <div className="space-y-1.5">
       {keys.map((k, index) => {
         const value = obj[k];
         const displayValue =
-          value !== null && typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+          value !== null && typeof value === "object"
+            ? JSON.stringify(value, null, 2)
+            : String(value);
         return (
           <div
             key={k}
-            className={`flex items-start justify-between rounded px-2.5 py-1.5 border gap-3 ${darkMode ? 'bg-gray-50 dark:bg-gray-800 border-gray-600' : 'bg-[var(--surface-container-low)] border-[var(--outline-variant)]'}`}
+            className={`flex items-start justify-between rounded px-2.5 py-1.5 border gap-3 ${
+              darkMode
+                ? "bg-gray-50 dark:bg-gray-800 border-gray-600"
+                : "bg-[var(--surface-container-low)] border-[var(--outline-variant)]"
+            }`}
           >
-            <div className={`text-sm pt-px ${darkMode ? 'text-gray-800 dark:text-gray-200' : 'text-[var(--on-surface-variant)]'}`}>{k}</div>
-            <div className={`text-base font-mono break-all text-right whitespace-pre-wrap ${darkMode ? 'text-gray-800 dark:text-gray-200' : 'text-gray-600'}`}>
+            <div
+              className={`text-sm pt-px ${
+                darkMode
+                  ? "text-gray-800 dark:text-gray-200"
+                  : "text-[var(--on-surface-variant)]"
+              }`}
+            >
+              {k}
+            </div>
+            <div
+              className={`text-base font-mono break-all text-right whitespace-pre-wrap ${
+                darkMode ? "text-gray-800 dark:text-gray-200" : "text-gray-600"
+              }`}
+            >
               {displayValue}
             </div>
           </div>
@@ -1714,7 +2166,7 @@ function safeParseJson(v) {
  */
 function toNumberOrNull(v) {
   if (v === null || v === undefined || v === "") return null;
-  const n = Number(String(v).replace(/,/g, ''));
+  const n = Number(String(v).replace(/,/g, ""));
   return Number.isFinite(n) ? n : null;
 }
 
@@ -1723,12 +2175,13 @@ function toNumberOrNull(v) {
  */
 function isQuarterPast(periodKey) {
   // Expected format: "2024-Q1"
-  if (!periodKey || typeof periodKey !== 'string' || !periodKey.includes('-Q')) return false;
-  
-  const [yStr, qStr] = periodKey.split('-Q');
+  if (!periodKey || typeof periodKey !== "string" || !periodKey.includes("-Q"))
+    return false;
+
+  const [yStr, qStr] = periodKey.split("-Q");
   const pYear = parseInt(yStr, 10);
   const pQuarter = parseInt(qStr, 10);
-  
+
   if (isNaN(pYear) || isNaN(pQuarter)) return false;
 
   const now = new Date();
@@ -1738,7 +2191,7 @@ function isQuarterPast(periodKey) {
 
   if (pYear < curYear) return true;
   if (pYear === curYear && pQuarter < curQuarter) return true;
-  
+
   return false;
 }
 
@@ -1797,12 +2250,12 @@ function fmtQuarterKey(qKey) {
   let fiscalQ, fiscalYear;
   if (calendarQ >= 3) {
     // July-Dec (Calendar Q3, Q4)
-    fiscalQ = calendarQ - 2;   // 3 -> 1, 4 -> 2
+    fiscalQ = calendarQ - 2; // 3 -> 1, 4 -> 2
     fiscalYear = calendarYear + 1; // e.g., July 2024 is FY2025
   } else {
     // Jan-June (Calendar Q1, Q2)
-    fiscalQ = calendarQ + 2;   // 1 -> 3, 2 -> 4
-    fiscalYear = calendarYear;     // e.g., March 2025 is FY2025
+    fiscalQ = calendarQ + 2; // 1 -> 3, 2 -> 4
+    fiscalYear = calendarYear; // e.g., March 2025 is FY2025
   }
   return `Q${fiscalQ}`;
   // return `Q${fiscalQ} FY${fiscalYear}`;
@@ -1822,7 +2275,8 @@ function flattenPeriods(masterJson, granularity) {
         if (granularity === "quarterly" && a.quarterlyGoals) {
           const qGoals = safeParseJson(a.quarterlyGoals);
           if (qGoals) {
-            Object.keys(qGoals).forEach(qKey => { // q1, q2
+            Object.keys(qGoals).forEach((qKey) => {
+              // q1, q2
               // We need a year. Assume current year for now if history is empty?
               // This is tricky. Let's rely on history *for now*.
               // A better approach would be to get year from goal/task.
@@ -1885,11 +2339,13 @@ function extractMetricValue(metricsObj, metricKey) {
   // Check common nested names
   if (metrics.currentMetric) {
     const current = safeParseJson(metrics.currentMetric);
-    if (current && metricKey && current[metricKey] !== undefined) return current[metricKey];
+    if (current && metricKey && current[metricKey] !== undefined)
+      return current[metricKey];
   }
   if (metrics.metrics_data) {
     const metricsData = safeParseJson(metrics.metrics_data);
-    if (metricsData && metricKey && metricsData[metricKey] !== undefined) return metricsData[metricKey];
+    if (metricsData && metricKey && metricsData[metricKey] !== undefined)
+      return metricsData[metricKey];
   }
   // If no key, find first
   if (!metricKey) {
@@ -1911,6 +2367,25 @@ function extractMetricValue(metricsObj, metricKey) {
 
 function parseNumberForPct(x) {
   return toNumberOrNull(x); // Use updated helper
+}
+
+// Sum recorded metric values across all quarters from activity.history
+function computeQuarterlyRecordsSum(activity, metricKey) {
+  if (!activity || !activity.history || !activity.history.quarterly)
+    return null;
+  const quarters = Object.keys(activity.history.quarterly || {});
+  if (!quarters.length) return null;
+  let sum = 0;
+  let foundAny = false;
+  for (const q of quarters) {
+    const v = getLatestMetricValueInPeriod(activity, q, "quarterly", metricKey);
+    const n = toNumberOrNull(v);
+    if (n !== null) {
+      sum += n;
+      foundAny = true;
+    }
+  }
+  return foundAny ? sum : null;
 }
 
 function getLatestMetricValueInPeriod(
@@ -1940,8 +2415,18 @@ function getLatestMetricValueInPeriod(
   if (candidateReports.length === 0) return null;
 
   candidateReports.sort((a, b) => {
-    const da = a && a.date ? new Date(a.date) : (a && a.createdAt ? new Date(a.createdAt) : null);
-    const db = b && b.date ? new Date(b.date) : (b && b.createdAt ? new Date(b.createdAt) : null);
+    const da =
+      a && a.date
+        ? new Date(a.date)
+        : a && a.createdAt
+        ? new Date(a.createdAt)
+        : null;
+    const db =
+      b && b.date
+        ? new Date(b.date)
+        : b && b.createdAt
+        ? new Date(b.createdAt)
+        : null;
     if (!da && !db) return 0;
     if (!da) return -1;
     if (!db) return 1;
@@ -1962,13 +2447,18 @@ function getLatestMetricValueInPeriod(
 // MODIFIED: This function now calculates progress as a percentage.
 // ---
 function getQuarterlyStats(activity, periodKey, metricKey) {
-  const qKey = String(periodKey).split('-Q')[1]; // e.g., "1" from "2024-Q1"
+  const qKey = String(periodKey).split("-Q")[1]; // e.g., "1" from "2024-Q1"
   if (!qKey) return { goal: null, record: null, progress: null };
 
   const qGoals = safeParseJson(activity.quarterlyGoals);
   const goal = qGoals ? toNumberOrNull(qGoals[`q${qKey}`]) : null;
 
-  const recordRaw = getLatestMetricValueInPeriod(activity, periodKey, 'quarterly', metricKey);
+  const recordRaw = getLatestMetricValueInPeriod(
+    activity,
+    periodKey,
+    "quarterly",
+    metricKey
+  );
   const record = toNumberOrNull(recordRaw);
 
   let progress_pct = null;
@@ -1977,7 +2467,7 @@ function getQuarterlyStats(activity, periodKey, metricKey) {
       // Standard percentage calculation
       progress_pct = (record / goal) * 100;
     } else if (goal === 0) {
-      progress_pct = (record > 0) ? 100.0 : 0.0; // If goal is 0, any record > 0 is 100% progress
+      progress_pct = record > 0 ? 100.0 : 0.0; // If goal is 0, any record > 0 is 100% progress
     }
   }
 
@@ -1990,23 +2480,29 @@ function getOverallMetrics(activity, metricKey) {
   // Target
   const targetObj = safeParseJson(activity.targetMetric) || {};
   let targetVal = null;
-  if (metricKey && targetObj[metricKey] !== undefined) targetVal = targetObj[metricKey];
+  if (metricKey && targetObj[metricKey] !== undefined)
+    targetVal = targetObj[metricKey];
   else if (typeof targetObj === "number") targetVal = targetObj;
-  else if (targetObj && Object.keys(targetObj).length > 0) targetVal = targetObj[Object.keys(targetObj)[0]];
+  else if (targetObj && Object.keys(targetObj).length > 0)
+    targetVal = targetObj[Object.keys(targetObj)[0]];
 
   // Previous
   const previousObj = safeParseJson(activity.previousMetric) || {};
   let prevVal = null;
-  if (metricKey && previousObj[metricKey] !== undefined) prevVal = previousObj[metricKey];
+  if (metricKey && previousObj[metricKey] !== undefined)
+    prevVal = previousObj[metricKey];
   else if (typeof previousObj === "number") prevVal = previousObj;
-  else if (previousObj && Object.keys(previousObj).length > 0) prevVal = previousObj[Object.keys(previousObj)[0]];
+  else if (previousObj && Object.keys(previousObj).length > 0)
+    prevVal = previousObj[Object.keys(previousObj)[0]];
 
   // Current
   const currentObj = safeParseJson(activity.currentMetric) || {};
   let currentVal = null;
-  if (metricKey && currentObj[metricKey] !== undefined) currentVal = currentObj[metricKey];
+  if (metricKey && currentObj[metricKey] !== undefined)
+    currentVal = currentObj[metricKey];
   else if (typeof currentObj === "number") currentVal = currentObj;
-  else if (currentObj && Object.keys(currentObj).length > 0) currentVal = currentObj[Object.keys(currentObj)[0]];
+  else if (currentObj && Object.keys(currentObj).length > 0)
+    currentVal = currentObj[Object.keys(currentObj)[0]];
 
   return { targetVal, prevVal, currentVal };
 }
@@ -2024,7 +2520,10 @@ function ActivityRow({
   const metricKey = pickMetricForActivity(activity, null);
 
   // MODIFIED: Get currentVal as well
-  const { targetVal, prevVal, currentVal } = getOverallMetrics(activity, metricKey);
+  const { targetVal, prevVal, currentVal } = getOverallMetrics(
+    activity,
+    metricKey
+  );
 
   // ADDED: Calculate Yearly Progress
   const targetNum = toNumberOrNull(targetVal);
@@ -2034,10 +2533,11 @@ function ActivityRow({
     if (targetNum > 0) {
       yearlyProgressPct = (currentNum / targetNum) * 100;
     } else if (targetNum === 0) {
-      yearlyProgressPct = (currentNum > 0) ? 100.0 : 0.0;
+      yearlyProgressPct = currentNum > 0 ? 100.0 : 0.0;
     }
   }
-  const displayYearlyProgress = yearlyProgressPct === null ? '-' : `${yearlyProgressPct.toFixed(2)}%`;
+  const displayYearlyProgress =
+    yearlyProgressPct === null ? "-" : `${yearlyProgressPct.toFixed(2)}%`;
 
   function formatMetricValue(val) {
     if (val === null || val === undefined) return "-";
@@ -2049,89 +2549,218 @@ function ActivityRow({
 
   return (
     <tr
-      className={`transition-all duration-300 hover:bg-opacity-90 ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-[var(--surface-container-low)]'}`}
+      className={`transition-all duration-300 hover:bg-opacity-90 ${
+        darkMode
+          ? "hover:bg-gray-700"
+          : "hover:bg-[var(--surface-container-low)]"
+      }`}
       style={{
         animationDelay: `${index * 60}ms`,
-        backgroundColor: darkMode ? '#1f2937' : 'var(--surface-container-lowest)'
+        backgroundColor: darkMode
+          ? "#1f2937"
+          : "var(--surface-container-lowest)",
       }}
     >
-      <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-600'} pl-5`}>
+      <td
+        className={`border-b ${
+          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+        } px-4 py-3 text-sm font-medium ${
+          darkMode ? "text-white" : "text-gray-600"
+        } pl-5`}
+      >
         <div className="flex items-center gap-2">
           <div>{`${number} ${activity.title}`}</div>
           <div className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
-            {activity.metricType || activity.metric_type || 'Plus'}
+            {activity.metricType || activity.metric_type || "Plus"}
           </div>
         </div>
       </td>
-      <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 text-center w-16`}>
+      <td
+        className={`border-b ${
+          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 text-center w-16`}
+      >
         <div>{activity.weight ?? "-"}</div>
       </td>
-      <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 text-center w-20`}>
+      <td
+        className={`border-b ${
+          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 text-center w-20`}
+      >
         <div>{metricKey ?? "-"}</div>
       </td>
-      <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}>
-        <div>{typeof prevVal === 'number' ? prevVal.toLocaleString() : prevVal ?? "-"}</div>
+      <td
+        className={`border-b ${
+          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}
+      >
+        <div>
+          {typeof prevVal === "number"
+            ? prevVal.toLocaleString()
+            : prevVal ?? "-"}
+        </div>
       </td>
-      <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}>
-        <div>{typeof targetVal === 'number' ? targetVal.toLocaleString() : targetVal ?? "-"}</div>
+      <td
+        className={`border-b ${
+          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}
+      >
+        <div>
+          {typeof targetVal === "number"
+            ? targetVal.toLocaleString()
+            : targetVal ?? "-"}
+        </div>
       </td>
 
-      {/* --- NEW: Dynamic Cells for Quarterly --- */}
-      {granularity === "quarterly" ? periods.map(p => {
-        // MODIFIED: 'variance' is now 'progress'
-        const { goal, record, progress } = getQuarterlyStats(activity, p, metricKey);
-        // MODIFIED: Format as percentage string
-        const displayProgress = progress === null ? '-' : `${progress.toFixed(2)}%`;
+      {/* NEW: Quarterly Total column (prefer recorded records sum) */}
+      <td
+        className={`border-b ${
+          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}
+      >
+        <div>
+          {(() => {
+            const rec = computeQuarterlyRecordsSum(activity, metricKey);
+            const val =
+              rec !== null
+                ? rec
+                : activity.quarterlyTotal !== undefined
+                ? activity.quarterlyTotal
+                : null;
+            return typeof val === "number" ? val.toLocaleString() : val ?? "-";
+          })()}
+        </div>
+      </td>
 
-        // Check if Quarter is passed and record < goal
-        const isPast = isQuarterPast(p);
-        // If passed, and we have a goal, and (record is missing OR record is less than goal)
-        // Adjust logic based on strictness: here assumes if record < goal it is bad.
-        const isUnderperforming = isPast && goal !== null && (record === null || record < goal);
-
-        // Color Logic for RECORD cell
-        const recordColorClass = isUnderperforming 
-          ? "text-red-600 font-bold" 
-          : (darkMode ? "text-gray-300" : "text-[var(--on-surface-variant)]");
-
-        return (
-          <React.Fragment key={p}>
-            <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-3 py-3 text-sm text-[var(--on-surface-variant)] ${darkMode ? 'text-gray-300' : 'text-[var(--on-surface-variant)]'} text-right w-20 font-mono`}>
-              <div>{typeof goal === 'number' ? goal.toLocaleString() : goal ?? '-'}</div>
-            </td>
-            {/* MODIFIED: Applied conditional color to this cell */}
-            <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-3 py-3 text-sm text-[var(--on-surface-variant)] ${recordColorClass} text-right w-20 font-mono`}>
-              <div>{typeof record === 'number' ? record.toLocaleString() : record ?? '-'}</div>
-            </td>
-            <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-3 py-3 text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-600'} text-right w-20 font-mono`}>
-              <div>{displayProgress}</div>
-            </td>
-          </React.Fragment>
-        );
-      }) : periods.map((p) => {
-        const rawVal = getLatestMetricValueInPeriod(
-          activity,
-          p,
-          granularity,
-          metricKey
-        );
-        const display = formatMetricValue(rawVal);
+      {/* NEW: Progress between Target and Quarterly Total (display as percent) */}
+      {(() => {
+        const tg = toNumberOrNull(targetVal);
+        const rec = computeQuarterlyRecordsSum(activity, metricKey);
+        const ytd =
+          (rec !== null
+            ? rec
+            : toNumberOrNull(activity.quarterlyTotal) ||
+              toNumberOrNull(currentVal)) || 0;
+        let pct = null;
+        if (tg !== null) {
+          if (tg > 0) pct = (ytd / tg) * 100;
+          else pct = ytd > 0 ? 100 : 0;
+        }
+        const disp = pct === null ? "-" : `${pct.toFixed(2)}%`;
         return (
           <td
-            key={p}
-            className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-3 py-3 text-sm ${darkMode ? 'text-gray-300' : 'text-[var(--on-surface-variant)]'} text-right w-20`}
+            className={`border-b ${
+              darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+            } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}
           >
-            <div className="min-w-0">
-              <div className="text-sm font-mono">{display}</div>
-            </div>
+            <div>{disp}</div>
           </td>
         );
-      })}
+      })()}
 
-      {/* Yearly Progress % Cell */}
-      <td className={`border-b ${darkMode ? 'border-gray-600' : 'border-[var(--outline-variant)]'} px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}>
-        <div>{displayYearlyProgress}</div>
-      </td>
+      {/* --- NEW: Dynamic Cells for Quarterly --- */}
+      {granularity === "quarterly"
+        ? periods.map((p) => {
+            // MODIFIED: 'variance' is now 'progress'
+            const { goal, record, progress } = getQuarterlyStats(
+              activity,
+              p,
+              metricKey
+            );
+            // MODIFIED: Format as percentage string
+            const displayProgress =
+              progress === null ? "-" : `${progress.toFixed(2)}%`;
+
+            // Check if Quarter is passed and record < goal
+            const isPast = isQuarterPast(p);
+            // If passed, and we have a goal, and (record is missing OR record is less than goal)
+            // Adjust logic based on strictness: here assumes if record < goal it is bad.
+            const isUnderperforming =
+              isPast && goal !== null && (record === null || record < goal);
+
+            // Color Logic for RECORD cell
+            const recordColorClass = isUnderperforming
+              ? "text-red-600 font-bold"
+              : darkMode
+              ? "text-gray-300"
+              : "text-[var(--on-surface-variant)]";
+
+            return (
+              <React.Fragment key={p}>
+                <td
+                  className={`border-b ${
+                    darkMode
+                      ? "border-gray-600"
+                      : "border-[var(--outline-variant)]"
+                  } px-3 py-3 text-sm text-[var(--on-surface-variant)] ${
+                    darkMode
+                      ? "text-gray-300"
+                      : "text-[var(--on-surface-variant)]"
+                  } text-right w-20 font-mono`}
+                >
+                  <div>
+                    {typeof goal === "number"
+                      ? goal.toLocaleString()
+                      : goal ?? "-"}
+                  </div>
+                </td>
+                {/* MODIFIED: Applied conditional color to this cell */}
+                <td
+                  className={`border-b ${
+                    darkMode
+                      ? "border-gray-600"
+                      : "border-[var(--outline-variant)]"
+                  } px-3 py-3 text-sm text-[var(--on-surface-variant)] ${recordColorClass} text-right w-20 font-mono`}
+                >
+                  <div>
+                    {typeof record === "number"
+                      ? record.toLocaleString()
+                      : record ?? "-"}
+                  </div>
+                </td>
+                <td
+                  className={`border-b ${
+                    darkMode
+                      ? "border-gray-600"
+                      : "border-[var(--outline-variant)]"
+                  } px-3 py-3 text-sm font-medium ${
+                    darkMode ? "text-white" : "text-gray-600"
+                  } text-right w-20 font-mono`}
+                >
+                  <div>{displayProgress}</div>
+                </td>
+              </React.Fragment>
+            );
+          })
+        : periods.map((p) => {
+            const rawVal = getLatestMetricValueInPeriod(
+              activity,
+              p,
+              granularity,
+              metricKey
+            );
+            const display = formatMetricValue(rawVal);
+            return (
+              <td
+                key={p}
+                className={`border-b ${
+                  darkMode
+                    ? "border-gray-600"
+                    : "border-[var(--outline-variant)]"
+                } px-3 py-3 text-sm ${
+                  darkMode
+                    ? "text-gray-300"
+                    : "text-[var(--on-surface-variant)]"
+                } text-right w-20`}
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-mono">{display}</div>
+                </div>
+              </td>
+            );
+          })}
+
+      {/* Yearly Progress cell moved earlier (after Target) — removed here */}
     </tr>
   );
 }

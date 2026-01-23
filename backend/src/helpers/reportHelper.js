@@ -28,36 +28,30 @@ function generateReportHtml(rows, breakdowns = {}) {
       '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>',
     calendar:
       '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
-    attachment:
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>',
-    print:
-      '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>',
   };
 
   function getIcon(name) {
-    return `<span class="icon">${ICONS[name] || ""}</span>`;
+    if (!name) return "";
+    return ICONS[name] || "";
   }
 
-  function formatMetrics(metric) {
-    if (
-      !metric ||
-      typeof metric !== "object" ||
-      Object.keys(metric).length === 0
-    ) {
-      return '<span class="metric-empty">—</span>';
+  function toNumeric(v) {
+    if (v === null || v === undefined) return 0;
+    if (typeof v === "number") return v;
+    if (typeof v === "string") {
+      const n = Number(String(v).replace(/,/g, "").trim());
+      return Number.isFinite(n) ? n : 0;
     }
-    return (
-      `<div class="metric-grid">` +
-      Object.entries(metric)
-        .map(
-          ([key, value]) =>
-            `<div class="metric-key">${escapeHtml(
-              key
-            )}</div><div class="metric-value">${escapeHtml(value)}</div>`
-        )
-        .join("") +
-      `</div>`
-    );
+    if (typeof v === "object") {
+      // try to extract a numeric value from common keys
+      const keys = ["value", "amount", "target", "val", "count"];
+      for (const k of keys) {
+        if (v[k] !== undefined && v[k] !== null) return toNumeric(v[k]);
+      }
+      // otherwise attempt to sum numeric members if any
+      return Object.values(v).reduce((s, it) => s + toNumeric(it), 0);
+    }
+    return 0;
   }
 
   function getStatusBadge(status) {
@@ -159,6 +153,7 @@ function generateReportHtml(rows, breakdowns = {}) {
             currentMetric: r.currentMetric ?? r.currentmetric ?? {},
             targetMetric: r.targetMetric ?? r.targetmetric ?? {},
             quarterlyGoals: r.quarterlyGoals ?? r.quarterlygoals ?? {},
+            metricType: r.metricType ?? r.metric_type ?? "Plus",
             previousMetric: r.previousMetric ?? r.previousmetric ?? {},
             status: r.activity_status || "—",
             weight:
@@ -166,7 +161,7 @@ function generateReportHtml(rows, breakdowns = {}) {
                 ? Number(r.activity_weight)
                 : 0,
             isDone: !!r.activity_done,
-            history: breakdowns[activityId] || {
+            history: (breakdowns && breakdowns[activityId]) || {
               monthly: {},
               quarterly: {},
               annual: {},
@@ -445,6 +440,72 @@ function generateReportHtml(rows, breakdowns = {}) {
                     )}</div>`;
                 });
 
+                // compute a year-to-date / quarterly total value based on metricType and available history
+                try {
+                  const metricType = a.metricType || "Plus";
+                  let ytd = null;
+                  const hist = (breakdowns && breakdowns[a.id]) || {
+                    quarterly: {},
+                  };
+
+                  if (metricType === "Plus" || metricType === "Minus") {
+                    // cumulative: sum latest metrics for each quarter if present
+                    let sum = 0;
+                    let found = false;
+                    for (const entries of Object.values(hist.quarterly || {})) {
+                      if (!Array.isArray(entries) || entries.length === 0)
+                        continue;
+                      const latest = entries[entries.length - 1];
+                      const nv = toNumeric(
+                        latest.metrics || latest.metrics_data || 0
+                      );
+                      if (nv || nv === 0) {
+                        sum += nv;
+                        found = true;
+                      }
+                    }
+                    if (found) ytd = sum;
+                  } else {
+                    // snapshot types: use latest quarter snapshot only
+                    const qKeys = Object.keys(hist.quarterly || {});
+                    if (qKeys.length) {
+                      qKeys.sort();
+                      const latestEntries =
+                        hist.quarterly[qKeys[qKeys.length - 1]] || [];
+                      if (latestEntries.length) {
+                        const latest = latestEntries[latestEntries.length - 1];
+                        const nv = toNumeric(
+                          latest.metrics || latest.metrics_data || {}
+                        );
+                        if (nv || nv === 0) ytd = nv;
+                      }
+                    }
+                  }
+
+                  const targetSum = Object.values(a.targetMetric || {}).reduce(
+                    (s, v) => s + toNumeric(v),
+                    0
+                  );
+                  const progressPercent =
+                    ytd !== null && targetSum
+                      ? Math.round((ytd / targetSum) * 100)
+                      : null;
+
+                  html += `
+                    <div class="metric-key">Quarterly Total</div>
+                    <div class="metric-value">${escapeHtml(
+                      ytd !== null ? String(ytd) : "—"
+                    )}</div>
+                    <div class="metric-key">Yearly %</div>
+                    <div class="metric-value">${escapeHtml(
+                      progressPercent !== null
+                        ? String(progressPercent) + "%"
+                        : "—"
+                    )}</div>`;
+                } catch (e) {
+                  // ignore errors in numeric coercion
+                }
+
                 html += `
                         </div>
                       </div>
@@ -477,6 +538,26 @@ function generateReportHtml(rows, breakdowns = {}) {
  */
 function generateReportJson(rows, breakdowns = {}) {
   const goals = new Map();
+
+  function sumNumericValuesLocal(obj) {
+    if (!obj) return 0;
+    try {
+      if (typeof obj === "number") return obj;
+      if (typeof obj === "string") {
+        const n = Number(String(obj).replace(/,/g, "").trim());
+        return Number.isFinite(n) ? n : 0;
+      }
+      if (typeof obj === "object") {
+        return Object.values(obj).reduce((s, v) => {
+          const n = Number(String(v).replace(/,/g, "").trim());
+          return s + (Number.isFinite(n) ? n : 0);
+        }, 0);
+      }
+    } catch (e) {
+      return 0;
+    }
+    return 0;
+  }
 
   // Helper: ensure nested maps/objects exist
   function getOrCreate(map, key, factory) {
@@ -615,6 +696,56 @@ function generateReportJson(rows, breakdowns = {}) {
           }
         }
 
+        // compute quarterly total (YTD) for JSON output using metricType and provided breakdowns
+        let quarterlyTotal = 0;
+        try {
+          const qg = act.quarterlyGoals || {};
+          const metricType = act.metricType || "Plus";
+          const hist = (breakdowns && breakdowns[act.id]) || { quarterly: {} };
+
+          if (metricType === "Plus" || metricType === "Minus") {
+            for (const entries of Object.values(hist.quarterly || {})) {
+              if (!Array.isArray(entries) || entries.length === 0) continue;
+              const latest = entries[entries.length - 1];
+              quarterlyTotal += sumNumericValuesLocal(
+                latest.metrics || latest.metrics_data || 0
+              );
+            }
+            if (!quarterlyTotal)
+              quarterlyTotal = Object.values(qg).reduce(
+                (s, v) => s + sumNumericValuesLocal(v),
+                0
+              );
+          } else {
+            const qKeys = Object.keys(hist.quarterly || {});
+            if (qKeys.length) {
+              qKeys.sort();
+              const latestEntries =
+                hist.quarterly[qKeys[qKeys.length - 1]] || [];
+              if (latestEntries.length) {
+                const latest = latestEntries[latestEntries.length - 1];
+                quarterlyTotal = sumNumericValuesLocal(
+                  latest.metrics || latest.metrics_data || {}
+                );
+              }
+            }
+            if (!quarterlyTotal)
+              quarterlyTotal = Object.values(qg).reduce(
+                (s, v) => s + sumNumericValuesLocal(v),
+                0
+              );
+            if (!quarterlyTotal)
+              quarterlyTotal = sumNumericValuesLocal(act.currentMetric || {});
+          }
+        } catch (e) {
+          quarterlyTotal = 0;
+        }
+
+        const targetSum = sumNumericValuesLocal(act.targetMetric || {});
+        const yearlyProgress = targetSum
+          ? Math.round((quarterlyTotal / targetSum) * 100)
+          : null;
+
         activitiesOut.push({
           id: act.id,
           title: act.title,
@@ -623,6 +754,8 @@ function generateReportJson(rows, breakdowns = {}) {
           targetMetric: act.targetMetric || {},
           previousMetric: act.previousMetric || {},
           quarterlyGoals: act.quarterlyGoals || {},
+          quarterlyTotal,
+          yearlyProgress,
           weight: act.weight,
           isDone: act.isDone,
           status: act.status,
