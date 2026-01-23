@@ -47,7 +47,7 @@ async function fetchReportWithGroup(reportId) {
 exports.canSubmitReport = async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`,
     );
     if (!rows[0]) return res.json({ reporting_active: false });
     const val = rows[0].value;
@@ -69,7 +69,7 @@ exports.submitReport = async (req, res) => {
   // early check: reporting enabled
   try {
     const { rows } = await db.query(
-      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`,
     );
     if (!rows[0]) {
       return res
@@ -120,7 +120,7 @@ exports.submitReport = async (req, res) => {
       // lock activity row
       const actQ = await client.query(
         `SELECT "targetMetric", "currentMetric", "metricType" FROM "Activities" WHERE id = $1 FOR UPDATE`,
-        [activityId]
+        [activityId],
       );
 
       if (!actQ.rows[0]) {
@@ -242,7 +242,7 @@ exports.submitReport = async (req, res) => {
         narrative || null,
         parsedMetrics || {},
         new_status || null,
-      ]
+      ],
     );
     const report = reportResult.rows[0];
 
@@ -252,7 +252,7 @@ exports.submitReport = async (req, res) => {
       const maxSizeMb = Number(
         attachmentSettings?.maxSizeMb ||
           attachmentSettings?.max_attachment_size_mb ||
-          10
+          10,
       );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
 
@@ -295,7 +295,7 @@ exports.submitReport = async (req, res) => {
               uploaded.fileType || file.mimetype,
               uploaded.provider || "local",
               uploaded.publicId || null,
-            ]
+            ],
           );
           insertedAttachments.push(insertRes.rows[0]);
         } catch (uerr) {
@@ -306,7 +306,7 @@ exports.submitReport = async (req, res) => {
               if (entry.uploaded && entry.uploaded.provider === "local") {
                 try {
                   const fname = path.basename(
-                    entry.uploaded.url || entry.originalFile.path || ""
+                    entry.uploaded.url || entry.originalFile.path || "",
                   );
                   const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
                   if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
@@ -368,13 +368,13 @@ exports.submitReport = async (req, res) => {
            JOIN "RolePermissions" rp ON rp."roleId" = r.id
            JOIN "Permissions" p ON p.id = rp."permissionId"
            WHERE p.name = $1`,
-          ["manage_reports"]
+          ["manage_reports"],
         );
         for (const r of permRes.rows) if (r && r.id) recipients.add(r.id);
       } catch (permErr) {
         console.error(
           "submitReport: failed to query manage_reports users:",
-          permErr
+          permErr,
         );
       }
 
@@ -384,7 +384,7 @@ exports.submitReport = async (req, res) => {
            FROM "Activities" a
            LEFT JOIN "Tasks" t ON t.id = a."taskId"
            WHERE a.id = $1 LIMIT 1`,
-          [activityId]
+          [activityId],
         );
         const arow = actRes.rows[0];
         const activityTitle = (arow && arow.activity_title) || null;
@@ -409,14 +409,14 @@ exports.submitReport = async (req, res) => {
           } catch (nerr) {
             console.error(
               `submitReport: failed to notify user ${uid} about report ${report.id}:`,
-              nerr
+              nerr,
             );
           }
         }
       } catch (aerr) {
         console.error(
           "submitReport: failed to fetch activity/task assignee:",
-          aerr
+          aerr,
         );
       }
     } catch (outerNotifyErr) {
@@ -437,7 +437,7 @@ exports.submitReport = async (req, res) => {
         if (entry.uploaded && entry.uploaded.provider === "local") {
           try {
             const fname = path.basename(
-              entry.uploaded.url || entry.originalFile.path || ""
+              entry.uploaded.url || entry.originalFile.path || "",
             );
             const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
             if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
@@ -477,7 +477,7 @@ exports.reviewReport = async (req, res) => {
 
     const repRes = await client.query(
       `SELECT * FROM "Reports" WHERE id = $1 FOR UPDATE`,
-      [reportId]
+      [reportId],
     );
     if (!repRes.rows[0]) {
       await client.query("ROLLBACK");
@@ -493,7 +493,7 @@ exports.reviewReport = async (req, res) => {
            "updatedAt" = NOW()
        WHERE id = $4
        RETURNING *`,
-      [status, adminComment || null, resubmissionDeadline || null, reportId]
+      [status, adminComment || null, resubmissionDeadline || null, reportId],
     );
     const updatedReport = updatedRows[0];
 
@@ -533,17 +533,17 @@ exports.reviewReport = async (req, res) => {
           // This calls the UPDATED accumulate_metrics SQL function
           await client.query(
             `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int)`,
-            [updatedReport.activityId, metricsObj, req.user.id]
+            [updatedReport.activityId, metricsObj, req.user.id],
           );
 
           await client.query(
             `UPDATE "Reports" SET applied = true, "appliedBy" = $1, "appliedAt" = NOW() WHERE id = $2`,
-            [req.user.id, reportId]
+            [req.user.id, reportId],
           );
         } catch (applyErr) {
           console.error(
             "Failed to apply metrics via accumulate_metrics:",
-            applyErr
+            applyErr,
           );
           await client.query("ROLLBACK");
           return res
@@ -574,7 +574,7 @@ exports.reviewReport = async (req, res) => {
                "isDone" = CASE WHEN $1::"activity_status"='Done' THEN true ELSE "isDone" END,
                "updatedAt" = NOW()
            WHERE id = $2`,
-          [updatedReport.new_status, updatedReport.activityId]
+          [updatedReport.new_status, updatedReport.activityId],
         );
       }
     }
@@ -615,7 +615,7 @@ exports.getAllReports = async (req, res) => {
     const page = Math.max(parseInt(req.query.page || "1", 10), 1);
     const pageSize = Math.min(
       Math.max(parseInt(req.query.pageSize || "20", 10), 1),
-      200
+      200,
     );
     const offset = (page - 1) * pageSize;
     const status = req.query.status ? String(req.query.status) : null;
@@ -634,14 +634,14 @@ exports.getAllReports = async (req, res) => {
     if (!isAdmin && canViewGroup) {
       const gRes2 = await db.query(
         `SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`,
-        [req.user.id]
+        [req.user.id],
       );
       const groupIds2 = gRes2.rows.map((r) => r.groupId).filter(Boolean);
       if (groupIds2.length) {
         const groupParam = pushParam(groupIds2);
         const userParam = pushParam(req.user.id);
         rebuiltWhereClauses.push(
-          `(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`
+          `(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`,
         );
       } else {
         const userParam = pushParam(req.user.id);
@@ -659,7 +659,7 @@ exports.getAllReports = async (req, res) => {
     if (qRaw) {
       const p = pushParam(`%${qRaw}%`);
       rebuiltWhereClauses.push(
-        `(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`
+        `(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`,
       );
     }
 
@@ -748,7 +748,7 @@ exports.generateMasterReport = async (req, res) => {
       ${groupId ? 'WHERE g."groupId" = $1' : ""}
       ORDER BY g.id, t.id, a.id, r.id
       `,
-      groupId ? [groupId] : []
+      groupId ? [groupId] : [],
     );
 
     const raw = rows.rows || [];
@@ -762,7 +762,7 @@ exports.generateMasterReport = async (req, res) => {
       ${groupId ? "AND group_id = $1" : ""}
       ORDER BY entity_id, snapshot_month
       `,
-      groupId ? [groupId] : []
+      groupId ? [groupId] : [],
     );
 
     const historyByActivity = {};
@@ -821,8 +821,12 @@ exports.generateMasterReport = async (req, res) => {
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
         const monthKey = `${year}-${String(month).padStart(2, "0")}`;
-        const quarterKey = `${year}-Q${Math.floor((month - 1) / 3) + 1}`;
-        const yearKey = `${year}`;
+        // Fiscal year starting in July: Jul-Sep => Q1, Oct-Dec => Q2, Jan-Mar => Q3, Apr-Jun => Q4
+        // Use the fiscal year's starting calendar year as the label (e.g. months Jan-Jun belong to previous fiscal year)
+        const fiscalYear = month >= 7 ? year : year - 1;
+        const fiscalMonthIndex = ((month + 5) % 12) + 1; // maps Jul->1, Aug->2, ..., Jun->12
+        const quarterKey = `${fiscalYear}-Q${Math.floor((fiscalMonthIndex - 1) / 3) + 1}`;
+        const yearKey = `${fiscalYear}`;
 
         const recordedAt = snap.recorded_at ? new Date(snap.recorded_at) : d;
         const existing = monthlyLatest.get(monthKey);
@@ -965,7 +969,7 @@ exports.generateMasterReport = async (req, res) => {
                 if (!Array.isArray(entries) || entries.length === 0) continue;
                 const latest = entries[entries.length - 1];
                 const nv = sumNumericValues(
-                  latest.metrics || latest.metrics_data || 0
+                  latest.metrics || latest.metrics_data || 0,
                 );
                 if (nv) {
                   sum += nv;
@@ -983,7 +987,7 @@ exports.generateMasterReport = async (req, res) => {
                 if (latestEntries.length) {
                   const latest = latestEntries[latestEntries.length - 1];
                   const nv = sumNumericValues(
-                    latest.metrics || latest.metrics_data || {}
+                    latest.metrics || latest.metrics_data || {},
                   );
                   if (nv || nv === 0) ytd = nv;
                 }
@@ -1035,7 +1039,7 @@ exports.generateMasterReport = async (req, res) => {
   } catch (err) {
     console.error(
       "Error generating master report:",
-      err && err.message ? err.message : err
+      err && err.message ? err.message : err,
     );
     res.status(500).json({ error: err.message || String(err) });
   }

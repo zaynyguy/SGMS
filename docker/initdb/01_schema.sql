@@ -1,11 +1,69 @@
--- ./docker/initdb/01_schema.sql
--- Idempotent schema initialization for SGMS (safe for re-run)
+-- This script clears the database by dropping all user-defined objects
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  -- 1. Drop all triggers
+  FOR r IN
+    SELECT tgname, tgrelid::regclass AS table_name
+    FROM pg_trigger
+    WHERE NOT tgisinternal
+  LOOP
+    EXECUTE 'DROP TRIGGER IF EXISTS ' || quote_ident(r.tgname) || ' ON ' || r.table_name || ' CASCADE';
+  END LOOP;
+
+  -- 2. Drop all functions and procedures
+  FOR r IN
+    SELECT oid::regprocedure AS func
+    FROM pg_proc
+    WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+  LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || r.func || ' CASCADE';
+  END LOOP;
+
+  -- 3. Drop all views
+  FOR r IN
+    SELECT viewname
+    FROM pg_views
+    WHERE schemaname = 'public'
+  LOOP
+    EXECUTE 'DROP VIEW IF EXISTS ' || quote_ident(r.viewname) || ' CASCADE';
+  END LOOP;
+
+  -- 4. Drop all tables (CASCADE removes FK constraints, indexes, etc.)
+  FOR r IN
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+  LOOP
+    EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+  END LOOP;
+
+  -- 5. Drop all sequences
+  FOR r IN
+    SELECT sequence_name
+    FROM information_schema.sequences
+    WHERE sequence_schema = 'public'
+  LOOP
+    EXECUTE 'DROP SEQUENCE IF EXISTS ' || quote_ident(r.sequence_name) || ' CASCADE';
+  END LOOP;
+
+  -- 6. Drop all custom types (ENUMs, etc.)
+  FOR r IN
+    SELECT typname
+    FROM pg_type t
+    JOIN pg_namespace ns ON ns.oid = t.typnamespace
+    WHERE t.typtype = 'e'  -- enum types only
+      AND ns.nspname = 'public'
+  LOOP
+    EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+  END LOOP;
+
+END $$;
 
 SET client_min_messages TO WARNING;
 SET search_path = public;
 
--- safe type creation (modern Postgres supports IF NOT EXISTS)
--- Safe enum creation (works on all Postgres versions)
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'goal_status') THEN
@@ -34,15 +92,6 @@ BEGIN
   END IF;
 END$$;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'metric_type') THEN
-    CREATE TYPE metric_type AS ENUM ('Plus', 'Minus', 'Increase', 'Decrease', 'Maintain');
-  END IF;
-END$$;
-
-
--- Roles & permissions
 CREATE TABLE IF NOT EXISTS "Roles" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
@@ -123,7 +172,6 @@ BEGIN
     ALTER TABLE "Goals" ADD CONSTRAINT chk_goals_rollno_positive CHECK ("rollNo" > 0);
   END IF;
 EXCEPTION WHEN duplicate_object THEN
-  -- ignore
 END$$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_goals_rollno ON "Goals" ("rollNo");
@@ -169,7 +217,6 @@ CREATE TABLE IF NOT EXISTS "Activities" (
   "targetMetric" JSONB DEFAULT '{}'::jsonb,
   "currentMetric" JSONB DEFAULT '{}'::jsonb,
   "quarterlyGoals" JSONB DEFAULT '{}'::jsonb,
-  "metricType" metric_type NOT NULL DEFAULT 'Plus',
   "progress" INTEGER NOT NULL DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
   "weight" NUMERIC NOT NULL DEFAULT 0,
   "isDone" BOOLEAN DEFAULT false,
@@ -282,8 +329,14 @@ CREATE INDEX IF NOT EXISTS idx_progresshistory_snapshot_month ON "ProgressHistor
 CREATE UNIQUE INDEX IF NOT EXISTS ux_progresshistory_entity_month
   ON "ProgressHistory"(entity_type, entity_id, snapshot_month);
 
--- Conversations (Channels)
-  CREATE TABLE IF NOT EXISTS "ChatConversations" (
+CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updatedAt" = NOW();
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
+
+CREATE TABLE IF NOT EXISTS "ChatConversations" (
   "id" SERIAL PRIMARY KEY,
   "type" VARCHAR(20) NOT NULL DEFAULT 'dm', -- 'dm' or 'group'
   "name" VARCHAR(255), -- Null for DMs, required for named groups
@@ -292,7 +345,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_progresshistory_entity_month
   "updatedAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Participants (Who is in which conversation)
+
 CREATE TABLE IF NOT EXISTS "ChatParticipants" (
   "conversationId" INTEGER NOT NULL REFERENCES "ChatConversations"("id") ON DELETE CASCADE,
   "userId" INTEGER NOT NULL REFERENCES "Users"("id") ON DELETE CASCADE,
@@ -300,7 +353,7 @@ CREATE TABLE IF NOT EXISTS "ChatParticipants" (
   PRIMARY KEY ("conversationId", "userId")
 );
 
--- Messages
+
 CREATE TABLE IF NOT EXISTS "ChatMessages" (
   "id" SERIAL PRIMARY KEY,
   "conversationId" INTEGER NOT NULL REFERENCES "ChatConversations"("id") ON DELETE CASCADE,
@@ -310,17 +363,10 @@ CREATE TABLE IF NOT EXISTS "ChatMessages" (
   "createdAt" TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indexes for performance
+
 CREATE INDEX IF NOT EXISTS idx_chat_participants_user ON "ChatParticipants"("userId");
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conv ON "ChatMessages"("conversationId");
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON "ChatMessages"("createdAt");
-
--- Update trigger helper
-CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
-BEGIN
-  NEW."updatedAt" = NOW();
-  RETURN NEW;
-END; $$ LANGUAGE plpgsql;
 
 DO $$
 BEGIN
@@ -359,7 +405,6 @@ BEGIN
   END IF;
 END$$;
 
--- Triggers and functions for roll numbers and progress recalculation
 CREATE OR REPLACE FUNCTION trg_assign_task_rollno() RETURNS TRIGGER AS $$
 DECLARE v_max INT;
 BEGIN
@@ -474,153 +519,170 @@ CREATE TRIGGER after_tasks_change
   AFTER INSERT OR UPDATE OR DELETE ON "Tasks"
   FOR EACH ROW EXECUTE FUNCTION trg_recalc_goal_progress();
 
--- accumulate_metrics and sp_SubmitReport (kept as-is, idempotent via CREATE OR REPLACE)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'metric_type') THEN
+        CREATE TYPE metric_type AS ENUM ('Plus', 'Minus', 'Increase', 'Decrease', 'Maintain');
+    END IF;
+END$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'Activities' AND column_name = 'metricType'
+    ) THEN
+        ALTER TABLE "Activities" ADD COLUMN "metricType" metric_type DEFAULT 'Plus';
+    END IF;
+END$$;
+
 CREATE OR REPLACE FUNCTION accumulate_metrics(
-  p_activity_id INT,
-  p_metrics JSONB,
-  p_actor_user_id INT DEFAULT NULL
+    p_activity_id INT,
+    p_metrics JSONB,
+    p_actor_user_id INT DEFAULT NULL
 ) RETURNS JSONB LANGUAGE plpgsql AS $$
 DECLARE
-  v_act RECORD;
-  v_target JSONB;
-  v_current JSONB;
-  v_prev JSONB;
-  v_metric_type metric_type;
-  k TEXT;
+    v_act RECORD;
+    v_target JSONB;
+    v_current JSONB;
+    v_prev JSONB;
+    v_metric_type metric_type;
+    k TEXT;
     
-  sum_current NUMERIC := 0;
-  sum_target NUMERIC := 0;
+    sum_current NUMERIC := 0;
+    sum_target NUMERIC := 0;
     
-  val_current NUMERIC;
-  val_target NUMERIC;
-  val_prev NUMERIC;
+    val_current NUMERIC;
+    val_target NUMERIC;
+    val_prev NUMERIC;
     
-  key_val NUMERIC;
-  v_new_progress INT := 0;
-  snap_month DATE := date_trunc('month', now())::date;
+    key_val NUMERIC;
+    v_new_progress INT := 0;
+    snap_month DATE := date_trunc('month', now())::date;
 BEGIN
-  IF p_activity_id IS NULL THEN
-    RAISE EXCEPTION 'activity id required';
-  END IF;
+    IF p_activity_id IS NULL THEN
+        RAISE EXCEPTION 'activity id required';
+    END IF;
 
-  SELECT * INTO v_act FROM "Activities" WHERE id = p_activity_id FOR UPDATE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Activity % not found', p_activity_id; END IF;
+    SELECT * INTO v_act FROM "Activities" WHERE id = p_activity_id FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Activity % not found', p_activity_id; END IF;
 
-  IF p_metrics IS NULL OR p_metrics = '{}'::jsonb THEN
-    RETURN COALESCE(v_act."currentMetric", '{}'::jsonb);
-  END IF;
+    IF p_metrics IS NULL OR p_metrics = '{}'::jsonb THEN
+        RETURN COALESCE(v_act."currentMetric", '{}'::jsonb);
+    END IF;
 
-  v_target := COALESCE(v_act."targetMetric", '{}'::jsonb);
-  v_prev   := COALESCE(v_act."previousMetric", '{}'::jsonb);
-  v_current := COALESCE(v_act."currentMetric", '{}'::jsonb);
-  v_metric_type := COALESCE(v_act."metricType", 'Plus');
+    v_target := COALESCE(v_act."targetMetric", '{}'::jsonb);
+    v_prev   := COALESCE(v_act."previousMetric", '{}'::jsonb);
+    v_current := COALESCE(v_act."currentMetric", '{}'::jsonb);
+    v_metric_type := COALESCE(v_act."metricType", 'Plus');
 
-  IF v_metric_type = 'Plus' OR v_metric_type = 'Minus' THEN
+    IF v_metric_type = 'Plus' OR v_metric_type = 'Minus' THEN
 
-    FOR k IN SELECT jsonb_object_keys(p_metrics) LOOP
-      BEGIN
-        key_val := (p_metrics ->> k)::numeric;
-        IF key_val IS NOT NULL THEN
-          val_current := COALESCE((v_current ->> k)::numeric, 0);
-          v_current := jsonb_set(v_current, ARRAY[k], to_jsonb(val_current + key_val));
+        FOR k IN SELECT jsonb_object_keys(p_metrics) LOOP
+            BEGIN
+                key_val := (p_metrics ->> k)::numeric;
+                IF key_val IS NOT NULL THEN
+                    val_current := COALESCE((v_current ->> k)::numeric, 0);
+                    v_current := jsonb_set(v_current, ARRAY[k], to_jsonb(val_current + key_val));
+                END IF;
+            EXCEPTION WHEN others THEN END;
+        END LOOP;
+
+        sum_current := 0;
+        sum_target := 0;
+
+        FOR k IN SELECT jsonb_object_keys(v_current) LOOP
+            val_current := (v_current ->> k)::numeric;
+            sum_current := sum_current + COALESCE(val_current, 0);
+        END LOOP;
+
+        FOR k IN SELECT jsonb_object_keys(v_target) LOOP
+            val_target := (v_target ->> k)::numeric;
+            sum_target := sum_target + COALESCE(val_target, 0);
+        END LOOP;
+
+        IF sum_target > 0 THEN
+            v_new_progress := LEAST(100, ROUND((sum_current / sum_target) * 100));
+        ELSE
+            v_new_progress := 0;
         END IF;
-      EXCEPTION WHEN others THEN END;
-    END LOOP;
 
-    sum_current := 0;
-    sum_target := 0;
+    ELSIF v_metric_type = 'Increase' THEN
 
-    FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-      val_current := (v_current ->> k)::numeric;
-      sum_current := sum_current + COALESCE(val_current, 0);
-    END LOOP;
+        v_current := p_metrics; 
 
-    FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-      val_target := (v_target ->> k)::numeric;
-      sum_target := sum_target + COALESCE(val_target, 0);
-    END LOOP;
+        sum_current := 0;
+        sum_target := 0;
+        val_prev := 0;
 
-    IF sum_target > 0 THEN
-      v_new_progress := LEAST(100, ROUND((sum_current / sum_target) * 100));
-    ELSE
-      v_new_progress := 0;
-    END IF;
-
-  ELSIF v_metric_type = 'Increase' THEN
-
-    v_current := p_metrics; 
-
-    sum_current := 0;
-    sum_target := 0;
-    val_prev := 0;
-
-    FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-      sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
-    END LOOP;
+        FOR k IN SELECT jsonb_object_keys(v_current) LOOP
+            sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
+        END LOOP;
         
-    FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-      sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
-    END LOOP;
+        FOR k IN SELECT jsonb_object_keys(v_target) LOOP
+            sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
+        END LOOP;
         
-    FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
-      val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
-    END LOOP;
+        FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
+            val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
+        END LOOP;
 
-    IF (sum_target - val_prev) > 0 THEN
-      v_new_progress := LEAST(100, ROUND( ((sum_current - val_prev) / (sum_target - val_prev)) * 100 ));
-      v_new_progress := GREATEST(0, v_new_progress);
-    ELSE
-      v_new_progress := 100;
+        IF (sum_target - val_prev) > 0 THEN
+            v_new_progress := LEAST(100, ROUND( ((sum_current - val_prev) / (sum_target - val_prev)) * 100 ));
+            v_new_progress := GREATEST(0, v_new_progress);
+        ELSE
+            v_new_progress := 100;
+        END IF;
+
+    ELSIF v_metric_type = 'Decrease' THEN
+
+        v_current := p_metrics;
+
+        sum_current := 0;
+        sum_target := 0;
+        val_prev := 0;
+
+        FOR k IN SELECT jsonb_object_keys(v_current) LOOP
+            sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
+        END LOOP;
+        FOR k IN SELECT jsonb_object_keys(v_target) LOOP
+            sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
+        END LOOP;
+        FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
+            val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
+        END LOOP;
+
+        IF (val_prev - sum_target) > 0 THEN
+            v_new_progress := LEAST(100, ROUND( ((val_prev - sum_current) / (val_prev - sum_target)) * 100 ));
+            v_new_progress := GREATEST(0, v_new_progress);
+        ELSE
+            v_new_progress := 100;
+        END IF;
+
+    ELSIF v_metric_type = 'Maintain' THEN
+
+        v_current := p_metrics;
+        v_new_progress := 100;
     END IF;
 
-  ELSIF v_metric_type = 'Decrease' THEN
+    UPDATE "Activities"
+    SET "currentMetric" = v_current,
+        "progress" = v_new_progress,
+        "updatedAt" = NOW()
+    WHERE id = p_activity_id;
 
-    v_current := p_metrics;
+    INSERT INTO "ProgressHistory"
+    (entity_type, entity_id, group_id, progress, metrics, recorded_at, snapshot_month)
+    VALUES
+    ('Activity', p_activity_id,
+     (SELECT gl."groupId" FROM "Activities" a JOIN "Tasks" t ON a."taskId" = t.id JOIN "Goals" gl ON t."goalId" = gl.id WHERE a.id = p_activity_id),
+     COALESCE(v_new_progress, 0),
+     v_current, NOW(), snap_month)
+    ON CONFLICT (entity_type, entity_id, snapshot_month)
+    DO UPDATE SET metrics = EXCLUDED.metrics, progress = EXCLUDED.progress, recorded_at = NOW();
 
-    sum_current := 0;
-    sum_target := 0;
-    val_prev := 0;
-
-    FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-      sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
-    END LOOP;
-    FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-      sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
-    END LOOP;
-    FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
-      val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
-    END LOOP;
-
-    IF (val_prev - sum_target) > 0 THEN
-      v_new_progress := LEAST(100, ROUND( ((val_prev - sum_current) / (val_prev - sum_target)) * 100 ));
-      v_new_progress := GREATEST(0, v_new_progress);
-    ELSE
-      v_new_progress := 100;
-    END IF;
-
-  ELSIF v_metric_type = 'Maintain' THEN
-
-    v_current := p_metrics;
-    v_new_progress := 100;
-  END IF;
-
-  UPDATE "Activities"
-  SET "currentMetric" = v_current,
-    "progress" = v_new_progress,
-    "updatedAt" = NOW()
-  WHERE id = p_activity_id;
-
-  INSERT INTO "ProgressHistory"
-  (entity_type, entity_id, group_id, progress, metrics, recorded_at, snapshot_month)
-  VALUES
-  ('Activity', p_activity_id,
-   (SELECT gl."groupId" FROM "Activities" a JOIN "Tasks" t ON a."taskId" = t.id JOIN "Goals" gl ON t."goalId" = gl.id WHERE a.id = p_activity_id),
-   COALESCE(v_new_progress, 0),
-   v_current, NOW(), snap_month)
-  ON CONFLICT (entity_type, entity_id, snapshot_month)
-  DO UPDATE SET metrics = EXCLUDED.metrics, progress = EXCLUDED.progress, recorded_at = NOW();
-
-  RETURN v_current;
+    RETURN v_current;
 END;
 $$;
 
@@ -666,3 +728,4 @@ BEGIN
     RETURN v_report_id;
 END;
 $$ LANGUAGE plpgsql;
+
