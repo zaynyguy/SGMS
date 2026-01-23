@@ -293,7 +293,7 @@ function TaskList({
   }
 
   return (
-    <div className="space-y-3 task-list-container  rounded-xl bg-gray-50 dark:bg-gray-800">
+    <div className="space-y-3 task-list-container px-3 rounded-xl bg-gray-100 dark:bg-gray-700">
       <style>{`
         :root {
           --primary: ${m3Colors.primary};
@@ -373,7 +373,7 @@ function TaskList({
         return (
             <div
               key={task.id}
-              className={`p-3 bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1${
+              className={`p-3 bg-white dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1${
                 taskIsExpanded ? "task-expanded" : ""
               }`}
               style={{
@@ -500,7 +500,7 @@ function TaskList({
             <div className={`task-content-wrapper ${taskIsExpanded ? "task-content-expanded" : "task-content-collapsed"}`}>
               {shouldRenderContent && (
                 <div className="mt-4 pl-0 sm:pl-9">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between pt-3 px-3 border-t border-l border-r border-[var(--outline-variant)] dark:border-gray-700 rounded-t-xl bg-gray-100 dark:bg-gray-700">
                     <h6 className="text-sm font-semibold text-[var(--on-surface)] dark:text-white flex items-center gap-2 task-fade-in">
                       <List className="h-4 w-4 text-[var(--primary)] dark:text-indigo-600" /> {t("project.sections.activities") || "Activities"}
                     </h6>
