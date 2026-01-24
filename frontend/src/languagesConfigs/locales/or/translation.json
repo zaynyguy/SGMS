@@ -966,6 +966,7 @@
   },
   "chat": {
     "title": "Waliigala",
+    "subtitle": "miiltoowwan hojii waliin haasauu",
     "recent": "Waliigala Dhiheenya",
     "loading": "Fe'aa jira...",
     "noConversations": "Hanga ammaatti haasawa hin jiru. Ergaa erguu jalqabuuf marii haaraa jalqabi.",
@@ -975,8 +976,9 @@
     "placeholder": "Ergaa barreessi...",
     "selectConversation": "Chatting jalqabuuf haasawa filadhu.",
     "chooseConversation": "Chaat jiru bitaa irraa filadhu ykn haaraa jalqabi.",
-    "New Message": "Ergaa Haaraa",
+    "newMessage": "Ergaa Haaraa",
     "loadingUsers": "Fayyadamtoota fe'aa jira...",
-    "noUsersFound": "Fayyadamtoota hin argamne"
+    "noUsersFound": "Fayyadamtoota hin argamne",
+    "sayHello": "Nagga jedhaa 👋"
   }
 }

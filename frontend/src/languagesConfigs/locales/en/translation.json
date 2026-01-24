@@ -966,6 +966,7 @@
   },
   "chat": {
     "title": "Messages",
+    "subtitle": "Chat with colleagues",
     "recent": "Chats",
     "loading": "Loading chats…",
     "noConversations": "No conversations yet. Start a new chat to begin messaging.",
@@ -975,8 +976,9 @@
     "placeholder": "Type a message…",
     "selectConversation": "Select a conversation to start chatting.",
     "chooseConversation": "Choose an existing chat from the left or start a new one.",
-    "New Message": "New Message",
+    "newMessage": "New Message",
     "loadingUsers": "Loading users…",
-    "noUsersFound": "No users found."
+    "noUsersFound": "No users found.",
+    "sayHello": "Say hello! 👋"
   }
 }

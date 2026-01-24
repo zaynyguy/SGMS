@@ -558,7 +558,7 @@ const App = ({ permissions, readonly = false }) => {
           border: 1px solid var(--outline-variant);
         }
       `}</style>
-      <div className="min-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      <div className="min-w-7xl min-h-screen mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         {/* Enhanced Toast with subtle animations */}
         {toast &&
           createPortal(

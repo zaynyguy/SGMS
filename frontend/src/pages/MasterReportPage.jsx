@@ -1533,9 +1533,9 @@ const App = () => {
       `}</style>
 
       {/* MODIFIED: Changed from min-w-7xl to w-full max-w-7xl to fix horizontal overflow issue */}
-      <div className="w-full max-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      <div className="w-full min-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <div className="mb-6">
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl px-4 py-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl px-4 py-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex min-w-0 gap-4 items-center">
                 <div className="p-3 rounded-xl bg-green-200 dark:bg-indigo-900">
@@ -1559,7 +1559,7 @@ const App = () => {
           </div>
         </div>
 
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl p-4 sm:p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl p-4 sm:p-6">
           {/* --- Group Filter and Action Buttons --- */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5">
             <div className="md:col-span-3">
@@ -1876,10 +1876,10 @@ const App = () => {
 
             <div
               ref={tableWrapRef}
-              className="overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1"
+              className="overflow-x-auto overflow-y-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1 max-h-[60vh]"
             >
               <table className="min-w-full">
-                <thead className="bg-gray-300 dark:bg-gray-700">
+                <thead className="sticky top-0 z-20 bg-gray-300 dark:bg-gray-900">
                   <tr>
                     <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-white">
                       {t("reports.table.title")}
@@ -1933,7 +1933,7 @@ const App = () => {
                     {/* Yearly Progress header moved above (after Target) */}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--outline-variant)] dark:divide-gray-600 bg-gray-100 dark:bg-gray-700">
+                <tbody className="divide-y divide-[var(--outline-variant)] dark:divide-gray-600 bg-gray-50 dark:bg-gray-600">
                   {tableRows.map((row, index) => {
                     if (row.type === "goal" || row.type === "task") {
                       const numEmptyCols =
@@ -1945,35 +1945,35 @@ const App = () => {
                           key={row.id}
                           className={`${
                             row.type === "goal"
-                              ? "bg-[var(--primary-container)]/[0.1] dark:bg-gray-900/[0.15]"
-                              : "bg-gray-100 dark:bg-gray-700"
+                              ? "bg-gray-400 dark:bg-gray-800"
+                              : "bg-gray-200 dark:bg-gray-700"
                           } transition-all duration-300`}
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
                           <td
-                            className={`border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 font-medium text-gray-600 dark:text-white text-sm ${
+                            className={`border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 font-medium text-gray-800 dark:text-white text-sm ${
                               row.type === "task" ? "pl-6" : ""
                             }`}
                           >
                             {`${row.number}. ${row.title}`}
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
+                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
                             {row.weight}
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
+                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
+                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
+                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
                           {/* ADDED: Empty cells for Quarterly Total and Yearly % (moved before period cols) */}
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
+                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm">
+                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
                           {Array(numEmptyCols)
@@ -1981,7 +1981,7 @@ const App = () => {
                             .map((_, i) => (
                               <td
                                 key={i}
-                                className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-600 dark:text-white text-sm"
+                                className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm"
                               >
                                 —
                               </td>
@@ -2557,16 +2557,14 @@ function ActivityRow({
       style={{
         animationDelay: `${index * 60}ms`,
         backgroundColor: darkMode
-          ? "#1f2937"
-          : "var(--surface-container-lowest)",
+          ? "var(--surface-container-lowest-light)"
+          : "var(--surface-container-lowest-dark)",
       }}
     >
       <td
         className={`border-b ${
           darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm font-medium ${
-          darkMode ? "text-white" : "text-gray-600"
-        } pl-5`}
+        } px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 pl-5`}
       >
         <div className="flex items-center gap-2">
           <div>{`${number} ${activity.title}`}</div>
@@ -2578,21 +2576,21 @@ function ActivityRow({
       <td
         className={`border-b ${
           darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 text-center w-16`}
+        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-16`}
       >
         <div>{activity.weight ?? "-"}</div>
       </td>
       <td
         className={`border-b ${
           darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 text-center w-20`}
+        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-20`}
       >
         <div>{metricKey ?? "-"}</div>
       </td>
       <td
         className={`border-b ${
           darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}
+        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {typeof prevVal === "number"
@@ -2603,7 +2601,7 @@ function ActivityRow({
       <td
         className={`border-b ${
           darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}
+        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {typeof targetVal === "number"
@@ -2616,7 +2614,7 @@ function ActivityRow({
       <td
         className={`border-b ${
           darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}
+        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {(() => {
@@ -2651,7 +2649,7 @@ function ActivityRow({
           <td
             className={`border-b ${
               darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-            } px-4 py-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-300 text-right w-24 font-mono`}
+            } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
           >
             <div>{disp}</div>
           </td>
@@ -2682,7 +2680,7 @@ function ActivityRow({
             const recordColorClass = isUnderperforming
               ? "text-red-600 font-bold"
               : darkMode
-              ? "text-gray-300"
+              ? "text-gray-700"
               : "text-[var(--on-surface-variant)]";
 
             return (
@@ -2692,7 +2690,7 @@ function ActivityRow({
                     darkMode
                       ? "border-gray-600"
                       : "border-[var(--outline-variant)]"
-                  } px-3 py-3 text-sm text-[var(--on-surface-variant)] ${
+                  } px-3 py-3 text-sm text-gray-700 dark:text-gray-300 ${
                     darkMode
                       ? "text-gray-300"
                       : "text-[var(--on-surface-variant)]"
@@ -2723,9 +2721,7 @@ function ActivityRow({
                     darkMode
                       ? "border-gray-600"
                       : "border-[var(--outline-variant)]"
-                  } px-3 py-3 text-sm font-medium ${
-                    darkMode ? "text-white" : "text-gray-600"
-                  } text-right w-20 font-mono`}
+                  } px-3 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 text-right w-20 font-mono`}
                 >
                   <div>{displayProgress}</div>
                 </td>

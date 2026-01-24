@@ -820,7 +820,7 @@ const openSubmitModal = useCallback(
           animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
-      <div className="min-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      <div className="min-w-7xl min-h-screen mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <header className="mb-6">
           {/* Header container with MD3 container styling */}
           <div className="md3-container dark:border-gray-700 surface-elevation-3">

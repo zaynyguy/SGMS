@@ -23,7 +23,7 @@ const ChatPage = () => {
 
   const styles = {
     card: "bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden",
-    input: "w-full rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-blue-500 dark:text-white",
+    input: "w-full rounded-xl px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-indigo-500 dark:text-white",
     activeItem: "bg-green-50 dark:bg-blue-900 border-l-4 border-green-500 dark:border-blue-500",
     item: "hover:bg-gray-50 dark:hover:bg-gray-700 border-l-4 border-transparent cursor-pointer transition-all",
   };
@@ -146,19 +146,19 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-200 dark:bg-gray-900 p-4 transition-colors duration-300">
       <div className="min-w-7xl mx-auto h-[calc(100vh-2rem)] flex flex-col">
         {/* Header (top-bar card applied below) */}
           {/* Header */}
           <div className="mb-4">
-            <div className="rounded-2xl bg-[var(--surface-container-low)] dark:bg-gray-800 surface-elevation-3 px-4 py-4 flex items-center justify-between">
+            <div className="rounded-2xl bg-white dark:bg-gray-800 surface-elevation-3 px-4 py-4 flex items-center justify-between">
               <div className="flex items-center gap-4 min-w-0">
-                <div className="p-3 rounded-xl bg-[var(--primary-container)] dark:bg-indigo-900 surface-elevation-2">
-                  <MessageSquare className="h-6 w-6 text-[var(--on-primary-container)] dark:text-indigo-200" />
+                <div className="p-3 rounded-xl bg-green-300 dark:bg-indigo-900 surface-elevation-2">
+                  <MessageSquare className="h-6 w-6 text-green-800 dark:text-indigo-200" />
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-2xl font-bold text-[var(--on-surface)] dark:text-white truncate transition-colors duration-300">{t("chat.title", "Messages")}</h1>
-                  <p className="mt-0.5 text-base text-[var(--on-surface-variant)] dark:text-gray-400 max-w-2xl">{t("chat.subtitle", "Chat with colleagues")}</p>
+                  <p className="text-base text-[var(--on-surface-variant)] dark:text-gray-400 max-w-2xl">{t("chat.subtitle", "Chat with colleagues")}</p>
                 </div>
               </div>
               <div className="flex-shrink-0">
@@ -174,7 +174,7 @@ const ChatPage = () => {
               <span className="font-semibold text-gray-700 dark:text-gray-200">{t("chat.recent", "Chats")}</span>
               <button 
                 onClick={handleNewChatClick} 
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition text-green-600 dark:text-blue-400"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition text-green-600 dark:text-indigo-400"
                 title="New Chat"
               >
                 <Plus size={20} />
@@ -192,7 +192,7 @@ const ChatPage = () => {
                   <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">{t("chat.noConversations", "No conversations yet.")}</p>
                   <button 
                     onClick={handleNewChatClick}
-                    className="px-4 py-2 bg-green-600 dark:bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 dark:hover:bg-blue-700 transition"
+                    className="px-4 py-2 bg-green-600 dark:bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 dark:hover:bg-blue-700 transition"
                   >
                     {t("chat.startNewChat", "Start New Chat")}
                   </button>
@@ -213,11 +213,11 @@ const ChatPage = () => {
                           <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{c.lastMessageAt ? new Date(c.lastMessageAt).toLocaleDateString() : ''}</span>
                         </div>
                         <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {c.lastMessage?.content || <span className="italic text-xs opacity-60">{t("chat.noMessagesYet", "No messages yet")}</span>}
+                          {c.lastMessage || <span className="italic text-xs opacity-60">{t("chat.noMessagesYet", "No messages yet")}</span>}
                         </p>
                       </div>
                       {c.unreadCount > 0 && (
-                        <span className="w-5 h-5 bg-green-500 dark:bg-blue-500 text-white text-xs flex items-center justify-center rounded-full flex-shrink-0">
+                        <span className="w-5 h-5 bg-green-500 dark:bg-indigo-500 text-white text-xs flex items-center justify-center rounded-full flex-shrink-0">
                           {c.unreadCount}
                         </span>
                       )}
@@ -229,7 +229,7 @@ const ChatPage = () => {
           </div>
 
           {/* Chat Area */}
-          <div className={`${isMobile && !activeConvId ? 'hidden' : 'flex'} flex-1 flex-col bg-gray-50/50 dark:bg-gray-900/50`}>
+          <div className={`${isMobile && !activeConvId ? 'hidden' : 'flex'} flex-1 flex-col bg-gray-100 dark:bg-gray-900/50`}>
             {activeConvId ? (
               <>
                 {/* Chat Header */}
@@ -257,8 +257,8 @@ const ChatPage = () => {
                 {/* Messages List */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {messages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                      <p>Say hello! 👋</p>
+                    <div className="flex flex-col items-center justify-center h-full text-gray-900 dark:text-white">
+                      <p className="text-2xl text-gray-900 dark:text-white">{t("chat.sayHello", "Say hello! 👋")}</p>
                     </div>
                   ) : (
                     messages.map((m, i) => {
@@ -267,10 +267,10 @@ const ChatPage = () => {
                         <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                           <div className={`max-w-[85%] md:max-w-[70%] p-3 rounded-2xl shadow-sm ${
                             isMe 
-                              ? 'bg-green-600 dark:bg-blue-600 text-white rounded-br-none' 
+                              ? 'bg-green-600 dark:bg-indigo-600 text-white rounded-br-none' 
                               : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-100 dark:border-gray-700'
                           }`}>
-                            <p className="text-sm whitespace-pre-wrap break-words">{m.content}</p>
+                            <p className="text-xl whitespace-pre-wrap break-words text-gray-900 dark:text-white">{m.content}</p>
                             <span className={`text-[10px] block text-right mt-1 opacity-70`}>
                               {new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                             </span>
@@ -295,7 +295,7 @@ const ChatPage = () => {
                     <button 
                       type="submit" 
                       disabled={!inputText.trim()}
-                      className="p-3 bg-green-600 dark:bg-blue-600 hover:bg-green-700 dark:hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex-shrink-0"
+                      className="p-3 bg-green-600 dark:bg-indigo-600 hover:bg-green-700 dark:hover:bg-indigo-700 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex-shrink-0"
                     >
                       <Send size={20} />
                     </button>
@@ -308,10 +308,10 @@ const ChatPage = () => {
                   <MessageSquare size={32} className="opacity-40" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">{t("chat.selectConversation", "Select a Conversation")}</h3>
-                <p className="max-w-xs mx-auto mb-6">{t("chat.chooseConversation", "Choose an existing chat from the left or start a new one.")}</p>
+                <p className="max-w-xs mx-auto mb-6 text-gray-500 dark:text-gray-400">{t("chat.chooseConversation", "Choose an existing chat from the left or start a new one.")}</p>
                 <button 
                   onClick={handleNewChatClick}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 dark:bg-blue-600 text-white rounded-xl hover:bg-green-700 dark:hover:bg-blue-700 transition font-medium shadow-md"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 dark:bg-indigo-600 text-white rounded-xl hover:bg-green-700 dark:hover:bg-indigo-700 transition font-medium shadow-md"
                 >
                   <UserPlus size={18} />
                   <span>{t("chat.startNewChat", "Start New Chat")}</span>

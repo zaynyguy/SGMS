@@ -390,7 +390,7 @@ const App = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-[32rem] bg-gray-50 dark:bg-gray-900">
+      <div className="flex justify-center items-center bg-gray-50 dark:bg-gray-900 min-h-screen">
         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md text-center border border-red-100 dark:border-red-900 max-w-xl">
           <AlertTriangle className="h-5 w-5 text-red-500 mx-auto dark:text-red-400" />
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -503,7 +503,7 @@ const App = () => {
       <PortalToast toast={toast} onClose={handleToastClose} />
 
       {/* Header */}
-      <div className="max-w-8xl mx-auto px-4 mb-6">
+      <div className="max-w-8xl min-h-screen mx-auto px-4 mb-6">
         <div className='overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl'>
           <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="px-5 py-4">
