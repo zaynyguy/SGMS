@@ -11,7 +11,7 @@ const MainLayout = () => {
     return (
         <div className="flex bg-gray-100 dark:bg-gray-800 min-h-screen">
             <Sidebar />
-            <main className="flex-1">
+            <main className="flex-1 min-w-0 overflow-hidden">
                 {/* The Outlet component renders the active child route */}
                 <Outlet />
             </main>

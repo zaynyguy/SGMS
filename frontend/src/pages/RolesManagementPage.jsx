@@ -503,7 +503,7 @@ const App = () => {
       <PortalToast toast={toast} onClose={handleToastClose} />
 
       {/* Header */}
-      <div className="max-w-8xl min-h-screen mx-auto px-4 mb-6">
+      <div className="max-w-8xl mx-auto px-4 mb-6">
         <div className='overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl'>
           <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="px-5 py-4">
@@ -522,7 +522,7 @@ const App = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">                  
+                <div className="flex items-center gap-3">
                   <div className="flex-shrink-0">
                     <TopBar />
                   </div>
@@ -553,18 +553,17 @@ const App = () => {
                         {roles.length > 0 ? (
                           <ul className="space-y-3 mb-5">
                             {roles.map((role, index) => (
-                              <li 
-                                key={role.id} 
+                              <li
+                                key={role.id}
                                 className="flex items-center justify-between rounded-xl overflow-hidden surface-elevation-1 hover:surface-elevation-2 transition-shadow duration-200"
                                 style={{ animation: `material-in 0.4s ease-out forwards`, animationDelay: `${index * 0.04}s` }}
                               >
                                 <button
                                   onClick={() => setSelectedRoleId(role.id)}
-                                  className={`flex-1 text-left p-3 text-sm rounded-l-xl font-medium transition-colors ${
-                                    selectedRoleId === role.id
+                                  className={`flex-1 text-left p-3 text-sm rounded-l-xl font-medium transition-colors ${selectedRoleId === role.id
                                       ? 'bg-green-100 dark:bg-indigo-900 text-green-800 dark:text-indigo-200'
                                       : 'text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
-                                  }`}
+                                    }`}
                                 >
                                   {role.name}
                                 </button>
@@ -574,11 +573,10 @@ const App = () => {
                                     onClick={() => handleDeleteClick(role)}
                                     disabled={role.name === 'Admin' || submitting}
                                     aria-label={t('admin.roles.deleteRole', { name: role.name })}
-                                    className={`p-2 rounded-full transition-all duration-200 ${
-                                      role.name === 'Admin'
+                                    className={`p-2 rounded-full transition-all duration-200 ${role.name === 'Admin'
                                         ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                                         : 'text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900'
-                                    }`}
+                                      }`}
                                   >
                                     <Trash2 size={18} />
                                   </button>
@@ -592,66 +590,66 @@ const App = () => {
 
                         {/* add role */}
                         {isAddingRole ? (
-  <div className="flex flex-col gap-3 w-full surface-elevation-2 rounded-xl p-4 mb-3">
-    <div className="flex gap-3 w-full">
-      <input
-        autoFocus
-        value={newRoleName}
-        onChange={(e) => setNewRoleName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleAddRole();
-          if (e.key === "Escape") {
-            setIsAddingRole(false);
-            setNewRoleName("");
-          }
-        }}
-        placeholder={t("admin.roles.roleNamePlaceholder")}
-        aria-label={t("admin.roles.roleNameAria")}
-        className="flex-1 px-3 py-2.5 text-sm border rounded-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 dark:ring-indigo-500"
-      />
-      <button
-        onClick={() => {
-          setIsAddingRole(false);
-          setNewRoleName("");
-        }}
-        className="p-2.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition duration-200"
-        aria-label={t("admin.roles.roleActions.remove")}
-      >
-        <X size={20} />
-      </button>
-    </div>
+                          <div className="flex flex-col gap-3 w-full surface-elevation-2 rounded-xl p-4 mb-3">
+                            <div className="flex gap-3 w-full">
+                              <input
+                                autoFocus
+                                value={newRoleName}
+                                onChange={(e) => setNewRoleName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") handleAddRole();
+                                  if (e.key === "Escape") {
+                                    setIsAddingRole(false);
+                                    setNewRoleName("");
+                                  }
+                                }}
+                                placeholder={t("admin.roles.roleNamePlaceholder")}
+                                aria-label={t("admin.roles.roleNameAria")}
+                                className="flex-1 px-3 py-2.5 text-sm border rounded-full bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 dark:ring-indigo-500"
+                              />
+                              <button
+                                onClick={() => {
+                                  setIsAddingRole(false);
+                                  setNewRoleName("");
+                                }}
+                                className="p-2.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition duration-200"
+                                aria-label={t("admin.roles.roleActions.remove")}
+                              >
+                                <X size={20} />
+                              </button>
+                            </div>
 
-    <button
-      onClick={handleAddRole}
-      className="w-full px-4 py-2.5 text-sm bg-green-500 hover:bg-green-600 dark:bg-indigo-500 hover:dark:bg-indigo-600 text-white rounded-full font-medium transition duration-200 surface-elevation-1"
-      aria-label={t("admin.roles.roleActions.add")}
-    >
-      {t("admin.roles.roleActions.add")}
-    </button>
-  </div>
-) : (
-  <button
-    onClick={() => setIsAddingRole(true)}
-    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition duration-200 surface-elevation-1"
-  >
-    <Plus size={18} /> {t("admin.roles.addRole")}
-  </button>
-)}
+                            <button
+                              onClick={handleAddRole}
+                              className="w-full px-4 py-2.5 text-sm bg-green-500 hover:bg-green-600 dark:bg-indigo-500 hover:dark:bg-indigo-600 text-white rounded-full font-medium transition duration-200 surface-elevation-1"
+                              aria-label={t("admin.roles.roleActions.add")}
+                            >
+                              {t("admin.roles.roleActions.add")}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setIsAddingRole(true)}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm rounded-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition duration-200 surface-elevation-1"
+                          >
+                            <Plus size={18} /> {t("admin.roles.addRole")}
+                          </button>
+                        )}
 
-<div className="flex flex-shrink-0 mt-6 justify-center items-center">
-  {hasUnsavedChanges && (
-    <button
-      onClick={handleSaveChanges}
-      className="hidden md:flex w-full px-4 py-2.5 text-sm bg-green-500 hover:bg-green-600 dark:text-indigo-200 dark:bg-indigo-900 text-white rounded-xl font-medium transition-all duration-200 shadow-md justify-center items-center gap-2 surface-elevation-1"
-      aria-label={t("admin.actions.saveChanges")}
-    >
-      {t("admin.actions.saveChanges")}
-    </button>
-  )}
-</div>
-</div>
+                        <div className="flex flex-shrink-0 mt-6 justify-center items-center">
+                          {hasUnsavedChanges && (
+                            <button
+                              onClick={handleSaveChanges}
+                              className="hidden md:flex w-full px-4 py-2.5 text-sm bg-green-500 hover:bg-green-600 dark:text-indigo-200 dark:bg-indigo-900 text-white rounded-xl font-medium transition-all duration-200 shadow-md justify-center items-center gap-2 surface-elevation-1"
+                              aria-label={t("admin.actions.saveChanges")}
+                            >
+                              {t("admin.actions.saveChanges")}
+                            </button>
+                          )}
+                        </div>
+                      </div>
 
-                      
+
 
                       {/* Mobile: horizontal role chips */}
                       <div className="md:hidden mt-3">
@@ -662,11 +660,10 @@ const App = () => {
                               <button
                                 key={role.id}
                                 onClick={() => setSelectedRoleId(role.id)}
-                                className={`flex-shrink-0 px-3 py-1.5 text-sm rounded-full border transition-all duration-200 ${
-                                  active
+                                className={`flex-shrink-0 px-3 py-1.5 text-sm rounded-full border transition-all duration-200 ${active
                                     ? 'bg-green-500 dark:bg-indigo-600 text-white border-green-500 dark:border-indigo-600'
                                     : 'bg-gray-100 dark:bg-gray-600 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500'
-                                }`}
+                                  }`}
                                 aria-current={active ? 'true' : undefined}
                                 style={{ animation: `material-in 0.4s ease-out forwards`, animationDelay: `${index * 0.04}s` }}
                               >
@@ -734,8 +731,8 @@ const App = () => {
                                 const meta = PERMISSION_META[permission.name] || { label: permission.name, description: permission.description || '', Icon: FileText };
                                 const Icon = meta.Icon || FileText;
                                 return (
-                                  <tr 
-                                    key={permission.id} 
+                                  <tr
+                                    key={permission.id}
                                     className="hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200"
                                     style={{ animation: `material-in 0.4s ease-out forwards`, animationDelay: `${index * 0.04}s` }}
                                   >
@@ -769,11 +766,10 @@ const App = () => {
                                           aria-pressed={checked}
                                           title={checked ? t('admin.roles.enabled') : t('admin.roles.disabled')}
                                         >
-                                          <div className={`w-6 h-6 rounded-full flex items-center justify-center mx-auto transition-all duration-200 ${
-                                            checked
+                                          <div className={`w-6 h-6 rounded-full flex items-center justify-center mx-auto transition-all duration-200 ${checked
                                               ? 'bg-green-500 dark:bg-indigo-600 text-white'
                                               : 'bg-gray-200 dark:bg-gray-600 border border-gray-300 dark:border-gray-500'
-                                          }`}>
+                                            }`}>
                                             {checked && (
                                               <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
                                             )}
@@ -827,11 +823,10 @@ const App = () => {
                                     </div>
 
                                     <div className="flex items-center">
-                                      <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 ${
-                                        checked
+                                      <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 ${checked
                                           ? 'bg-green-500 dark:bg-indigo-600 text-white'
                                           : 'bg-gray-300 dark:bg-gray-500 border border-gray-400 dark:border-gray-500'
-                                      }`}>
+                                        }`}>
                                         {checked && (
                                           <div className="w-2.5 h-2.5 rounded-full bg-white"></div>
                                         )}

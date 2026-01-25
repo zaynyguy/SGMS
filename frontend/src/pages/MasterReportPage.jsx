@@ -1528,9 +1528,9 @@ const App = () => {
           }
       `}</style>
 
-      {/* MODIFIED: Expanded width to max-w-[1920px] and added padding for better responsiveness */}
-      <div className="w-full max-w-[1920px] mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
-        <div className="mb-6">
+      {/* MODIFIED: Use min-w-0 to prevent flex child expansion beyond parent width AND enforce strict max-width */}
+      <div className="flex-1 min-w-0 w-full max-w-full overflow-hidden mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+        <div className="mb-6 w-full">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl px-4 py-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex min-w-0 gap-4 items-center">
@@ -1555,7 +1555,7 @@ const App = () => {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl p-4 sm:p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl p-4 sm:p-6 w-full overflow-hidden">
           {/* --- Group Filter and Action Buttons --- */}
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-5">
             <div className="md:col-span-3">
@@ -1865,8 +1865,8 @@ const App = () => {
               aria-hidden="true"
             />
 
-            {/* MODIFIED: added overflow-x-auto to this container specifically so only the table slides */}
-            <div className="overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1">
+            {/* MODIFIED: Table uses full width within the already-constrained parent, with horizontal scroll */}
+            <div className="w-full overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1">
               <table className="min-w-full table-auto">
                 <thead className="sticky top-0 z-20 bg-gray-300 dark:bg-gray-900">
                   <tr>
@@ -2174,6 +2174,60 @@ function isQuarterPast(periodKey) {
   return false;
 }
 
+// Helper: Convert raw DB key or date to FISCAL KEY "YYYY-Qx"
+// Fiscal Year Starts July.
+// Jul 2024 -> FY2025 Q1.
+// Jan 2024 -> FY2024 Q3.
+// OPTIMIZATION: Memoize this function since it's called thousands of times in loops
+const fiscalKeyCache = new Map();
+
+function toFiscalKey(rawKey) {
+  if (!rawKey) return null;
+  if (fiscalKeyCache.has(rawKey)) return fiscalKeyCache.get(rawKey);
+
+  // Try to parse as date first (for history items)
+  let date = new Date(rawKey);
+  // If rawKey is "YYYY-Qx", Date() might parse it weirdly or fail. check format.
+  if (String(rawKey).match(/^\d{4}-Q\d$/)) {
+    // It's already a quarter string? Assume it is CALENDAR format from DB?
+    // NOTE: flattened headers rely on this. DB Keys are likely Calendar "2024-Q1".
+    const [y, q] = rawKey.split('-Q').map(Number);
+    date = new Date(y, (q - 1) * 3, 15); // Month is 0-indexed
+  } else if (String(rawKey).match(/^\d{4}-\d{2}$/)) {
+    // Monthly "2024-07"
+    const [y, m] = rawKey.split('-').map(Number);
+    date = new Date(y, m - 1, 15);
+  }
+
+  if (isNaN(date.getTime())) {
+    fiscalKeyCache.set(rawKey, null);
+    return null;
+  }
+
+  const calMonth = date.getMonth(); // 0 (Jan) - 11 (Dec)
+  const calYear = date.getFullYear();
+
+  let fiscalYear = calYear;
+  let fiscalQuarter = 1;
+
+  // July (6) to Sept (8) -> Q1. Oct (9) to Dec (11) -> Q2.
+  // Jan (0) to Mar (2) -> Q3. Apr (3) to Jun (5) -> Q4.
+
+  if (calMonth >= 6) {
+    // July onwards. New Fiscal Year.
+    fiscalYear = calYear + 1;
+    fiscalQuarter = Math.floor((calMonth - 6) / 3) + 1;
+  } else {
+    // Jan - June. Previous Calendar Year's FY.
+    fiscalYear = calYear;
+    fiscalQuarter = Math.floor(calMonth / 3) + 3;
+  }
+
+  const result = `${fiscalYear}-Q${fiscalQuarter}`;
+  fiscalKeyCache.set(rawKey, result);
+  return result;
+}
+
 function normalizePeriodKey(rawKey, granularity) {
   if (!rawKey) return null;
   const tryDate = new Date(rawKey);
@@ -2181,8 +2235,8 @@ function normalizePeriodKey(rawKey, granularity) {
     const y = tryDate.getFullYear();
     const m = String(tryDate.getMonth() + 1).padStart(2, "0");
     if (granularity === "monthly") return `${y}-${m}`;
-    if (granularity === "quarterly")
-      return `${y}-Q${Math.floor(tryDate.getMonth() / 3) + 1}`;
+    if (granularity === "quarterly") return toFiscalKey(rawKey);
+    // OLD: return `${y}-Q${Math.floor(tryDate.getMonth() / 3) + 1}`;
     return String(y);
   }
   const parts = String(rawKey).split("-");
@@ -2195,14 +2249,9 @@ function normalizePeriodKey(rawKey, granularity) {
     return rawKey;
   }
   if (granularity === "quarterly") {
-    if (rawKey.includes("-Q")) return rawKey;
-    if (parts.length >= 2) {
-      const y = parts[0];
-      const m = Number(parts[1]);
-      const q = Math.floor((m - 1) / 3) + 1;
-      return `${y}-Q${q}`;
-    }
-    return rawKey;
+    // If it's already normalized (YYYY-Qx), just return it (or re-normalize to be safe)
+    if (String(rawKey).match(/^\d{4}-Q\d$/)) return rawKey;
+    return toFiscalKey(rawKey);
   }
   if (parts.length >= 1) return parts[0];
   return rawKey;
@@ -2223,10 +2272,9 @@ function fmtMonthKey(dateKey) {
 
 function fmtQuarterKey(qKey) {
   // qKey expectation: "2024-Q1" (Fiscal Year 2024, Quarter 1)
-  // We normalized everything to Fiscal Keys in flattenPeriods/normalizePeriodKey now.
   if (!qKey || !qKey.includes("-Q")) return qKey;
   const [yearStr, qStr] = qKey.split("-Q");
-  return `Q${qStr} FY${yearStr}`;
+  return `Q${qStr}`;
 }
 
 function flattenPeriods(masterJson, granularity) {
@@ -2256,19 +2304,7 @@ function flattenPeriods(masterJson, granularity) {
   });
 
   const arr = Array.from(set);
-  arr.sort((A, B) => {
-    if (granularity === "monthly") {
-      const [yA, mA] = A.split("-").map(Number);
-      const [yB, mB] = B.split("-").map(Number);
-      return yA !== yB ? yA - yB : mA - mB;
-    } else if (granularity === "quarterly") {
-      const [yA, qA] = A.split("-Q").map(Number);
-      const [yB, qB] = B.split("-Q").map(Number);
-      return yA !== yB ? yA - yB : qA - qB;
-    } else {
-      return Number(A) - Number(B);
-    }
-  });
+  arr.sort(); // String sort works for "2024-Q1" < "2025-Q1"
   return arr;
 }
 
