@@ -480,8 +480,8 @@ const App = () => {
           row.type === "goal"
             ? "row-goal"
             : row.type === "task"
-            ? "row-task"
-            : "row-activity";
+              ? "row-task"
+              : "row-activity";
 
         // Non-activity rows (Headers)
         if (row.type !== "activity") {
@@ -546,8 +546,8 @@ const App = () => {
               return `
             <td class="cell-sub-val">${escapeHtml(String(goal ?? ""))}</td>
             <td class="cell-sub-val font-medium">${escapeHtml(
-              String(record ?? "")
-            )}</td>
+                String(record ?? "")
+              )}</td>
             <td class="cell-sub-val ${progressColor} text-xs">${escapeHtml(
                 displayProgress
               )}</td>
@@ -651,9 +651,8 @@ const App = () => {
             <div class="stat-item">
               <div class="stat-content">
                 <div class="stat-label">${escapeHtml(item.label)}</div>
-                <div class="stat-value">${
-                  item.value ? escapeHtml(JSON.stringify(item.value)) : "—"
-                }</div>
+                <div class="stat-value">${item.value ? escapeHtml(JSON.stringify(item.value)) : "—"
+                      }</div>
               </div>
             </div>
           `
@@ -670,24 +669,22 @@ const App = () => {
                 <div class="timeline-header">
                   <span class="report-id">#${escapeHtml(String(r.id))}</span>
                   <span class="status-pill status-${String(
-                    r.status || ""
-                  ).toLowerCase()}">${escapeHtml(
+                      r.status || ""
+                    ).toLowerCase()}">${escapeHtml(
                       String(r.status || "unknown").toLowerCase()
                     )}</span>
-                  <span class="report-date">${
-                    r.createdAt
-                      ? escapeHtml(new Date(r.createdAt).toLocaleDateString())
-                      : ""
-                  }</span>
+                  <span class="report-date">${r.createdAt
+                        ? escapeHtml(new Date(r.createdAt).toLocaleDateString())
+                        : ""
+                      }</span>
                 </div>
                 <div class="report-text">${escapeHtml(r.narrative || "")}</div>
-                ${
-                  r.metrics
-                    ? `<div class="report-meta">${escapeHtml(
-                        t("reports.master.metricsName")
-                      )}: ${escapeHtml(JSON.stringify(r.metrics))}</div>`
-                    : ""
-                }
+                ${r.metrics
+                        ? `<div class="report-meta">${escapeHtml(
+                          t("reports.master.metricsName")
+                        )}: ${escapeHtml(JSON.stringify(r.metrics))}</div>`
+                        : ""
+                      }
               </div>
             </div>
           `
@@ -698,18 +695,17 @@ const App = () => {
           <div class="card activity-card">
             <div class="card-header-activity">
               <span class="activity-title">${escapeHtml(
-                `${activityNum} ${activity.title}`
-              )}</span>
+                  `${activityNum} ${activity.title}`
+                )}</span>
             </div>
             <div class="card-body">
               <div class="stats-grid">
                 ${metricItems}
               </div>
-              ${
-                reportsList
-                  ? `<div class="timeline-container">${reportsList}</div>`
-                  : ""
-              }
+              ${reportsList
+                    ? `<div class="timeline-container">${reportsList}</div>`
+                    : ""
+                  }
             </div>
           </div>
           `;
@@ -723,8 +719,8 @@ const App = () => {
             <div class="task-meta">
               <div class="progress-micro-wrapper">
                  <span class="progress-text">${escapeHtml(
-                   String(task.progress ?? 0)
-                 )}%</span>
+              String(task.progress ?? 0)
+            )}%</span>
                  ${createProgressBar(task.progress, "sm")}
               </div>
               ${escapeHtml(t("reports.master.task.weight"))}: ${escapeHtml(
@@ -1057,7 +1053,8 @@ const App = () => {
             border-collapse: separate;
             border-spacing: 0;
             font-size: 12px;
-            table-layout: fixed; /* Force column widths to respect page */
+            /* table-layout: fixed;  -- Removed to allow expansion */
+            width: 100%;
           }
           thead th {
             background: var(--gray-50);
@@ -1162,26 +1159,26 @@ const App = () => {
              <thead>
                <tr>
                  <th class="cell-title">${escapeHtml(
-                   t("reports.table.title")
-                 )}</th>
+      t("reports.table.title")
+    )}</th>
                  <th class="cell-center" style="width: 8%">${escapeHtml(
-                   t("reports.table.weight")
-                 )}</th>
+      t("reports.table.weight")
+    )}</th>
                  <th class="cell-center" style="width: 8%">${escapeHtml(
-                   t("reports.table.metric")
-                 )}</th>
+      t("reports.table.metric")
+    )}</th>
                  <th style="text-align:right; width: 10%">${escapeHtml(
-                   t("reports.table.previous", "Prev")
-                 )}</th>
+      t("reports.table.previous", "Prev")
+    )}</th>
                  <th style="text-align:right; width: 10%">${escapeHtml(
-                   t("reports.table.target")
-                 )}</th>
+      t("reports.table.target")
+    )}</th>
                  <th style="text-align:right; width: 12%">${escapeHtml(
-                   t("reports.table.quarterlyTotal", "Quarterly Total")
-                 )}</th>
+      t("reports.table.quarterlyTotal", "Quarterly Total")
+    )}</th>
                  <th style="text-align:right; width: 10%">${escapeHtml(
-                   t("reports.table.yearlyProgress", "Yearly %")
-                 )}</th>
+      t("reports.table.yearlyProgress", "Yearly %")
+    )}</th>
                  <th>${columnsHtml}</th>
                </tr>
              </thead>
@@ -1191,12 +1188,12 @@ const App = () => {
         <footer>
           <div class="footer-meta">
              <span>Group: <span class="footer-val">${escapeHtml(
-               String(groupSearchTerm || "All")
-             )}</span></span>
+      String(groupSearchTerm || "All")
+    )}</span></span>
              <span class="footer-sep">•</span>
              <span>Date: <span class="footer-val">${escapeHtml(
-               generated
-             )}</span></span>
+      generated
+    )}</span></span>
              <span class="footer-sep">•</span>
           </div>
         </footer>
@@ -1304,8 +1301,8 @@ const App = () => {
             recSum !== null
               ? recSum
               : a.quarterlyTotal !== undefined && a.quarterlyTotal !== null
-              ? a.quarterlyTotal
-              : null;
+                ? a.quarterlyTotal
+                : null;
           const displayQuarterlyTotal =
             quarterlyTotalVal !== null ? String(quarterlyTotalVal) : "";
           const displayYearlyProgress =
@@ -1393,15 +1390,14 @@ const App = () => {
       try {
         w.focus();
         w.print();
-      } catch (e) {}
+      } catch (e) { }
     }, 400);
   }
 
   return (
     <div
-      className={`min-h-screen bg-[var(--onprimary)] dark:bg-gray-900 font-sans transition-colors duration-300 ${
-        mounted ? "animate-fade-in" : ""
-      }`}
+      className={`min-h-screen bg-[var(--onprimary)] dark:bg-gray-900 font-sans transition-colors duration-300 ${mounted ? "animate-fade-in" : ""
+        }`}
       style={{
         "--primary": m3Colors.primary,
         "--on-primary": m3Colors.onPrimary,
@@ -1532,8 +1528,8 @@ const App = () => {
           }
       `}</style>
 
-      {/* MODIFIED: Changed from min-w-7xl to w-full max-w-7xl to fix horizontal overflow issue */}
-      <div className="w-full min-w-7xl mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      {/* MODIFIED: Expanded width to max-w-[1920px] and added padding for better responsiveness */}
+      <div className="w-full max-w-[1920px] mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <div className="mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl px-4 py-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1604,9 +1600,8 @@ const App = () => {
               >
                 {loading ? (
                   <Loader
-                    className={`h-4 w-4 animate-spin ${
-                      isRefreshing ? "scale-125" : "scale-100"
-                    }`}
+                    className={`h-4 w-4 animate-spin ${isRefreshing ? "scale-125" : "scale-100"
+                      }`}
                   />
                 ) : (
                   t("reports.master.loadButton")
@@ -1640,11 +1635,10 @@ const App = () => {
                   <button
                     key={g}
                     onClick={() => setGranularity(g)}
-                    className={`px-4 py-2 rounded-full transition-all duration-300 ${
-                      granularity === g
-                        ? "bg-green-400 dark:bg-green-700 text-[var(--on-primary)] dark:text-white shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.5)] scale-105"
-                        : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-white"
-                    }`}
+                    className={`px-4 py-2 rounded-full transition-all duration-300 ${granularity === g
+                      ? "bg-green-400 dark:bg-green-700 text-[var(--on-primary)] dark:text-white shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.5)] scale-105"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-400 dark:hover:bg-gray-600 hover:text-gray-600 dark:hover:text-white"
+                      }`}
                   >
                     {t(`reports.master.granularities.${g}`)}
                   </button>
@@ -1706,17 +1700,15 @@ const App = () => {
                               <div className="pl-3 mt-2 space-y-3">
                                 {(task.activities || []).map(
                                   (a, activityIndex) => {
-                                    const activityNum = `${taskNum}.${
-                                      activityIndex + 1
-                                    }`;
+                                    const activityNum = `${taskNum}.${activityIndex + 1
+                                      }`;
                                     return (
                                       <div
                                         key={a.id}
                                         className="p-3 bg-gray-300 dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1 transition-all duration-300 w-full"
                                         style={{
-                                          animationDelay: `${
-                                            activityIndex * 80
-                                          }ms`,
+                                          animationDelay: `${activityIndex * 80
+                                            }ms`,
                                         }}
                                       >
                                         <div className="flex flex-col gap-3">
@@ -1795,9 +1787,8 @@ const App = () => {
                                                     key={r.id}
                                                     className="p-3 bg-gray-200 dark:bg-gray-700 rounded-lg border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1 transition-all duration-300"
                                                     style={{
-                                                      animationDelay: `${
-                                                        reportIndex * 60
-                                                      }ms`,
+                                                      animationDelay: `${reportIndex * 60
+                                                        }ms`,
                                                     }}
                                                   >
                                                     <div className="flex flex-col sm:flex-row sm:justify-between gap-1 mb-2">
@@ -1810,8 +1801,8 @@ const App = () => {
                                                       <div className="text-sm text-gray-600 dark:text-gray-400">
                                                         {r.createdAt
                                                           ? new Date(
-                                                              r.createdAt
-                                                            ).toLocaleString()
+                                                            r.createdAt
+                                                          ).toLocaleString()
                                                           : ""}
                                                       </div>
                                                     </div>
@@ -1874,11 +1865,9 @@ const App = () => {
               aria-hidden="true"
             />
 
-            <div
-              ref={tableWrapRef}
-              className="overflow-x-auto overflow-y-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1 max-h-[60vh]"
-            >
-              <table className="min-w-full">
+            {/* MODIFIED: added overflow-x-auto to this container specifically so only the table slides */}
+            <div className="overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1">
+              <table className="min-w-full table-auto">
                 <thead className="sticky top-0 z-20 bg-gray-300 dark:bg-gray-900">
                   <tr>
                     <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-white">
@@ -1906,30 +1895,30 @@ const App = () => {
                     {/* --- Dynamic Headers for Quarterly/Monthly/Annual --- */}
                     {granularity === "quarterly"
                       ? periodColumns.map((p) => {
-                          const label = fmtQuarterKey(p);
-                          return (
-                            <React.Fragment key={p}>
-                              <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
-                                {t("reports.table.qGoal", "Goal")} ({label})
-                              </th>
-                              <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
-                                {t("reports.table.qRecord", "Record")} ({label})
-                              </th>
-                              <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
-                                {t("reports.table.qProgress", "Progress%")} (
-                                {label})
-                              </th>
-                            </React.Fragment>
-                          );
-                        })
+                        const label = fmtQuarterKey(p);
+                        return (
+                          <React.Fragment key={p}>
+                            <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                              {t("reports.table.qGoal", "Goal")} ({label})
+                            </th>
+                            <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                              {t("reports.table.qRecord", "Record")} ({label})
+                            </th>
+                            <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                              {t("reports.table.qProgress", "Progress%")} (
+                              {label})
+                            </th>
+                          </React.Fragment>
+                        );
+                      })
                       : periodColumns.map((p) => (
-                          <th
-                            key={p}
-                            className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white"
-                          >
-                            {granularity === "monthly" ? fmtMonthKey(p) : p}
-                          </th>
-                        ))}
+                        <th
+                          key={p}
+                          className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white"
+                        >
+                          {granularity === "monthly" ? fmtMonthKey(p) : p}
+                        </th>
+                      ))}
                     {/* Yearly Progress header moved above (after Target) */}
                   </tr>
                 </thead>
@@ -1943,17 +1932,15 @@ const App = () => {
                       return (
                         <tr
                           key={row.id}
-                          className={`${
-                            row.type === "goal"
-                              ? "bg-gray-400 dark:bg-gray-800"
-                              : "bg-gray-200 dark:bg-gray-700"
-                          } transition-all duration-300`}
+                          className={`${row.type === "goal"
+                            ? "bg-gray-400 dark:bg-gray-800"
+                            : "bg-gray-200 dark:bg-gray-700"
+                            }`}
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
                           <td
-                            className={`border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 font-medium text-gray-800 dark:text-white text-sm ${
-                              row.type === "task" ? "pl-6" : ""
-                            }`}
+                            className={`border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 font-medium text-gray-800 dark:text-white text-sm ${row.type === "task" ? "pl-6" : ""
+                              }`}
                           >
                             {`${row.number}. ${row.title}`}
                           </td>
@@ -2033,16 +2020,14 @@ const App = () => {
  * ------------------------- */
 const MetricSection = ({ title, metrics, t, darkMode = false }) => (
   <div
-    className={`p-3 rounded-lg ${
-      darkMode
-        ? "bg-gray-200 dark:bg-gray-600 border-gray-600"
-        : "bg-[var(--surface-container-lowest)] border-[var(--outline-variant)]"
-    } border`}
+    className={`p-3 rounded-lg ${darkMode
+      ? "bg-gray-200 dark:bg-gray-600 border-gray-600"
+      : "bg-[var(--surface-container-lowest)] border-[var(--outline-variant)]"
+      } border`}
   >
     <div
-      className={`text-sm font-medium mb-1 ${
-        darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
-      }`}
+      className={`text-sm font-medium mb-1 ${darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
+        }`}
     >
       {title}:
     </div>
@@ -2067,11 +2052,10 @@ const MetricsDisplay = ({ metrics, darkMode = false }) => {
     const s = String(metrics);
     return (
       <div
-        className={`text-base font-mono break-words p-1.5 rounded border ${
-          darkMode
-            ? "bg-gray-50 dark:bg-gray-800 border-gray-600 text-gray-300"
-            : "bg-[var(--surface-container-low)] text-gray-600"
-        }`}
+        className={`text-base font-mono break-words p-1.5 rounded border ${darkMode
+          ? "bg-gray-50 dark:bg-gray-800 border-gray-600 text-gray-300"
+          : "bg-[var(--surface-container-low)] text-gray-600"
+          }`}
       >
         {s}
       </div>
@@ -2080,9 +2064,8 @@ const MetricsDisplay = ({ metrics, darkMode = false }) => {
   if (!obj || typeof obj !== "object") {
     return (
       <div
-        className={`text-base ${
-          darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
-        }`}
+        className={`text-base ${darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
+          }`}
       >
         —
       </div>
@@ -2092,9 +2075,8 @@ const MetricsDisplay = ({ metrics, darkMode = false }) => {
   if (keys.length === 0)
     return (
       <div
-        className={`text-base ${
-          darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
-        }`}
+        className={`text-base ${darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
+          }`}
       >
         —
       </div>
@@ -2110,25 +2092,22 @@ const MetricsDisplay = ({ metrics, darkMode = false }) => {
         return (
           <div
             key={k}
-            className={`flex items-start justify-between rounded px-2.5 py-1.5 border gap-3 ${
-              darkMode
-                ? "bg-gray-50 dark:bg-gray-800 border-gray-600"
-                : "bg-[var(--surface-container-low)] border-[var(--outline-variant)]"
-            }`}
+            className={`flex items-start justify-between rounded px-2.5 py-1.5 border gap-3 ${darkMode
+              ? "bg-gray-50 dark:bg-gray-800 border-gray-600"
+              : "bg-[var(--surface-container-low)] border-[var(--outline-variant)]"
+              }`}
           >
             <div
-              className={`text-sm pt-px ${
-                darkMode
-                  ? "text-gray-800 dark:text-gray-200"
-                  : "text-[var(--on-surface-variant)]"
-              }`}
+              className={`text-sm pt-px ${darkMode
+                ? "text-gray-800 dark:text-gray-200"
+                : "text-[var(--on-surface-variant)]"
+                }`}
             >
               {k}
             </div>
             <div
-              className={`text-base font-mono break-all text-right whitespace-pre-wrap ${
-                darkMode ? "text-gray-800 dark:text-gray-200" : "text-gray-600"
-              }`}
+              className={`text-base font-mono break-all text-right whitespace-pre-wrap ${darkMode ? "text-gray-800 dark:text-gray-200" : "text-gray-600"
+                }`}
             >
               {displayValue}
             </div>
@@ -2243,22 +2222,11 @@ function fmtMonthKey(dateKey) {
 }
 
 function fmtQuarterKey(qKey) {
+  // qKey expectation: "2024-Q1" (Fiscal Year 2024, Quarter 1)
+  // We normalized everything to Fiscal Keys in flattenPeriods/normalizePeriodKey now.
   if (!qKey || !qKey.includes("-Q")) return qKey;
   const [yearStr, qStr] = qKey.split("-Q");
-  const calendarYear = parseInt(yearStr);
-  const calendarQ = parseInt(qStr);
-  let fiscalQ, fiscalYear;
-  if (calendarQ >= 3) {
-    // July-Dec (Calendar Q3, Q4)
-    fiscalQ = calendarQ - 2; // 3 -> 1, 4 -> 2
-    fiscalYear = calendarYear + 1; // e.g., July 2024 is FY2025
-  } else {
-    // Jan-June (Calendar Q1, Q2)
-    fiscalQ = calendarQ + 2; // 1 -> 3, 2 -> 4
-    fiscalYear = calendarYear; // e.g., March 2025 is FY2025
-  }
-  return `Q${fiscalQ}`;
-  // return `Q${fiscalQ} FY${fiscalYear}`;
+  return `Q${qStr} FY${yearStr}`;
 }
 
 function flattenPeriods(masterJson, granularity) {
@@ -2402,8 +2370,10 @@ function getLatestMetricValueInPeriod(
   const rawKeys = Object.keys(hist || {});
   for (const rk of rawKeys) {
     try {
+      // MODIFIED: Check normalization equality
       const norm = normalizePeriodKey(rk, granularity);
       if (norm === normalizedKey) {
+        // ... match found
         const bucket = Array.isArray(hist[rk]) ? hist[rk].slice() : [];
         for (const r of bucket) candidateReports.push(r);
       }
@@ -2419,14 +2389,14 @@ function getLatestMetricValueInPeriod(
       a && a.date
         ? new Date(a.date)
         : a && a.createdAt
-        ? new Date(a.createdAt)
-        : null;
+          ? new Date(a.createdAt)
+          : null;
     const db =
       b && b.date
         ? new Date(b.date)
         : b && b.createdAt
-        ? new Date(b.createdAt)
-        : null;
+          ? new Date(b.createdAt)
+          : null;
     if (!da && !db) return 0;
     if (!da) return -1;
     if (!db) return 1;
@@ -2444,34 +2414,36 @@ function getLatestMetricValueInPeriod(
 
 // Helper to get Goal, Record, Progress %
 // ---
-// MODIFIED: This function now calculates progress as a percentage.
+// MODIFIED: Corrected for Fiscal Mapping.
+// periodKey is now normalized to Fiscal Format ("YYYY-Qx", e.g. "2025-Q1" for July 2024).
 // ---
 function getQuarterlyStats(activity, periodKey, metricKey) {
-  const qKey = String(periodKey).split("-Q")[1]; // e.g., "1" from "2024-Q1"
-  if (!qKey) return { goal: null, record: null, progress: null };
+  if (!periodKey || !periodKey.includes('-Q')) return { goal: null, record: null, progress: null };
+  const fiscalQStr = periodKey.split('-Q')[1];
+  const fiscalQ = parseInt(fiscalQStr, 10);
 
+  if (isNaN(fiscalQ)) return { goal: null, record: null, progress: null };
+
+  // Fetch the goal corresponding to the FISCAL quarter
+  // (Since we normalized to Fiscal Key, 'fiscalQ' IS the Q1/Q2/Q3/Q4 we want)
   const qGoals = safeParseJson(activity.quarterlyGoals);
-  const goal = qGoals ? toNumberOrNull(qGoals[`q${qKey}`]) : null;
+  const goal = qGoals ? toNumberOrNull(qGoals[`q${fiscalQ}`]) : null;
 
-  const recordRaw = getLatestMetricValueInPeriod(
-    activity,
-    periodKey,
-    "quarterly",
-    metricKey
-  );
+  // We must fetch record using the SAME normalization logic.
+  // getLatestMetricValueInPeriod calls normalizePeriodKey internally.
+  const recordRaw = getLatestMetricValueInPeriod(activity, periodKey, 'quarterly', metricKey);
   const record = toNumberOrNull(recordRaw);
 
   let progress_pct = null;
   if (record !== null && goal !== null) {
     if (goal > 0) {
-      // Standard percentage calculation
       progress_pct = (record / goal) * 100;
     } else if (goal === 0) {
-      progress_pct = record > 0 ? 100.0 : 0.0; // If goal is 0, any record > 0 is 100% progress
+      progress_pct = (record > 0) ? 100.0 : 0.0;
     }
   }
 
-  return { goal, record, progress: progress_pct }; // 'progress' key now holds the percentage
+  return { goal, record, progress: progress_pct };
 }
 
 // Helper to get overall Target, Previous, and Current
@@ -2549,11 +2521,10 @@ function ActivityRow({
 
   return (
     <tr
-      className={`transition-all duration-300 hover:bg-opacity-90 ${
-        darkMode
-          ? "hover:bg-gray-700"
-          : "hover:bg-[var(--surface-container-low)]"
-      }`}
+      className={`transition-all duration-300 hover:bg-opacity-90 ${darkMode
+        ? "hover:bg-gray-700"
+        : "hover:bg-[var(--surface-container-low)]"
+        }`}
       style={{
         animationDelay: `${index * 60}ms`,
         backgroundColor: darkMode
@@ -2562,9 +2533,8 @@ function ActivityRow({
       }}
     >
       <td
-        className={`border-b ${
-          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 pl-5`}
+        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+          } px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 pl-5`}
       >
         <div className="flex items-center gap-2">
           <div>{`${number} ${activity.title}`}</div>
@@ -2574,23 +2544,20 @@ function ActivityRow({
         </div>
       </td>
       <td
-        className={`border-b ${
-          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-16`}
+        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-16`}
       >
         <div>{activity.weight ?? "-"}</div>
       </td>
       <td
-        className={`border-b ${
-          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-20`}
+        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-20`}
       >
         <div>{metricKey ?? "-"}</div>
       </td>
       <td
-        className={`border-b ${
-          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
+        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {typeof prevVal === "number"
@@ -2599,9 +2566,8 @@ function ActivityRow({
         </div>
       </td>
       <td
-        className={`border-b ${
-          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
+        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {typeof targetVal === "number"
@@ -2612,9 +2578,8 @@ function ActivityRow({
 
       {/* NEW: Quarterly Total column (prefer recorded records sum) */}
       <td
-        className={`border-b ${
-          darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-        } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
+        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {(() => {
@@ -2623,8 +2588,8 @@ function ActivityRow({
               rec !== null
                 ? rec
                 : activity.quarterlyTotal !== undefined
-                ? activity.quarterlyTotal
-                : null;
+                  ? activity.quarterlyTotal
+                  : null;
             return typeof val === "number" ? val.toLocaleString() : val ?? "-";
           })()}
         </div>
@@ -2638,7 +2603,7 @@ function ActivityRow({
           (rec !== null
             ? rec
             : toNumberOrNull(activity.quarterlyTotal) ||
-              toNumberOrNull(currentVal)) || 0;
+            toNumberOrNull(currentVal)) || 0;
         let pct = null;
         if (tg !== null) {
           if (tg > 0) pct = (ytd / tg) * 100;
@@ -2647,9 +2612,8 @@ function ActivityRow({
         const disp = pct === null ? "-" : `${pct.toFixed(2)}%`;
         return (
           <td
-            className={`border-b ${
-              darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-            } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
+            className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
+              } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
           >
             <div>{disp}</div>
           </td>
@@ -2659,102 +2623,96 @@ function ActivityRow({
       {/* --- NEW: Dynamic Cells for Quarterly --- */}
       {granularity === "quarterly"
         ? periods.map((p) => {
-            // MODIFIED: 'variance' is now 'progress'
-            const { goal, record, progress } = getQuarterlyStats(
-              activity,
-              p,
-              metricKey
-            );
-            // MODIFIED: Format as percentage string
-            const displayProgress =
-              progress === null ? "-" : `${progress.toFixed(2)}%`;
+          // MODIFIED: 'variance' is now 'progress'
+          const { goal, record, progress } = getQuarterlyStats(
+            activity,
+            p,
+            metricKey
+          );
+          // MODIFIED: Format as percentage string
+          const displayProgress =
+            progress === null ? "-" : `${progress.toFixed(2)}%`;
 
-            // Check if Quarter is passed and record < goal
-            const isPast = isQuarterPast(p);
-            // If passed, and we have a goal, and (record is missing OR record is less than goal)
-            // Adjust logic based on strictness: here assumes if record < goal it is bad.
-            const isUnderperforming =
-              isPast && goal !== null && (record === null || record < goal);
+          // Check if Quarter is passed and record < goal
+          const isPast = isQuarterPast(p);
+          // If passed, and we have a goal, and (record is missing OR record is less than goal)
+          // Adjust logic based on strictness: here assumes if record < goal it is bad.
+          const isUnderperforming =
+            isPast && goal !== null && (record === null || record < goal);
 
-            // Color Logic for RECORD cell
-            const recordColorClass = isUnderperforming
-              ? "text-red-600 font-bold"
-              : darkMode
+          // Color Logic for RECORD cell
+          const recordColorClass = isUnderperforming
+            ? "text-red-600 font-bold"
+            : darkMode
               ? "text-gray-700"
               : "text-[var(--on-surface-variant)]";
 
-            return (
-              <React.Fragment key={p}>
-                <td
-                  className={`border-b ${
-                    darkMode
-                      ? "border-gray-600"
-                      : "border-[var(--outline-variant)]"
-                  } px-3 py-3 text-sm text-gray-700 dark:text-gray-300 ${
-                    darkMode
-                      ? "text-gray-300"
-                      : "text-[var(--on-surface-variant)]"
-                  } text-right w-20 font-mono`}
-                >
-                  <div>
-                    {typeof goal === "number"
-                      ? goal.toLocaleString()
-                      : goal ?? "-"}
-                  </div>
-                </td>
-                {/* MODIFIED: Applied conditional color to this cell */}
-                <td
-                  className={`border-b ${
-                    darkMode
-                      ? "border-gray-600"
-                      : "border-[var(--outline-variant)]"
-                  } px-3 py-3 text-sm text-[var(--on-surface-variant)] ${recordColorClass} text-right w-20 font-mono`}
-                >
-                  <div>
-                    {typeof record === "number"
-                      ? record.toLocaleString()
-                      : record ?? "-"}
-                  </div>
-                </td>
-                <td
-                  className={`border-b ${
-                    darkMode
-                      ? "border-gray-600"
-                      : "border-[var(--outline-variant)]"
-                  } px-3 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 text-right w-20 font-mono`}
-                >
-                  <div>{displayProgress}</div>
-                </td>
-              </React.Fragment>
-            );
-          })
-        : periods.map((p) => {
-            const rawVal = getLatestMetricValueInPeriod(
-              activity,
-              p,
-              granularity,
-              metricKey
-            );
-            const display = formatMetricValue(rawVal);
-            return (
+          return (
+            <React.Fragment key={p}>
               <td
-                key={p}
-                className={`border-b ${
-                  darkMode
-                    ? "border-gray-600"
-                    : "border-[var(--outline-variant)]"
-                } px-3 py-3 text-sm ${
-                  darkMode
+                className={`border-b ${darkMode
+                  ? "border-gray-600"
+                  : "border-[var(--outline-variant)]"
+                  } px-3 py-3 text-sm text-gray-700 dark:text-gray-300 ${darkMode
                     ? "text-gray-300"
                     : "text-[var(--on-surface-variant)]"
-                } text-right w-20`}
+                  } text-right w-20 font-mono`}
               >
-                <div className="min-w-0">
-                  <div className="text-sm font-mono">{display}</div>
+                <div>
+                  {typeof goal === "number"
+                    ? goal.toLocaleString()
+                    : goal ?? "-"}
                 </div>
               </td>
-            );
-          })}
+              {/* MODIFIED: Applied conditional color to this cell */}
+              <td
+                className={`border-b ${darkMode
+                  ? "border-gray-600"
+                  : "border-[var(--outline-variant)]"
+                  } px-3 py-3 text-sm text-[var(--on-surface-variant)] ${recordColorClass} text-right w-20 font-mono`}
+              >
+                <div>
+                  {typeof record === "number"
+                    ? record.toLocaleString()
+                    : record ?? "-"}
+                </div>
+              </td>
+              <td
+                className={`border-b ${darkMode
+                  ? "border-gray-600"
+                  : "border-[var(--outline-variant)]"
+                  } px-3 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 text-right w-20 font-mono`}
+              >
+                <div>{displayProgress}</div>
+              </td>
+            </React.Fragment>
+          );
+        })
+        : periods.map((p) => {
+          const rawVal = getLatestMetricValueInPeriod(
+            activity,
+            p,
+            granularity,
+            metricKey
+          );
+          const display = formatMetricValue(rawVal);
+          return (
+            <td
+              key={p}
+              className={`border-b ${darkMode
+                ? "border-gray-600"
+                : "border-[var(--outline-variant)]"
+                } px-3 py-3 text-sm ${darkMode
+                  ? "text-gray-300"
+                  : "text-[var(--on-surface-variant)]"
+                } text-right w-20`}
+            >
+              <div className="min-w-0">
+                <div className="text-sm font-mono">{display}</div>
+              </div>
+            </td>
+          );
+        })}
 
       {/* Yearly Progress cell moved earlier (after Target) — removed here */}
     </tr>
