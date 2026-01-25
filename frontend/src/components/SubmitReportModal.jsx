@@ -9,6 +9,7 @@ import {
   FileText,
   PlusSquare,
   AlertCircle,
+  Info,
 } from "lucide-react";
 
 /**
@@ -120,15 +121,15 @@ export default function SubmitReportInline({
 
     const rawTargets = safeParseJson(
       data.targetMetric ??
-        data.activity?.targetMetric ??
-        data.target_metrics ??
-        {}
+      data.activity?.targetMetric ??
+      data.target_metrics ??
+      {}
     );
     const rawCurrents = safeParseJson(
       data.currentMetric ??
-        data.activity?.currentMetric ??
-        data.current_metrics ??
-        {}
+      data.activity?.currentMetric ??
+      data.current_metrics ??
+      {}
     );
 
     const targets =
@@ -181,6 +182,53 @@ export default function SubmitReportInline({
 
   const metricType = (data && (data.metricType || data.activity?.metricType)) || 'Plus';
 
+  // Helper to determine if this is a cumulative or snapshot metric type
+  const isCumulative = metricType === 'Plus' || metricType === 'Minus';
+
+  // Get user-friendly label and description for metric type
+  const getMetricTypeInfo = (type) => {
+    const info = {
+      'Plus': {
+        label: 'Cumulative (Add)',
+        description: 'Enter the increment to add to current value',
+        placeholder: 'Enter increment (e.g., +100)',
+        example: 'If current is 1,500 and you achieved 100 more, enter 100',
+        color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+      },
+      'Minus': {
+        label: 'Cumulative (Subtract)',
+        description: 'Enter the decrement to subtract from current value',
+        placeholder: 'Enter decrement (e.g., +100 to reduce)',
+        example: 'If current is 1,500 and you reduced by 100, enter 100',
+        color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+      },
+      'Increase': {
+        label: 'Snapshot (Increase Target)',
+        description: 'Enter your current absolute value (replaces previous)',
+        placeholder: 'Enter current value (e.g., 1,600)',
+        example: 'If your metric is now 1,600, enter 1,600',
+        color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+      },
+      'Decrease': {
+        label: 'Snapshot (Decrease Target)',
+        description: 'Enter your current absolute value (replaces previous)',
+        placeholder: 'Enter current value (e.g., 4.2%)',
+        example: 'If your metric is now 4.2%, enter 4.2',
+        color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+      },
+      'Maintain': {
+        label: 'Snapshot (Maintain)',
+        description: 'Enter your current absolute value (replaces previous)',
+        placeholder: 'Enter current value',
+        example: 'Enter the current state of your metric',
+        color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+      }
+    };
+    return info[type] || info['Plus'];
+  };
+
+  const metricTypeInfo = getMetricTypeInfo(metricType);
+
   const onFileChange = (e) => {
     setLocalErr(null);
     const incoming = Array.from(e.target.files || []).map((f) => ({
@@ -204,7 +252,7 @@ export default function SubmitReportInline({
       setFiles(combined.slice(0, 5));
       setLocalErr(
         t("project.errors.maxAttachments", { max: 5 }) ||
-          "Maximum 5 attachments allowed. Extra files were ignored."
+        "Maximum 5 attachments allowed. Extra files were ignored."
       );
     } else {
       setFiles(combined);
@@ -382,7 +430,7 @@ export default function SubmitReportInline({
     if (hasInvalid) {
       setLocalErr(
         t("project.errors.metricKeyMissing") ||
-          "Metric name is required if a value is entered."
+        "Metric name is required if a value is entered."
       );
       return;
     }
@@ -394,7 +442,7 @@ export default function SubmitReportInline({
     if (hasNaN) {
       setLocalErr(
         t("project.errors.metricValueNumeric") ||
-          "Metric value must be a number."
+        "Metric value must be a number."
       );
       return;
     }
@@ -485,15 +533,14 @@ export default function SubmitReportInline({
 
             <div className="flex items-center gap-3">
               <div
-                className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                  headerIsWarning
-                    ? "bg-red-100 text-red-800 dark:bg-red-900/30"
-                    : newStatus === "Done"
+                className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${headerIsWarning
+                  ? "bg-red-100 text-red-800 dark:bg-red-900/30"
+                  : newStatus === "Done"
                     ? "bg-green-100 text-green-800 dark:bg-green-900/30"
                     : newStatus === "In Progress"
-                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30"
-                    : "bg-gray-100 text-gray-800 dark:bg-gray-800/60"
-                } ${badgePulse ? "badgePulse" : ""}`}
+                      ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30"
+                      : "bg-gray-100 text-gray-800 dark:bg-gray-800/60"
+                  } ${badgePulse ? "badgePulse" : ""}`}
                 title={headerIsWarning ? "Warning: reported value exceeds target" : `Status: ${newStatus}`}
                 aria-live="polite"
               >
@@ -539,6 +586,19 @@ export default function SubmitReportInline({
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Metric Type Info - Compact Design on its own line */}
+            <div className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs ${isCumulative
+                ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50'
+                : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50'
+              }`}>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${metricTypeInfo.color}`}>
+                {metricTypeInfo.label}
+              </span>
+              <span className={`${isCumulative ? 'text-green-700 dark:text-green-300' : 'text-blue-700 dark:text-blue-300'}`}>
+                {metricTypeInfo.description}
+              </span>
             </div>
 
             <div>
@@ -600,20 +660,16 @@ export default function SubmitReportInline({
                           onChange={(e) =>
                             updateMetricRow(idx, "key", e.target.value)
                           }
-                          className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
-                            m.isPredefined
-                              ? "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-800 cursor-not-allowed"
-                              : "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700"
-                          }`}
+                          className={`flex-1 px-3 py-2 border rounded-lg text-sm ${m.isPredefined
+                            ? "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-800 cursor-not-allowed"
+                            : "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700"
+                            }`}
                         />
                         <input
                           type="number"
                           step="any"
                           min={0}
-                          placeholder={
-                            t("project.placeholders.metricValueReport") ||
-                            "Value to Report (will replace)"
-                          }
+                          placeholder={metricTypeInfo.placeholder}
                           value={m.value}
                           onChange={(e) =>
                             updateMetricRow(idx, "value", e.target.value)
@@ -631,9 +687,10 @@ export default function SubmitReportInline({
                       </div>
 
                       <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 pl-1">
-                        {`Current (after change): ${displayedCurrent} / ${m.target !== null ? m.target : "-"}${
-                          remaining !== null ? ` (Remaining: ${remaining})` : ""
-                        }`}
+                        {isCumulative
+                          ? `${curr} + ${reported !== null ? reported : 0} = ${displayedCurrent} / ${m.target !== null ? m.target : "-"}${remaining !== null ? ` (Remaining: ${remaining})` : ""}`
+                          : `New value: ${displayedCurrent} / ${m.target !== null ? m.target : "-"}${remaining !== null ? ` (Remaining: ${remaining})` : ""}`
+                        }
                       </div>
 
                       {exceeded && (
