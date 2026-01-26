@@ -251,8 +251,8 @@ exports.submitReport = async (req, res) => {
       const attachmentSettings = await getAttachmentSettings();
       const maxSizeMb = Number(
         attachmentSettings?.maxSizeMb ||
-          attachmentSettings?.max_attachment_size_mb ||
-          10,
+        attachmentSettings?.max_attachment_size_mb ||
+        10,
       );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
 
@@ -269,7 +269,7 @@ exports.submitReport = async (req, res) => {
         for (const f of req.files) {
           try {
             fs.unlinkSync(f.path);
-          } catch (e) {}
+          } catch (e) { }
         }
         await client.query("ROLLBACK");
         return res.status(400).json({
@@ -310,7 +310,7 @@ exports.submitReport = async (req, res) => {
                   );
                   const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
                   if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
-                } catch (e) {}
+                } catch (e) { }
               }
             } catch (cleanupErr) {
               console.error("cleanup after failed upload error:", cleanupErr);
@@ -319,7 +319,7 @@ exports.submitReport = async (req, res) => {
           for (const f of req.files) {
             try {
               fs.unlinkSync(f.path);
-            } catch (e) {}
+            } catch (e) { }
           }
           await client.query("ROLLBACK");
           return res.status(500).json({ error: "File upload failed." });
@@ -453,7 +453,7 @@ exports.submitReport = async (req, res) => {
       for (let file of req.files) {
         try {
           fs.unlinkSync(file.path);
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     console.error("Error submitting report:", err);
@@ -1005,16 +1005,51 @@ exports.generateMasterReport = async (req, res) => {
             annual: {},
           };
           // compute yearly progress percent if possible (YTD vs targetMetric)
+          // compute yearly progress percent if possible (YTD vs targetMetric)
           try {
             const targetSum = sumNumericValues(activity.targetMetric || {});
+            const metricType = activity.metricType || "Plus";
+
             if (
               activity.quarterlyTotal !== null &&
               typeof activity.quarterlyTotal !== "undefined"
             ) {
               const ytdVal = Number(activity.quarterlyTotal) || 0;
-              activity.yearlyProgress = targetSum
-                ? Math.round((ytdVal / targetSum) * 100)
-                : null;
+
+              if (metricType === "Decrease") {
+                // Lower is Better
+                if (ytdVal === 0) {
+                  // Perfect score (0 defects, 0 cost, etc)
+                  activity.yearlyProgress = 100;
+                } else if (targetSum === 0) {
+                  // Goal is 0, but record > 0 -> 0% progress
+                  activity.yearlyProgress = 0;
+                } else {
+                  // (Target / Record) * 100
+                  activity.yearlyProgress = Math.round((targetSum / ytdVal) * 100);
+                }
+              } else if (metricType === "Maintain") {
+                // Maintain: Higher is Better, but Cap at 100%?
+                // User requirement: "needed to maintain 100% but ... gave me 200% ... fix this up" -> Impaling Cap.
+                // User requirement: "maintaining 0% ... gave me 0% ... should be 100%" -> Handle 0/0.
+
+                if (targetSum === 0) {
+                  if (ytdVal === 0) activity.yearlyProgress = 100; // Met 0 target
+                  else activity.yearlyProgress = 0; // Failed to maintain 0
+                } else {
+                  const pct = Math.round((ytdVal / targetSum) * 100);
+                  activity.yearlyProgress = pct > 100 ? 100 : pct;
+                }
+              } else {
+                // Standard: Higher is Better (Plus, Minus, Increase) - Uncapped
+                if (targetSum === 0 && ytdVal === 0) {
+                  activity.yearlyProgress = 100;
+                } else {
+                  activity.yearlyProgress = targetSum
+                    ? Math.round((ytdVal / targetSum) * 100)
+                    : null;
+                }
+              }
             } else {
               activity.yearlyProgress = null;
             }

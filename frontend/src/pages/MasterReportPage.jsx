@@ -386,9 +386,7 @@ const App = () => {
         targetSum = null;
       }
       if (targetSum !== null) {
-        if (targetSum > 0)
-          yearlyProgressPct = (Number(quarterlyTotalVal) / targetSum) * 100;
-        else yearlyProgressPct = Number(quarterlyTotalVal) > 0 ? 100 : 0;
+        yearlyProgressPct = calculateProgress(quarterlyTotalVal, targetSum, a.metricType || a.metric_type);
       }
     }
     // prefer backend value if provided
@@ -410,7 +408,7 @@ const App = () => {
       const quarterlyCells = periodColumns
         .map((p) => {
           // MODIFIED: 'variance' is now 'progress'
-          const { goal, record, progress } = getQuarterlyStats(a, p, mk);
+          const { goal, record, progress } = getQuarterlyStats(a, p, mk, a.metricType || a.metric_type);
           // MODIFIED: Format the percentage value
           const displayProgress =
             progress === null ? "-" : `${progress.toFixed(2)}%`;
@@ -537,7 +535,8 @@ const App = () => {
               const { goal, record, progress } = getQuarterlyStats(
                 row.activity,
                 p,
-                mk
+                mk,
+                row.activity.metricType || row.activity.metric_type
               );
               const displayProgress =
                 progress === null ? "" : `${progress.toFixed(0)}%`;
@@ -1314,7 +1313,7 @@ const App = () => {
           if (granularity === "quarterly") {
             periods.forEach((p) => {
               // MODIFIED: 'variance' is now 'progress'
-              const { goal, record, progress } = getQuarterlyStats(a, p, mk);
+              const { goal, record, progress } = getQuarterlyStats(a, p, mk, a.metricType || a.metric_type);
               // MODIFIED: Format as percentage string
               const displayProgress =
                 progress === null ? "" : `${progress.toFixed(2)}%`;
@@ -2453,7 +2452,7 @@ function getLatestMetricValueInPeriod(
 // MODIFIED: Corrected for Fiscal Mapping.
 // periodKey is now normalized to Fiscal Format ("YYYY-Qx", e.g. "2025-Q1" for July 2024).
 // ---
-function getQuarterlyStats(activity, periodKey, metricKey) {
+function getQuarterlyStats(activity, periodKey, metricKey, metricType) {
   if (!periodKey || !periodKey.includes('-Q')) return { goal: null, record: null, progress: null };
   const fiscalQStr = periodKey.split('-Q')[1];
   const fiscalQ = parseInt(fiscalQStr, 10);
@@ -2470,16 +2469,57 @@ function getQuarterlyStats(activity, periodKey, metricKey) {
   const recordRaw = getLatestMetricValueInPeriod(activity, periodKey, 'quarterly', metricKey);
   const record = toNumberOrNull(recordRaw);
 
-  let progress_pct = null;
-  if (record !== null && goal !== null) {
-    if (goal > 0) {
-      progress_pct = (record / goal) * 100;
-    } else if (goal === 0) {
-      progress_pct = (record > 0) ? 100.0 : 0.0;
-    }
-  }
+  const progress_pct = calculateProgress(record, goal, metricType);
 
   return { goal, record, progress: progress_pct };
+}
+
+/**
+ * NEW: Centralized Progress Calculator based on Metric Type
+ * Handles "Decrease" (Lower is Better) vs others (Higher is Better).
+ */
+function calculateProgress(record, goal, metricType) {
+  if (record === null || goal === null) return null;
+  const r = Number(record);
+  const g = Number(goal);
+
+  // Normalize type string
+  const type = String(metricType || "Plus").trim(); // Default to Plus if empty
+
+  switch (type) {
+    case "Decrease":
+      // LOWER IS BETTER
+      // Formula: (Target / Actual) * 100
+      if (r === 0) return 100; // 0 defects/cost is perfect
+      if (g === 0) {
+        // Goal 0, Record > 0 -> 0% progress (failed to be zero)
+        return 0;
+      }
+      return (g / r) * 100;
+
+    case "Maintain":
+      // Higher is Better but CAPPED at 100%
+      if (g === 0) {
+        // Maintain 0. If record is 0, we maintained it (100%). If not, we failed (0%).
+        return (r === 0) ? 100 : 0;
+      }
+      const mPct = (r / g) * 100;
+      return mPct > 100 ? 100 : mPct;
+
+    case "Increase":
+    case "Plus":
+    case "Minus":
+    default:
+      // HIGHER IS BETTER (Standard)
+      // Formula: (Actual / Target) * 100
+      if (g === 0) {
+        // No goal set? Or Goal is 0.
+        // If goal is 0 and we have 0 record, we met the goal.
+        // If goal is 0 and record > 0, we exceeded it.
+        return 100;
+      }
+      return (r / g) * 100;
+  }
 }
 
 // Helper to get overall Target, Previous, and Current
@@ -2538,11 +2578,7 @@ function ActivityRow({
   const currentNum = toNumberOrNull(currentVal);
   let yearlyProgressPct = null;
   if (targetNum !== null && currentNum !== null) {
-    if (targetNum > 0) {
-      yearlyProgressPct = (currentNum / targetNum) * 100;
-    } else if (targetNum === 0) {
-      yearlyProgressPct = currentNum > 0 ? 100.0 : 0.0;
-    }
+    yearlyProgressPct = calculateProgress(currentNum, targetNum, activity.metricType || activity.metric_type);
   }
   const displayYearlyProgress =
     yearlyProgressPct === null ? "-" : `${yearlyProgressPct.toFixed(2)}%`;
@@ -2642,8 +2678,7 @@ function ActivityRow({
             toNumberOrNull(currentVal)) || 0;
         let pct = null;
         if (tg !== null) {
-          if (tg > 0) pct = (ytd / tg) * 100;
-          else pct = ytd > 0 ? 100 : 0;
+          pct = calculateProgress(ytd, tg, activity.metricType || activity.metric_type);
         }
         const disp = pct === null ? "-" : `${pct.toFixed(2)}%`;
         return (
@@ -2663,7 +2698,8 @@ function ActivityRow({
           const { goal, record, progress } = getQuarterlyStats(
             activity,
             p,
-            metricKey
+            metricKey,
+            activity.metricType || activity.metric_type
           );
           // MODIFIED: Format as percentage string
           const displayProgress =
