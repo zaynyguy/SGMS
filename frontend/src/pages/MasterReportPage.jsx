@@ -1865,30 +1865,30 @@ const App = () => {
             />
 
             {/* MODIFIED: Table uses full width within the already-constrained parent, with horizontal scroll */}
-            <div className="w-full overflow-x-auto rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 surface-elevation-1">
+            <div className="w-full overflow-x-auto rounded-xl border border-black dark:border-white surface-elevation-1">
               <table className="min-w-full table-auto">
-                <thead className="sticky top-0 z-20 bg-gray-300 dark:bg-gray-900">
+                <thead className="sticky top-0 z-20 bg-gray-500 dark:bg-gray-900">
                   <tr>
-                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-white">
+                    <th className="border border-black dark:border-white px-4 py-3 text-left text-sm font-medium text-white">
                       {t("reports.table.title")}
                     </th>
-                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                    <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                       {t("reports.table.weight")}
                     </th>
-                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                    <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                       {t("reports.table.metric")}
                     </th>
-                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                    <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                       {t("reports.table.previou", "2017")}
                     </th>
-                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                    <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                       {t("reports.table.targe", "2018")}
                     </th>
                     {/* Quarterly Total and Yearly % (backend-provided) */}
-                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                    <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                       {t("reports.table.quarterlyTotal", "Quarterly Total")}
                     </th>
-                    <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                    <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                       {t("reports.table.yearlyProgress", "Yearly %")}
                     </th>
                     {/* --- Dynamic Headers for Quarterly/Monthly/Annual --- */}
@@ -1897,13 +1897,13 @@ const App = () => {
                         const label = fmtQuarterKey(p);
                         return (
                           <React.Fragment key={p}>
-                            <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                            <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                               {t("reports.table.qGoal", "Goal")} ({label})
                             </th>
-                            <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                            <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                               {t("reports.table.qRecord", "Record")} ({label})
                             </th>
-                            <th className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white">
+                            <th className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white">
                               {t("reports.table.qProgress", "Progress%")} (
                               {label})
                             </th>
@@ -1913,7 +1913,7 @@ const App = () => {
                       : periodColumns.map((p) => (
                         <th
                           key={p}
-                          className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-sm font-medium text-gray-600 dark:text-white"
+                          className="border border-black dark:border-white px-4 py-3 text-sm font-medium text-white"
                         >
                           {granularity === "monthly" ? fmtMonthKey(p) : p}
                         </th>
@@ -1938,28 +1938,28 @@ const App = () => {
                           style={{ animationDelay: `${index * 50}ms` }}
                         >
                           <td
-                            className={`border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 font-medium text-gray-800 dark:text-white text-sm ${row.type === "task" ? "pl-6" : ""
+                            className={`border border-black dark:border-white px-4 py-3 font-medium text-gray-800 dark:text-white text-sm ${row.type === "task" ? "pl-6" : ""
                               }`}
                           >
                             {`${row.number}. ${row.title}`}
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
+                          <td className="border border-black dark:border-white px-4 py-3 text-gray-800 dark:text-white text-sm">
                             {row.weight}
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
+                          <td className="border border-black dark:border-white px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
+                          <td className="border border-black dark:border-white px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
+                          <td className="border border-black dark:border-white px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
                           {/* ADDED: Empty cells for Quarterly Total and Yearly % (moved before period cols) */}
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
+                          <td className="border border-black dark:border-white px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
-                          <td className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm">
+                          <td className="border border-black dark:border-white px-4 py-3 text-gray-800 dark:text-white text-sm">
                             —
                           </td>
                           {Array(numEmptyCols)
@@ -1967,7 +1967,7 @@ const App = () => {
                             .map((_, i) => (
                               <td
                                 key={i}
-                                className="border-b border-[var(--outline-variant)] dark:border-gray-600 px-4 py-3 text-gray-800 dark:text-white text-sm"
+                                className="border border-black dark:border-white px-4 py-3 text-gray-800 dark:text-white text-sm"
                               >
                                 —
                               </td>
@@ -2605,8 +2605,7 @@ function ActivityRow({
       }}
     >
       <td
-        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-          } px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 pl-5`}
+        className={`border border-black dark:border-white px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 pl-5`}
       >
         <div className="flex items-center gap-2">
           <div>{`${number} ${activity.title}`}</div>
@@ -2616,20 +2615,17 @@ function ActivityRow({
         </div>
       </td>
       <td
-        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-16`}
+        className={`border border-black dark:border-white px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-16`}
       >
         <div>{activity.weight ?? "-"}</div>
       </td>
       <td
-        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-20`}
+        className={`border border-black dark:border-white px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-center w-20`}
       >
         <div>{metricKey ?? "-"}</div>
       </td>
       <td
-        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
+        className={`border border-black dark:border-white px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {typeof prevVal === "number"
@@ -2638,8 +2634,7 @@ function ActivityRow({
         </div>
       </td>
       <td
-        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
+          className={`border border-black dark:border-white px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {typeof targetVal === "number"
@@ -2650,8 +2645,7 @@ function ActivityRow({
 
       {/* NEW: Quarterly Total column (prefer recorded records sum) */}
       <td
-        className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-          } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
+        className={`border border-black dark:border-white px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
       >
         <div>
           {(() => {
@@ -2683,8 +2677,7 @@ function ActivityRow({
         const disp = pct === null ? "-" : `${pct.toFixed(2)}%`;
         return (
           <td
-            className={`border-b ${darkMode ? "border-gray-600" : "border-[var(--outline-variant)]"
-              } px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
+            className={`border border-black dark:border-white px-4 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-24 font-mono`}
           >
             <div>{disp}</div>
           </td>
@@ -2722,13 +2715,7 @@ function ActivityRow({
           return (
             <React.Fragment key={p}>
               <td
-                className={`border-b ${darkMode
-                  ? "border-gray-600"
-                  : "border-[var(--outline-variant)]"
-                  } px-3 py-3 text-sm text-gray-700 dark:text-gray-300 ${darkMode
-                    ? "text-gray-300"
-                    : "text-[var(--on-surface-variant)]"
-                  } text-right w-20 font-mono`}
+                className={`border border-black dark:border-white px-3 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-20 font-mono`}
               >
                 <div>
                   {typeof goal === "number"
@@ -2738,10 +2725,7 @@ function ActivityRow({
               </td>
               {/* MODIFIED: Applied conditional color to this cell */}
               <td
-                className={`border-b ${darkMode
-                  ? "border-gray-600"
-                  : "border-[var(--outline-variant)]"
-                  } px-3 py-3 text-sm text-[var(--on-surface-variant)] ${recordColorClass} text-right w-20 font-mono`}
+                className={`border border-black dark:border-white px-3 py-3 text-sm text-[var(--on-surface-variant)] ${recordColorClass} text-right w-20 font-mono`}
               >
                 <div>
                   {typeof record === "number"
@@ -2750,10 +2734,7 @@ function ActivityRow({
                 </div>
               </td>
               <td
-                className={`border-b ${darkMode
-                  ? "border-gray-600"
-                  : "border-[var(--outline-variant)]"
-                  } px-3 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 text-right w-20 font-mono`}
+                className={`border border-black dark:border-white px-3 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 text-right w-20 font-mono`}
               >
                 <div>{displayProgress}</div>
               </td>
@@ -2771,13 +2752,7 @@ function ActivityRow({
           return (
             <td
               key={p}
-              className={`border-b ${darkMode
-                ? "border-gray-600"
-                : "border-[var(--outline-variant)]"
-                } px-3 py-3 text-sm ${darkMode
-                  ? "text-gray-300"
-                  : "text-[var(--on-surface-variant)]"
-                } text-right w-20`}
+              className={`border border-black dark:border-white px-3 py-3 text-sm text-gray-700 dark:text-gray-300 text-right w-20`}
             >
               <div className="min-w-0">
                 <div className="text-sm font-mono">{display}</div>
