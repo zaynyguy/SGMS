@@ -1129,7 +1129,7 @@ const App = () => {
         
       </div>
       {/* Refresh button below on mobile, same row on desktop */}
-      <div className="w-full md:w-auto mt-3 md:mt-0">
+      {/* <div className="w-full md:w-auto mt-3 md:mt-0">
         <button
           onClick={handleRefresh}
           className={`w-full md:w-auto px-4 py-2.5 rounded-full bg-[var(--surface-container-low)] dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-700 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 flex items-center justify-center md:justify-start gap-2 transition-all duration-300 surface-elevation-2 ${
@@ -1157,7 +1157,7 @@ const App = () => {
             {t("dashboard.refresh")}
           </span>
         </button>
-      </div>
+      </div> */}
       <div className="flex-shrink-0">
           <TopBar />
         </div>

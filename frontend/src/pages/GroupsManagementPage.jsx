@@ -426,7 +426,7 @@ const GroupMembers = ({ group, onClose, allUsers, onUpdateMemberCount, t }) => {
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="flex-1 px-4 py-2.5 border rounded-xl bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className="w-full flex-1 px-4 py-2.5 border rounded-xl bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               disabled={availableUsers.length === 0}
             >
               <option value="">{t("groups.members.add.selectUser")}</option>

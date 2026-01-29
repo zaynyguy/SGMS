@@ -270,7 +270,7 @@ const ChatPage = () => {
                               ? 'bg-green-600 dark:bg-indigo-600 text-white rounded-br-none' 
                               : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-100 dark:border-gray-700'
                           }`}>
-                            <p className="text-xl whitespace-pre-wrap break-words text-gray-900 dark:text-white">{m.content}</p>
+                            <p className="text-xl whitespace-pre-wrap break-words text-white">{m.content}</p>
                             <span className={`text-[10px] block text-right mt-1 opacity-70`}>
                               {new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                             </span>

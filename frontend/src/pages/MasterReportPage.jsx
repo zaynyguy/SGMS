@@ -1865,7 +1865,7 @@ const App = () => {
             />
 
             {/* MODIFIED: Table uses full width within the already-constrained parent, with horizontal scroll */}
-            <div className="w-full overflow-x-auto rounded-xl border border-black dark:border-white surface-elevation-1">
+            <div className="w-full h-[80vh] overflow-y-auto overflow-x-auto rounded-xl border border-black dark:border-white surface-elevation-1">
               <table className="min-w-full table-auto">
                 <thead className="sticky top-0 z-20 bg-gray-500 dark:bg-gray-900">
                   <tr>

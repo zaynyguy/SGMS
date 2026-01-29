@@ -4,7 +4,7 @@ const { ipKeyGenerator } = require('express-rate-limit');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 8,
+  max: 15,
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,

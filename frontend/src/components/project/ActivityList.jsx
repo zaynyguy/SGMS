@@ -272,14 +272,22 @@ function ActivityCard({
           </button>
 
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-sm text-[var(--on-surface)] dark:text-white break-words flex items-center gap-2">
-              {compositeRoll && (
-                <span className="text-[var(--primary)] dark:text-indigo-900 font-semibold bg-[var(--primary-container)] dark:bg-indigo-400 px-2 py-1 rounded-full text-xs">
-                  {compositeRoll}.
-                </span>
-              )}
-              <span>{activity.title}</span>
-            </div>
+                      <div className="
+            font-medium text-sm text-[var(--on-surface)] dark:text-white break-words
+            flex flex-col sm:flex-row sm:items-center gap-2
+          ">
+            {compositeRoll && (
+              <span className="
+                text-[var(--primary)] dark:text-indigo-900
+                font-semibold bg-[var(--primary-container)] dark:bg-indigo-400
+                px-2 py-1 rounded-full text-xs
+                w-fit
+              ">
+                {compositeRoll}.
+              </span>
+            )}
+            <span>{activity.title}</span>
+          </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               <span
