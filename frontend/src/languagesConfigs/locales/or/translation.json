@@ -706,7 +706,9 @@
       "previousMetrics": "Safartuuwwan Duraa",
       "selectedFiles": "Faayilota Filataman:",
       "quickInfo": "Odeeffannoo saffisaa",
-      "totalTarget": "Galmee waliigalaa"
+      "totalTarget": "Galmee waliigalaa",
+      "quarterlyGoals": "Galmoota Kurmaana Kurmaanaa",
+      "metricType": "Gosa Meetirikii"
     },
 
     "placeholders": {
@@ -725,8 +727,19 @@
       "hint": "Dirqama kan hinta'in. Lakkoofsa guutuu pozaatiivii. Yoo duwwaa hafe sirnichi ofumaan ramada.",
       "metricRemaining": "Amma: {{current}} / {{target}} (Hafe: {{remaining}})",
       "maxAttachments": "Dabalata baay'inaan 5.",
-      "overallHint": "Kaayyoo Waliigalaa: {{target}}. Adeemsa waliigalaa: {{used}}. Hafe: {{remaining}}."
+      "overallHint": "Kaayyoo Waliigalaa: {{target}}. Adeemsa waliigalaa: {{used}}. Hafe: {{remaining}}.",
+      "quarterlyGoals": "Tokkoon tokkoon kurmaanaaf safartuuwwan galma ibsi. Isaan kun hanga galma waggaatti walitti qabamuu qabu.",
+      "metricType": "Akkaataa gatiiwwan gabaafaman itti hiikaman filadhu: kuusuu (Dabala/Hir'isuu) ykn suuraa (Dabala/Hir'isi/Eeguu)."
     },
+
+    "metriceType":{
+      "plus(Accumulate)": "Dabalata (Kuusuu)",
+      "minus(Accumulate)": "Hir’isuu (Kuusuu)",
+      "increase(Snapshot)": "Dabalaa (Snapshot)",
+      "decrease(Snapshot)": "Hir'isuu (Snapshot)",
+      "maintain(Snapshot)": "Kunuunsuu (Snapshot)"
+    },
+
     "empty": {
       "noGoals": "Kaayyoon hin argamne. Galma kee isa jalqabaa uumi.",
       "noMatch": "Gooliin barbaacha kee wajjin walsimu hin jiru.",
@@ -779,7 +792,8 @@
       "editTask": "Hojii Gulaali",
       "createActivity": "Gocha Uumuu",
       "editActivity": "Gocha Gulaali",
-      "submitReport": "Gabaasa Galchuu"
+      "submitReport": "Gabaasa Galchuu",
+      "subtitle": "Seenessaa dabali, faayilii walitti qabsiisi, fi safartuuwwan haaromsi"
     },
 
     "pagination": {
@@ -815,8 +829,42 @@
       "deleteTaskMessage": "Hojii kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{title}}\"",
       "deleteActivityTitle": "Gocha Haquu",
       "deleteActivityMessage": "Gocha kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{title}}\""
+    },
+  "metrics": {
+    "types": {
+      "plus": {
+        "label": "Kuufamaa (Dabala) .",
+        "description": "Dabala gatii ammaa irratti dabaluuf galchi",
+        "placeholder": "Dabala galchi (fkn, +100)",
+        "example": "Yoo current 1,500 ta'ee fi 100 dabalataa galmaan geesse 100 galchi"
+      },
+      "minus": {
+        "label": "Kuufamaa (Hir'isa)",
+        "description": "Gatii ammaa irraa hir'isuuf galchi",
+        "placeholder": "Hir'isa galchi (fkn, 100)",
+        "example": "Yoo current 1,500 ta'ee fi 100n hir'ifte 100 galchi"
+      },
+      "increase": {
+        "label": "Snapshot (Dabala Target)",
+        "description": "Gatii ammaa sirrii galchi (kan duraa bakka buusa)",
+        "placeholder": "Gatii ammaa galchi (fkn, 1,600)",
+        "example": "Yoo metric kee 1,600 ta'ee, 1,600 galchi"
+      },
+      "decrease": {
+        "label": "Snapshot (Hir'isa Target)",
+        "description": "Gatii ammaa sirrii galchi (kan duraa bakka buusa)",
+        "placeholder": "Gatii ammaa galchi (fkn, 4.2%)",
+        "example": "Yoo metric kee 4.2% ta'ee, 4.2 galchi"
+      },
+      "maintain": {
+        "label": "Snapshot (Akka jirutti tursuu)",
+        "description": "Gatii ammaa sirrii galchi (kan duraa bakka buusa)",
+        "placeholder": "Gatii ammaa galchi",
+        "example": "Gatii ammaa sirrii galchi"
+      }
     }
-  },
+  }
+},
   "login": {
     "company_logo_alt": "Asxaa dhaabbataa",
     "title": "SGMS",

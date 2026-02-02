@@ -1086,7 +1086,7 @@ transform: translateY(0);
                           min="0"
                           step="any"
                           placeholder={t(
-                            `project.placeholders.quarterlyGoal`,
+                            // `project.placeholders.quarterlyGoal`,
                             `Goal for ${q.toUpperCase()}`
                           )}
                           value={local.quarterlyGoals?.[q] ?? ""}
@@ -1097,44 +1097,6 @@ transform: translateY(0);
                     ))}
                   </div>
                 </div>
-
-                {/* ---------------------------------------------------------------- */}
-                {/* NEW: Add Quarterly Records section (actual values) */}
-                {/* ---------------------------------------------------------------- */}
-                {modal.type === "editActivity" && (
-                  <div className="transition-all duration-300 mt-4">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                      {t("project.labels.quarterlyRecords", "Quarterly Records")}
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      {t(
-                        "project.hints.quarterlyRecords",
-                        "Edit actual record values for each quarter. These are auto-populated from approved reports but can be manually corrected here."
-                      )}
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {["q1", "q2", "q3", "q4"].map((q) => (
-                        <div key={`record-${q}`}>
-                          <label className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            {q.toUpperCase()} Record
-                          </label>
-                          <input
-                            name={q}
-                            type="number"
-                            step="any"
-                            placeholder={t(
-                              `project.placeholders.quarterlyRecord`,
-                              `Record for ${q.toUpperCase()}`
-                            )}
-                            value={local.quarterlyRecords?.[q] ?? ""}
-                            onChange={onQuarterlyRecordChange}
-                            className="w-full px-2 py-1.5 border border-emerald-300 dark:border-emerald-600 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 {/* ---------------------------------------------------------------- */}
                 {/* MODIFICATION END */}
                 {/* ---------------------------------------------------------------- */}
@@ -1188,11 +1150,11 @@ transform: translateY(0);
                     onChange={(e) => setLocal((p) => ({ ...(p || {}), metricType: e.target.value }))}
                     className="w-48 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
                   >
-                    <option value="Plus">Plus (Accumulate)</option>
-                    <option value="Minus">Minus (Accumulate)</option>
-                    <option value="Increase">Increase (Snapshot)</option>
-                    <option value="Decrease">Decrease (Snapshot)</option>
-                    <option value="Maintain">Maintain (Snapshot)</option>
+                    <option value="Plus">{t("project.metriceType.plus(Accumulate)")}</option>
+                    <option value="Minus">{t("project.metriceType.minus(Accumulate)")}</option>
+                    <option value="Increase">{t("project.metriceType.increase(Snapshot)")}</option>
+                    <option value="Decrease">{t("project.metriceType.decrease(Snapshot)")}</option>
+                    <option value="Maintain">{t("project.metriceType.maintain(Snapshot)")}</option>
                   </select>
                 </div>
                 <div className="transition-all duration-300">

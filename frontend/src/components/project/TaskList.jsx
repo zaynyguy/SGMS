@@ -463,33 +463,32 @@ function TaskList({
               </div>
             </div>
 
-            {canManageGTA && (
-              <div className="inline-flex sm:hidden items-center gap-1 mt-2 task-fade-in" style={{ animationDelay: `${index * 60 + 100}ms` }}>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onEditTask && onEditTask(goal.id, task); }}
-                  className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-[var(--outline-variant)] dark:border-gray-600 rounded-md text-sm dark:text-white task-btn task-pulse"
-                  title={t("project.actions.edit") || "Edit task"}
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onDeleteTask && onDeleteTask(goal.id, task.id); }}
-                  className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-[var(--outline-variant)] dark:border-gray-600 rounded-md text-sm text-[var(--error)] dark:text-red-400 task-btn"
-                  title={t("project.actions.delete") || "Delete task"}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 pl-0 sm:pl-9 task-stagger-item" style={{ animationDelay: `${index * 60 + 150}ms` }}>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 <span className="truncate">{t("project.fields.due") || "Due"}: {formatDate(task.dueDate)}</span>
               </div>
               <div>{t("project.fields.weight") || "Weight"}: <strong className="text-[var(--on-surface)] dark:text-white">{task.weight ?? "-"}</strong></div>
+              {canManageGTA && (
+                <div className="inline-flex sm:hidden items-center gap-1 mt-2 task-fade-in" style={{ animationDelay: `${index * 60 + 100}ms` }}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onEditTask && onEditTask(goal.id, task); }}
+                    className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-[var(--outline-variant)] dark:border-gray-600 rounded-md text-sm dark:text-white task-btn task-pulse"
+                    title={t("project.actions.edit") || "Edit task"}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onDeleteTask && onDeleteTask(goal.id, task.id); }}
+                    className="flex-shrink-0 inline-flex items-center gap-2 px-2 py-1 border border-[var(--outline-variant)] dark:border-gray-600 rounded-md text-sm text-[var(--error)] dark:text-red-400 task-btn"
+                    title={t("project.actions.delete") || "Delete task"}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <div className="flex-1 max-w-xs">
                   <ProgressBar progress={task.progress ?? 0} variant="task" />
@@ -510,7 +509,7 @@ function TaskList({
                         <button
                           type="button"
                           onClick={() => onCreateActivity && onCreateActivity(goal.id, task.id)}
-                          className="px-2 py-1 text-xs bg-[var(--primary)] dark:bg-indigo-700 text-[var(--on-primary)] dark:text-white rounded-full task- task- hover:bg-[var(--primary-container)] dark:hover:bg-indigo-600 transition-all duration-300"
+                          className="px-2 py-1 text-xs bg-green-800 dark:bg-indigo-700 text-[var(--on-primary)] dark:text-white rounded-full task- task- hover:bg-[var(--primary-container)] dark:hover:bg-indigo-600 transition-all duration-300"
                           title={t("actions.addActivity") || "Add Activity"}
                         >
                           <PlusIcon className="inline-block h-3 w-3 mr-1" /> {t("project.actions.addActivity") || "Add Activity"}

@@ -187,45 +187,47 @@ export default function SubmitReportInline({
 
   // Get user-friendly label and description for metric type
   const getMetricTypeInfo = (type) => {
-    const info = {
-      'Plus': {
-        label: 'Cumulative (Add)',
-        description: 'Enter the increment to add to current value',
-        placeholder: 'Enter increment (e.g., +100)',
-        example: 'If current is 1,500 and you achieved 100 more, enter 100',
-        color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-      },
-      'Minus': {
-        label: 'Cumulative (Subtract)',
-        description: 'Enter the decrement to subtract from current value',
-        placeholder: 'Enter decrement (e.g., +100 to reduce)',
-        example: 'If current is 1,500 and you reduced by 100, enter 100',
-        color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
-      },
-      'Increase': {
-        label: 'Snapshot (Increase Target)',
-        description: 'Enter your current absolute value (replaces previous)',
-        placeholder: 'Enter current value (e.g., 1,600)',
-        example: 'If your metric is now 1,600, enter 1,600',
-        color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-      },
-      'Decrease': {
-        label: 'Snapshot (Decrease Target)',
-        description: 'Enter your current absolute value (replaces previous)',
-        placeholder: 'Enter current value (e.g., 4.2%)',
-        example: 'If your metric is now 4.2%, enter 4.2',
-        color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
-      },
-      'Maintain': {
-        label: 'Snapshot (Maintain)',
-        description: 'Enter your current absolute value (replaces previous)',
-        placeholder: 'Enter current value',
-        example: 'Enter the current state of your metric',
-        color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-      }
-    };
-    return info[type] || info['Plus'];
+  const info = {
+    Plus: {
+      label: t('project.metrics.types.plus.label'),
+      description: t('project.metrics.types.plus.description'),
+      placeholder: t('project.metrics.types.plus.placeholder'),
+      example: t('project.metrics.types.plus.example'),
+      color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    },
+    Minus: {
+      label: t('project.metrics.types.minus.label'),
+      description: t('project.metrics.types.minus.description'),
+      placeholder: t('project.metrics.types.minus.placeholder'),
+      example: t('project.metrics.types.minus.example'),
+      color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+    },
+    Increase: {
+      label: t('project.metrics.types.increase.label'),
+      description: t('project.metrics.types.increase.description'),
+      placeholder: t('project.metrics.types.increase.placeholder'),
+      example: t('project.metrics.types.increase.example'),
+      color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    },
+    Decrease: {
+      label: t('project.metrics.types.decrease.label'),
+      description: t('project.metrics.types.decrease.description'),
+      placeholder: t('project.metrics.types.decrease.placeholder'),
+      example: t('project.metrics.types.decrease.example'),
+      color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    },
+    Maintain: {
+      label: t('project.metrics.types.maintain.label'),
+      description: t('project.metrics.types.maintain.description'),
+      placeholder: t('project.metrics.types.maintain.placeholder'),
+      example: t('project.metrics.types.maintain.example'),
+      color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    },
   };
+
+  return info[type] || info.Plus;
+};
+
 
   const metricTypeInfo = getMetricTypeInfo(metricType);
 
@@ -582,7 +584,7 @@ export default function SubmitReportInline({
                   <FileText className="inline h-4 w-4 mr-1 -mt-0.5" />
                   {isNumericTarget ? totalTarget : "-"}
                   <div className="text-xs text-gray-400">
-                    {t("project.hints.totalTarget") || "Total target"}
+                    {t("project.labels.totalTarget") || "Total target"}
                   </div>
                 </div>
               </div>
@@ -650,41 +652,45 @@ export default function SubmitReportInline({
                       key={m.id}
                       className="p-3 border border-gray-100 dark:border-gray-800 rounded-lg bg-white dark:bg-gray-900 rowFade"
                     >
-                      <div className="flex gap-2 items-center">
-                        <input
-                          placeholder={
-                            t("project.placeholders.metricKey") || "Metric Key"
-                          }
-                          value={m.key}
-                          readOnly={m.isPredefined}
-                          onChange={(e) =>
-                            updateMetricRow(idx, "key", e.target.value)
-                          }
-                          className={`flex-1 px-3 py-2 border rounded-lg text-sm ${m.isPredefined
-                            ? "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-800 cursor-not-allowed"
-                            : "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700"
-                            }`}
-                        />
-                        <input
-                          type="number"
-                          step="any"
-                          min={0}
-                          placeholder={metricTypeInfo.placeholder}
-                          value={m.value}
-                          onChange={(e) =>
-                            updateMetricRow(idx, "value", e.target.value)
-                          }
-                          className="w-44 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeMetricRow(idx)}
-                          className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                          aria-label={t("project.actions.removeShort") || "Remove"}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
+                     <div className="flex flex-col md:flex-row gap-2 md:items-center">
+  <input
+    placeholder={t("project.placeholders.metricKey") || "Metric Key"}
+    value={m.key}
+    readOnly={m.isPredefined}
+    onChange={(e) =>
+      updateMetricRow(idx, "key", e.target.value)
+    }
+    className={`w-full md:flex-1 px-3 py-2 border rounded-lg text-sm ${
+      m.isPredefined
+        ? "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-800 cursor-not-allowed"
+        : "bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700"
+    }`}
+  />
+
+  <div className="flex items-center gap-2">
+    <input
+      type="number"
+      step="any"
+      min={0}
+      placeholder={metricTypeInfo.placeholder}
+      value={m.value}
+      onChange={(e) =>
+        updateMetricRow(idx, "value", e.target.value)
+      }
+      className="w-full md:w-44 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-400"
+    />
+
+    <button
+      type="button"
+      onClick={() => removeMetricRow(idx)}
+      className="p-2 text-gray-400 hover:text-red-500 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shrink-0"
+      aria-label={t("project.actions.removeShort") || "Remove"}
+    >
+      <X className="h-4 w-4" />
+    </button>
+  </div>
+</div>
+
 
                       <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 pl-1">
                         {isCumulative
@@ -706,7 +712,7 @@ export default function SubmitReportInline({
               <button
                 type="button"
                 onClick={addMetricRow}
-                className="flex items-center justify-center gap-2 mt-4 px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:shadow-sm transition btnFloat"
+                className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-3 bg-green-500 dark:bg-indigo-500 text-white rounded-lg text-sm font-medium hover:shadow-sm transition"
               >
                 <PlusSquare className="h-4 w-4" />
                 {t("project.actions.addMetric") || "Add Metric"}
