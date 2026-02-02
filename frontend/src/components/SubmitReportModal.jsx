@@ -712,7 +712,7 @@ export default function SubmitReportInline({
               <button
                 type="button"
                 onClick={addMetricRow}
-                className="flex items-center justify-center gap-2 mt-4 px-4 py-3 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:shadow-sm transition btnFloat"
+                className="w-full flex items-center justify-center gap-2 mt-4 px-4 py-3 bg-green-500 dark:bg-indigo-500 text-white rounded-lg text-sm font-medium hover:shadow-sm transition"
               >
                 <PlusSquare className="h-4 w-4" />
                 {t("project.actions.addMetric") || "Add Metric"}
