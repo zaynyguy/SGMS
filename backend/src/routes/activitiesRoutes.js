@@ -34,4 +34,29 @@ router.delete(
   activitiesController.deleteActivity
 );
 
+// ================================================================
+// ACTIVITY RECORDS ROUTES
+// ================================================================
+
+// Get records for an activity
+router.get(
+  "/:activityId/records",
+  authorizePermissions(["manage_gta", "view_gta"]),
+  activitiesController.getActivityRecords
+);
+
+// Upsert records for an activity (create/update)
+router.put(
+  "/:activityId/records",
+  authorizePermissions(["manage_gta"]),
+  activitiesController.upsertActivityRecords
+);
+
+// Delete a specific record
+router.delete(
+  "/:activityId/records/:recordId",
+  authorizePermissions(["manage_gta"]),
+  activitiesController.deleteActivityRecord
+);
+
 module.exports = router;

@@ -329,6 +329,46 @@ CREATE INDEX IF NOT EXISTS idx_progresshistory_snapshot_month ON "ProgressHistor
 CREATE UNIQUE INDEX IF NOT EXISTS ux_progresshistory_entity_month
   ON "ProgressHistory"(entity_type, entity_id, snapshot_month);
 
+-- ActivityRecords: Stores editable quarterly/monthly records for activities
+-- This table allows direct editing of records while still being auto-populated from approved reports
+CREATE TABLE IF NOT EXISTS "ActivityRecords" (
+  id SERIAL PRIMARY KEY,
+  "activityId" INTEGER NOT NULL REFERENCES "Activities"(id) ON DELETE CASCADE,
+  "fiscalYear" INTEGER NOT NULL,  -- e.g., 2025 for FY2025 (starting July 2024)
+  "quarter" INTEGER CHECK (quarter IS NULL OR (quarter BETWEEN 1 AND 4)),  -- NULL for monthly records
+  "month" INTEGER CHECK (month IS NULL OR (month BETWEEN 1 AND 12)),  -- Calendar month (1=Jan, 7=Jul, etc.)
+  "metricKey" VARCHAR(255) NOT NULL,
+  "value" NUMERIC,
+  "source" VARCHAR(50) DEFAULT 'report',  -- 'report' for auto-created, 'manual' for manually edited
+  "reportId" INTEGER REFERENCES "Reports"(id) ON DELETE SET NULL,  -- Link to source report if any
+  "createdBy" INTEGER REFERENCES "Users"(id) ON DELETE SET NULL,
+  "updatedBy" INTEGER REFERENCES "Users"(id) ON DELETE SET NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Unique constraint: one record per activity/fiscalYear/quarter/metricKey (for quarterly)
+CREATE UNIQUE INDEX IF NOT EXISTS ux_activityrecords_quarterly
+  ON "ActivityRecords"("activityId", "fiscalYear", "quarter", "metricKey")
+  WHERE "quarter" IS NOT NULL;
+
+-- Unique constraint: one record per activity/fiscalYear/month/metricKey (for monthly)
+CREATE UNIQUE INDEX IF NOT EXISTS ux_activityrecords_monthly
+  ON "ActivityRecords"("activityId", "fiscalYear", "month", "metricKey")
+  WHERE "month" IS NOT NULL AND "quarter" IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_activityrecords_activity ON "ActivityRecords"("activityId");
+CREATE INDEX IF NOT EXISTS idx_activityrecords_fiscalyear ON "ActivityRecords"("fiscalYear");
+CREATE INDEX IF NOT EXISTS idx_activityrecords_quarter ON "ActivityRecords"("quarter");
+
+-- Trigger to update updatedAt
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'set_updatedAt_ActivityRecords') THEN
+    CREATE TRIGGER set_updatedAt_ActivityRecords BEFORE UPDATE ON "ActivityRecords" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
+  END IF;
+END$$;
+
 CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
 BEGIN
   NEW."updatedAt" = NOW();
@@ -537,10 +577,59 @@ BEGIN
     END IF;
 END$$;
 
+-- Helper function to get fiscal year start month from system settings (default: 7 for July)
+CREATE OR REPLACE FUNCTION get_fiscal_year_start_month() RETURNS INT LANGUAGE plpgsql AS $$
+DECLARE
+    v_month INT;
+BEGIN
+    SELECT (value::text)::int INTO v_month 
+    FROM "SystemSettings" 
+    WHERE key = 'fiscal_year_start_month' 
+    LIMIT 1;
+    
+    RETURN COALESCE(v_month, 7); -- Default to July if not set
+END;
+$$;
+
+-- Helper function to calculate fiscal year and quarter from a date
+-- Returns: {fiscal_year: INT, quarter: INT, month: INT}
+CREATE OR REPLACE FUNCTION calc_fiscal_period(p_date DATE DEFAULT CURRENT_DATE) 
+RETURNS TABLE(fiscal_year INT, quarter INT, cal_month INT) LANGUAGE plpgsql AS $$
+DECLARE
+    v_start_month INT;
+    v_cal_month INT;
+    v_cal_year INT;
+    v_fiscal_month INT;
+BEGIN
+    v_start_month := get_fiscal_year_start_month();
+    v_cal_month := EXTRACT(MONTH FROM p_date)::INT;
+    v_cal_year := EXTRACT(YEAR FROM p_date)::INT;
+    
+    -- Calculate fiscal month (1-12 starting from fiscal year start)
+    IF v_cal_month >= v_start_month THEN
+        -- We're in the new fiscal year
+        fiscal_year := v_cal_year + 1;  -- FY is named after the end year (July 2024 -> FY2025)
+        v_fiscal_month := v_cal_month - v_start_month + 1;
+    ELSE
+        -- We're in the previous fiscal year
+        fiscal_year := v_cal_year;
+        v_fiscal_month := v_cal_month + (12 - v_start_month + 1);
+    END IF;
+    
+    -- Calculate quarter (1-4) based on fiscal month
+    quarter := CEIL(v_fiscal_month / 3.0)::INT;
+    cal_month := v_cal_month;
+    
+    RETURN NEXT;
+END;
+$$;
+
+-- Updated accumulate_metrics function that also writes to ActivityRecords
 CREATE OR REPLACE FUNCTION accumulate_metrics(
     p_activity_id INT,
     p_metrics JSONB,
-    p_actor_user_id INT DEFAULT NULL
+    p_actor_user_id INT DEFAULT NULL,
+    p_report_id INT DEFAULT NULL
 ) RETURNS JSONB LANGUAGE plpgsql AS $$
 DECLARE
     v_act RECORD;
@@ -560,6 +649,9 @@ DECLARE
     key_val NUMERIC;
     v_new_progress INT := 0;
     snap_month DATE := date_trunc('month', now())::date;
+    
+    -- Fiscal period variables
+    v_fiscal RECORD;
 BEGIN
     IF p_activity_id IS NULL THEN
         RAISE EXCEPTION 'activity id required';
@@ -672,6 +764,7 @@ BEGIN
         "updatedAt" = NOW()
     WHERE id = p_activity_id;
 
+    -- Insert into ProgressHistory (for backward compatibility and monthly data)
     INSERT INTO "ProgressHistory"
     (entity_type, entity_id, group_id, progress, metrics, recorded_at, snapshot_month)
     VALUES
@@ -681,6 +774,70 @@ BEGIN
      v_current, NOW(), snap_month)
     ON CONFLICT (entity_type, entity_id, snapshot_month)
     DO UPDATE SET metrics = EXCLUDED.metrics, progress = EXCLUDED.progress, recorded_at = NOW();
+
+    -- Calculate fiscal period and insert into ActivityRecords
+    SELECT * INTO v_fiscal FROM calc_fiscal_period(CURRENT_DATE);
+    
+    -- Insert/update quarterly record for each metric key
+    FOR k IN SELECT jsonb_object_keys(p_metrics) LOOP
+        BEGIN
+            key_val := (p_metrics ->> k)::numeric;
+            IF key_val IS NOT NULL THEN
+                -- Upsert quarterly record
+                INSERT INTO "ActivityRecords" 
+                    ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "reportId", "createdBy", "updatedBy")
+                VALUES 
+                    (p_activity_id, v_fiscal.fiscal_year, v_fiscal.quarter, NULL, k, 
+                     -- For cumulative types (Plus/Minus), we need to get existing + new
+                     CASE WHEN v_metric_type IN ('Plus', 'Minus') THEN
+                         COALESCE((SELECT "value" FROM "ActivityRecords" 
+                                   WHERE "activityId" = p_activity_id 
+                                   AND "fiscalYear" = v_fiscal.fiscal_year 
+                                   AND "quarter" = v_fiscal.quarter 
+                                   AND "metricKey" = k), 0) + key_val
+                     ELSE key_val END,
+                     'report', p_report_id, p_actor_user_id, p_actor_user_id)
+                ON CONFLICT ("activityId", "fiscalYear", "quarter", "metricKey") 
+                WHERE "quarter" IS NOT NULL
+                DO UPDATE SET 
+                    "value" = CASE WHEN v_metric_type IN ('Plus', 'Minus') THEN
+                                  COALESCE("ActivityRecords"."value", 0) + key_val
+                              ELSE key_val END,
+                    "source" = 'report',
+                    "reportId" = p_report_id,
+                    "updatedBy" = p_actor_user_id,
+                    "updatedAt" = NOW();
+                    
+                -- Also insert monthly record for granular tracking
+                INSERT INTO "ActivityRecords" 
+                    ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "reportId", "createdBy", "updatedBy")
+                VALUES 
+                    (p_activity_id, v_fiscal.fiscal_year, NULL, v_fiscal.cal_month, k,
+                     CASE WHEN v_metric_type IN ('Plus', 'Minus') THEN
+                         COALESCE((SELECT "value" FROM "ActivityRecords" 
+                                   WHERE "activityId" = p_activity_id 
+                                   AND "fiscalYear" = v_fiscal.fiscal_year 
+                                   AND "month" = v_fiscal.cal_month 
+                                   AND "quarter" IS NULL
+                                   AND "metricKey" = k), 0) + key_val
+                     ELSE key_val END,
+                     'report', p_report_id, p_actor_user_id, p_actor_user_id)
+                ON CONFLICT ("activityId", "fiscalYear", "month", "metricKey") 
+                WHERE "month" IS NOT NULL AND "quarter" IS NULL
+                DO UPDATE SET 
+                    "value" = CASE WHEN v_metric_type IN ('Plus', 'Minus') THEN
+                                  COALESCE("ActivityRecords"."value", 0) + key_val
+                              ELSE key_val END,
+                    "source" = 'report',
+                    "reportId" = p_report_id,
+                    "updatedBy" = p_actor_user_id,
+                    "updatedAt" = NOW();
+            END IF;
+        EXCEPTION WHEN others THEN 
+            -- Log but don't fail on record insert errors
+            RAISE NOTICE 'Failed to insert ActivityRecord for key %: %', k, SQLERRM;
+        END;
+    END LOOP;
 
     RETURN v_current;
 END;

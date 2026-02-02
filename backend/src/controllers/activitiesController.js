@@ -97,6 +97,41 @@ exports.getActivitiesByTask = async (req, res) => {
     `;
 
     const { rows } = await db.query(finalQuery, params);
+
+    // Fetch quarterly records for all activities and attach them
+    if (rows.length > 0) {
+      const activityIds = rows.map(r => r.id);
+
+      // Get current fiscal year
+      const fiscalRes = await db.query(`SELECT * FROM calc_fiscal_period(CURRENT_DATE)`);
+      const currentFiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+
+      // Fetch all quarterly records for these activities
+      const recordsRes = await db.query(
+        `SELECT "activityId", "quarter", "metricKey", "value" 
+         FROM "ActivityRecords" 
+         WHERE "activityId" = ANY($1) 
+         AND "fiscalYear" = $2 
+         AND "quarter" IS NOT NULL`,
+        [activityIds, currentFiscalYear]
+      );
+
+      // Group records by activity
+      const recordsByActivity = {};
+      for (const rec of recordsRes.rows) {
+        if (!recordsByActivity[rec.activityId]) {
+          recordsByActivity[rec.activityId] = { q1: "", q2: "", q3: "", q4: "" };
+        }
+        const qKey = `q${rec.quarter}`;
+        recordsByActivity[rec.activityId][qKey] = rec.value;
+      }
+
+      // Attach to each activity
+      for (const activity of rows) {
+        activity.quarterlyRecords = recordsByActivity[activity.id] || { q1: "", q2: "", q3: "", q4: "" };
+      }
+    }
+
     return res.json(rows);
   } catch (err) {
     console.error("getActivitiesByTask error:", err);
@@ -129,7 +164,7 @@ exports.createActivity = async (req, res) => {
   const parsedTargetMetric = safeParseJson(targetMetric);
   const parsedPreviousMetric = safeParseJson(previousMetric);
   const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
-  
+
   // Validate Metric Type
   const validTypes = ['Plus', 'Minus', 'Increase', 'Decrease', 'Maintain'];
   const safeMetricType = validTypes.includes(metricType) ? metricType : 'Plus';
@@ -301,6 +336,7 @@ exports.updateActivity = async (req, res) => {
     targetMetric,
     previousMetric,
     quarterlyGoals,
+    quarterlyRecords, // NEW: editable quarterly records
     isDone,
     rollNo,
     metricType, // ADDED
@@ -397,12 +433,12 @@ exports.updateActivity = async (req, res) => {
       const safeStatus = nullIfEmpty(status);
       const safeDueDate = nullIfEmpty(dueDate);
       const safeIsDone = isDone === undefined ? null : toBoolean(isDone);
-      
+
       // Validate Metric Type
       const validTypes = ['Plus', 'Minus', 'Increase', 'Decrease', 'Maintain'];
       let safeMetricType = null;
       if (metricType !== undefined) {
-         safeMetricType = validTypes.includes(metricType) ? metricType : existing.metricType;
+        safeMetricType = validTypes.includes(metricType) ? metricType : existing.metricType;
       }
 
       // Update query including metricType
@@ -436,6 +472,39 @@ exports.updateActivity = async (req, res) => {
 
       if (!r.rows || !r.rows[0]) throw new Error("Failed to update activity");
       const updatedActivity = r.rows[0];
+
+      // NEW: Handle quarterlyRecords if provided
+      if (quarterlyRecords && typeof quarterlyRecords === 'object') {
+        // Get fiscal year from database helper function
+        const fiscalRes = await client.query(
+          `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`
+        );
+        const fiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+
+        // Get metric key from target metric
+        const targetMetricObj = updatedActivity.targetMetric || {};
+        const metricKey = Object.keys(targetMetricObj)[0] || 'value';
+
+        // Upsert each quarter's record
+        for (const [quarter, value] of Object.entries(quarterlyRecords)) {
+          const qNum = parseInt(quarter.replace('q', ''), 10);
+          if (qNum >= 1 && qNum <= 4 && value !== null && value !== undefined && value !== '') {
+            await client.query(
+              `INSERT INTO "ActivityRecords" 
+                ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")
+               VALUES ($1, $2, $3, NULL, $4, $5, 'manual', $6, $6)
+               ON CONFLICT ("activityId", "fiscalYear", "quarter", "metricKey") 
+               WHERE "quarter" IS NOT NULL
+               DO UPDATE SET 
+                 "value" = $5,
+                 "source" = 'manual',
+                 "updatedBy" = $6,
+                 "updatedAt" = NOW()`,
+              [activityId, fiscalYear, qNum, metricKey, toNumberOrNull(value), req.user.id]
+            );
+          }
+        }
+      }
 
       try {
         await logAudit({
@@ -542,5 +611,321 @@ exports.deleteActivity = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Failed to delete activity.", error: err.message });
+  }
+};
+
+// ================================================================
+// ACTIVITY RECORDS CRUD OPERATIONS
+// ================================================================
+
+/**
+ * Get all records for an activity
+ * Supports filtering by fiscalYear, quarter, and granularity (quarterly/monthly)
+ */
+exports.getActivityRecords = async (req, res) => {
+  const activityId = toIntOrNull(req.params.activityId);
+  if (!activityId) return res.status(400).json({ message: "Invalid activityId" });
+
+  const { fiscalYear, quarter, granularity } = req.query;
+
+  try {
+    let query = `
+      SELECT ar.*, u_created.name as "createdByName", u_updated.name as "updatedByName"
+      FROM "ActivityRecords" ar
+      LEFT JOIN "Users" u_created ON ar."createdBy" = u_created.id
+      LEFT JOIN "Users" u_updated ON ar."updatedBy" = u_updated.id
+      WHERE ar."activityId" = $1
+    `;
+    const params = [activityId];
+    let paramIndex = 2;
+
+    if (fiscalYear) {
+      query += ` AND ar."fiscalYear" = $${paramIndex}`;
+      params.push(toIntOrNull(fiscalYear));
+      paramIndex++;
+    }
+
+    if (quarter) {
+      query += ` AND ar."quarter" = $${paramIndex}`;
+      params.push(toIntOrNull(quarter));
+      paramIndex++;
+    }
+
+    // Filter by granularity
+    if (granularity === 'quarterly') {
+      query += ` AND ar."quarter" IS NOT NULL`;
+    } else if (granularity === 'monthly') {
+      query += ` AND ar."month" IS NOT NULL AND ar."quarter" IS NULL`;
+    }
+
+    query += ` ORDER BY ar."fiscalYear" DESC, ar."quarter" NULLS LAST, ar."month" NULLS LAST, ar."metricKey"`;
+
+    const { rows } = await db.query(query, params);
+    return res.json(rows);
+  } catch (err) {
+    console.error("getActivityRecords error:", err);
+    return res.status(500).json({ message: "Failed to fetch records.", error: err.message });
+  }
+};
+
+/**
+ * Update or create activity records (upsert)
+ * Expects body: { records: [{ fiscalYear, quarter, month, metricKey, value }, ...] }
+ */
+exports.upsertActivityRecords = async (req, res) => {
+  const activityId = toIntOrNull(req.params.activityId);
+  if (!activityId) return res.status(400).json({ message: "Invalid activityId" });
+
+  const { records } = req.body;
+  if (!Array.isArray(records) || records.length === 0) {
+    return res.status(400).json({ message: "Records array is required" });
+  }
+
+  try {
+    const results = await db.tx(async (client) => {
+      // Verify activity exists
+      const actCheck = await client.query(
+        `SELECT id FROM "Activities" WHERE id = $1`,
+        [activityId]
+      );
+      if (!actCheck.rows.length) {
+        const err = new Error("Activity not found");
+        err.status = 404;
+        throw err;
+      }
+
+      const upserted = [];
+
+      for (const record of records) {
+        const { fiscalYear, quarter, month, metricKey, value } = record;
+
+        if (!fiscalYear || !metricKey) {
+          continue; // Skip invalid records
+        }
+
+        const numValue = toNumberOrNull(value);
+
+        if (quarter !== null && quarter !== undefined) {
+          // Quarterly record
+          const result = await client.query(
+            `INSERT INTO "ActivityRecords" 
+              ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")
+             VALUES ($1, $2, $3, NULL, $4, $5, 'manual', $6, $6)
+             ON CONFLICT ("activityId", "fiscalYear", "quarter", "metricKey") 
+             WHERE "quarter" IS NOT NULL
+             DO UPDATE SET 
+               "value" = $5,
+               "source" = 'manual',
+               "updatedBy" = $6,
+               "updatedAt" = NOW()
+             RETURNING *`,
+            [activityId, fiscalYear, quarter, metricKey, numValue, req.user.id]
+          );
+          upserted.push(result.rows[0]);
+        } else if (month !== null && month !== undefined) {
+          // Monthly record
+          const result = await client.query(
+            `INSERT INTO "ActivityRecords" 
+              ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")
+             VALUES ($1, $2, NULL, $3, $4, $5, 'manual', $6, $6)
+             ON CONFLICT ("activityId", "fiscalYear", "month", "metricKey") 
+             WHERE "month" IS NOT NULL AND "quarter" IS NULL
+             DO UPDATE SET 
+               "value" = $5,
+               "source" = 'manual',
+               "updatedBy" = $6,
+               "updatedAt" = NOW()
+             RETURNING *`,
+            [activityId, fiscalYear, month, metricKey, numValue, req.user.id]
+          );
+          upserted.push(result.rows[0]);
+        }
+      }
+
+      // Log audit
+      try {
+        await logAudit({
+          userId: req.user.id,
+          action: "ACTIVITY_RECORDS_UPDATED",
+          entity: "ActivityRecords",
+          entityId: activityId,
+          details: { recordCount: upserted.length },
+          client,
+          req,
+        });
+      } catch (e) {
+        console.error("ACTIVITY_RECORDS_UPDATED audit failed:", e);
+      }
+
+      return upserted;
+    });
+
+    return res.json({
+      message: "Records updated successfully.",
+      records: results,
+      count: results.length
+    });
+  } catch (err) {
+    console.error("upsertActivityRecords error:", err);
+    if (err && err.status === 404) {
+      return res.status(404).json({ message: err.message });
+    }
+    return res.status(500).json({ message: "Failed to update records.", error: err.message });
+  }
+};
+
+/**
+ * Delete a specific activity record
+ */
+exports.deleteActivityRecord = async (req, res) => {
+  const activityId = toIntOrNull(req.params.activityId);
+  const recordId = toIntOrNull(req.params.recordId);
+
+  if (!activityId || !recordId) {
+    return res.status(400).json({ message: "Invalid activityId or recordId" });
+  }
+
+  try {
+    const result = await db.tx(async (client) => {
+      // Verify record exists and belongs to activity
+      const recordCheck = await client.query(
+        `SELECT * FROM "ActivityRecords" WHERE id = $1 AND "activityId" = $2`,
+        [recordId, activityId]
+      );
+
+      if (!recordCheck.rows.length) {
+        const err = new Error("Record not found");
+        err.status = 404;
+        throw err;
+      }
+
+      const deletedRecord = recordCheck.rows[0];
+
+      await client.query(
+        `DELETE FROM "ActivityRecords" WHERE id = $1`,
+        [recordId]
+      );
+
+      // Log audit
+      try {
+        await logAudit({
+          userId: req.user.id,
+          action: "ACTIVITY_RECORD_DELETED",
+          entity: "ActivityRecords",
+          entityId: recordId,
+          before: deletedRecord,
+          client,
+          req,
+        });
+      } catch (e) {
+        console.error("ACTIVITY_RECORD_DELETED audit failed:", e);
+      }
+
+      return deletedRecord;
+    });
+
+    return res.json({ message: "Record deleted successfully.", record: result });
+  } catch (err) {
+    console.error("deleteActivityRecord error:", err);
+    if (err && err.status === 404) {
+      return res.status(404).json({ message: err.message });
+    }
+    return res.status(500).json({ message: "Failed to delete record.", error: err.message });
+  }
+};
+
+/**
+ * Get aggregated records for master report display
+ * Returns records grouped by activity with fiscal calculations
+ */
+exports.getAggregatedRecords = async (req, res) => {
+  const { groupId, fiscalYear, granularity = 'quarterly' } = req.query;
+
+  try {
+    let query = `
+      SELECT 
+        ar."activityId",
+        ar."fiscalYear",
+        ar."quarter",
+        ar."month",
+        ar."metricKey",
+        ar."value",
+        ar."source",
+        a.title as "activityTitle",
+        a."targetMetric",
+        a."quarterlyGoals",
+        a."metricType",
+        t.title as "taskTitle",
+        t.id as "taskId",
+        g.title as "goalTitle",
+        g.id as "goalId",
+        gr.name as "groupName",
+        gr.id as "groupId"
+      FROM "ActivityRecords" ar
+      JOIN "Activities" a ON ar."activityId" = a.id
+      JOIN "Tasks" t ON a."taskId" = t.id
+      JOIN "Goals" g ON t."goalId" = g.id
+      LEFT JOIN "Groups" gr ON g."groupId" = gr.id
+      WHERE 1=1
+    `;
+    const params = [];
+    let paramIndex = 1;
+
+    if (groupId) {
+      query += ` AND g."groupId" = $${paramIndex}`;
+      params.push(toIntOrNull(groupId));
+      paramIndex++;
+    }
+
+    if (fiscalYear) {
+      query += ` AND ar."fiscalYear" = $${paramIndex}`;
+      params.push(toIntOrNull(fiscalYear));
+      paramIndex++;
+    }
+
+    if (granularity === 'quarterly') {
+      query += ` AND ar."quarter" IS NOT NULL`;
+    } else if (granularity === 'monthly') {
+      query += ` AND ar."month" IS NOT NULL AND ar."quarter" IS NULL`;
+    }
+
+    query += ` ORDER BY gr.name, g.id, t.id, a.id, ar."fiscalYear", ar."quarter" NULLS LAST, ar."month" NULLS LAST`;
+
+    const { rows } = await db.query(query, params);
+
+    // Group by activity
+    const grouped = {};
+    for (const row of rows) {
+      const key = row.activityId;
+      if (!grouped[key]) {
+        grouped[key] = {
+          activityId: row.activityId,
+          activityTitle: row.activityTitle,
+          targetMetric: row.targetMetric,
+          quarterlyGoals: row.quarterlyGoals,
+          metricType: row.metricType,
+          taskId: row.taskId,
+          taskTitle: row.taskTitle,
+          goalId: row.goalId,
+          goalTitle: row.goalTitle,
+          groupId: row.groupId,
+          groupName: row.groupName,
+          records: []
+        };
+      }
+      grouped[key].records.push({
+        fiscalYear: row.fiscalYear,
+        quarter: row.quarter,
+        month: row.month,
+        metricKey: row.metricKey,
+        value: row.value,
+        source: row.source
+      });
+    }
+
+    return res.json(Object.values(grouped));
+  } catch (err) {
+    console.error("getAggregatedRecords error:", err);
+    return res.status(500).json({ message: "Failed to fetch aggregated records.", error: err.message });
   }
 };

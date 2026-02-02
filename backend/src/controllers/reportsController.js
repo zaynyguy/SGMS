@@ -44,10 +44,36 @@ async function fetchReportWithGroup(reportId) {
   return rows[0] || null;
 }
 
+/* small helpers used by generateMasterReport */
+function toNumberOrNull(v) {
+  if (v === null || typeof v === "undefined") return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const n = Number(String(v).replace(/,/g, "").trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+function sumNumericValues(obj) {
+  if (!obj) return 0;
+  if (typeof obj === "number") return obj;
+  if (typeof obj === "string") {
+    const n = toNumberOrNull(obj);
+    return n || 0;
+  }
+  if (typeof obj === "object") {
+    return Object.values(obj).reduce((sum, val) => {
+      const n = toNumberOrNull(val);
+      return sum + (n || 0);
+    }, 0);
+  }
+  return 0;
+}
+
+/* Controllers */
+
 exports.canSubmitReport = async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`,
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
     );
     if (!rows[0]) return res.json({ reporting_active: false });
     const val = rows[0].value;
@@ -69,7 +95,7 @@ exports.submitReport = async (req, res) => {
   // early check: reporting enabled
   try {
     const { rows } = await db.query(
-      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`,
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
     );
     if (!rows[0]) {
       return res
@@ -120,7 +146,7 @@ exports.submitReport = async (req, res) => {
       // lock activity row
       const actQ = await client.query(
         `SELECT "targetMetric", "currentMetric", "metricType" FROM "Activities" WHERE id = $1 FOR UPDATE`,
-        [activityId],
+        [activityId]
       );
 
       if (!actQ.rows[0]) {
@@ -129,9 +155,9 @@ exports.submitReport = async (req, res) => {
       }
 
       const activityRow = actQ.rows[0];
-      const targetMetric = activityRow.targetMetric || {};
-      const currentMetric = activityRow.currentMetric || {};
-      const metricType = activityRow.metricType || "Plus"; // Default
+      const targetMetric = activityRow.targetmetric || activityRow.targetMetric || {};
+      const currentMetric = activityRow.currentmetric || activityRow.currentMetric || {};
+      const metricType = activityRow.metrictype || activityRow.metricType || "Plus"; // Default
 
       const violations = [];
 
@@ -186,7 +212,6 @@ exports.submitReport = async (req, res) => {
 
           if (metricType === "Plus" || metricType === "Minus") {
             // CUMULATIVE: We validate that (Current + Incoming) <= Target
-            // For Minus, Target usually implies "Total Amount to Reduce".
             if (currentVal + incoming > targetVal) {
               violations.push({
                 key: k,
@@ -198,26 +223,8 @@ exports.submitReport = async (req, res) => {
                 message: `Cumulative total would exceed target.`,
               });
             }
-          } else if (metricType === "Increase") {
-            // INCREASE: Snapshot. Input replaces Current.
-            // Usually, exceeding target in "Increase" is GOOD (e.g. Sales > Target).
-            // But if validation is strictly "Do not exceed target", we check:
-            // if (incoming > targetVal) ...
-            // Typically reporting systems allow exceeding for "Increase".
-            // If you want to BLOCK it:
-            /*
-            if (incoming > targetVal) {
-               violations.push({ ... });
-            }
-            */
-            // For now, let's assume exceeding is allowed for Increase unless strictly capped.
-          } else if (metricType === "Decrease") {
-            // DECREASE: Snapshot. Input replaces Current.
-            // Target is floor (e.g. 2%). Input (4%) is valid. Input (1%) is valid (better than target).
-            // No validation needed usually.
-          } else if (metricType === "Maintain") {
-            // MAINTAIN: Input replaces Current.
-            // Usually no strict validation unless physically impossible.
+          } else {
+            // For snapshot types (Increase/Decrease/Maintain) we allow values by default.
           }
         }
       }
@@ -236,13 +243,7 @@ exports.submitReport = async (req, res) => {
       `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status, "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
        RETURNING *`,
-      [
-        activityId,
-        req.user.id,
-        narrative || null,
-        parsedMetrics || {},
-        new_status || null,
-      ],
+      [activityId, req.user.id, narrative || null, parsedMetrics || {}, new_status || null]
     );
     const report = reportResult.rows[0];
 
@@ -252,7 +253,7 @@ exports.submitReport = async (req, res) => {
       const maxSizeMb = Number(
         attachmentSettings?.maxSizeMb ||
         attachmentSettings?.max_attachment_size_mb ||
-        10,
+        10
       );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
 
@@ -295,7 +296,7 @@ exports.submitReport = async (req, res) => {
               uploaded.fileType || file.mimetype,
               uploaded.provider || "local",
               uploaded.publicId || null,
-            ],
+            ]
           );
           insertedAttachments.push(insertRes.rows[0]);
         } catch (uerr) {
@@ -306,7 +307,7 @@ exports.submitReport = async (req, res) => {
               if (entry.uploaded && entry.uploaded.provider === "local") {
                 try {
                   const fname = path.basename(
-                    entry.uploaded.url || entry.originalFile.path || "",
+                    entry.uploaded.url || entry.originalFile.path || ""
                   );
                   const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
                   if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
@@ -368,13 +369,13 @@ exports.submitReport = async (req, res) => {
            JOIN "RolePermissions" rp ON rp."roleId" = r.id
            JOIN "Permissions" p ON p.id = rp."permissionId"
            WHERE p.name = $1`,
-          ["manage_reports"],
+          ["manage_reports"]
         );
         for (const r of permRes.rows) if (r && r.id) recipients.add(r.id);
       } catch (permErr) {
         console.error(
           "submitReport: failed to query manage_reports users:",
-          permErr,
+          permErr
         );
       }
 
@@ -384,7 +385,7 @@ exports.submitReport = async (req, res) => {
            FROM "Activities" a
            LEFT JOIN "Tasks" t ON t.id = a."taskId"
            WHERE a.id = $1 LIMIT 1`,
-          [activityId],
+          [activityId]
         );
         const arow = actRes.rows[0];
         const activityTitle = (arow && arow.activity_title) || null;
@@ -409,14 +410,14 @@ exports.submitReport = async (req, res) => {
           } catch (nerr) {
             console.error(
               `submitReport: failed to notify user ${uid} about report ${report.id}:`,
-              nerr,
+              nerr
             );
           }
         }
       } catch (aerr) {
         console.error(
           "submitReport: failed to fetch activity/task assignee:",
-          aerr,
+          aerr
         );
       }
     } catch (outerNotifyErr) {
@@ -437,7 +438,7 @@ exports.submitReport = async (req, res) => {
         if (entry.uploaded && entry.uploaded.provider === "local") {
           try {
             const fname = path.basename(
-              entry.uploaded.url || entry.originalFile.path || "",
+              entry.uploaded.url || entry.originalFile.path || ""
             );
             const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
             if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
@@ -477,7 +478,7 @@ exports.reviewReport = async (req, res) => {
 
     const repRes = await client.query(
       `SELECT * FROM "Reports" WHERE id = $1 FOR UPDATE`,
-      [reportId],
+      [reportId]
     );
     if (!repRes.rows[0]) {
       await client.query("ROLLBACK");
@@ -493,7 +494,7 @@ exports.reviewReport = async (req, res) => {
            "updatedAt" = NOW()
        WHERE id = $4
        RETURNING *`,
-      [status, adminComment || null, resubmissionDeadline || null, reportId],
+      [status, adminComment || null, resubmissionDeadline || null, reportId]
     );
     const updatedReport = updatedRows[0];
 
@@ -524,34 +525,28 @@ exports.reviewReport = async (req, res) => {
         }
       }
 
-      if (
-        !updatedReport.applied &&
-        metricsObj &&
-        Object.keys(metricsObj).length
-      ) {
+      if (!updatedReport.applied && metricsObj && Object.keys(metricsObj).length) {
         try {
           // This calls the UPDATED accumulate_metrics SQL function
           await client.query(
-            `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int)`,
-            [updatedReport.activityId, metricsObj, req.user.id],
+            `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, $4::int)`,
+            [updatedReport.activityId, metricsObj, req.user.id, reportId]
           );
 
           await client.query(
             `UPDATE "Reports" SET applied = true, "appliedBy" = $1, "appliedAt" = NOW() WHERE id = $2`,
-            [req.user.id, reportId],
+            [req.user.id, reportId]
           );
         } catch (applyErr) {
           console.error(
             "Failed to apply metrics via accumulate_metrics:",
-            applyErr,
+            applyErr
           );
           await client.query("ROLLBACK");
-          return res
-            .status(500)
-            .json({ error: "Failed to apply report metrics." });
+          return res.status(500).json({ error: "Failed to apply report metrics." });
         }
 
-        // Post-apply snapshot
+        // Post-apply snapshot - run async
         try {
           const { snapshotActivity } = require("../jobs/monthlySnapshot");
           setImmediate(async () => {
@@ -574,7 +569,7 @@ exports.reviewReport = async (req, res) => {
                "isDone" = CASE WHEN $1::"activity_status"='Done' THEN true ELSE "isDone" END,
                "updatedAt" = NOW()
            WHERE id = $2`,
-          [updatedReport.new_status, updatedReport.activityId],
+          [updatedReport.new_status, updatedReport.activityId]
         );
       }
     }
@@ -615,7 +610,7 @@ exports.getAllReports = async (req, res) => {
     const page = Math.max(parseInt(req.query.page || "1", 10), 1);
     const pageSize = Math.min(
       Math.max(parseInt(req.query.pageSize || "20", 10), 1),
-      200,
+      200
     );
     const offset = (page - 1) * pageSize;
     const status = req.query.status ? String(req.query.status) : null;
@@ -634,14 +629,14 @@ exports.getAllReports = async (req, res) => {
     if (!isAdmin && canViewGroup) {
       const gRes2 = await db.query(
         `SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`,
-        [req.user.id],
+        [req.user.id]
       );
       const groupIds2 = gRes2.rows.map((r) => r.groupId).filter(Boolean);
       if (groupIds2.length) {
         const groupParam = pushParam(groupIds2);
         const userParam = pushParam(req.user.id);
         rebuiltWhereClauses.push(
-          `(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`,
+          `(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`
         );
       } else {
         const userParam = pushParam(req.user.id);
@@ -659,7 +654,7 @@ exports.getAllReports = async (req, res) => {
     if (qRaw) {
       const p = pushParam(`%${qRaw}%`);
       rebuiltWhereClauses.push(
-        `(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`,
+        `(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`
       );
     }
 
@@ -705,7 +700,8 @@ exports.generateMasterReport = async (req, res) => {
   const format = (req.query.format || "").toLowerCase();
 
   try {
-    const rows = await db.query(
+    // Main raw query
+    const rowsRes = await db.query(
       `
       SELECT g.id as goal_id,
              g.title as goal_title,
@@ -748,12 +744,124 @@ exports.generateMasterReport = async (req, res) => {
       ${groupId ? 'WHERE g."groupId" = $1' : ""}
       ORDER BY g.id, t.id, a.id, r.id
       `,
-      groupId ? [groupId] : [],
+      groupId ? [groupId] : []
     );
 
-    const raw = rows.rows || [];
+    const raw = rowsRes.rows || [];
 
-    // Fetch history
+    // Build nested masterJson: goals -> tasks -> activities
+    const goalsMap = new Map();
+
+    for (const r of raw) {
+      const goalId = r.goal_id;
+      if (!goalId) continue;
+
+      if (!goalsMap.has(goalId)) {
+        goalsMap.set(goalId, {
+          id: goalId,
+          title: r.goal_title,
+          progress: r.goal_progress,
+          status: r.goal_status,
+          weight: r.goal_weight,
+          tasks: new Map(),
+        });
+      }
+      const goal = goalsMap.get(goalId);
+
+      const taskId = r.task_id;
+      if (!taskId) continue;
+
+      if (!goal.tasks.has(taskId)) {
+        goal.tasks.set(taskId, {
+          id: taskId,
+          title: r.task_title,
+          progress: r.task_progress,
+          status: r.task_status,
+          weight: r.task_weight,
+          assignee: r.task_assignee,
+          activities: new Map(),
+        });
+      }
+      const task = goal.tasks.get(taskId);
+
+      const actId = r.activity_id;
+      if (!actId) continue;
+
+      if (!task.activities.has(actId)) {
+        task.activities.set(actId, {
+          id: actId,
+          title: r.activity_title,
+          description: r.activity_description,
+          currentMetric: r.currentmetric || r.currentMetric || {},
+          targetMetric: r.targetmetric || r.targetMetric || {},
+          previousMetric: r.previousmetric || r.previousMetric || {},
+          quarterlyGoals: r.quarterlygoals || r.quarterlyGoals || {},
+          metricType: r.metrictype || r.metricType || "Plus",
+          weight: r.activity_weight,
+          isDone: r.activity_done,
+          status: r.activity_status,
+          reports: [],
+          attachments: [],
+          history: { monthly: {}, quarterly: {}, annual: {} },
+          quarterlyTotal: null,
+          yearlyProgress: null,
+        });
+      }
+      const activity = task.activities.get(actId);
+
+      // Attach report if present
+      if (r.report_id) {
+        activity.reports.push({
+          id: r.report_id,
+          narrative: r.report_narrative,
+          status: r.report_status,
+          metrics: r.report_metrics,
+          new_status: r.report_new_status,
+          createdAt: r.report_createdat || r.report_createdAt,
+        });
+      }
+
+      // Attach attachment if present
+      if (r.attachment_id) {
+        activity.attachments.push({
+          id: r.attachment_id,
+          fileName: r.attachment_name,
+          filePath: r.attachment_path,
+          fileType: r.attachment_type,
+        });
+      }
+    }
+
+    // Convert nested Maps to plain arrays
+    const masterJson = { goals: [] };
+    for (const goal of goalsMap.values()) {
+      const goalObj = {
+        id: goal.id,
+        title: goal.title,
+        progress: goal.progress,
+        status: goal.status,
+        weight: goal.weight,
+        tasks: [],
+      };
+      for (const task of goal.tasks.values()) {
+        const taskObj = {
+          id: task.id,
+          title: task.title,
+          progress: task.progress,
+          status: task.status,
+          weight: task.weight,
+          assignee: task.assignee,
+          activities: [],
+        };
+        for (const activity of task.activities.values()) {
+          taskObj.activities.push(activity);
+        }
+        goalObj.tasks.push(taskObj);
+      }
+      masterJson.goals.push(goalObj);
+    }
+
+    // Fetch ProgressHistory rows (monthly snapshots)
     const phRowsQ = await db.query(
       `
       SELECT entity_id::int as activity_id, snapshot_month, progress, metrics, recorded_at
@@ -762,7 +870,7 @@ exports.generateMasterReport = async (req, res) => {
       ${groupId ? "AND group_id = $1" : ""}
       ORDER BY entity_id, snapshot_month
       `,
-      groupId ? [groupId] : [],
+      groupId ? [groupId] : []
     );
 
     const historyByActivity = {};
@@ -771,311 +879,225 @@ exports.generateMasterReport = async (req, res) => {
       if (!historyByActivity[aid]) historyByActivity[aid] = [];
       historyByActivity[aid].push({
         snapshot_month: r.snapshot_month,
-        progress:
-          typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
+        progress: typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
         metrics: r.metrics || {},
         recorded_at: r.recorded_at,
       });
     }
 
-    // fallback: derive report-based timelines if no progress snapshots
-    if (Object.keys(historyByActivity).length === 0) {
-      for (const row of raw) {
-        if (!row.activity_id || !row.report_id) continue;
-        if (
-          row.report_status &&
-          String(row.report_status).toLowerCase() !== "approved"
-        )
-          continue;
+    // Merge ActivityRecords (authoritative manual edits)
+    // Get fiscal start month
+    const fsRes = await db.query("SELECT get_fiscal_year_start_month() as m");
+    const startMonth = fsRes.rows[0]?.m || 7;
 
-        const actId = row.activity_id;
-        const createdAt =
-          row.report_createdat ||
-          row.report_createdAt ||
-          row.createdat ||
-          row.createdAt;
-        const metrics = row.report_metrics || {};
+    const arQuery = `
+        SELECT ar.*
+        FROM "ActivityRecords" ar
+        JOIN "Activities" a ON ar."activityId" = a.id
+        JOIN "Tasks" t ON a."taskId" = t.id
+        JOIN "Goals" g ON t."goalId" = g.id
+        WHERE 1=1
+        ${groupId ? 'AND g."groupId" = $1' : ''}
+        ORDER BY ar."fiscalYear", ar."quarter", ar."month"
+      `;
+    const arRows = await db.query(arQuery, groupId ? [groupId] : []);
 
-        if (!historyByActivity[actId]) historyByActivity[actId] = [];
-        historyByActivity[actId].push({
-          reportId: row.report_id,
-          date: createdAt,
-          metrics,
-          newStatus: row.report_new_status,
+    const recordsByActivity = {};
+    for (const rec of arRows.rows || []) {
+      const aid = rec.activityId;
+      if (!recordsByActivity[aid]) recordsByActivity[aid] = [];
+      recordsByActivity[aid].push(rec);
+    }
+
+    // Populate activity.history from both ProgressHistory and ActivityRecords
+    // First: attach ProgressHistory monthly snapshots
+    for (const [aidStr, snaps] of Object.entries(historyByActivity)) {
+      const aid = Number(aidStr);
+      // place into activity.history.monthly using snapshot_month YYYY-MM-DD -> YYYY-MM
+      const activity = findActivityInMaster(masterJson, aid);
+      if (!activity) continue;
+      for (const s of snaps) {
+        const d = s.snapshot_month ? new Date(s.snapshot_month) : new Date(s.recorded_at || Date.now());
+        if (isNaN(d)) continue;
+        const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (!activity.history.monthly[monthKey]) activity.history.monthly[monthKey] = [];
+        activity.history.monthly[monthKey].push({
+          date: d.toISOString(),
+          progress: s.progress,
+          metrics: s.metrics,
+          recorded_at: s.recorded_at,
+          source: "progress_history",
         });
       }
     }
 
-    // Build breakdowns
-    const breakdowns = {};
-    for (const [actId, snaps] of Object.entries(historyByActivity)) {
-      const numericActId = Number(actId);
-      breakdowns[numericActId] = { monthly: {}, quarterly: {}, annual: {} };
+    // Second: attach ActivityRecords (monthly and quarterly)
+    for (const aidStr of Object.keys(recordsByActivity)) {
+      const aid = Number(aidStr);
+      const activity = findActivityInMaster(masterJson, aid);
+      if (!activity) continue;
+      for (const rec of recordsByActivity[aid]) {
+        const metricKey = rec.metricKey;
+        const val = toNumberOrNull(rec.value);
+        // construct metrics object
+        const metricsObj = { [metricKey]: val };
 
-      const monthlyLatest = new Map();
-      for (const snap of snaps) {
-        const dateStr = snap.snapshot_month || snap.recorded_at || snap.date;
-        const d = new Date(dateStr);
-        if (isNaN(d)) continue;
+        // Quarter
+        if (rec.quarter) {
+          const fiscalYear = rec.fiscalYear;
+          // calculate calendar month (end of quarter)
+          const relativeMonth = (rec.quarter - 1) * 3 + 2; // 0-indexed within fiscal year
+          const absMonth = (startMonth - 1) + relativeMonth;
+          const calMonthIndex = (absMonth % 12) + 1; // 1-12
+          const yearOffset = Math.floor(absMonth / 12);
+          const calYear = fiscalYear + yearOffset;
+          const qKey = `${fiscalYear}-Q${rec.quarter}`;
+          const dateStr = `${calYear}-${String(calMonthIndex).padStart(2, "0")}-28`;
+          if (!activity.history.quarterly[qKey]) activity.history.quarterly[qKey] = [];
+          activity.history.quarterly[qKey].push({
+            date: dateStr,
+            progress: null,
+            metrics: metricsObj,
+            recorded_at: dateStr,
+            source: "activity_record",
+          });
+        }
 
-        const year = d.getFullYear();
-        const month = d.getMonth() + 1;
-        const monthKey = `${year}-${String(month).padStart(2, "0")}`;
-        // Fiscal year starting in July: Jul-Sep => Q1, Oct-Dec => Q2, Jan-Mar => Q3, Apr-Jun => Q4
-        // Use the fiscal year's starting calendar year as the label (e.g. months Jan-Jun belong to previous fiscal year)
-        const fiscalYear = month >= 7 ? year : year - 1;
-        const fiscalMonthIndex = ((month + 5) % 12) + 1; // maps Jul->1, Aug->2, ..., Jun->12
-        const quarterKey = `${fiscalYear}-Q${Math.floor((fiscalMonthIndex - 1) / 3) + 1}`;
-        const yearKey = `${fiscalYear}`;
-
-        const recordedAt = snap.recorded_at ? new Date(snap.recorded_at) : d;
-        const existing = monthlyLatest.get(monthKey);
-
-        if (
-          !existing ||
-          (recordedAt &&
-            recordedAt > new Date(existing.recorded_at || existing.date || 0))
-        ) {
-          monthlyLatest.set(monthKey, {
-            snap,
-            dateStr,
-            monthKey,
-            quarterKey,
-            yearKey,
+        // Month
+        if (rec.month) {
+          const m = rec.month; // calendar month 1-12
+          // Determine calendar year: if month >= startMonth then calendar year = fiscalYear; else fiscalYear + 1
+          const fiscalYear = rec.fiscalYear;
+          const calYear = m >= startMonth ? fiscalYear : fiscalYear + 1;
+          const monthKey = `${calYear}-${String(m).padStart(2, "0")}`;
+          const dateStr = `${calYear}-${String(m).padStart(2, "0")}-28`;
+          if (!activity.history.monthly[monthKey]) activity.history.monthly[monthKey] = [];
+          activity.history.monthly[monthKey].push({
+            date: dateStr,
+            progress: null,
+            metrics: metricsObj,
+            recorded_at: dateStr,
+            source: "activity_record",
           });
         }
       }
-
-      for (const entry of monthlyLatest.values()) {
-        const { snap, dateStr, monthKey, quarterKey, yearKey } = entry;
-
-        if (!breakdowns[numericActId].monthly[monthKey])
-          breakdowns[numericActId].monthly[monthKey] = [];
-        breakdowns[numericActId].monthly[monthKey].push({
-          date: dateStr,
-          progress: snap.progress,
-          metrics: snap.metrics,
-          recorded_at: snap.recorded_at || snap.date,
-        });
-
-        if (!breakdowns[numericActId].quarterly[quarterKey])
-          breakdowns[numericActId].quarterly[quarterKey] = [];
-        breakdowns[numericActId].quarterly[quarterKey].push({
-          date: dateStr,
-          progress: snap.progress,
-          metrics: snap.metrics,
-          recorded_at: snap.recorded_at || snap.date,
-        });
-
-        if (!breakdowns[numericActId].annual[yearKey])
-          breakdowns[numericActId].annual[yearKey] = [];
-        breakdowns[numericActId].annual[yearKey].push({
-          date: dateStr,
-          progress: snap.progress,
-          metrics: snap.metrics,
-          recorded_at: snap.recorded_at || snap.date,
-        });
-      }
     }
 
-    const masterJson = generateReportJson(raw);
-
-    // Inject metrics & metricType
-    const activityMetricTypeById = {};
-    const activityPreviousById = {};
-    const activityQuarterlyGoalsById = {};
-    const activityCurrentMetricById = {};
-
-    for (const row of raw) {
-      const aid = Number(row.activity_id);
-      if (!aid) continue;
-
-      if (!activityPreviousById[aid]) {
-        const candidate = row.previousMetric || row.previous_metric || null;
-        if (candidate) activityPreviousById[aid] = candidate;
-      }
-      if (!activityQuarterlyGoalsById[aid]) {
-        const candidate = row.quarterlyGoals || row.quarterly_goals || null;
-        if (candidate) activityQuarterlyGoalsById[aid] = candidate;
-      }
-      if (!activityCurrentMetricById[aid]) {
-        const candidate = row.currentMetric || row.current_metric || null;
-        if (candidate) activityCurrentMetricById[aid] = candidate;
-      }
-      if (!activityMetricTypeById[aid]) {
-        const candidate = row.metricType || row.metric_type || "Plus";
-        activityMetricTypeById[aid] = candidate;
-      }
-    }
-
-    function sumNumericValues(obj) {
-      if (!obj) return 0;
-      try {
-        if (typeof obj === "number") return obj;
-        if (typeof obj === "string") {
-          const n = Number(String(obj).replace(/,/g, "").trim());
-          return Number.isFinite(n) ? n : 0;
-        }
-        if (typeof obj === "object") {
-          return Object.values(obj).reduce((s, v) => {
-            const n = Number(String(v).replace(/,/g, "").trim());
-            return s + (Number.isFinite(n) ? n : 0);
-          }, 0);
-        }
-      } catch (e) {
-        return 0;
-      }
-      return 0;
-    }
-
+    // Compute quarterlyTotal and yearlyProgress for each activity
     for (const goal of masterJson.goals || []) {
       for (const task of goal.tasks || []) {
         for (const activity of task.activities || []) {
-          if (activityPreviousById[activity.id] && !activity.previousMetric) {
-            activity.previousMetric = activityPreviousById[activity.id];
-          }
-          if (
-            activityQuarterlyGoalsById[activity.id] &&
-            !activity.quarterlyGoals
-          ) {
-            activity.quarterlyGoals = activityQuarterlyGoalsById[activity.id];
-          }
-          if (
-            activityCurrentMetricById[activity.id] &&
-            !activity.currentMetric
-          ) {
-            activity.currentMetric = activityCurrentMetricById[activity.id];
-          }
-          // Inject Metric Type
-          if (activityMetricTypeById[activity.id]) {
-            activity.metricType = activityMetricTypeById[activity.id];
-          }
-
-          // compute quarterlyTotal (year-to-date) based on metricType and history
           try {
-            const metricType =
-              activity.metricType ||
-              activityMetricTypeById[activity.id] ||
-              "Plus";
+            const hist = activity.history || { quarterly: {}, monthly: {} };
+            const metricType = activity.metricType || "Plus";
 
-            let ytd = null; // null means no recorded data
-            const hist = breakdowns[activity.id] || { quarterly: {} };
-
+            // quarterlyTotal
             if (metricType === "Plus" || metricType === "Minus") {
-              // Cumulative: sum latest metrics for each quarter (only from history)
+              // sum latest value per quarter
               let sum = 0;
               let found = false;
-              for (const entries of Object.values(hist.quarterly || {})) {
-                if (!Array.isArray(entries) || entries.length === 0) continue;
-                const latest = entries[entries.length - 1];
-                const nv = sumNumericValues(
-                  latest.metrics || latest.metrics_data || 0,
-                );
+              const quarterKeys = Object.keys(hist.quarterly || {}).sort();
+              for (const qk of quarterKeys) {
+                const entries = hist.quarterly[qk];
+                if (!entries || entries.length === 0) continue;
+                // pick latest entry
+                const last = entries[entries.length - 1];
+                const nv = sumNumericValues(last.metrics || {});
                 if (nv) {
                   sum += nv;
                   found = true;
                 }
               }
-              if (found) ytd = sum;
+              activity.quarterlyTotal = found ? sum : null;
             } else {
-              // Snapshot types (Increase/Decrease/Maintain): use latest quarter snapshot only (no fallbacks)
-              const qKeys = Object.keys(hist.quarterly || {});
+              // snapshot types: use latest quarter (last key)
+              const qKeys = Object.keys(hist.quarterly || {}).sort();
               if (qKeys.length) {
-                qKeys.sort();
-                const latestEntries =
-                  hist.quarterly[qKeys[qKeys.length - 1]] || [];
+                const latestEntries = hist.quarterly[qKeys[qKeys.length - 1]] || [];
                 if (latestEntries.length) {
                   const latest = latestEntries[latestEntries.length - 1];
-                  const nv = sumNumericValues(
-                    latest.metrics || latest.metrics_data || {},
-                  );
-                  if (nv || nv === 0) ytd = nv;
+                  activity.quarterlyTotal = sumNumericValues(latest.metrics || {});
+                } else {
+                  activity.quarterlyTotal = null;
                 }
+              } else {
+                activity.quarterlyTotal = null;
               }
             }
 
-            activity.quarterlyTotal = ytd;
-          } catch (e) {
-            activity.quarterlyTotal = null;
-          }
-
-          activity.history = breakdowns[activity.id] || {
-            monthly: {},
-            quarterly: {},
-            annual: {},
-          };
-          // compute yearly progress percent if possible (YTD vs targetMetric)
-          // compute yearly progress percent if possible (YTD vs targetMetric)
-          try {
+            // compute yearlyProgress (YTD vs target)
+            const ytdVal = activity.quarterlyTotal === null ? null : Number(activity.quarterlyTotal || 0);
             const targetSum = sumNumericValues(activity.targetMetric || {});
-            const metricType = activity.metricType || "Plus";
-
-            if (
-              activity.quarterlyTotal !== null &&
-              typeof activity.quarterlyTotal !== "undefined"
-            ) {
-              const ytdVal = Number(activity.quarterlyTotal) || 0;
-
-              if (metricType === "Decrease") {
-                // Lower is Better
+            if (ytdVal === null) {
+              activity.yearlyProgress = null;
+            } else {
+              if (activity.metricType === "Decrease") {
                 if (ytdVal === 0) {
-                  // Perfect score (0 defects, 0 cost, etc)
                   activity.yearlyProgress = 100;
                 } else if (targetSum === 0) {
-                  // Goal is 0, but record > 0 -> 0% progress
                   activity.yearlyProgress = 0;
                 } else {
-                  // (Target / Record) * 100
                   activity.yearlyProgress = Math.round((targetSum / ytdVal) * 100);
                 }
-              } else if (metricType === "Maintain") {
-                // Maintain: Higher is Better, but Cap at 100%?
-                // User requirement: "needed to maintain 100% but ... gave me 200% ... fix this up" -> Impaling Cap.
-                // User requirement: "maintaining 0% ... gave me 0% ... should be 100%" -> Handle 0/0.
-
+              } else if (activity.metricType === "Maintain") {
                 if (targetSum === 0) {
-                  if (ytdVal === 0) activity.yearlyProgress = 100; // Met 0 target
-                  else activity.yearlyProgress = 0; // Failed to maintain 0
+                  activity.yearlyProgress = ytdVal === 0 ? 100 : 0;
                 } else {
                   const pct = Math.round((ytdVal / targetSum) * 100);
                   activity.yearlyProgress = pct > 100 ? 100 : pct;
                 }
               } else {
-                // Standard: Higher is Better (Plus, Minus, Increase) - Uncapped
+                // Plus, Minus, Increase
                 if (targetSum === 0 && ytdVal === 0) {
                   activity.yearlyProgress = 100;
+                } else if (targetSum === 0) {
+                  activity.yearlyProgress = null;
                 } else {
-                  activity.yearlyProgress = targetSum
-                    ? Math.round((ytdVal / targetSum) * 100)
-                    : null;
+                  activity.yearlyProgress = Math.round((ytdVal / targetSum) * 100);
                 }
               }
-            } else {
-              activity.yearlyProgress = null;
             }
           } catch (e) {
+            activity.quarterlyTotal = null;
             activity.yearlyProgress = null;
           }
         }
       }
     }
 
+    // If HTML requested
     if (
       format === "html" ||
-      (req.headers.accept &&
-        req.headers.accept.includes("text/html") &&
-        !req.query.format)
+      (req.headers.accept && req.headers.accept.includes("text/html") && !req.query.format)
     ) {
-      const html = generateReportHtml(raw, breakdowns);
-      return res.set("Content-Type", "text/html").send(html);
+      try {
+        const html = generateReportHtml(masterJson);
+        return res.set("Content-Type", "text/html").send(html);
+      } catch (e) {
+        console.error("generateMasterReport: generateReportHtml error:", e);
+        // fallthrough to JSON
+      }
     }
 
     return res.json(masterJson);
   } catch (err) {
     console.error(
       "Error generating master report:",
-      err && err.message ? err.message : err,
+      err && err.message ? err.message : err
     );
     res.status(500).json({ error: err.message || String(err) });
   }
 };
+
+/* Helper to find activity in master JSON */
+function findActivityInMaster(masterJson, activityId) {
+  if (!masterJson || !masterJson.goals) return null;
+  for (const g of masterJson.goals) {
+    for (const t of g.tasks || []) {
+      for (const a of t.activities || []) {
+        if (Number(a.id) === Number(activityId)) return a;
+      }
+    }
+  }
+  return null;
+}
