@@ -829,8 +829,7 @@
       "deleteTaskMessage": "Hojii kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{title}}\"",
       "deleteActivityTitle": "Gocha Haquu",
       "deleteActivityMessage": "Gocha kana haquu akka barbaaddu mirkaneeffatteettaa? \"{{title}}\""
-    }
-  },
+    },
   "metrics": {
     "types": {
       "plus": {
@@ -864,7 +863,8 @@
         "example": "Gatii ammaa sirrii galchi"
       }
     }
-  },
+  }
+},
   "login": {
     "company_logo_alt": "Asxaa dhaabbataa",
     "title": "SGMS",
