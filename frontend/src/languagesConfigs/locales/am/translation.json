@@ -703,7 +703,9 @@
       "previousMetrics": "ቀዳሚ መለኪያዎች",
       "selectedFiles": "የተመረጡ ፋይሎች፡",
       "quickInfo": "ፈጣን መረጃ",
-      "totalTarget": "ጠቅላላ ኢላማ"
+      "totalTarget": "ጠቅላላ ኢላማ",
+      "quarterlyGoals": "የሩብ ዓመት ግቦች",
+      "metricType": "የመለኪያ አይነት"
     },
 
     "placeholders": {
@@ -722,7 +724,17 @@
       "hint": "ከተፈለገ አዎንታዊ ኢንቲጀር. ባዶ ከሆነ ስርዓቱ በራስ-ሰር ይመድባል።",
       "metricRemaining": "አሁን: {{current}} / {{target}} (ቀሪው: {{remaining}})",
       "maxAttachments": "ቢበዛ 5 አባሪዎች።",
-      "overallHint": "አጠቃላይ ዒላማ፡ {{target}}። ጠቅላላ እድገት፡ {{used}}። የቀረው፡ {{remaining}}።"
+      "overallHint": "አጠቃላይ ዒላማ፡ {{target}}። ጠቅላላ እድገት፡ {{used}}። የቀረው፡ {{remaining}}።",
+      "quarterlyGoals": "ይህ ግብ ለየትኛውም የሩብ ዓመት ግብ አይደለም። እባክዎ የሩብ ዓመት ግቦችን ለመጨመር ከላይ ያለውን 'የሩብ ዓመት ግቦች' ክፈት።",
+      "metricType": "የተዘገቡት እሴቶች እንዴት እንደሚተረጎሙ ይምረጡ፡ ይሰብስቡ (ፕላስ/ሲነስ) ወይም ቅጽበታዊ ገጽ እይታ (ጨምር/ቀንስ/ጥገና)።"
+    },
+
+    "metriceType":{
+      "plus(Accumulate)": "ፕላስ (ክምችት)",
+      "minus(Accumulate)": "ዝቅተኛ (ክምችት)",
+      "increase(Snapshot)": "ጨምር (ቅጽበተ ፎቶ)",
+      "decrease(Snapshot)": "ቀንስ (ቅጽበተ ፎቶ)",
+      "maintain(Snapshot)": "ይጠብቁ (ቅጽበተ ፎቶ)"
     },
 
     "empty": {
@@ -777,7 +789,8 @@
       "editTask": "ተግባርን አርትዕ",
       "createActivity": "እንቅስቃሴ ፍጠር",
       "editActivity": "እንቅስቃሴን አርትዕ",
-      "submitReport": "ሪፖርት አስገባ"
+      "submitReport": "ሪፖርት አስገባ",
+      "subtitle": "ትረካ ያክሉ፣ ፋይሎችን ያያይዙ እና ሜትሪክሶችን ያዘምኑ"
     },
 
     "pagination": {
@@ -813,6 +826,40 @@
       "deleteTaskMessage": "እርግጠኛ ነዎት ይህን ተግባር መሰረዝ ይፈልጋሉ? \"{{title}}\"",
       "deleteActivityTitle": "እንቅስቃሴ ሰርዝ",
       "deleteActivityMessage": "እርግጠኛ ነዎት ይህን እንቅስቃሴ መሰረዝ ይፈልጋሉ? \"{{title}}\""
+    }
+  },
+  "metrics": {
+    "types": {
+      "plus": {
+        "label": "ድምር (ጨምር)",
+        "description": "ወደ የአሁኑ እሴት ለመጨመር ጭማሪውን ያስገቡ",
+        "placeholder": "ጭማሪ ያስገቡ (ለምሳሌ፣ +100)",
+        "example": "የአሁኑ 1,500 ከሆነ እና 100 ተጨማሪ ካገኙ 100 ያስገቡ"
+      },
+      "minus": {
+        "label": "ድምር (ቀንስ)",
+        "description": "ወደ የአሁኑ እሴት ለመቀነስ ጭማሪውን ያስገቡ",
+        "placeholder": "ጭማሪ ያስገቡ (ለምሳሌ፣ -100)",
+        "example": "የአሁኑ 1,500 ከሆነ እና 100 ተቀነሰ 100 ያስገቡ"
+      },
+      "increase": {
+        "label": "ቅጽበተ-ፎቶ (ዒላማውን ጨምር)",
+        "description": "የአሁኑን ማለት እሴት ያስገቡ (ከቀዳሚውን ተቀምጣ)",
+        "placeholder": "የአሁኑን እሴት ያስገቡ (ለምሳሌ፣ 1,600)",
+        "example": "የአሁኑ ሜትሪክ 1,600 ከሆነ 1,600 ያስገቡ"
+      },
+      "decrease": {
+        "label": "ቅጽበተ-ፎቶ (ዒላማውን ይቀንሱ)",
+        "description": "የአሁኑን ማለት እሴት ያስገቡ (ከቀዳሚውን ተቀምጣ)",
+        "placeholder": "የአሁኑን እሴት ያስገቡ (ለምሳሌ፣ 4.2%)",
+        "example": "የአሁኑ ሜትሪክ 4.2% ከሆነ 4.2 ያስገቡ"
+      },
+      "maintain": {
+        "label": "ቅጽበተ-ፎቶ (ጥገና)",
+        "description": "የአሁኑን ማለት እሴት ያስገቡ (ከቀዳሚውን ተቀምጣ)",
+        "placeholder": "የአሁኑን እሴት ያስገቡ",
+        "example": "የአሁኑ ሜትሪክ ሁሉንም ተቀምጣ"
+      }
     }
   },
   "login": {

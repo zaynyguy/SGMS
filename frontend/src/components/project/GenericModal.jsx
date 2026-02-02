@@ -1062,7 +1062,7 @@ transform: translateY(0);
                         min="0"
                         step="any"
                         placeholder={t(
-                          `project.placeholders.quarterlyGoal`,
+                          // `project.placeholders.quarterlyGoal`,
                           `Goal for ${q.toUpperCase()}`
                         )}
                         value={local.quarterlyGoals?.[q] ?? ""}
@@ -1126,11 +1126,11 @@ transform: translateY(0);
                   onChange={(e) => setLocal((p) => ({ ...(p||{}), metricType: e.target.value }))}
                   className="w-48 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
                 >
-                  <option value="Plus">Plus (Accumulate)</option>
-                  <option value="Minus">Minus (Accumulate)</option>
-                  <option value="Increase">Increase (Snapshot)</option>
-                  <option value="Decrease">Decrease (Snapshot)</option>
-                  <option value="Maintain">Maintain (Snapshot)</option>
+                  <option value="Plus">{t("project.metriceType.plus(Accumulate)")}</option>
+                  <option value="Minus">{t("project.metriceType.minus(Accumulate)")}</option>
+                  <option value="Increase">{t("project.metriceType.increase(Snapshot)")}</option>
+                  <option value="Decrease">{t("project.metriceType.decrease(Snapshot)")}</option>
+                  <option value="Maintain">{t("project.metriceType.maintain(Snapshot)")}</option>
                 </select>
               </div>
               <div className="transition-all duration-300">
