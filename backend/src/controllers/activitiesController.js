@@ -488,20 +488,37 @@ exports.updateActivity = async (req, res) => {
         // Upsert each quarter's record
         for (const [quarter, value] of Object.entries(quarterlyRecords)) {
           const qNum = parseInt(quarter.replace('q', ''), 10);
-          if (qNum >= 1 && qNum <= 4 && value !== null && value !== undefined && value !== '') {
-            await client.query(
-              `INSERT INTO "ActivityRecords" 
-                ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")
-               VALUES ($1, $2, $3, NULL, $4, $5, 'manual', $6, $6)
-               ON CONFLICT ("activityId", "fiscalYear", "quarter", "metricKey") 
-               WHERE "quarter" IS NOT NULL
-               DO UPDATE SET 
-                 "value" = $5,
-                 "source" = 'manual',
-                 "updatedBy" = $6,
-                 "updatedAt" = NOW()`,
-              [activityId, fiscalYear, qNum, metricKey, toNumberOrNull(value), req.user.id]
-            );
+
+          if (qNum >= 1 && qNum <= 4) {
+            // If value is null or empty string, treat it as a DELETE request
+            if (value === null || value === undefined || value === '') {
+              await client.query(
+                `DELETE FROM "ActivityRecords" 
+                 WHERE "activityId" = $1 
+                   AND "fiscalYear" = $2 
+                   AND "quarter" = $3 
+                   AND "metricKey" = $4`,
+                [activityId, fiscalYear, qNum, metricKey]
+              );
+            } else {
+              // Otherwise UPSERT
+              const numVal = toNumberOrNull(value);
+              if (numVal !== null) {
+                await client.query(
+                  `INSERT INTO "ActivityRecords" 
+                    ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")
+                   VALUES ($1, $2, $3, NULL, $4, $5, 'manual', $6, $6)
+                   ON CONFLICT ("activityId", "fiscalYear", "quarter", "metricKey") 
+                   WHERE "quarter" IS NOT NULL
+                   DO UPDATE SET 
+                     "value" = $5,
+                     "source" = 'manual',
+                     "updatedBy" = $6,
+                     "updatedAt" = NOW()`,
+                  [activityId, fiscalYear, qNum, metricKey, numVal, req.user.id]
+                );
+              }
+            }
           }
         }
       }
