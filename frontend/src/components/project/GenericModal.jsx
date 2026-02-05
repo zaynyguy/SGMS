@@ -17,12 +17,12 @@ export default function GenericModal({
   tasks = {}, // Expected: { [goalId]: [task1, task2] } or an array of tasks
   goals = [],
   activities = {}, // Expected: { [taskId]: [act1, act2] } or an array of activities
-  onCreateGoal = async () => { },
-  onUpdateGoal = async () => { },
-  onCreateTask = async () => { },
-  onUpdateTask = async () => { },
-  onCreateActivity = async () => { },
-  onUpdateActivity = async () => { },
+  onCreateGoal = async () => {},
+  onUpdateGoal = async () => {},
+  onCreateTask = async () => {},
+  onUpdateTask = async () => {},
+  onCreateActivity = async () => {},
+  onUpdateActivity = async () => {},
   isSubmitting = false,
   t = (s) => s, // Translation function fallback
 }) {
@@ -182,7 +182,7 @@ export default function GenericModal({
       const list = tasks && tasks[gId] ? tasks[gId] : [];
       return (
         (Array.isArray(list) ? list : []).find(
-          (x) => String(x.id) === String(tId) || x.id === tId
+          (x) => String(x.id) === String(tId) || x.id === tId,
         ) || null
       );
     };
@@ -193,14 +193,14 @@ export default function GenericModal({
       if (Array.isArray(activities)) {
         return (
           activities.find(
-            (x) => String(x.id) === String(aId) || x.id === aId
+            (x) => String(x.id) === String(aId) || x.id === aId,
           ) || null
         );
       }
       const list = activities && activities[tId] ? activities[tId] : [];
       return (
         (Array.isArray(list) ? list : []).find(
-          (x) => String(x.id) === String(aId) || x.id === aId
+          (x) => String(x.id) === String(aId) || x.id === aId,
         ) || null
       );
     };
@@ -247,13 +247,13 @@ export default function GenericModal({
         rollNo: initRoll(source.rollNo),
         // MODIFIED: Added previousMetrics
         previousMetrics: parseMetricData(
-          source.previousMetric ?? source.previousMetrics
+          source.previousMetric ?? source.previousMetrics,
         ),
         targetMetrics: parseMetricData(
-          source.targetMetric ?? source.targetMetrics
+          source.targetMetric ?? source.targetMetrics,
         ),
         // metricType: store metric type for activity creation/edit
-        metricType: source.metricType || source.metric_type || 'Plus',
+        metricType: source.metricType || source.metric_type || "Plus",
         // MODIFICATION: Add quarterlyGoals from source
         quarterlyGoals: {
           q1: qGoals.q1 ?? "",
@@ -462,27 +462,28 @@ export default function GenericModal({
   // --- Weight calculation helpers ---
   const parseNum = useCallback((v, fallback = 0) => {
     const n = parseFloat(String(v));
-    return Number.isNaN(n) ? fallback : n;
+    return Number.isNaN(n) ? fallback : parseFloat(n.toFixed(2));
   }, []);
 
   const computeGoalWeightAvailable = useCallback(
     (goalId, excludeTaskId = null) => {
       const g = goals.find(
-        (x) => String(x.id) === String(goalId) || x.id === goalId
+        (x) => String(x.id) === String(goalId) || x.id === goalId,
       );
       const goalWeight = parseNum(g?.weight, 0);
       const list = tasks[goalId] || [];
       const sumOther = (Array.isArray(list) ? list : []).reduce((s, t) => {
         if (excludeTaskId && String(t.id) === String(excludeTaskId)) return s;
-        return s + parseNum(t.weight, 0);
+        return parseNum(s + parseNum(t.weight, 0));
       }, 0);
+      const available = Math.max(0, parseNum(goalWeight - sumOther));
       return {
         goalWeight,
         used: sumOther,
-        available: Math.max(0, goalWeight - sumOther),
+        available,
       };
     },
-    [goals, tasks, parseNum]
+    [goals, tasks, parseNum],
   );
 
   const computeTaskWeightAvailable = useCallback(
@@ -491,35 +492,36 @@ export default function GenericModal({
         ? tasks
         : Object.values(tasks).flat();
       const taskObj = (Array.isArray(allTasksLists) ? allTasksLists : []).find(
-        (t) => String(t.id) === String(taskId) || t.id === taskId
+        (t) => String(t.id) === String(taskId) || t.id === taskId,
       );
       const taskWeight = parseNum(taskObj?.weight, 0);
       const list = activities[taskId] || [];
       const sumOther = (Array.isArray(list) ? list : []).reduce((s, a) => {
         if (excludeActivityId && String(a.id) === String(excludeActivityId))
           return s;
-        return s + parseNum(a.weight, 0);
+        return parseNum(s + parseNum(a.weight, 0));
       }, 0);
+      const available = Math.max(0, parseNum(taskWeight - sumOther));
       return {
         taskWeight,
         used: sumOther,
-        available: Math.max(0, taskWeight - sumOther),
+        available,
       };
     },
-    [tasks, activities, parseNum]
+    [tasks, activities, parseNum],
   );
 
   const computeSystemWeightAvailable = useCallback(
     (excludeGoalId = null) => {
       const sumOther = (goals || []).reduce((s, g) => {
         if (excludeGoalId && String(g.id) === String(excludeGoalId)) return s;
-        return s + parseNum(g.weight, 0);
+        return parseNum(s + parseNum(g.weight, 0));
       }, 0);
       const used = sumOther;
-      const available = Math.max(0, 100 - used);
+      const available = Math.max(0, parseNum(100 - used));
       return { used, available };
     },
-    [goals, parseNum]
+    [goals, parseNum],
   );
 
   /**
@@ -562,7 +564,7 @@ export default function GenericModal({
         if (!Number.isFinite(asNum) || !Number.isInteger(asNum) || asNum <= 0) {
           setInlineError(
             t("project.errors.rollNoPositive") ||
-            "Roll number must be a positive integer"
+              "Roll number must be a positive integer",
           );
           return;
         }
@@ -573,7 +575,7 @@ export default function GenericModal({
         const { goalId, id } = resolveIds(modal.data || {});
         if (!goalId) {
           setInlineError(
-            t("project.errors.missingGoalId") || "Missing goal id"
+            t("project.errors.missingGoalId") || "Missing goal id",
           );
           return;
         }
@@ -581,12 +583,12 @@ export default function GenericModal({
         const excludeTaskId = modal.type === "editTask" ? id : null;
         const { goalWeight, used, available } = computeGoalWeightAvailable(
           goalId,
-          excludeTaskId
+          excludeTaskId,
         );
 
         if (newWeight <= 0) {
           setInlineError(
-            t("project.errors.weightPositive") || "Weight must be > 0"
+            t("project.errors.weightPositive") || "Weight must be > 0",
           );
           return;
         }
@@ -597,7 +599,7 @@ export default function GenericModal({
               goalWeight,
               used,
               available,
-            }) || `Weight ${newWeight} exceeds available ${available}`
+            }) || `Weight ${newWeight} exceeds available ${available}`,
           );
           return;
         }
@@ -608,7 +610,7 @@ export default function GenericModal({
         const { taskId, id } = resolveIds(modal.data || {});
         if (!taskId) {
           setInlineError(
-            t("project.errors.missingTaskId") || "Missing task id"
+            t("project.errors.missingTaskId") || "Missing task id",
           );
           return;
         }
@@ -616,12 +618,12 @@ export default function GenericModal({
         const excludeActivityId = modal.type === "editActivity" ? id : null;
         const { taskWeight, used, available } = computeTaskWeightAvailable(
           taskId,
-          excludeActivityId
+          excludeActivityId,
         );
 
         if (newWeight <= 0) {
           setInlineError(
-            t("project.errors.weightPositive") || "Weight must be > 0"
+            t("project.errors.weightPositive") || "Weight must be > 0",
           );
           return;
         }
@@ -632,7 +634,7 @@ export default function GenericModal({
               taskWeight,
               used,
               available,
-            }) || `Weight ${newWeight} exceeds available ${available}`
+            }) || `Weight ${newWeight} exceeds available ${available}`,
           );
           return;
         }
@@ -643,7 +645,7 @@ export default function GenericModal({
         const newWeight = parseNum(local.weight, 0);
         if (newWeight <= 0) {
           setInlineError(
-            t("project.errors.weightPositive") || "Weight must be > 0"
+            t("project.errors.weightPositive") || "Weight must be > 0",
           );
           return;
         }
@@ -656,7 +658,7 @@ export default function GenericModal({
               used,
               available,
             }) ||
-            `Cannot set weight to ${newWeight}. System used ${used}, available ${available}.`
+              `Cannot set weight to ${newWeight}. System used ${used}, available ${available}.`,
           );
           return;
         }
@@ -703,7 +705,7 @@ export default function GenericModal({
         const { goalId, id } = resolveIds(modal.data || {});
         if (!goalId || !id) {
           setInlineError(
-            t("project.errors.invalidIds") || "Invalid goal or task id"
+            t("project.errors.invalidIds") || "Invalid goal or task id",
           );
           return;
         }
@@ -780,15 +782,26 @@ export default function GenericModal({
       if (modal.type === "createActivity") {
         const { goalId, taskId } = resolveIds(modal.data || {});
         // Enforce single target metric (client-side validation)
-        const nonEmptyTargets = (Array.isArray(local.targetMetrics) ? local.targetMetrics.filter(m => m && String(m.key || "").trim() !== "") : []).length;
+        const nonEmptyTargets = (
+          Array.isArray(local.targetMetrics)
+            ? local.targetMetrics.filter(
+                (m) => m && String(m.key || "").trim() !== "",
+              )
+            : []
+        ).length;
         if (nonEmptyTargets > 1) {
-          setInlineError(t("project.errors.singleTargetMetric") || "Only one target metric allowed per activity.");
+          setInlineError(
+            t("project.errors.singleTargetMetric") ||
+              "Only one target metric allowed per activity.",
+          );
           return;
         }
         const payload = { ...local };
         // MODIFIED: Convert all metric arrays to objects
         payload.quarterlyGoals = quarterlyGoalsToObject(local.quarterlyGoals);
-        payload.quarterlyRecords = quarterlyRecordsToObject(local.quarterlyRecords); // Use records-specific conversion
+        payload.quarterlyRecords = quarterlyRecordsToObject(
+          local.quarterlyRecords,
+        ); // Use records-specific conversion
         payload.targetMetric = metricsToObject(local.targetMetrics);
         payload.previousMetric = metricsToObject(local.previousMetrics);
         delete payload.targetMetrics;
@@ -807,20 +820,31 @@ export default function GenericModal({
         const { goalId, taskId, id } = resolveIds(modal.data || {});
         if (!taskId || !id) {
           setInlineError(
-            t("project.errors.missingTaskId") || "Missing task or activity id"
+            t("project.errors.missingTaskId") || "Missing task or activity id",
           );
           return;
         }
         const payload = { ...local };
         // Enforce single target metric (client-side validation)
-        const nonEmptyTargetsEdit = (Array.isArray(local.targetMetrics) ? local.targetMetrics.filter(m => m && String(m.key || "").trim() !== "") : []).length;
+        const nonEmptyTargetsEdit = (
+          Array.isArray(local.targetMetrics)
+            ? local.targetMetrics.filter(
+                (m) => m && String(m.key || "").trim() !== "",
+              )
+            : []
+        ).length;
         if (nonEmptyTargetsEdit > 1) {
-          setInlineError(t("project.errors.singleTargetMetric") || "Only one target metric allowed per activity.");
+          setInlineError(
+            t("project.errors.singleTargetMetric") ||
+              "Only one target metric allowed per activity.",
+          );
           return;
         }
         // MODIFIED: Convert all metric arrays to objects
         payload.quarterlyGoals = quarterlyGoalsToObject(local.quarterlyGoals);
-        payload.quarterlyRecords = quarterlyRecordsToObject(local.quarterlyRecords); // Use records-specific conversion
+        payload.quarterlyRecords = quarterlyRecordsToObject(
+          local.quarterlyRecords,
+        ); // Use records-specific conversion
         payload.targetMetric = metricsToObject(local.targetMetrics);
         payload.previousMetric = metricsToObject(local.previousMetrics);
         delete payload.targetMetrics;
@@ -839,7 +863,7 @@ export default function GenericModal({
     } catch (err) {
       console.error("modal submit error", err);
       setInlineError(
-        err?.message || t("project.errors.modalSubmit") || "Submit failed"
+        err?.message || t("project.errors.modalSubmit") || "Submit failed",
       );
     }
   };
@@ -849,12 +873,12 @@ export default function GenericModal({
   const systemHint =
     modal.type === "createGoal" || modal.type === "editGoal"
       ? (() => {
-        const excludeGoalId =
-          modal.type === "editGoal" ? modal.data?.id : null;
-        const { used, available } =
-          computeSystemWeightAvailable(excludeGoalId);
-        return { used, available };
-      })()
+          const excludeGoalId =
+            modal.type === "editGoal" ? modal.data?.id : null;
+          const { used, available } =
+            computeSystemWeightAvailable(excludeGoalId);
+          return { used, available };
+        })()
       : null;
 
   return (
@@ -949,11 +973,14 @@ transform: translateY(0);
                 {modal.type === "editGoal" && t("project.modal.editGoal")}
                 {modal.type === "createTask" && t("project.modal.createTask")}
                 {modal.type === "editTask" && t("project.modal.editTask")}
-                {modal.type === "createActivity" && t("project.modal.createActivity")}
-                {modal.type === "editActivity" && t("project.modal.editActivity")}
+                {modal.type === "createActivity" &&
+                  t("project.modal.createActivity")}
+                {modal.type === "editActivity" &&
+                  t("project.modal.editActivity")}
               </h3>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t("project.modal.subtitle") || "Create or edit items — fill fields and save."}
+                {t("project.modal.subtitle") ||
+                  "Create or edit items — fill fields and save."}
               </p>
             </div>
           </div>
@@ -968,295 +995,319 @@ transform: translateY(0);
           </button>
         </div>
 
-        <form id="generic-modal-form" onSubmit={submitLocal} className="modal-body flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 pb-20 sm:pb-6 space-y-4">
+        <form
+          id="generic-modal-form"
+          onSubmit={submitLocal}
+          className="modal-body flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 pb-20 sm:pb-6 space-y-4"
+        >
           {(modal.type === "createActivity" ||
             modal.type === "editActivity") && (
-              <>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                  {t("project.fields.title")} *
-                </label>
-                <input
-                  ref={firstFieldRef}
-                  name="title"
-                  value={local.title || ""}
-                  onChange={onLocalChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transform focus:scale-[1.02] hover:border-gray-400 dark:hover:border-gray-500"
-                />
+            <>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                {t("project.fields.title")} *
+              </label>
+              <input
+                ref={firstFieldRef}
+                name="title"
+                value={local.title || ""}
+                onChange={onLocalChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transform focus:scale-[1.02] hover:border-gray-400 dark:hover:border-gray-500"
+              />
 
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                  {t("project.fields.description")}
-                </label>
-                <textarea
-                  name="description"
-                  value={local.description || ""}
-                  onChange={onLocalChange}
-                  rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-gray-400 dark:hover:border-gray-500"
-                />
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                {t("project.fields.description")}
+              </label>
+              <textarea
+                name="description"
+                value={local.description || ""}
+                onChange={onLocalChange}
+                rows="3"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none hover:border-gray-400 dark:hover:border-gray-500"
+              />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                      {t("project.fields.dueDate")}
-                    </label>
-                    <input
-                      name="dueDate"
-                      value={local.dueDate || ""}
-                      onChange={onLocalChange}
-                      type="date"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                      {t("project.fields.weight")}
-                    </label>
-                    <input
-                      name="weight"
-                      value={local.weight ?? 1}
-                      onChange={onLocalChange}
-                      type="number"
-                      min="0.01"
-                      step="any"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
-                    />
-                  </div>
-                </div>
-
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                  {t("project.fields.status")}
-                </label>
-                <select
-                  name="status"
-                  value={local.status || "To Do"}
-                  onChange={onLocalChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
-                >
-                  <option value="To Do">
-                    {t("project.status.toDo") || "To Do"}
-                  </option>
-                  <option value="In Progress">
-                    {t("project.status.inProgress") || "In Progress"}
-                  </option>
-                  <option value="Done">
-                    {t("project.status.completed") || "Done"}
-                  </option>
-                </select>
-
-                <div className="mt-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                    {t("project.labels.rollLabel")}
+                    {t("project.fields.dueDate")}
                   </label>
                   <input
-                    name="rollNo"
-                    value={local.rollNo === "" ? "" : local.rollNo ?? ""}
+                    name="dueDate"
+                    value={local.dueDate || ""}
                     onChange={onLocalChange}
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder={
-                      t("project.placeholders.rollNo") ||
-                      "Leave empty to auto-assign"
-                    }
+                    type="date"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
                   />
-                  <div className="text-xs text-gray-500 mt-1 transition-colors duration-200">
-                    {t("project.hints.hint")}
-                  </div>
                 </div>
-
-                {modal.data?.taskId && (
-                  <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-all duration-200">
-                    {(() => {
-                      const resolved = resolveIds(modal.data || {});
-                      const { taskWeight, used, available } =
-                        computeTaskWeightAvailable(
-                          resolved.taskId,
-                          modal.type === "editActivity" ? resolved.id : null
-                        );
-                      return t("project.hints.taskWeight", {
-                        taskWeight,
-                        used,
-                        available,
-                      });
-                    })()}
-                  </div>
-                )}
-
-                {/* ---------------------------------------------------------------- */}
-                {/* MODIFICATION START: Add Quarterly Goals section */}
-                {/* ---------------------------------------------------------------- */}
-                <div className="transition-all duration-300">
+                <div>
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                    {t("project.labels.quarterlyGoals", "Quarterly Goals")}
+                    {t("project.fields.weight")}
+                  </label>
+                  <input
+                    name="weight"
+                    value={local.weight ?? 1}
+                    onChange={onLocalChange}
+                    type="number"
+                    min="0.01"
+                    step="any"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                  />
+                </div>
+              </div>
+
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                {t("project.fields.status")}
+              </label>
+              <select
+                name="status"
+                value={local.status || "To Do"}
+                onChange={onLocalChange}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+              >
+                <option value="To Do">
+                  {t("project.status.toDo") || "To Do"}
+                </option>
+                <option value="In Progress">
+                  {t("project.status.inProgress") || "In Progress"}
+                </option>
+                <option value="Done">
+                  {t("project.status.completed") || "Done"}
+                </option>
+              </select>
+
+              <div className="mt-3">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                  {t("project.labels.rollLabel")}
+                </label>
+                <input
+                  name="rollNo"
+                  value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
+                  onChange={onLocalChange}
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder={
+                    t("project.placeholders.rollNo") ||
+                    "Leave empty to auto-assign"
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 dark:hover:border-gray-500"
+                />
+                <div className="text-xs text-gray-500 mt-1 transition-colors duration-200">
+                  {t("project.hints.hint")}
+                </div>
+              </div>
+
+              {modal.data?.taskId && (
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-all duration-200">
+                  {(() => {
+                    const resolved = resolveIds(modal.data || {});
+                    const { taskWeight, used, available } =
+                      computeTaskWeightAvailable(
+                        resolved.taskId,
+                        modal.type === "editActivity" ? resolved.id : null,
+                      );
+                    return t("project.hints.taskWeight", {
+                      taskWeight,
+                      used,
+                      available,
+                    });
+                  })()}
+                </div>
+              )}
+
+              {/* ---------------------------------------------------------------- */}
+              {/* MODIFICATION START: Add Quarterly Goals section */}
+              {/* ---------------------------------------------------------------- */}
+              <div className="transition-all duration-300">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                  {t("project.labels.quarterlyGoals", "Quarterly Goals")}
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  {t(
+                    "project.hints.quarterlyGoals",
+                    "Define target metrics for each quarter. These should sum up to the yearly target.",
+                  )}
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {["q1", "q2", "q3", "q4"].map((q) => (
+                    <div key={q}>
+                      <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {q.toUpperCase()}
+                      </label>
+                      <input
+                        name={q}
+                        type="number"
+                        min="0"
+                        step="any"
+                        placeholder={t(
+                          `project.placeholders.quarterlyGoal`,
+                          `Goal for ${q.toUpperCase()}`,
+                        )}
+                        value={local.quarterlyGoals?.[q] ?? ""}
+                        onChange={onQuarterlyChange}
+                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ---------------------------------------------------------------- */}
+              {/* NEW: Add Quarterly Records section (actual values) */}
+              {/* ---------------------------------------------------------------- */}
+              {modal.type === "editActivity" && (
+                <div className="transition-all duration-300 mt-4">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                    {t("project.labels.quarterlyRecords", "Quarterly Records")}
                   </label>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                     {t(
-                      "project.hints.quarterlyGoals",
-                      "Define target metrics for each quarter. These should sum up to the yearly target."
+                      "project.hints.quarterlyRecords",
+                      "Edit actual record values for each quarter. These are auto-populated from approved reports but can be manually corrected here.",
                     )}
                   </p>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {["q1", "q2", "q3", "q4"].map((q) => (
-                      <div key={q}>
-                        <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                          {q.toUpperCase()}
+                      <div key={`record-${q}`}>
+                        <label className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                          {q.toUpperCase()} Record
                         </label>
                         <input
                           name={q}
                           type="number"
-                          min="0"
                           step="any"
                           placeholder={t(
-                            `project.placeholders.quarterlyGoal`,
-                            `Goal for ${q.toUpperCase()}`
+                            `project.placeholders.quarterlyRecord`,
+                            `Record for ${q.toUpperCase()}`,
                           )}
-                          value={local.quarterlyGoals?.[q] ?? ""}
-                          onChange={onQuarterlyChange}
-                          className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                          value={local.quarterlyRecords?.[q] ?? ""}
+                          onChange={onQuarterlyRecordChange}
+                          className="w-full px-2 py-1.5 border border-emerald-300 dark:border-emerald-600 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
                         />
                       </div>
                     ))}
                   </div>
                 </div>
+              )}
+              {/* ---------------------------------------------------------------- */}
+              {/* MODIFICATION END */}
+              {/* ---------------------------------------------------------------- */}
 
-                {/* ---------------------------------------------------------------- */}
-                {/* NEW: Add Quarterly Records section (actual values) */}
-                {/* ---------------------------------------------------------------- */}
-                {modal.type === "editActivity" && (
-                  <div className="transition-all duration-300 mt-4">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                      {t("project.labels.quarterlyRecords", "Quarterly Records")}
-                    </label>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      {t(
-                        "project.hints.quarterlyRecords",
-                        "Edit actual record values for each quarter. These are auto-populated from approved reports but can be manually corrected here."
-                      )}
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {["q1", "q2", "q3", "q4"].map((q) => (
-                        <div key={`record-${q}`}>
-                          <label className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            {q.toUpperCase()} Record
-                          </label>
-                          <input
-                            name={q}
-                            type="number"
-                            step="any"
-                            placeholder={t(
-                              `project.placeholders.quarterlyRecord`,
-                              `Record for ${q.toUpperCase()}`
-                            )}
-                            value={local.quarterlyRecords?.[q] ?? ""}
-                            onChange={onQuarterlyRecordChange}
-                            className="w-full px-2 py-1.5 border border-emerald-300 dark:border-emerald-600 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
-                          />
-                        </div>
-                      ))}
-                    </div>
+              {/* Enhanced Previous Metrics Section */}
+              <div className="transition-all duration-300">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                  {t("project.labels.previousMetrics", "Previous Metrics")}
+                </label>
+                <div className="mt-2">
+                  {/* Only a single previous metric is allowed — show first entry only */}
+                  {(() => {
+                    const arr = Array.isArray(local.previousMetrics)
+                      ? local.previousMetrics
+                      : [{ id: "empty-prev-0", key: "", value: "" }];
+                    const m = arr[0] || {
+                      id: "empty-prev-0",
+                      key: "",
+                      value: "",
+                    };
+                    return (
+                      <div className="flex gap-2 p-1 rounded">
+                        <input
+                          placeholder={t("project.placeholders.metricKey")}
+                          value={m?.key || ""}
+                          onChange={(e) =>
+                            updatePreviousMetricRow(0, "key", e.target.value)
+                          }
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.0000001"
+                          placeholder={t("project.placeholders.metricValue")}
+                          value={m?.value || ""}
+                          onChange={(e) =>
+                            updatePreviousMetricRow(0, "value", e.target.value)
+                          }
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* Enhanced Target Metrics Section */}
+              <div className="mt-4">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("project.labels.metricType", "Metric Type")}
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  {t(
+                    "project.hints.metricType",
+                    "Choose how reported values are interpreted: accumulate (Plus/Minus) or snapshot (Increase/Decrease/Maintain).",
+                  )}
+                </p>
+                <select
+                  name="metricType"
+                  value={local.metricType || "Plus"}
+                  onChange={(e) =>
+                    setLocal((p) => ({
+                      ...(p || {}),
+                      metricType: e.target.value,
+                    }))
+                  }
+                  className="w-48 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+                >
+                  <option value="Plus">Plus (Accumulate)</option>
+                  <option value="Minus">Minus (Accumulate)</option>
+                  <option value="Increase">Increase (Snapshot)</option>
+                  <option value="Decrease">Decrease (Snapshot)</option>
+                  <option value="Maintain">Maintain (Snapshot)</option>
+                </select>
+              </div>
+              <div className="transition-all duration-300">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
+                  {t("project.labels.targetMetrics")}
+                </label>
+                <div className="mt-2">
+                  {/* Only a single target metric is allowed — show first entry only */}
+                  {(() => {
+                    const arr = Array.isArray(local.targetMetrics)
+                      ? local.targetMetrics
+                      : [{ id: "empty-0", key: "", value: "" }];
+                    const m = arr[0] || { id: "empty-0", key: "", value: "" };
+                    return (
+                      <div className="flex gap-2 p-1 rounded">
+                        <input
+                          placeholder={t("project.placeholders.metricKey")}
+                          value={m?.key || ""}
+                          onChange={(e) =>
+                            updateMetricRow(0, "key", e.target.value)
+                          }
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <input
+                          type="number"
+                          min={0}
+                          placeholder={t("project.placeholders.metricValue")}
+                          value={m?.value || ""}
+                          onChange={(e) =>
+                            updateMetricRow(0, "value", e.target.value)
+                          }
+                          className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    );
+                  })()}
+                </div>
+                {jsonError && (
+                  <div className="text-xs text-red-500 mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded transition-all duration-200">
+                    {jsonError}
                   </div>
                 )}
-                {/* ---------------------------------------------------------------- */}
-                {/* MODIFICATION END */}
-                {/* ---------------------------------------------------------------- */}
-
-                {/* Enhanced Previous Metrics Section */}
-                <div className="transition-all duration-300">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                    {t("project.labels.previousMetrics", "Previous Metrics")}
-                  </label>
-                  <div className="mt-2">
-                    {/* Only a single previous metric is allowed — show first entry only */}
-                    {(() => {
-                      const arr = Array.isArray(local.previousMetrics)
-                        ? local.previousMetrics
-                        : [{ id: "empty-prev-0", key: "", value: "" }];
-                      const m = arr[0] || { id: "empty-prev-0", key: "", value: "" };
-                      return (
-                        <div className="flex gap-2 p-1 rounded">
-                          <input
-                            placeholder={t("project.placeholders.metricKey")}
-                            value={m?.key || ""}
-                            onChange={(e) => updatePreviousMetricRow(0, "key", e.target.value)}
-                            className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                          />
-                          <input
-                            type="number"
-                            min={0}
-                            step="0.0000001"
-                            placeholder={t("project.placeholders.metricValue")}
-                            value={m?.value || ""}
-                            onChange={(e) => updatePreviousMetricRow(0, "value", e.target.value)}
-                            className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-
-                {/* Enhanced Target Metrics Section */}
-                <div className="mt-4">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {t("project.labels.metricType", "Metric Type")}
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                    {t("project.hints.metricType", "Choose how reported values are interpreted: accumulate (Plus/Minus) or snapshot (Increase/Decrease/Maintain).")}
-                  </p>
-                  <select
-                    name="metricType"
-                    value={local.metricType || 'Plus'}
-                    onChange={(e) => setLocal((p) => ({ ...(p || {}), metricType: e.target.value }))}
-                    className="w-48 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
-                  >
-                    <option value="Plus">Plus (Accumulate)</option>
-                    <option value="Minus">Minus (Accumulate)</option>
-                    <option value="Increase">Increase (Snapshot)</option>
-                    <option value="Decrease">Decrease (Snapshot)</option>
-                    <option value="Maintain">Maintain (Snapshot)</option>
-                  </select>
-                </div>
-                <div className="transition-all duration-300">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-200">
-                    {t("project.labels.targetMetrics")}
-                  </label>
-                  <div className="mt-2">
-                    {/* Only a single target metric is allowed — show first entry only */}
-                    {(() => {
-                      const arr = Array.isArray(local.targetMetrics)
-                        ? local.targetMetrics
-                        : [{ id: "empty-0", key: "", value: "" }];
-                      const m = arr[0] || { id: "empty-0", key: "", value: "" };
-                      return (
-                        <div className="flex gap-2 p-1 rounded">
-                          <input
-                            placeholder={t("project.placeholders.metricKey")}
-                            value={m?.key || ""}
-                            onChange={(e) => updateMetricRow(0, "key", e.target.value)}
-                            className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                          />
-                          <input
-                            type="number"
-                            min={0}
-                            placeholder={t("project.placeholders.metricValue")}
-                            value={m?.value || ""}
-                            onChange={(e) => updateMetricRow(0, "value", e.target.value)}
-                            className="flex-1 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white transition-all duration-200 focus:ring-1 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  {jsonError && (
-                    <div className="text-xs text-red-500 mt-1 p-2 bg-red-50 dark:bg-red-900/20 rounded transition-all duration-200">
-                      {jsonError}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
+              </div>
+            </>
+          )}
 
           {/* Other modal types (Task and Goal) with similar enhanced animations... */}
           {(modal.type === "createTask" || modal.type === "editTask") && (
@@ -1301,7 +1352,7 @@ transform: translateY(0);
               </label>
               <input
                 name="rollNo"
-                value={local.rollNo === "" ? "" : local.rollNo ?? ""}
+                value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
                 onChange={onLocalChange}
                 type="number"
                 min="1"
@@ -1361,7 +1412,7 @@ transform: translateY(0);
                     const { goalWeight, used, available } =
                       computeGoalWeightAvailable(
                         modal.data.goalId,
-                        excludeTaskId
+                        excludeTaskId,
                       );
                     return t("project.hints.goalWeight", {
                       goalWeight,
@@ -1473,7 +1524,7 @@ transform: translateY(0);
               </label>
               <input
                 name="rollNo"
-                value={local.rollNo === "" ? "" : local.rollNo ?? ""}
+                value={local.rollNo === "" ? "" : (local.rollNo ?? "")}
                 onChange={onLocalChange}
                 type="number"
                 min="1"
@@ -1528,9 +1579,7 @@ transform: translateY(0);
         <div className="w-full px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col-reverse sm:flex-row sm:justify-end items-stretch sm:items-center gap-2 bg-white/95 dark:bg-gray-800/95 sticky bottom-0 z-10">
           <button
             type="button"
-            onClick={() =>
-              setModal({ isOpen: false, type: null, data: null })
-            }
+            onClick={() => setModal({ isOpen: false, type: null, data: null })}
             className="w-full sm:w-auto px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-600 hover:scale-105 active:scale-95"
           >
             {t("project.actions.cancel")}

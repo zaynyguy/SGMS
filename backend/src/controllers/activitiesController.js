@@ -50,6 +50,14 @@ function nullIfEmpty(v) {
   return v;
 }
 
+function roundToTwo(num) {
+  return Math.round((num + Number.EPSILON) * 100) / 100;
+}
+
+function areWeightsEqual(a, b) {
+  return Math.abs(a - b) < 1e-6;
+}
+
 exports.getActivitiesByTask = async (req, res) => {
   const taskId = toIntOrNull(req.params.taskId);
   if (!taskId) return res.status(400).json({ message: "Invalid taskId" });
@@ -86,7 +94,7 @@ exports.getActivitiesByTask = async (req, res) => {
       const qKey = `q${quarter}`;
       params.push(qKey);
       whereClauses.push(
-        `COALESCE((a."quarterlyGoals"->>$${params.length})::numeric, 0) > 0`
+        `COALESCE((a."quarterlyGoals"->>$${params.length})::numeric, 0) > 0`,
       );
     }
 
@@ -100,11 +108,14 @@ exports.getActivitiesByTask = async (req, res) => {
 
     // Fetch quarterly records for all activities and attach them
     if (rows.length > 0) {
-      const activityIds = rows.map(r => r.id);
+      const activityIds = rows.map((r) => r.id);
 
       // Get current fiscal year
-      const fiscalRes = await db.query(`SELECT * FROM calc_fiscal_period(CURRENT_DATE)`);
-      const currentFiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+      const fiscalRes = await db.query(
+        `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`,
+      );
+      const currentFiscalYear =
+        fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
 
       // Fetch all quarterly records for these activities
       const recordsRes = await db.query(
@@ -113,14 +124,19 @@ exports.getActivitiesByTask = async (req, res) => {
          WHERE "activityId" = ANY($1) 
          AND "fiscalYear" = $2 
          AND "quarter" IS NOT NULL`,
-        [activityIds, currentFiscalYear]
+        [activityIds, currentFiscalYear],
       );
 
       // Group records by activity
       const recordsByActivity = {};
       for (const rec of recordsRes.rows) {
         if (!recordsByActivity[rec.activityId]) {
-          recordsByActivity[rec.activityId] = { q1: "", q2: "", q3: "", q4: "" };
+          recordsByActivity[rec.activityId] = {
+            q1: "",
+            q2: "",
+            q3: "",
+            q4: "",
+          };
         }
         const qKey = `q${rec.quarter}`;
         recordsByActivity[rec.activityId][qKey] = rec.value;
@@ -128,7 +144,12 @@ exports.getActivitiesByTask = async (req, res) => {
 
       // Attach to each activity
       for (const activity of rows) {
-        activity.quarterlyRecords = recordsByActivity[activity.id] || { q1: "", q2: "", q3: "", q4: "" };
+        activity.quarterlyRecords = recordsByActivity[activity.id] || {
+          q1: "",
+          q2: "",
+          q3: "",
+          q4: "",
+        };
       }
     }
 
@@ -166,15 +187,15 @@ exports.createActivity = async (req, res) => {
   const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
 
   // Validate Metric Type
-  const validTypes = ['Plus', 'Minus', 'Increase', 'Decrease', 'Maintain'];
-  const safeMetricType = validTypes.includes(metricType) ? metricType : 'Plus';
+  const validTypes = ["Plus", "Minus", "Increase", "Decrease", "Maintain"];
+  const safeMetricType = validTypes.includes(metricType) ? metricType : "Plus";
 
   try {
     const activity = await db.tx(async (client) => {
       // lock task
       const t = await client.query(
         'SELECT id, weight FROM "Tasks" WHERE id=$1 FOR UPDATE',
-        [taskId]
+        [taskId],
       );
       if (!t.rows.length) {
         const err = new Error("Task not found");
@@ -198,13 +219,18 @@ exports.createActivity = async (req, res) => {
 
       const sumRes = await client.query(
         'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Activities" WHERE "taskId"=$1',
-        [taskId]
+        [taskId],
       );
       const sumOther = parseFloat(sumRes.rows[0].sum || 0);
+      const totalAfter = roundToTwo(newWeight + sumOther);
+      const taskWeightRounded = roundToTwo(taskWeight);
 
-      if (newWeight + sumOther > taskWeight + EPS) {
+      if (
+        totalAfter > taskWeightRounded &&
+        !areWeightsEqual(totalAfter, taskWeightRounded)
+      ) {
         const err = new Error(
-          `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${sumOther} is already used.`
+          `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${sumOther} is already used. Available: ${roundToTwo(taskWeight - sumOther)}`,
         );
         err.status = 400;
         throw err;
@@ -217,7 +243,7 @@ exports.createActivity = async (req, res) => {
       if (rn !== null) {
         const dup = await client.query(
           `SELECT id FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2`,
-          [taskId, rn]
+          [taskId, rn],
         );
         if (dup.rows.length) {
           const err = new Error(`rollNo ${rn} is already in use for this task`);
@@ -241,7 +267,7 @@ exports.createActivity = async (req, res) => {
             parsedPreviousMetric ?? null,
             parsedQuarterlyGoals ?? null,
             safeMetricType, // Insert metricType
-          ]
+          ],
         );
       } else {
         insertRes = await client.query(
@@ -259,7 +285,7 @@ exports.createActivity = async (req, res) => {
             parsedPreviousMetric ?? null,
             parsedQuarterlyGoals ?? null,
             safeMetricType, // Insert metricType
-          ]
+          ],
         );
       }
 
@@ -351,7 +377,7 @@ exports.updateActivity = async (req, res) => {
     const activity = await db.tx(async (client) => {
       const c = await client.query(
         'SELECT * FROM "Activities" WHERE id=$1 FOR UPDATE',
-        [activityId]
+        [activityId],
       );
       if (!c.rows.length) {
         const e = new Error("Activity not found");
@@ -374,7 +400,7 @@ exports.updateActivity = async (req, res) => {
         }
         const dup = await client.query(
           `SELECT id FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2 AND id <> $3`,
-          [existing.taskId, rn, activityId]
+          [existing.taskId, rn, activityId],
         );
         if (dup.rows.length) {
           const err = new Error(`rollNo ${rn} is already in use for this task`);
@@ -397,7 +423,7 @@ exports.updateActivity = async (req, res) => {
 
       const tRes = await client.query(
         'SELECT weight FROM "Tasks" WHERE id=$1 FOR UPDATE',
-        [existing.taskId]
+        [existing.taskId],
       );
       if (!tRes.rows.length) {
         const err = new Error("Parent task not found");
@@ -408,13 +434,18 @@ exports.updateActivity = async (req, res) => {
 
       const sumRes = await client.query(
         'SELECT COALESCE(SUM(weight)::numeric,0) AS sum FROM "Activities" WHERE "taskId"=$1 AND id<>$2',
-        [existing.taskId, activityId]
+        [existing.taskId, activityId],
       );
       const sumOther = parseFloat(sumRes.rows[0].sum || 0);
+      const totalAfter = roundToTwo(newWeight + sumOther);
+      const taskWeightRounded = roundToTwo(taskWeight);
 
-      if (newWeight + sumOther > taskWeight + EPS) {
+      if (
+        totalAfter > taskWeightRounded &&
+        !areWeightsEqual(totalAfter, taskWeightRounded)
+      ) {
         const err = new Error(
-          `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${sumOther} is already used.`
+          `Cannot set activity weight to ${newWeight}. Task total is ${taskWeight} and ${sumOther} is already used. Available: ${roundToTwo(taskWeight - sumOther)}`,
         );
         err.status = 400;
         throw err;
@@ -435,10 +466,12 @@ exports.updateActivity = async (req, res) => {
       const safeIsDone = isDone === undefined ? null : toBoolean(isDone);
 
       // Validate Metric Type
-      const validTypes = ['Plus', 'Minus', 'Increase', 'Decrease', 'Maintain'];
+      const validTypes = ["Plus", "Minus", "Increase", "Decrease", "Maintain"];
       let safeMetricType = null;
       if (metricType !== undefined) {
-        safeMetricType = validTypes.includes(metricType) ? metricType : existing.metricType;
+        safeMetricType = validTypes.includes(metricType)
+          ? metricType
+          : existing.metricType;
       }
 
       // Update query including metricType
@@ -467,38 +500,39 @@ exports.updateActivity = async (req, res) => {
           parsedPreviousMetric ?? null,
           parsedQuarterlyGoals ?? null,
           safeMetricType, // $12
-        ]
+        ],
       );
 
       if (!r.rows || !r.rows[0]) throw new Error("Failed to update activity");
       const updatedActivity = r.rows[0];
 
       // NEW: Handle quarterlyRecords if provided
-      if (quarterlyRecords && typeof quarterlyRecords === 'object') {
+      if (quarterlyRecords && typeof quarterlyRecords === "object") {
         // Get fiscal year from database helper function
         const fiscalRes = await client.query(
-          `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`
+          `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`,
         );
-        const fiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+        const fiscalYear =
+          fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
 
         // Get metric key from target metric
         const targetMetricObj = updatedActivity.targetMetric || {};
-        const metricKey = Object.keys(targetMetricObj)[0] || 'value';
+        const metricKey = Object.keys(targetMetricObj)[0] || "value";
 
         // Upsert each quarter's record
         for (const [quarter, value] of Object.entries(quarterlyRecords)) {
-          const qNum = parseInt(quarter.replace('q', ''), 10);
+          const qNum = parseInt(quarter.replace("q", ""), 10);
 
           if (qNum >= 1 && qNum <= 4) {
             // If value is null or empty string, treat it as a DELETE request
-            if (value === null || value === undefined || value === '') {
+            if (value === null || value === undefined || value === "") {
               await client.query(
                 `DELETE FROM "ActivityRecords" 
                  WHERE "activityId" = $1 
                    AND "fiscalYear" = $2 
                    AND "quarter" = $3 
                    AND "metricKey" = $4`,
-                [activityId, fiscalYear, qNum, metricKey]
+                [activityId, fiscalYear, qNum, metricKey],
               );
             } else {
               // Otherwise UPSERT
@@ -515,7 +549,14 @@ exports.updateActivity = async (req, res) => {
                      "source" = 'manual',
                      "updatedBy" = $6,
                      "updatedAt" = NOW()`,
-                  [activityId, fiscalYear, qNum, metricKey, numVal, req.user.id]
+                  [
+                    activityId,
+                    fiscalYear,
+                    qNum,
+                    metricKey,
+                    numVal,
+                    req.user.id,
+                  ],
                 );
               }
             }
@@ -587,7 +628,7 @@ exports.deleteActivity = async (req, res) => {
 
       const r = await client.query(
         'DELETE FROM "Activities" WHERE id=$1 RETURNING *',
-        [activityId]
+        [activityId],
       );
       const deletedRow = r.rows && r.rows[0] ? r.rows[0] : null;
 
@@ -641,7 +682,8 @@ exports.deleteActivity = async (req, res) => {
  */
 exports.getActivityRecords = async (req, res) => {
   const activityId = toIntOrNull(req.params.activityId);
-  if (!activityId) return res.status(400).json({ message: "Invalid activityId" });
+  if (!activityId)
+    return res.status(400).json({ message: "Invalid activityId" });
 
   const { fiscalYear, quarter, granularity } = req.query;
 
@@ -669,9 +711,9 @@ exports.getActivityRecords = async (req, res) => {
     }
 
     // Filter by granularity
-    if (granularity === 'quarterly') {
+    if (granularity === "quarterly") {
       query += ` AND ar."quarter" IS NOT NULL`;
-    } else if (granularity === 'monthly') {
+    } else if (granularity === "monthly") {
       query += ` AND ar."month" IS NOT NULL AND ar."quarter" IS NULL`;
     }
 
@@ -681,7 +723,9 @@ exports.getActivityRecords = async (req, res) => {
     return res.json(rows);
   } catch (err) {
     console.error("getActivityRecords error:", err);
-    return res.status(500).json({ message: "Failed to fetch records.", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to fetch records.", error: err.message });
   }
 };
 
@@ -691,7 +735,8 @@ exports.getActivityRecords = async (req, res) => {
  */
 exports.upsertActivityRecords = async (req, res) => {
   const activityId = toIntOrNull(req.params.activityId);
-  if (!activityId) return res.status(400).json({ message: "Invalid activityId" });
+  if (!activityId)
+    return res.status(400).json({ message: "Invalid activityId" });
 
   const { records } = req.body;
   if (!Array.isArray(records) || records.length === 0) {
@@ -703,7 +748,7 @@ exports.upsertActivityRecords = async (req, res) => {
       // Verify activity exists
       const actCheck = await client.query(
         `SELECT id FROM "Activities" WHERE id = $1`,
-        [activityId]
+        [activityId],
       );
       if (!actCheck.rows.length) {
         const err = new Error("Activity not found");
@@ -736,7 +781,7 @@ exports.upsertActivityRecords = async (req, res) => {
                "updatedBy" = $6,
                "updatedAt" = NOW()
              RETURNING *`,
-            [activityId, fiscalYear, quarter, metricKey, numValue, req.user.id]
+            [activityId, fiscalYear, quarter, metricKey, numValue, req.user.id],
           );
           upserted.push(result.rows[0]);
         } else if (month !== null && month !== undefined) {
@@ -753,7 +798,7 @@ exports.upsertActivityRecords = async (req, res) => {
                "updatedBy" = $6,
                "updatedAt" = NOW()
              RETURNING *`,
-            [activityId, fiscalYear, month, metricKey, numValue, req.user.id]
+            [activityId, fiscalYear, month, metricKey, numValue, req.user.id],
           );
           upserted.push(result.rows[0]);
         }
@@ -780,14 +825,16 @@ exports.upsertActivityRecords = async (req, res) => {
     return res.json({
       message: "Records updated successfully.",
       records: results,
-      count: results.length
+      count: results.length,
     });
   } catch (err) {
     console.error("upsertActivityRecords error:", err);
     if (err && err.status === 404) {
       return res.status(404).json({ message: err.message });
     }
-    return res.status(500).json({ message: "Failed to update records.", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to update records.", error: err.message });
   }
 };
 
@@ -807,7 +854,7 @@ exports.deleteActivityRecord = async (req, res) => {
       // Verify record exists and belongs to activity
       const recordCheck = await client.query(
         `SELECT * FROM "ActivityRecords" WHERE id = $1 AND "activityId" = $2`,
-        [recordId, activityId]
+        [recordId, activityId],
       );
 
       if (!recordCheck.rows.length) {
@@ -818,10 +865,9 @@ exports.deleteActivityRecord = async (req, res) => {
 
       const deletedRecord = recordCheck.rows[0];
 
-      await client.query(
-        `DELETE FROM "ActivityRecords" WHERE id = $1`,
-        [recordId]
-      );
+      await client.query(`DELETE FROM "ActivityRecords" WHERE id = $1`, [
+        recordId,
+      ]);
 
       // Log audit
       try {
@@ -841,13 +887,18 @@ exports.deleteActivityRecord = async (req, res) => {
       return deletedRecord;
     });
 
-    return res.json({ message: "Record deleted successfully.", record: result });
+    return res.json({
+      message: "Record deleted successfully.",
+      record: result,
+    });
   } catch (err) {
     console.error("deleteActivityRecord error:", err);
     if (err && err.status === 404) {
       return res.status(404).json({ message: err.message });
     }
-    return res.status(500).json({ message: "Failed to delete record.", error: err.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to delete record.", error: err.message });
   }
 };
 
@@ -856,7 +907,7 @@ exports.deleteActivityRecord = async (req, res) => {
  * Returns records grouped by activity with fiscal calculations
  */
 exports.getAggregatedRecords = async (req, res) => {
-  const { groupId, fiscalYear, granularity = 'quarterly' } = req.query;
+  const { groupId, fiscalYear, granularity = "quarterly" } = req.query;
 
   try {
     let query = `
@@ -900,9 +951,9 @@ exports.getAggregatedRecords = async (req, res) => {
       paramIndex++;
     }
 
-    if (granularity === 'quarterly') {
+    if (granularity === "quarterly") {
       query += ` AND ar."quarter" IS NOT NULL`;
-    } else if (granularity === 'monthly') {
+    } else if (granularity === "monthly") {
       query += ` AND ar."month" IS NOT NULL AND ar."quarter" IS NULL`;
     }
 
@@ -927,7 +978,7 @@ exports.getAggregatedRecords = async (req, res) => {
           goalTitle: row.goalTitle,
           groupId: row.groupId,
           groupName: row.groupName,
-          records: []
+          records: [],
         };
       }
       grouped[key].records.push({
@@ -936,13 +987,16 @@ exports.getAggregatedRecords = async (req, res) => {
         month: row.month,
         metricKey: row.metricKey,
         value: row.value,
-        source: row.source
+        source: row.source,
       });
     }
 
     return res.json(Object.values(grouped));
   } catch (err) {
     console.error("getAggregatedRecords error:", err);
-    return res.status(500).json({ message: "Failed to fetch aggregated records.", error: err.message });
+    return res.status(500).json({
+      message: "Failed to fetch aggregated records.",
+      error: err.message,
+    });
   }
 };
