@@ -33,7 +33,7 @@ function ActivityCard({
 
   // Dark mode state
   const [darkMode, setDarkMode] = useState(false);
-  
+
   // Toggle dark mode
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -124,11 +124,11 @@ function ActivityCard({
   const compositeRoll =
     goal?.rollNo != null && task?.rollNo != null && activity?.rollNo != null
       ? `${String(goal.rollNo)}.${String(task.rollNo)}.${String(
-          activity.rollNo
+          activity.rollNo,
         )}`
       : activity?.rollNo != null
-      ? String(activity.rollNo)
-      : null;
+        ? String(activity.rollNo)
+        : null;
 
   const isDone =
     (activity.status || "").toString().toLowerCase() === "done" ||
@@ -167,7 +167,9 @@ function ActivityCard({
           <span className="font-semibold mr-1 bg-[var(--surface-container)] dark:bg-gray-700 px-1.5 py-0.5 rounded text-[var(--on-surface)] dark:text-white">
             {label}:
           </span>
-          <span className="truncate text-[var(--on-surface-variant)] dark:text-gray-400">—</span>
+          <span className="truncate text-[var(--on-surface-variant)] dark:text-gray-400">
+            —
+          </span>
         </div>
       );
     }
@@ -186,13 +188,15 @@ function ActivityCard({
               label === tr("project.fields.previous", "Previous")
                 ? "bg-[var(--tertiary-container)] dark:bg-purple-900 text-[var(--on-tertiary-container)] dark:text-purple-200"
                 : label === tr("project.fields.target", "Target")
-                ? "bg-[var(--primary-container)] dark:bg-green-900 text-[var(--on-primary-container)] dark:text-green-200"
-                : "bg-[var(--secondary-container)] dark:bg-blue-900 text-[var(--on-secondary-container)] dark:text-blue-200"
+                  ? "bg-[var(--primary-container)] dark:bg-green-900 text-[var(--on-primary-container)] dark:text-green-200"
+                  : "bg-[var(--secondary-container)] dark:bg-blue-900 text-[var(--on-secondary-container)] dark:text-blue-200"
             }`}
           >
             {label}:
           </span>
-          <span className="truncate text-[var(--on-surface)] dark:text-white">{summary}</span>
+          <span className="truncate text-[var(--on-surface)] dark:text-white">
+            {summary}
+          </span>
         </div>
       );
     } catch {
@@ -213,7 +217,7 @@ function ActivityCard({
   const renderQuarterlyGoals = (goals) => {
     const qGoals = goals || {};
     const hasGoals = ["q1", "q2", "q3", "q4"].some(
-      (q) => qGoals[q] != null && qGoals[q] !== ""
+      (q) => qGoals[q] != null && qGoals[q] !== "",
     );
 
     if (!hasGoals) {
@@ -227,13 +231,18 @@ function ActivityCard({
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {["q1", "q2", "q3", "q4"].map((q) => (
-          <div key={q} className="bg-[var(--surface-container)] dark:bg-gray-700 p-2 rounded-lg">
+          <div
+            key={q}
+            className="bg-[var(--surface-container)] dark:bg-gray-700 p-2 rounded-lg"
+          >
             <div className="text-[11px] font-semibold text-[var(--on-surface-variant)] dark:text-gray-400 uppercase">
               {q}
             </div>
             <div className="text-xs font-medium text-[var(--on-surface)] dark:text-white mt-0.5">
               {qGoals[q] ?? (
-                <span className="text-[var(--on-surface-variant)] dark:text-gray-400">—</span>
+                <span className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                  —
+                </span>
               )}
             </div>
           </div>
@@ -244,18 +253,29 @@ function ActivityCard({
 
   return (
     <div
-      className={`relative bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1 transition-all duration-300 transform hover:-translate-y-0.5 group ${isExpanded ? 'shadow-md' : ''}`}
-      onClick={(e) => { e.stopPropagation(); setIsExpanded((v) => !v); }}
+      className={`relative bg-[var(--surface-container-lowest)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 surface-elevation-1 transition-all duration-300 transform hover:-translate-y-0.5 group ${isExpanded ? "shadow-md" : ""}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsExpanded((v) => !v);
+      }}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); setIsExpanded((v) => !v); } }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.stopPropagation();
+          setIsExpanded((v) => !v);
+        }
+      }}
     >
       {/* Activity Header Row */}
       <div className="flex items-start justify-between gap-2 p-3">
         <div className="flex items-start gap-2 min-w-0 flex-1">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setIsExpanded((v) => !v); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded((v) => !v);
+            }}
             className="p-1.5 text-[var(--on-surface-variant)] dark:text-gray-400 hover:text-[var(--on-surface)] dark:hover:text-white rounded-full hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200 flex-shrink-0"
             title={
               isExpanded
@@ -272,22 +292,26 @@ function ActivityCard({
           </button>
 
           <div className="min-w-0 flex-1">
-                      <div className="
+            <div
+              className="
             font-medium text-sm text-[var(--on-surface)] dark:text-white break-words
             flex flex-col sm:flex-row sm:items-center gap-2
-          ">
-            {compositeRoll && (
-              <span className="
+          "
+            >
+              {compositeRoll && (
+                <span
+                  className="
                 text-[var(--primary)] dark:text-indigo-900
                 font-semibold bg-[var(--primary-container)] dark:bg-indigo-400
                 px-2 py-1 rounded-full text-xs
                 w-fit
-              ">
-                {compositeRoll}.
-              </span>
-            )}
-            <span>{activity.title}</span>
-          </div>
+              "
+                >
+                  {compositeRoll}.
+                </span>
+              )}
+              <span>{activity.title}</span>
+            </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
               <span
@@ -305,7 +329,9 @@ function ActivityCard({
               </span>
               <span className="text-xs text-[var(--on-surface-variant)] dark:text-gray-400 whitespace-nowrap">
                 {tr("project.fields.weight") || "Weight"}:{" "}
-                <strong className="text-[var(--on-surface)] dark:text-white">{activity.weight ?? "-"}</strong>
+                <strong className="text-[var(--on-surface)] dark:text-white">
+                  {activity.weight ?? "-"}
+                </strong>
               </span>
             </div>
           </div>
@@ -316,7 +342,10 @@ function ActivityCard({
             <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onEditActivity && onEditActivity(activity); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditActivity && onEditActivity(activity);
+                }}
                 className="p-1.5 text-blue-600 hover:bg-blue-600/30 rounded-full transition-all duration-200"
                 title={tr("project.actions.edit") || "Edit activity"}
               >
@@ -324,7 +353,10 @@ function ActivityCard({
               </button>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onDeleteActivity && onDeleteActivity(activity.id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteActivity && onDeleteActivity(activity.id);
+                }}
                 className="p-1.5 text-[var(--error)] dark:text-red-400 hover:bg-[var(--error-container)]/[0.1] dark:hover:bg-red-900/[0.3] rounded-full transition-all duration-200"
                 title={tr("project.actions.delete") || "Delete activity"}
               >
@@ -335,7 +367,10 @@ function ActivityCard({
           {reportingActive && (
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); openSubmitModal && openSubmitModal(activity.id); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                openSubmitModal && openSubmitModal(activity.id);
+              }}
               disabled={!canSubmitReport}
               className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-[var(--on-primary)] dark:text-white rounded-full text-xs hover:bg-[var(--primary-container)] dark:hover:bg-green-600 disabled:opacity-50 transition-all duration-300"
             >
@@ -368,7 +403,7 @@ function ActivityCard({
                 <span className="italic text-[var(--on-surface-variant)] dark:text-gray-400">
                   {tr(
                     "project.empty.noDescription",
-                    "No description provided."
+                    "No description provided.",
                   )}
                 </span>
               )}
@@ -383,24 +418,24 @@ function ActivityCard({
             <div className="flex items-center justify-between mb-2">
               <div />
               <div className="text-xs text-[var(--on-surface-variant)] dark:text-gray-400">
-                {tr("project.labels.metricType", "Metric Type")}: 
+                {tr("project.labels.metricType", "Metric Type")}:
                 <span className="ml-2 inline-block px-2 py-0.5 rounded-full bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white text-xs font-medium">
-                  {activity.metricType || activity.metric_type || 'Plus'}
+                  {activity.metricType || activity.metric_type || "Plus"}
                 </span>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 p-4 bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white rounded-xl border border-[var(--outline-variant)] dark:border-gray-600">
               {renderMetricSummary(
                 activity.previousMetric,
-                tr("project.fields.previous", "Previous")
+                tr("project.fields.previous", "Previous"),
               )}
               {renderMetricSummary(
                 activity.targetMetric,
-                tr("project.fields.target", "Target")
+                tr("project.fields.target", "Target"),
               )}
               {renderMetricSummary(
                 activity.currentMetric,
-                tr("project.fields.current", "Current")
+                tr("project.fields.current", "Current"),
               )}
             </div>
           </div>
@@ -440,10 +475,10 @@ function ActivityList({
   canManageGTA = false,
 }) {
   const { t } = useTranslation();
-  
+
   // Dark mode state
   const [darkMode, setDarkMode] = useState(false);
-  
+
   // Toggle dark mode
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -602,7 +637,9 @@ function ActivityList({
   }
 
   return (
-    <div className={`space-y-3 px-3 py-3 border-l border-r border-[var(--outline-variant)] dark:border-gray-700 bg-gray-100 dark:bg-gray-700 ${mounted ? 'animate-fade-in' : ''}`}>
+    <div
+      className={`space-y-3 px-3 py-3 border-l border-r border-[var(--outline-variant)] dark:border-gray-700 bg-gray-100 dark:bg-gray-700 ${mounted ? "animate-fade-in" : ""}`}
+    >
       <style>{`
         :root {
           --primary: ${m3Colors.primary};

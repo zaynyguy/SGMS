@@ -564,6 +564,115 @@ exports.updateActivity = async (req, res) => {
         }
       }
 
+      if (quarterlyRecords && typeof quarterlyRecords === "object") {
+        try {
+          // 1. Get fiscal context & metric definition
+          const fiscalRes = await client.query(
+            `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`,
+          );
+          const fiscalYear =
+            fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+          const targetMetricObj = updatedActivity.targetMetric || {};
+          const metricKey = Object.keys(targetMetricObj)[0] || "value";
+          const metricType = updatedActivity.metricType || "Plus";
+          const previousMetricObj = updatedActivity.previousMetric || {};
+          const previousVal = toNumberOrNull(previousMetricObj[metricKey]) || 0;
+          const targetVal = toNumberOrNull(targetMetricObj[metricKey]) || 0;
+
+          // 2. Fetch ALL quarterly records for current fiscal year
+          const recordsRes = await client.query(
+            `SELECT "quarter", "value" 
+       FROM "ActivityRecords" 
+       WHERE "activityId" = $1 
+         AND "fiscalYear" = $2 
+         AND "quarter" IS NOT NULL
+         AND "metricKey" = $3
+       ORDER BY "quarter"`,
+            [activityId, fiscalYear, metricKey],
+          );
+
+          // 3. Recalculate currentMetric VALUE based on metricType
+          let recalculatedValue = 0;
+          if (metricType === "Plus" || metricType === "Minus") {
+            recalculatedValue = recordsRes.rows.reduce((sum, rec) => {
+              const v = toNumberOrNull(rec.value);
+              return sum + (v || 0);
+            }, 0);
+          } else {
+            // Snapshot types: take latest quarter value
+            if (recordsRes.rows.length > 0) {
+              recalculatedValue =
+                toNumberOrNull(
+                  recordsRes.rows[recordsRes.rows.length - 1].value,
+                ) || 0;
+            }
+          }
+
+          // 4. Recalculate PROGRESS percentage
+          let newProgress = 0;
+          if (["Plus", "Minus"].includes(metricType)) {
+            newProgress =
+              targetVal > 0
+                ? Math.min(
+                    100,
+                    Math.round((recalculatedValue / targetVal) * 100),
+                  )
+                : recalculatedValue > 0
+                  ? 100
+                  : 0;
+          } else if (metricType === "Increase") {
+            const diffTarget = targetVal - previousVal;
+            newProgress =
+              diffTarget > 0
+                ? Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      Math.round(
+                        ((recalculatedValue - previousVal) / diffTarget) * 100,
+                      ),
+                    ),
+                  )
+                : 100;
+          } else if (metricType === "Decrease") {
+            const diffTarget = previousVal - targetVal;
+            newProgress =
+              diffTarget > 0
+                ? Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      Math.round(
+                        ((previousVal - recalculatedValue) / diffTarget) * 100,
+                      ),
+                    ),
+                  )
+                : 100;
+          } else if (metricType === "Maintain") {
+            newProgress = 100; // Simplified per existing logic
+          }
+
+          // 5. UPDATE canonical fields in Activities table
+          const newCurrentMetric = { [metricKey]: recalculatedValue };
+          await client.query(
+            `UPDATE "Activities" 
+       SET "currentMetric" = $1, "progress" = $2, "updatedAt" = NOW()
+       WHERE id = $3`,
+            [newCurrentMetric, newProgress, activityId],
+          );
+
+          // 6. Refresh updatedActivity for response/audit
+          const refreshRes = await client.query(
+            'SELECT * FROM "Activities" WHERE id = $1',
+            [activityId],
+          );
+          if (refreshRes.rows[0]) updatedActivity = refreshRes.rows[0];
+        } catch (recalcErr) {
+          console.error("Quarterly edit recalc failed (non-fatal):", recalcErr);
+          // Continue transaction - records were saved, metric will update on next report
+        }
+      }
+
       try {
         await logAudit({
           userId: req.user.id,
