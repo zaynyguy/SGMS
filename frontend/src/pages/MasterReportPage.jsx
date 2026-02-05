@@ -1992,7 +1992,7 @@ const App = () => {
                   {tableRows.length === 0 && (
                     <tr>
                       <td
-                        className="p-6 text-center text-gray-600 dark:text-gray-400 text-base"
+                        className="bg-white dark:bg-gray-800 py-52 text-center text-gray-600 dark:text-gray-400 text-2xl"
                         colSpan={
                           8 +
                           (granularity === "quarterly"

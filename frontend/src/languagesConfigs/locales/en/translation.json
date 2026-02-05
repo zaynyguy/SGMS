@@ -707,6 +707,8 @@
       "quickInfo": "Quick info",
       "totalTarget": "Total target",
       "quarterlyGoals": "Quarterly Goals",
+      "quarterlyRecords": "Quarterly Records",
+      "record": "Record",
       "metricType": "Metric Type"
     },
 
@@ -728,7 +730,8 @@
       "maxAttachments": "Max 5 attachments.",
       "overallHint": "Overall Target: {{target}}. Total progress: {{used}}. Remaining: {{remaining}}.",
       "quarterlyGoals": "Define target metrics for each quarter. These should sum up to the yearly target.",
-      "metricType": "Choose how reported values are interpreted: accumulate (Plus/Minus) or snapshot (Increase/Decrease/Maintain)."
+      "metricType": "Choose how reported values are interpreted: accumulate (Plus/Minus) or snapshot (Increase/Decrease/Maintain).",
+      "quarterlyRecords": "Edit actual record values for each quarter. These are auto-populated from approved reports but can be manually corrected here."
     },
 
     "metriceType":{

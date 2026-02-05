@@ -708,6 +708,8 @@
       "quickInfo": "Odeeffannoo saffisaa",
       "totalTarget": "Galmee waliigalaa",
       "quarterlyGoals": "Galmoota Kurmaana Kurmaanaa",
+      "quarterlyRecords": "Galmee Kurmaana Kurmaana",
+      "galmee": "Galmee",
       "metricType": "Gosa Meetirikii"
     },
 
@@ -729,7 +731,8 @@
       "maxAttachments": "Dabalata baay'inaan 5.",
       "overallHint": "Kaayyoo Waliigalaa: {{target}}. Adeemsa waliigalaa: {{used}}. Hafe: {{remaining}}.",
       "quarterlyGoals": "Tokkoon tokkoon kurmaanaaf safartuuwwan galma ibsi. Isaan kun hanga galma waggaatti walitti qabamuu qabu.",
-      "metricType": "Akkaataa gatiiwwan gabaafaman itti hiikaman filadhu: kuusuu (Dabala/Hir'isuu) ykn suuraa (Dabala/Hir'isi/Eeguu)."
+      "metricType": "Akkaataa gatiiwwan gabaafaman itti hiikaman filadhu: kuusuu (Dabala/Hir'isuu) ykn suuraa (Dabala/Hir'isi/Eeguu).",
+      "quarterlyRecords": "Gatii galmee qabatamaa kurmaana tokkoon tokkoo gulaali. Isaan kun gabaasa mirkanaa'e irraa ofumaan guutamu garuu asitti harkaan sirreessuu ni danda'ama."
     },
 
     "metriceType":{
