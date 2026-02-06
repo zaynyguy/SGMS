@@ -567,13 +567,17 @@ export default function SubmitReportInline({
 
           <div className="px-6 py-6 space-y-5 overflow-y-auto">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t("project.labels.activity")}
-                </label>
-                <div className="mt-2 text-sm font-mono p-2 bg-gray-50 dark:bg-gray-800 rounded text-gray-700 dark:text-gray-200 border border-gray-100 dark:border-gray-800">
-                  {activityId}
-                </div>
+              {/* Metric Type Info - Compact Design on its own line */}
+              <div className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs ${isCumulative
+                  ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50'
+                  : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50'
+                }`}>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${metricTypeInfo.color}`}>
+                  {metricTypeInfo.label}
+                </span>
+                <span className={`${isCumulative ? 'text-green-700 dark:text-green-300' : 'text-blue-700 dark:text-blue-300'}`}>
+                  {metricTypeInfo.description}
+                </span>
               </div>
 
               <div className="w-44 text-right">
@@ -588,19 +592,6 @@ export default function SubmitReportInline({
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Metric Type Info - Compact Design on its own line */}
-            <div className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs ${isCumulative
-                ? 'bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50'
-                : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50'
-              }`}>
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${metricTypeInfo.color}`}>
-                {metricTypeInfo.label}
-              </span>
-              <span className={`${isCumulative ? 'text-green-700 dark:text-green-300' : 'text-blue-700 dark:text-blue-300'}`}>
-                {metricTypeInfo.description}
-              </span>
             </div>
 
             <div>

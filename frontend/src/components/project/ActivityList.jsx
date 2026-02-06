@@ -214,10 +214,25 @@ function ActivityCard({
     }
   };
 
-  const renderQuarterlyGoals = (goals) => {
-    const qGoals = goals || {};
-    const hasGoals = ["q1", "q2", "q3", "q4"].some(
-      (q) => qGoals[q] != null && qGoals[q] !== "",
+  const renderQuarterlyGoals = (goals, records) => {
+    const qGoalsRaw = goals || {};
+    const qRecsRaw = records || {};
+
+    const safeParse = (v) => {
+      if (v == null) return {};
+      if (typeof v === 'object') return v;
+      try {
+        return JSON.parse(v);
+      } catch {
+        return {};
+      }
+    };
+
+    const qGoals = safeParse(qGoalsRaw);
+    const qRecs = safeParse(qRecsRaw);
+
+    const hasGoals = ['q1', 'q2', 'q3', 'q4'].some(
+      (q) => qGoals[q] != null && qGoals[q] !== '' && qGoals[q] !== undefined,
     );
 
     if (!hasGoals) {
@@ -230,24 +245,43 @@ function ActivityCard({
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {["q1", "q2", "q3", "q4"].map((q) => (
-          <div
-            key={q}
-            className="bg-[var(--surface-container)] dark:bg-gray-700 p-2 rounded-lg"
-          >
-            <div className="text-[11px] font-semibold text-[var(--on-surface-variant)] dark:text-gray-400 uppercase">
-              {q}
-            </div>
-            <div className="text-xs font-medium text-[var(--on-surface)] dark:text-white mt-0.5">
-              {qGoals[q] ?? (
-                <span className="text-[var(--on-surface-variant)] dark:text-gray-400">
-                  —
-                </span>
-              )}
+  {['q1', 'q2', 'q3', 'q4'].map((q) => {
+    const goalVal = qGoals[q];
+    const recVal = qRecs[q];
+
+    return (
+      <div
+        key={q}
+        className="bg-[var(--surface-container)] dark:bg-gray-700 p-2 rounded-lg"
+      >
+        <div className="text-[11px] font-semibold uppercase text-[var(--on-surface-variant)] dark:text-gray-400 mb-2">
+          {q}
+        </div>
+
+        <div className="grid grid-cols-2 gap-1">
+          {/* Goal */}
+          <div className="rounded-md bg-[var(--surface-container-high)] dark:bg-gray-800 p-1.5 text-center">
+            <div className="text-[10px] uppercase text-gray-400">{t('project.fields.goal', 'Goal')}</div>
+            <div className="text-sm font-semibold text-black dark:text-white">
+              {goalVal ?? '—'}
             </div>
           </div>
-        ))}
+
+          {/* Record */}
+          <div className="rounded-md bg-[var(--surface-container-low)] dark:bg-gray-900 p-1.5 text-center">
+            <div className="text-[10px] uppercase text-gray-400">
+              {t('project.fields.record', 'Record')}
+            </div>
+            <div className="text-sm text-black dark:text-white font-semibold">
+              {recVal != null && recVal !== '' ? recVal : '—'}
+            </div>
+          </div>
+        </div>
       </div>
+    );
+  })}
+</div>
+
     );
   };
 
@@ -445,7 +479,7 @@ function ActivityCard({
             <h4 className="text-xs font-semibold text-[var(--on-surface-variant)] dark:text-gray-400 uppercase tracking-wide mb-2">
               {tr("project.fields.quarterlyGoals", "Quarterly Goals")}
             </h4>
-            {renderQuarterlyGoals(activity.quarterlyGoals)}
+            {renderQuarterlyGoals(activity.quarterlyGoals, activity.quarterlyRecords)}
           </div>
         </div>
       </div>

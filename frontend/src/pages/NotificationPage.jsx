@@ -365,8 +365,8 @@ export default function NotificationsPage() {
           <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 shadow-xl p-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex items-center justify-center gap-4 min-w-0 flex-1">
-                <div className="p-3 rounded-xl bg-[var(--primary-container)] dark:bg-green-900">
-                  <Bell className="h-6 w-6 text-[var(--on-primary-container)] dark:text-green-200" />
+                <div className="p-3 rounded-xl bg-[var(--primary-container)] dark:bg-indigo-900">
+                  <Bell className="h-6 w-6 text-[var(--on-primary-container)] dark:text-indigo-200" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-row gap-2">
@@ -375,7 +375,7 @@ export default function NotificationsPage() {
                     </h1>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">•</span>
-                      <span className="text-sm text-[var(--primary)] dark:text-green-400 bg-[var(--primary-container)] dark:bg-green-900 px-3 py-1 rounded-full font-medium">
+                      <span className="text-sm text-[var(--primary)] dark:text-indigo-400 bg-[var(--primary-container)] dark:bg-indigo-900 px-3 py-1 rounded-full font-medium">
                         {unread} {t("notifications.unread", { count: unread })}
                       </span>
                     </div>
@@ -405,7 +405,7 @@ export default function NotificationsPage() {
                 onClick={() => setFilter(f)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                   filter === f
-                    ? "bg-[var(--primary)] dark:bg-green-700 text-[var(--on-primary)] dark:text-white shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.4)] scale-105"
+                    ? "bg-[var(--primary)] dark:bg-indigo-700 text-[var(--on-primary)] dark:text-white shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.4)] scale-105"
                     : "bg-[var(--surface-container)] dark:bg-gray-700 text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container-high)] dark:hover:bg-gray-600 hover:text-[var(--on-surface)] dark:hover:text-white"
                 }`}
                 aria-pressed={filter === f}
@@ -419,7 +419,7 @@ export default function NotificationsPage() {
             {unread > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="px-4 py-2.5 rounded-full bg-[var(--primary)] dark:bg-green-700 hover:bg-[var(--primary-container)] dark:hover:bg-green-600 transition-all duration-200 text-[var(--on-primary)] dark:text-white font-medium shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_2px_6px_rgba(16,185,129,0.4)] hover:shadow-[0_3px_8px_rgba(16,185,129,0.4)] dark:hover:shadow-[0_3px_8px_rgba(16,185,129,0.5)]"
+                className="px-4 py-2.5 rounded-full bg-[var(--primary)] dark:bg-indigo-700 hover:bg-[var(--primary-container)] dark:hover:bg-indigo-600 transition-all duration-200 text-[var(--on-primary)] dark:text-white font-medium shadow-[0_2px_6px_rgba(16,185,129,0.3)] dark:shadow-[0_4px_10px_rgba(99,102,241,0.5)] hover:shadow-[0_3px_8px_rgba(16,185,129,0.4)] dark:hover:shadow-[0_3px_8px_rgba(16,185,129,0.5)]"
                 aria-label={t("notifications.aria.markAll")}
               >
                 {t("notifications.markAll")}
@@ -432,7 +432,7 @@ export default function NotificationsPage() {
         <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 shadow-xl overflow-hidden">
           {loading && notifications.length === 0 ? (
             <div className="p-6 flex flex-col items-center justify-center text-center text-[var(--on-surface-variant)] dark:text-gray-400 min-h-[120px]">
-              <Loader className="h-6 w-6 animate-spin text-[var(--primary)] dark:text-green-400" />
+              <Loader className="h-6 w-6 animate-spin text-[var(--primary)] dark:text-indigo-400" />
               <p className="mt-2 text-base font-medium">{t("notifications.loading")}</p>
             </div>
           ) : visible.length === 0 ? (
@@ -447,7 +447,7 @@ export default function NotificationsPage() {
                   className={`flex items-start gap-4 p-5 transition-all duration-300 ${
                     n.isRead
                       ? "bg-[var(--surface-container-low)] dark:bg-gray-800 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700"
-                      : "bg-[var(--primary-container)]/[0.15] dark:bg-green-900/[0.3] hover:bg-[var(--primary-container)]/[0.2] dark:hover:bg-green-900/[0.5]"
+                      : "bg-[var(--primary-container)]/[0.15] dark:bg-indigo-900/[0.3] hover:bg-[var(--primary-container)]/[0.2] dark:hover:bg-indigo-800/[0.5]"
                   } ${
                     animatingNotifications.has(n.id) 
                       ? "scale-[1.01] bg-[var(--tertiary-container)] dark:bg-purple-900/[0.3] shadow-[0_0_12px_rgba(125,82,96,0.2)] dark:shadow-[0_0_12px_rgba(125,82,96,0.3)]" 

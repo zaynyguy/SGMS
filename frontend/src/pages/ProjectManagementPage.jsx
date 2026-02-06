@@ -702,21 +702,7 @@ const openSubmitModal = useCallback(
     });
     return arr;
   }, [filteredGoals, sortKey, sortOrder]);
-  /* ----------------- Refresh with animation ----------------- */
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      if (setActivities) setActivities({});
-      if (setTasks) setTasks({});
-      setExpandedTask(null);
-      setExpandedGoal(null);
-      await loadGoals({ page: currentPage, pageSize });
-    } catch (err) {
-      console.error("loadGoals error:", err);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 600);
-    }
-  }, [loadGoals, currentPage, pageSize, setActivities, setTasks]);
+
   /* ----------------- Render ----------------- */
   return (
     <div 
@@ -892,6 +878,36 @@ const openSubmitModal = useCallback(
                 </div>
                 {/* Actions container */}
                 <div className="flex flex-wrap gap-2">
+                  {/* Quarter drop down button */}
+                  <div>
+                    <div className="flex flex-row items-center gap-3">
+                      <span className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400 flex-shrink-0">
+                        {t("project.quarterFilter", "Quarter")}:
+                      </span>
+
+                      <select
+                        value={currentQuarter}
+                        onChange={(e) => setCurrentQuarter(Number(e.target.value))}
+                        className="
+                          px-3 py-2 rounded-xl text-sm font-medium
+                          bg-[var(--surface-container-lowest)]
+                          dark:bg-gray-800
+                          border border-gray-300 dark:border-gray-200
+                          text-[var(--on-surface)] dark:text-white
+                          focus:outline-none focus:ring-2 focus:ring-green-700 dark:focus:ring-indigo-600
+                        "
+                      >
+                        {[0, 1, 2, 3, 4].map((q) => (
+                          <option key={q} value={q}>
+                            {q === 0
+                              ? t("project.all", "All")
+                              : `${t("project.quarterFilter", "Quarter")} ${q}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
                   {/* Sort controls */}
                   <div className="flex items-center gap-2">
                     <label className="text-sm font-medium text-[var(--on-surface-variant)] dark:text-gray-400">
@@ -901,7 +917,7 @@ const openSubmitModal = useCallback(
                       aria-label="Sort by"
                       value={sortKey}
                       onChange={(e) => setSortKey(e.target.value)}
-                      className="md3-input text-base min-w-[120px] md:min-w-[140px] bg-[var(--surface-container-lowest)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white"
+                      className="md3-input text-base min-w-[120px] md:min-w-[140px] bg-[var(--surface-container-lowest)] dark:bg-gray-800 text-[var(--on-surface)] dark:text-white"
                     >
                       <option value="rollNo" className="bg-white dark:bg-gray-700">
                         {t("project.sort.rollNo") || "Roll No"}
@@ -932,21 +948,6 @@ const openSubmitModal = useCallback(
                       />
                     </button>
                   </div>
-                  {/* Refresh button */}
-                  <button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-colors disabled:opacity-60"
-                    title={t("project.refresh") || "Refresh"}
-                    aria-label="Refresh goals"
-                  >
-                    <RefreshCcw
-                      className={`h-4 w-4 ${
-                        isRefreshing ? "animate-spin" : ""
-                      }`}
-                    />
-                    <span className="inline text-sm">{t("project.refresh")}</span>
-                  </button>
                   {/* Add Goal button (visible on larger screens) */}
                   {canManageGTA && (
                     <button
@@ -960,32 +961,6 @@ const openSubmitModal = useCallback(
                       <span className="inline text-sm">{t("project.addGoalLabel")}</span>
                     </button>
                   )}
-                </div>
-              </div>
-              {/* Row 2: Quarter Filters */}
-              <div className="bg-white dark:bg-gray-700 rounded-xl p-4 dark:border-gray-800 surface-elevation-1">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <span className="text-sm font-medium text-[var(--on-surface)] dark:text-white flex-shrink-0">
-                    {t("project.quarterFilter", "Quarter")}:
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {[0, 1, 2, 3, 4].map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => setCurrentQuarter(q)}
-                        className={`
-                          px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 
-                          ${
-                            currentQuarter === q
-                              ? "bg-green-800 dark:bg-indigo-700 text-[var(--on-primary)] dark:text-white shadow tansition-all"
-                              : "bg-[var(--surface-container-lowest)] border dark:border-gray-100 dark:bg-gray-800 text-[var(--on-surface)] dark:text-white hover:bg-[var(--surface-container)] dark:hover:bg-gray-700"
-                          }
-                        `}
-                      >
-                        {q === 0 ? t("project.all", "All") : `${t("project.quarterFilter", "All")} ${q}`}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>

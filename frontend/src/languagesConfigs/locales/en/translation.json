@@ -686,7 +686,9 @@
       "target": "Target",
       "current": "Current",
       "metrics": "Metrics",
-      "quarterlyGoals": "Quarterly Goals"
+      "quarterlyGoals": "Quarterly Goals",
+      "goal": "Goal",
+      "record": "Records"
     },
 
     "sections": {

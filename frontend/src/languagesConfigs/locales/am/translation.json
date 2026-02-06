@@ -684,7 +684,9 @@
       "target": "ዒላማ",
       "current": "የአሁኑ",
       "metrics": "ሜትሪክስ",
-      "quarterlyGoals": "የሩብ ዓመት ግቦች"
+      "quarterlyGoals": "የሩብ ዓመት ግቦች",
+      "goal": "ግብ",
+      "record": "መዝገቦች"
     },
 
     "sections": {
