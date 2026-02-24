@@ -264,15 +264,35 @@ const ChatPage = () => {
                     messages.map((m, i) => {
                       const isMe = m.senderId === user?.id;
                       return (
-                        <div key={i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[85%] md:max-w-[70%] p-3 rounded-2xl shadow-sm ${
-                            isMe 
-                              ? 'bg-green-600 dark:bg-indigo-600 text-white rounded-br-none' 
-                              : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-100 dark:border-gray-700'
-                          }`}>
-                            <p className="text-xl whitespace-pre-wrap break-words text-black dark:text-white">{m.content}</p>
-                            <span className={`text-[10px] block text-right mt-1 opacity-70`}>
-                              {new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        <div
+                          key={i}
+                          className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                        >
+                          <div
+                            className={`max-w-[85%] md:max-w-[70%] p-3 rounded-2xl shadow-sm ${
+                              isMe
+                                ? "bg-green-600 dark:bg-indigo-600 rounded-br-none"
+                                : "bg-white dark:bg-gray-800 rounded-bl-none border border-gray-100 dark:border-gray-700"
+                            }`}
+                          >
+                            <p
+                              className={`text-xl whitespace-pre-wrap break-words ${
+                                isMe
+                                  ? "text-white"
+                                  : "text-gray-900 dark:text-gray-100"
+                              }`}
+                            >
+                              {m.content}
+                            </p>
+                            <span className={`text-[10px] block text-right mt-1 opacity-70 ${
+                                isMe
+                                  ? "text-white"
+                                  : "text-gray-900 dark:text-gray-100"
+                              }`}>
+                              {new Date(m.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </span>
                           </div>
                         </div>
