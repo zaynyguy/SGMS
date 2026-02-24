@@ -159,7 +159,7 @@ exports.submitReport = async (req, res) => {
       const currentMetric = activityRow.currentmetric || activityRow.currentMetric || {};
       const metricType = activityRow.metrictype || activityRow.metricType || "Plus"; // Default
 
-      const violations = [];
+      const overflowMetrics = [];
 
       const extractNumeric = (v) => {
         if (v === null || typeof v === "undefined") return null;
@@ -211,16 +211,14 @@ exports.submitReport = async (req, res) => {
           // --- LOGIC PER METRIC TYPE ---
 
           if (metricType === "Plus" || metricType === "Minus") {
-            // CUMULATIVE: We validate that (Current + Incoming) <= Target
+            // CUMULATIVE: detect overflow (informational only)
             if (currentVal + incoming > targetVal) {
-              violations.push({
+              overflowMetrics.push({
                 key: k,
-                incoming,
                 current: currentVal,
+                incoming: incoming,
                 target: targetVal,
-                type: metricType,
-                wouldBe: currentVal + incoming,
-                message: `Cumulative total would exceed target.`,
+                overflowAmount: currentVal + incoming - targetVal,
               });
             }
           } else {
@@ -229,12 +227,17 @@ exports.submitReport = async (req, res) => {
         }
       }
 
-      if (violations.length) {
-        await client.query("ROLLBACK");
-        return res.status(400).json({
-          error: "Submitted metrics validation failed.",
-          details: violations,
-        });
+      // Do not block submission on cumulative overflow. Attach overflow info
+      // to the parsed metrics so it is saved with the report and returned.
+      if (overflowMetrics.length) {
+        try {
+          if (parsedMetrics && typeof parsedMetrics === "object") {
+            parsedMetrics._overflowMetrics = overflowMetrics;
+          }
+        } catch (e) {
+          // non-fatal: don't interrupt submission if attaching fails
+          console.error("Failed to attach overflow metrics to parsedMetrics:", e);
+        }
       }
     }
     // === end validation ===

@@ -477,7 +477,7 @@ export default function SubmitReportInline({
   if (!isVisible && !isAnimating) return null;
 
   // header badge label: if any exceeded -> show "Warning" (red), else show status
-  const headerBadge = hasExceeded ? "Warning" : newStatus;
+  const headerBadge = hasExceeded ? "Caution" : newStatus;
   const headerIsWarning = hasExceeded;
 
   return (
@@ -662,7 +662,6 @@ export default function SubmitReportInline({
     <input
       type="number"
       step="any"
-      min={0}
       placeholder={metricTypeInfo.placeholder}
       value={m.value}
       onChange={(e) =>
@@ -689,12 +688,6 @@ export default function SubmitReportInline({
                           : `New value: ${displayedCurrent} / ${m.target !== null ? m.target : "-"}${remaining !== null ? ` (Remaining: ${remaining})` : ""}`
                         }
                       </div>
-
-                      {exceeded && (
-                        <div className="mt-2 text-xs text-red-700 dark:text-red-200 pl-1">
-                          <span className="font-medium">Warning:</span> reported value ({reported}) exceeds target ({m.target}).
-                        </div>
-                      )}
                     </div>
                   );
                 })}
