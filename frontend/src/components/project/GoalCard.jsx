@@ -302,7 +302,7 @@ function GoalCard({
           <div className="flex items-start gap-4 min-w-0 flex-1">
             <button
               onClick={() => handleToggleGoal(goal)}
-              className="p-2 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200"
+              className="hidden md:block p-2 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200"
               aria-label={t("project.actions.toggleGoal") || "Toggle"}
               title={t("project.actions.toggleGoal") || "Toggle"}
             >

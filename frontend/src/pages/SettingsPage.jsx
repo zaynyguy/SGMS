@@ -731,7 +731,7 @@ const SettingsPage = () => {
                       {t("settings.personalInfo") || "Personal info"}
                     </h2>
                     <p className="text-sm dark:text-gray-400">
-                      {t("settings.personalInfoDesc")}
+                      {t("settings.personalInfo")}
                     </p>
                   </div>
                 </div>

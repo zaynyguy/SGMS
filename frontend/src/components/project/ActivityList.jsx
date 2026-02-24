@@ -310,7 +310,7 @@ function ActivityCard({
               e.stopPropagation();
               setIsExpanded((v) => !v);
             }}
-            className="p-1.5 text-[var(--on-surface-variant)] dark:text-gray-400 hover:text-[var(--on-surface)] dark:hover:text-white rounded-full hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200 flex-shrink-0"
+            className="hidden md:block p-1.5 text-[var(--on-surface-variant)] dark:text-gray-400 hover:text-[var(--on-surface)] dark:hover:text-white rounded-full hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-200 flex-shrink-0"
             title={
               isExpanded
                 ? tr("project.actions.collapse", "Collapse")

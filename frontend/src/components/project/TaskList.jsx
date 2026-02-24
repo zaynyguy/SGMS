@@ -390,7 +390,7 @@ function TaskList({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleToggleTask(goal, task); }}
-                  className="p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 task-btn task-icon-rotate"
+                  className="hidden md:block p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 task-btn task-icon-rotate"
                   aria-label={t("project.actions.toggleTask") || "Toggle task"}
                   aria-expanded={taskIsExpanded}
                 >
