@@ -3,37 +3,41 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { initSocket } = require("./services/socketService");
-const db = require("./db")
-const cookieParser = require('cookie-parser');
-const { scheduleMonthlySnapshots } = require('./jobs/monthlySnapshot');
-
+const db = require("./db");
+const cookieParser = require("cookie-parser");
+const { scheduleMonthlySnapshots } = require("./jobs/monthlySnapshot");
 
 const app = express();
 const server = http.createServer(app);
 
 const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || "")
   .split(",")
-  .map(s => s.trim())
+  .map((s) => s.trim())
   .filter(Boolean);
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // allows requests with no origin (Postman, curl, server-to-server)
-    if (!origin) return callback(null, true);
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allows requests with no origin (Postman, curl, server-to-server)
+      if (!origin) return callback(null, true);
 
-    // allows if origin is in whitelist OR if not in production
-    if (FRONTEND_ORIGINS.includes(origin) || process.env.NODE_ENV !== "production") {
-      return callback(null, true);
-    }
+      // allows if origin is in whitelist OR if not in production
+      if (
+        FRONTEND_ORIGINS.includes(origin) ||
+        process.env.NODE_ENV !== "production"
+      ) {
+        return callback(null, true);
+      }
 
-    callback(new Error("Not allowed by CORS"));
-  },
-  credentials: true
-}));
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(cookieParser());
 
-scheduleMonthlySnapshots({ schedule: '0 9 1 * *' });
+scheduleMonthlySnapshots({ schedule: "0 9 1 * *" });
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/usersRoutes"));
@@ -57,14 +61,13 @@ app.get("/", (req, res) => {
   res.send("The API server is running...");
 });
 
-
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, "0.0.0.0", async () => {
   console.log(`Server running on port ${PORT}`);
   initSocket(server);
   try {
-    const time = db.query("Select now()")
+    await db.query("SELECT now()");
     console.log("Database connection established successfully.");
   } catch (error) {
     console.error("Unable to connect to the database:", error);
