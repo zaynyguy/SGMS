@@ -32,10 +32,18 @@ async function ensureMigrationsTable(client) {
 }
 
 async function getAppliedMigrations(client) {
-  const { rows } = await client.query(
-    `SELECT filename FROM "${MIGRATIONS_TABLE}" ORDER BY id`,
-  );
-  return new Set(rows.map((row) => row.filename));
+  try {
+    const { rows } = await client.query(
+      `SELECT filename FROM "${MIGRATIONS_TABLE}" ORDER BY id`,
+    );
+    return new Set(rows.map((row) => row.filename));
+  } catch (err) {
+    if (err.code === "42P01") {
+      // relation does not exist
+      return new Set();
+    }
+    throw err;
+  }
 }
 
 async function insertMigrationRecord(client, filename, checksum = null) {
@@ -69,8 +77,6 @@ async function run() {
 
   const client = await db.connect();
   try {
-    await ensureMigrationsTable(client);
-
     const applied = await getAppliedMigrations(client);
     const tableCount = await countUserTables(client);
 

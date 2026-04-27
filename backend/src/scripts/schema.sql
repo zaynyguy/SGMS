@@ -92,6 +92,13 @@ BEGIN
   END IF;
 END$$;
 
+CREATE TABLE IF NOT EXISTS "Migrations" (
+  "id" SERIAL PRIMARY KEY,
+  "filename" VARCHAR(255) NOT NULL UNIQUE,
+  "applied_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "checksum" VARCHAR(255)
+);
+
 CREATE TABLE IF NOT EXISTS "Roles" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
@@ -361,6 +368,13 @@ CREATE INDEX IF NOT EXISTS idx_activityrecords_activity ON "ActivityRecords"("ac
 CREATE INDEX IF NOT EXISTS idx_activityrecords_fiscalyear ON "ActivityRecords"("fiscalYear");
 CREATE INDEX IF NOT EXISTS idx_activityrecords_quarter ON "ActivityRecords"("quarter");
 
+-- Function to update updatedAt
+CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updatedAt" = NOW();
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
 -- Trigger to update updatedAt
 DO $$
 BEGIN
@@ -368,12 +382,6 @@ BEGIN
     CREATE TRIGGER set_updatedAt_ActivityRecords BEFORE UPDATE ON "ActivityRecords" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
   END IF;
 END$$;
-
-CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
-BEGIN
-  NEW."updatedAt" = NOW();
-  RETURN NEW;
-END; $$ LANGUAGE plpgsql;
 
 
 CREATE TABLE IF NOT EXISTS "ChatConversations" (
