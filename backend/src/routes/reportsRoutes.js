@@ -14,42 +14,49 @@ router.use(authenticateJWT);
 // allows frontend to check if reporting is active
 router.get(
   "/reporting-status",
-  authorizePermissions(["view_reports", "manage_reports"]), 
-  reportsController.canSubmitReport
+  authorizePermissions(["view_reports", "manage_reports"]),
+  reportsController.canSubmitReport,
 );
 
 router.post(
   "/activity/:activityId",
   upload.array("attachments", 5),
   authorizePermissions(["view_reports", "manage_reports"]),
-  reportsController.submitReport
+  reportsController.submitReport,
 );
 
 router.put(
   "/:reportId/review",
   authorizePermissions(["manage_reports"]),
-  reportsController.reviewReport
+  reportsController.reviewReport,
 );
 
 // Admin generates the master json report (optional groupId query)
 router.get(
   "/master-report",
   authorizePermissions(["manage_reports"]),
-  reportsController.generateMasterReport
+  reportsController.generateMasterReport,
+);
+
+router.post(
+  "/import",
+  upload.single("file"),
+  authorizePermissions(["manage_reports"]),
+  reportsController.importProjectDataFromExcel,
 );
 
 // Fetch all reports (for admin review) — now accessible to view_reports, but controller scopes results
 router.get(
   "/",
   authorizePermissions(["manage_reports", "view_reports"]),
-  reportsController.getAllReports
+  reportsController.getAllReports,
 );
 
 // Download a specific attachment (checks group scope inside controller)
 router.get(
   "/attachments/:attachmentId/download",
   authorizePermissions(["manage_reports", "view_reports", "view_attachments"]),
-  attachmentsController.downloadAttachment
+  attachmentsController.downloadAttachment,
 );
 
 // Upload attachment
@@ -57,21 +64,21 @@ router.post(
   "/attachments/upload",
   upload.single("file"),
   authorizePermissions(["manage_reports"]),
-  attachmentsController.uploadAttachment
+  attachmentsController.uploadAttachment,
 );
 
 // Delete attachment
 router.delete(
   "/attachments/:attachmentId",
   authorizePermissions(["manage_reports", "manage_attachments"]),
-  attachmentsController.deleteAttachment
+  attachmentsController.deleteAttachment,
 );
 
 // Admin list attachments
 router.get(
   "/attachments",
   authorizePermissions(["manage_attachments", "manage_reports"]),
-  attachmentsController.listAttachments
+  attachmentsController.listAttachments,
 );
 
 module.exports = router;

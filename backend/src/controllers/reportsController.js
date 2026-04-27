@@ -8,6 +8,10 @@ const {
   generateReportHtml,
   generateReportJson,
 } = require("../helpers/reportHelper");
+const {
+  buildMasterWorkbook,
+  parseExcelWorkbook,
+} = require("../helpers/excelHelper");
 const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
 const { getAttachmentSettings } = require("../utils/systemSettings");
 const { uploadFile, deleteFile } = require("../services/uploadService");
@@ -73,7 +77,7 @@ function sumNumericValues(obj) {
 exports.canSubmitReport = async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`,
     );
     if (!rows[0]) return res.json({ reporting_active: false });
     const val = rows[0].value;
@@ -95,7 +99,7 @@ exports.submitReport = async (req, res) => {
   // early check: reporting enabled
   try {
     const { rows } = await db.query(
-      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`
+      `SELECT value FROM "SystemSettings" WHERE key = 'reporting_active' LIMIT 1`,
     );
     if (!rows[0]) {
       return res
@@ -146,7 +150,7 @@ exports.submitReport = async (req, res) => {
       // lock activity row
       const actQ = await client.query(
         `SELECT "targetMetric", "currentMetric", "metricType" FROM "Activities" WHERE id = $1 FOR UPDATE`,
-        [activityId]
+        [activityId],
       );
 
       if (!actQ.rows[0]) {
@@ -155,9 +159,12 @@ exports.submitReport = async (req, res) => {
       }
 
       const activityRow = actQ.rows[0];
-      const targetMetric = activityRow.targetmetric || activityRow.targetMetric || {};
-      const currentMetric = activityRow.currentmetric || activityRow.currentMetric || {};
-      const metricType = activityRow.metrictype || activityRow.metricType || "Plus"; // Default
+      const targetMetric =
+        activityRow.targetmetric || activityRow.targetMetric || {};
+      const currentMetric =
+        activityRow.currentmetric || activityRow.currentMetric || {};
+      const metricType =
+        activityRow.metrictype || activityRow.metricType || "Plus"; // Default
 
       const overflowMetrics = [];
 
@@ -236,7 +243,10 @@ exports.submitReport = async (req, res) => {
           }
         } catch (e) {
           // non-fatal: don't interrupt submission if attaching fails
-          console.error("Failed to attach overflow metrics to parsedMetrics:", e);
+          console.error(
+            "Failed to attach overflow metrics to parsedMetrics:",
+            e,
+          );
         }
       }
     }
@@ -246,7 +256,13 @@ exports.submitReport = async (req, res) => {
       `INSERT INTO "Reports"("activityId", "userId", narrative, metrics_data, new_status, "createdAt", "updatedAt")
        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
        RETURNING *`,
-      [activityId, req.user.id, narrative || null, parsedMetrics || {}, new_status || null]
+      [
+        activityId,
+        req.user.id,
+        narrative || null,
+        parsedMetrics || {},
+        new_status || null,
+      ],
     );
     const report = reportResult.rows[0];
 
@@ -255,8 +271,8 @@ exports.submitReport = async (req, res) => {
       const attachmentSettings = await getAttachmentSettings();
       const maxSizeMb = Number(
         attachmentSettings?.maxSizeMb ||
-        attachmentSettings?.max_attachment_size_mb ||
-        10
+          attachmentSettings?.max_attachment_size_mb ||
+          10,
       );
       const maxBytes = (Number(maxSizeMb) || 10) * 1024 * 1024;
 
@@ -273,7 +289,7 @@ exports.submitReport = async (req, res) => {
         for (const f of req.files) {
           try {
             fs.unlinkSync(f.path);
-          } catch (e) { }
+          } catch (e) {}
         }
         await client.query("ROLLBACK");
         return res.status(400).json({
@@ -299,7 +315,7 @@ exports.submitReport = async (req, res) => {
               uploaded.fileType || file.mimetype,
               uploaded.provider || "local",
               uploaded.publicId || null,
-            ]
+            ],
           );
           insertedAttachments.push(insertRes.rows[0]);
         } catch (uerr) {
@@ -310,11 +326,11 @@ exports.submitReport = async (req, res) => {
               if (entry.uploaded && entry.uploaded.provider === "local") {
                 try {
                   const fname = path.basename(
-                    entry.uploaded.url || entry.originalFile.path || ""
+                    entry.uploaded.url || entry.originalFile.path || "",
                   );
                   const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
                   if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
-                } catch (e) { }
+                } catch (e) {}
               }
             } catch (cleanupErr) {
               console.error("cleanup after failed upload error:", cleanupErr);
@@ -323,7 +339,7 @@ exports.submitReport = async (req, res) => {
           for (const f of req.files) {
             try {
               fs.unlinkSync(f.path);
-            } catch (e) { }
+            } catch (e) {}
           }
           await client.query("ROLLBACK");
           return res.status(500).json({ error: "File upload failed." });
@@ -372,13 +388,13 @@ exports.submitReport = async (req, res) => {
            JOIN "RolePermissions" rp ON rp."roleId" = r.id
            JOIN "Permissions" p ON p.id = rp."permissionId"
            WHERE p.name = $1`,
-          ["manage_reports"]
+          ["manage_reports"],
         );
         for (const r of permRes.rows) if (r && r.id) recipients.add(r.id);
       } catch (permErr) {
         console.error(
           "submitReport: failed to query manage_reports users:",
-          permErr
+          permErr,
         );
       }
 
@@ -388,7 +404,7 @@ exports.submitReport = async (req, res) => {
            FROM "Activities" a
            LEFT JOIN "Tasks" t ON t.id = a."taskId"
            WHERE a.id = $1 LIMIT 1`,
-          [activityId]
+          [activityId],
         );
         const arow = actRes.rows[0];
         const activityTitle = (arow && arow.activity_title) || null;
@@ -413,14 +429,14 @@ exports.submitReport = async (req, res) => {
           } catch (nerr) {
             console.error(
               `submitReport: failed to notify user ${uid} about report ${report.id}:`,
-              nerr
+              nerr,
             );
           }
         }
       } catch (aerr) {
         console.error(
           "submitReport: failed to fetch activity/task assignee:",
-          aerr
+          aerr,
         );
       }
     } catch (outerNotifyErr) {
@@ -441,7 +457,7 @@ exports.submitReport = async (req, res) => {
         if (entry.uploaded && entry.uploaded.provider === "local") {
           try {
             const fname = path.basename(
-              entry.uploaded.url || entry.originalFile.path || ""
+              entry.uploaded.url || entry.originalFile.path || "",
             );
             const fullLocal = path.join(process.cwd(), UPLOAD_DIR, fname);
             if (fs.existsSync(fullLocal)) fs.unlinkSync(fullLocal);
@@ -457,7 +473,7 @@ exports.submitReport = async (req, res) => {
       for (let file of req.files) {
         try {
           fs.unlinkSync(file.path);
-        } catch (e) { }
+        } catch (e) {}
       }
     }
     console.error("Error submitting report:", err);
@@ -481,7 +497,7 @@ exports.reviewReport = async (req, res) => {
 
     const repRes = await client.query(
       `SELECT * FROM "Reports" WHERE id = $1 FOR UPDATE`,
-      [reportId]
+      [reportId],
     );
     if (!repRes.rows[0]) {
       await client.query("ROLLBACK");
@@ -497,7 +513,7 @@ exports.reviewReport = async (req, res) => {
            "updatedAt" = NOW()
        WHERE id = $4
        RETURNING *`,
-      [status, adminComment || null, resubmissionDeadline || null, reportId]
+      [status, adminComment || null, resubmissionDeadline || null, reportId],
     );
     const updatedReport = updatedRows[0];
 
@@ -528,25 +544,31 @@ exports.reviewReport = async (req, res) => {
         }
       }
 
-      if (!updatedReport.applied && metricsObj && Object.keys(metricsObj).length) {
+      if (
+        !updatedReport.applied &&
+        metricsObj &&
+        Object.keys(metricsObj).length
+      ) {
         try {
           // This calls the UPDATED accumulate_metrics SQL function
           await client.query(
             `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, $4::int)`,
-            [updatedReport.activityId, metricsObj, req.user.id, reportId]
+            [updatedReport.activityId, metricsObj, req.user.id, reportId],
           );
 
           await client.query(
             `UPDATE "Reports" SET applied = true, "appliedBy" = $1, "appliedAt" = NOW() WHERE id = $2`,
-            [req.user.id, reportId]
+            [req.user.id, reportId],
           );
         } catch (applyErr) {
           console.error(
             "Failed to apply metrics via accumulate_metrics:",
-            applyErr
+            applyErr,
           );
           await client.query("ROLLBACK");
-          return res.status(500).json({ error: "Failed to apply report metrics." });
+          return res
+            .status(500)
+            .json({ error: "Failed to apply report metrics." });
         }
 
         // Post-apply snapshot - run async
@@ -572,7 +594,7 @@ exports.reviewReport = async (req, res) => {
                "isDone" = CASE WHEN $1::"activity_status"='Done' THEN true ELSE "isDone" END,
                "updatedAt" = NOW()
            WHERE id = $2`,
-          [updatedReport.new_status, updatedReport.activityId]
+          [updatedReport.new_status, updatedReport.activityId],
         );
       }
     }
@@ -613,7 +635,7 @@ exports.getAllReports = async (req, res) => {
     const page = Math.max(parseInt(req.query.page || "1", 10), 1);
     const pageSize = Math.min(
       Math.max(parseInt(req.query.pageSize || "20", 10), 1),
-      200
+      200,
     );
     const offset = (page - 1) * pageSize;
     const status = req.query.status ? String(req.query.status) : null;
@@ -632,14 +654,14 @@ exports.getAllReports = async (req, res) => {
     if (!isAdmin && canViewGroup) {
       const gRes2 = await db.query(
         `SELECT DISTINCT "groupId" FROM "UserGroups" WHERE "userId" = $1`,
-        [req.user.id]
+        [req.user.id],
       );
       const groupIds2 = gRes2.rows.map((r) => r.groupId).filter(Boolean);
       if (groupIds2.length) {
         const groupParam = pushParam(groupIds2);
         const userParam = pushParam(req.user.id);
         rebuiltWhereClauses.push(
-          `(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`
+          `(g."groupId" = ANY(${groupParam}) OR r."userId" = ${userParam})`,
         );
       } else {
         const userParam = pushParam(req.user.id);
@@ -657,7 +679,7 @@ exports.getAllReports = async (req, res) => {
     if (qRaw) {
       const p = pushParam(`%${qRaw}%`);
       rebuiltWhereClauses.push(
-        `(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`
+        `(r.id::text ILIKE ${p} OR u.name ILIKE ${p} OR a.title ILIKE ${p} OR r.narrative ILIKE ${p})`,
       );
     }
 
@@ -747,7 +769,7 @@ exports.generateMasterReport = async (req, res) => {
       ${groupId ? 'WHERE g."groupId" = $1' : ""}
       ORDER BY g.id, t.id, a.id, r.id
       `,
-      groupId ? [groupId] : []
+      groupId ? [groupId] : [],
     );
 
     const raw = rowsRes.rows || [];
@@ -873,7 +895,7 @@ exports.generateMasterReport = async (req, res) => {
       ${groupId ? "AND group_id = $1" : ""}
       ORDER BY entity_id, snapshot_month
       `,
-      groupId ? [groupId] : []
+      groupId ? [groupId] : [],
     );
 
     const historyByActivity = {};
@@ -882,7 +904,8 @@ exports.generateMasterReport = async (req, res) => {
       if (!historyByActivity[aid]) historyByActivity[aid] = [];
       historyByActivity[aid].push({
         snapshot_month: r.snapshot_month,
-        progress: typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
+        progress:
+          typeof r.progress === "number" ? r.progress : Number(r.progress) || 0,
         metrics: r.metrics || {},
         recorded_at: r.recorded_at,
       });
@@ -900,7 +923,7 @@ exports.generateMasterReport = async (req, res) => {
         JOIN "Tasks" t ON a."taskId" = t.id
         JOIN "Goals" g ON t."goalId" = g.id
         WHERE 1=1
-        ${groupId ? 'AND g."groupId" = $1' : ''}
+        ${groupId ? 'AND g."groupId" = $1' : ""}
         ORDER BY ar."fiscalYear", ar."quarter", ar."month"
       `;
     const arRows = await db.query(arQuery, groupId ? [groupId] : []);
@@ -920,10 +943,13 @@ exports.generateMasterReport = async (req, res) => {
       const activity = findActivityInMaster(masterJson, aid);
       if (!activity) continue;
       for (const s of snaps) {
-        const d = s.snapshot_month ? new Date(s.snapshot_month) : new Date(s.recorded_at || Date.now());
+        const d = s.snapshot_month
+          ? new Date(s.snapshot_month)
+          : new Date(s.recorded_at || Date.now());
         if (isNaN(d)) continue;
         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        if (!activity.history.monthly[monthKey]) activity.history.monthly[monthKey] = [];
+        if (!activity.history.monthly[monthKey])
+          activity.history.monthly[monthKey] = [];
         activity.history.monthly[monthKey].push({
           date: d.toISOString(),
           progress: s.progress,
@@ -950,13 +976,14 @@ exports.generateMasterReport = async (req, res) => {
           const fiscalYear = rec.fiscalYear;
           // calculate calendar month (end of quarter)
           const relativeMonth = (rec.quarter - 1) * 3 + 2; // 0-indexed within fiscal year
-          const absMonth = (startMonth - 1) + relativeMonth;
+          const absMonth = startMonth - 1 + relativeMonth;
           const calMonthIndex = (absMonth % 12) + 1; // 1-12
           const yearOffset = Math.floor(absMonth / 12);
           const calYear = fiscalYear + yearOffset;
           const qKey = `${fiscalYear}-Q${rec.quarter}`;
           const dateStr = `${calYear}-${String(calMonthIndex).padStart(2, "0")}-28`;
-          if (!activity.history.quarterly[qKey]) activity.history.quarterly[qKey] = [];
+          if (!activity.history.quarterly[qKey])
+            activity.history.quarterly[qKey] = [];
           activity.history.quarterly[qKey].push({
             date: dateStr,
             progress: null,
@@ -974,7 +1001,8 @@ exports.generateMasterReport = async (req, res) => {
           const calYear = m >= startMonth ? fiscalYear : fiscalYear + 1;
           const monthKey = `${calYear}-${String(m).padStart(2, "0")}`;
           const dateStr = `${calYear}-${String(m).padStart(2, "0")}-28`;
-          if (!activity.history.monthly[monthKey]) activity.history.monthly[monthKey] = [];
+          if (!activity.history.monthly[monthKey])
+            activity.history.monthly[monthKey] = [];
           activity.history.monthly[monthKey].push({
             date: dateStr,
             progress: null,
@@ -1016,10 +1044,13 @@ exports.generateMasterReport = async (req, res) => {
               // snapshot types: use latest quarter (last key)
               const qKeys = Object.keys(hist.quarterly || {}).sort();
               if (qKeys.length) {
-                const latestEntries = hist.quarterly[qKeys[qKeys.length - 1]] || [];
+                const latestEntries =
+                  hist.quarterly[qKeys[qKeys.length - 1]] || [];
                 if (latestEntries.length) {
                   const latest = latestEntries[latestEntries.length - 1];
-                  activity.quarterlyTotal = sumNumericValues(latest.metrics || {});
+                  activity.quarterlyTotal = sumNumericValues(
+                    latest.metrics || {},
+                  );
                 } else {
                   activity.quarterlyTotal = null;
                 }
@@ -1029,7 +1060,10 @@ exports.generateMasterReport = async (req, res) => {
             }
 
             // compute yearlyProgress (YTD vs target)
-            const ytdVal = activity.quarterlyTotal === null ? null : Number(activity.quarterlyTotal || 0);
+            const ytdVal =
+              activity.quarterlyTotal === null
+                ? null
+                : Number(activity.quarterlyTotal || 0);
             const targetSum = sumNumericValues(activity.targetMetric || {});
             if (ytdVal === null) {
               activity.yearlyProgress = null;
@@ -1040,7 +1074,9 @@ exports.generateMasterReport = async (req, res) => {
                 } else if (targetSum === 0) {
                   activity.yearlyProgress = 0;
                 } else {
-                  activity.yearlyProgress = Math.round((targetSum / ytdVal) * 100);
+                  activity.yearlyProgress = Math.round(
+                    (targetSum / ytdVal) * 100,
+                  );
                 }
               } else if (activity.metricType === "Maintain") {
                 if (targetSum === 0) {
@@ -1056,7 +1092,9 @@ exports.generateMasterReport = async (req, res) => {
                 } else if (targetSum === 0) {
                   activity.yearlyProgress = null;
                 } else {
-                  activity.yearlyProgress = Math.round((ytdVal / targetSum) * 100);
+                  activity.yearlyProgress = Math.round(
+                    (ytdVal / targetSum) * 100,
+                  );
                 }
               }
             }
@@ -1068,10 +1106,35 @@ exports.generateMasterReport = async (req, res) => {
       }
     }
 
+    // If Excel requested
+    if (format === "excel") {
+      try {
+        const workbook = buildMasterWorkbook(masterJson);
+        const buffer = await workbook.xlsx.writeBuffer();
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        );
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="master-report${groupId ? `-group-${groupId}` : ""}.xlsx"`,
+        );
+        return res.send(buffer);
+      } catch (e) {
+        console.error(
+          "generateMasterReport: Excel workbook generation error:",
+          e,
+        );
+        // fallthrough to HTML/JSON
+      }
+    }
+
     // If HTML requested
     if (
       format === "html" ||
-      (req.headers.accept && req.headers.accept.includes("text/html") && !req.query.format)
+      (req.headers.accept &&
+        req.headers.accept.includes("text/html") &&
+        !req.query.format)
     ) {
       try {
         const html = generateReportHtml(masterJson);
@@ -1086,9 +1149,305 @@ exports.generateMasterReport = async (req, res) => {
   } catch (err) {
     console.error(
       "Error generating master report:",
-      err && err.message ? err.message : err
+      err && err.message ? err.message : err,
     );
     res.status(500).json({ error: err.message || String(err) });
+  }
+};
+
+exports.importProjectDataFromExcel = async (req, res) => {
+  const file = req.file;
+  if (!file) {
+    return res.status(400).json({ error: "Excel file is required." });
+  }
+
+  let payload;
+  try {
+    payload = await parseExcelWorkbook(file.path);
+  } catch (err) {
+    console.error("importProjectDataFromExcel: failed to parse workbook:", err);
+    return res.status(400).json({ error: "Invalid Excel file format." });
+  }
+
+  const { goals, tasks, activities } = payload;
+  if (!goals.length && !tasks.length && !activities.length) {
+    return res.status(400).json({
+      error:
+        "Excel workbook must contain at least one Goals, Tasks, or Activities sheet with data.",
+    });
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    const groupRows = await client.query(`SELECT id, name FROM "Groups"`);
+    const groupsByName = new Map(
+      groupRows.rows.map((g) => [String(g.name).toLowerCase(), g.id]),
+    );
+
+    const userRows = await client.query(
+      `SELECT id, username, name FROM "Users"`,
+    );
+    const usersByUsername = new Map(
+      userRows.rows.map((u) => [String(u.username).toLowerCase(), u.id]),
+    );
+
+    const goalMap = new Map();
+    const taskMap = new Map();
+    const activityMap = new Map();
+
+    async function resolveGoalId(row) {
+      const candidateId = row.goal_id || row.goalid || row.id || null;
+      if (candidateId) return Number(candidateId);
+      const title = (row.title || row.goal_title || row.name || "").trim();
+      if (!title) return null;
+      const groupId = row.group_id || row.groupid || null;
+      const resolvedGroupId = groupId
+        ? Number(groupId)
+        : groupsByName.get(
+            String(row.group_name || row.groupname || "").toLowerCase(),
+          ) || null;
+      const key = `${title}::${resolvedGroupId || 0}`;
+      if (goalMap.has(key)) return goalMap.get(key);
+
+      const q = await client.query(
+        `SELECT id FROM "Goals" WHERE title = $1 AND COALESCE("groupId", 0) = COALESCE($2, 0) LIMIT 1`,
+        [title, resolvedGroupId],
+      );
+      if (q.rows[0]) {
+        goalMap.set(key, q.rows[0].id);
+        return q.rows[0].id;
+      }
+      return null;
+    }
+
+    async function resolveTaskId(row, goalId) {
+      const candidateId = row.task_id || row.taskid || row.id || null;
+      if (candidateId) return Number(candidateId);
+      const title = (row.title || row.task_title || row.name || "").trim();
+      if (!title || !goalId) return null;
+      const key = `${goalId}::${title}`;
+      if (taskMap.has(key)) return taskMap.get(key);
+
+      const q = await client.query(
+        `SELECT id FROM "Tasks" WHERE title = $1 AND "goalId" = $2 LIMIT 1`,
+        [title, goalId],
+      );
+      if (q.rows[0]) {
+        taskMap.set(key, q.rows[0].id);
+        return q.rows[0].id;
+      }
+      return null;
+    }
+
+    async function resolveActivityId(row, taskId) {
+      const candidateId = row.activity_id || row.activityid || row.id || null;
+      if (candidateId) return Number(candidateId);
+      const title = (row.title || row.activity_title || row.name || "").trim();
+      if (!title || !taskId) return null;
+      const key = `${taskId}::${title}`;
+      if (activityMap.has(key)) return activityMap.get(key);
+
+      const q = await client.query(
+        `SELECT id FROM "Activities" WHERE title = $1 AND "taskId" = $2 LIMIT 1`,
+        [title, taskId],
+      );
+      if (q.rows[0]) {
+        activityMap.set(key, q.rows[0].id);
+        return q.rows[0].id;
+      }
+      return null;
+    }
+
+    const imported = { goals: 0, tasks: 0, activities: 0 };
+
+    for (const row of goals) {
+      const title = (row.title || row.goal_title || row.name || "").trim();
+      if (!title) continue;
+      const groupId = row.group_id || row.groupid || null;
+      const resolvedGroupId = groupId
+        ? Number(groupId)
+        : groupsByName.get(
+            String(row.group_name || row.groupname || "").toLowerCase(),
+          ) || null;
+      const progress = row.progress != null ? Number(row.progress) : null;
+      const weight = row.weight != null ? Number(row.weight) : null;
+      const startDate = row.start_date || row.startdate || row.start || null;
+      const endDate = row.end_date || row.enddate || row.end || null;
+      const status = row.status || row.goal_status || null;
+      const description = row.description || row.desc || null;
+
+      const existing = await client.query(
+        `SELECT id FROM "Goals" WHERE title = $1 AND COALESCE("groupId", 0) = COALESCE($2, 0) LIMIT 1`,
+        [title, resolvedGroupId],
+      );
+      if (existing.rows[0]) {
+        const goalId = existing.rows[0].id;
+        goalMap.set(`${title}::${resolvedGroupId || 0}`, goalId);
+        await client.query(
+          `UPDATE "Goals" SET description = COALESCE($1, description), "groupId" = $2, "startDate" = COALESCE($3, "startDate"), "endDate" = COALESCE($4, "endDate"), status = COALESCE($5, status), progress = COALESCE($6, progress), weight = COALESCE($7, weight), "updatedAt" = NOW() WHERE id = $8`,
+          [
+            description,
+            resolvedGroupId,
+            startDate,
+            endDate,
+            status,
+            progress,
+            weight,
+            goalId,
+          ],
+        );
+      } else {
+        const insertRes = await client.query(
+          `INSERT INTO "Goals" (title, description, "groupId", "startDate", "endDate", status, progress, weight, "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,0),COALESCE($8,100),NOW(),NOW()) RETURNING id`,
+          [
+            title,
+            description,
+            resolvedGroupId,
+            startDate,
+            endDate,
+            status || "Not Started",
+            progress,
+            weight,
+          ],
+        );
+        goalMap.set(`${title}::${resolvedGroupId || 0}`, insertRes.rows[0].id);
+      }
+      imported.goals += 1;
+    }
+
+    for (const row of tasks) {
+      const title = (row.title || row.task_title || row.name || "").trim();
+      if (!title) continue;
+      const goalId =
+        Number(row.goal_id || row.goalid || 0) || (await resolveGoalId(row));
+      if (!goalId) continue;
+      const assignee =
+        row.assignee || row.assignee_username || row.assigneeid || null;
+      const assigneeId = assignee
+        ? Number(assignee) ||
+          usersByUsername.get(String(assignee).toLowerCase())
+        : null;
+      const progress = row.progress != null ? Number(row.progress) : null;
+      const weight = row.weight != null ? Number(row.weight) : null;
+      const dueDate = row.due_date || row.duedate || row.due || null;
+      const status = row.status || row.task_status || null;
+      const description = row.description || row.desc || null;
+
+      const existing = await client.query(
+        `SELECT id FROM "Tasks" WHERE title = $1 AND "goalId" = $2 LIMIT 1`,
+        [title, goalId],
+      );
+      if (existing.rows[0]) {
+        const taskId = existing.rows[0].id;
+        taskMap.set(`${goalId}::${title}`, taskId);
+        await client.query(
+          `UPDATE "Tasks" SET description = COALESCE($1, description), "assigneeId" = $2, "dueDate" = COALESCE($3, "dueDate"), status = COALESCE($4, status), progress = COALESCE($5, progress), weight = COALESCE($6, weight), "updatedAt" = NOW() WHERE id = $7`,
+          [
+            description,
+            assigneeId,
+            dueDate,
+            status || "To Do",
+            progress,
+            weight,
+            taskId,
+          ],
+        );
+      } else {
+        const insertRes = await client.query(
+          `INSERT INTO "Tasks" ("goalId", title, description, "assigneeId", "dueDate", status, progress, weight, "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,0),COALESCE($8,0),NOW(),NOW()) RETURNING id`,
+          [
+            goalId,
+            title,
+            description,
+            assigneeId,
+            dueDate,
+            status || "To Do",
+            progress,
+            weight,
+          ],
+        );
+        taskMap.set(`${goalId}::${title}`, insertRes.rows[0].id);
+      }
+      imported.tasks += 1;
+    }
+
+    for (const row of activities) {
+      const title = (row.title || row.activity_title || row.name || "").trim();
+      if (!title) continue;
+      const taskId =
+        Number(row.task_id || row.taskid || 0) ||
+        (await resolveTaskId(row, Number(row.goal_id || row.goalid || 0))) ||
+        (await resolveTaskId(row, await resolveGoalId(row)));
+      if (!taskId) continue;
+      const status = row.status || row.activity_status || null;
+      const weight = row.weight != null ? Number(row.weight) : null;
+      const isDone = row.is_done || row.isdone || row.done || false;
+      const metricType =
+        row.metric_type || row.metrictype || row.metricType || null;
+      const targetMetric =
+        row.target_metric || row.targetmetric || row.targetMetric || null;
+      const currentMetric =
+        row.current_metric || row.currentmetric || row.currentMetric || null;
+      const previousMetric =
+        row.previous_metric || row.previousmetric || row.previousMetric || null;
+      const quarterlyGoals =
+        row.quarterly_goals || row.quarterlygoals || row.quarterlyGoals || null;
+      const description = row.description || row.desc || null;
+
+      const existing = await client.query(
+        `SELECT id FROM "Activities" WHERE title = $1 AND "taskId" = $2 LIMIT 1`,
+        [title, taskId],
+      );
+      if (existing.rows[0]) {
+        const activityId = existing.rows[0].id;
+        activityMap.set(`${taskId}::${title}`, activityId);
+        await client.query(
+          `UPDATE "Activities" SET description = COALESCE($1, description), status = COALESCE($2, status), weight = COALESCE($3, weight), "isDone" = COALESCE($4, "isDone"), "metricType" = COALESCE($5, "metricType"), "targetMetric" = COALESCE($6, "targetMetric"), "currentMetric" = COALESCE($7, "currentMetric"), "previousMetric" = COALESCE($8, "previousMetric"), "quarterlyGoals" = COALESCE($9, "quarterlyGoals"), "updatedAt" = NOW() WHERE id = $10`,
+          [
+            description,
+            status || "To Do",
+            weight,
+            isDone === true || String(isDone).toLowerCase() === "true",
+            metricType || "Plus",
+            targetMetric,
+            currentMetric,
+            previousMetric,
+            quarterlyGoals,
+            activityId,
+          ],
+        );
+      } else {
+        const insertRes = await client.query(
+          `INSERT INTO "Activities" ("taskId", title, description, status, weight, "isDone", "metricType", "targetMetric", "currentMetric", "previousMetric", "quarterlyGoals", "createdAt", "updatedAt") VALUES ($1,$2,$3,$4,COALESCE($5,0),$6,COALESCE($7,'Plus'),$8,$9,$10,$11,NOW(),NOW()) RETURNING id`,
+          [
+            taskId,
+            title,
+            description,
+            status || "To Do",
+            weight,
+            isDone === true || String(isDone).toLowerCase() === "true",
+            metricType || "Plus",
+            targetMetric,
+            currentMetric,
+            previousMetric,
+            quarterlyGoals,
+          ],
+        );
+        activityMap.set(`${taskId}::${title}`, insertRes.rows[0].id);
+      }
+      imported.activities += 1;
+    }
+
+    await client.query("COMMIT");
+    return res.json({ message: "Excel data imported successfully.", imported });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("importProjectDataFromExcel error:", err);
+    return res.status(500).json({ error: err.message || "Import failed." });
+  } finally {
+    client.release();
   }
 };
 

@@ -8,7 +8,7 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
-import { fetchMasterReport } from "../api/reports";
+import { fetchMasterReport, downloadMasterReportExcel } from "../api/reports";
 import { useTranslation } from "react-i18next";
 import { fetchGroups } from "../api/groups";
 import TopBar from "../components/layout/TopBar";
@@ -1189,6 +1189,30 @@ const App = () => {
     </html>`;
   }
 
+  async function exportExcel() {
+    if (!master) return alert(t("reports.master.loadFirstAlert"));
+    try {
+      const blob = await downloadMasterReportExcel(groupId || undefined);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `master_report_${granularity}_${groupId || "all"}.xlsx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert(
+        err?.message ||
+          t(
+            "reports.master.downloadExcelFailed",
+            "Failed to download Excel report.",
+          ),
+      );
+    }
+  }
+
   function exportCSV() {
     if (!master) return alert(t("reports.master.loadFirstAlert"));
     const periods = periodColumns;
@@ -1608,6 +1632,13 @@ const App = () => {
               >
                 <Printer className="h-4 w-4" />
                 {t("reports.master.exportPDF")}
+              </button>
+              <button
+                onClick={exportExcel}
+                className="px-4 py-2.5 bg-sky-600 dark:bg-sky-900 text-white rounded-full hover:bg-sky-300 dark:hover:bg-sky-800 transition-all duration-300 surface-elevation-1 flex items-center justify-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {t("reports.master.exportExcel", "Export Excel")}
               </button>
               <button
                 onClick={exportCSV}
