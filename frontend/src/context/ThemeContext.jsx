@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 const ThemeContext = createContext();
 
@@ -12,7 +18,7 @@ export const ThemeProvider = ({ children }) => {
     } catch (e) {
       // ignore storage errors
     }
-    return document.documentElement.classList.contains("dark");
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches || false;
   });
 
   useEffect(() => {
@@ -30,7 +36,9 @@ export const ThemeProvider = ({ children }) => {
 
   const value = useMemo(() => ({ dark, toggleTheme, setTheme }), [dark]);
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 };
 
 export const useTheme = () => {
