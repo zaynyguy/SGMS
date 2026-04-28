@@ -1334,11 +1334,7 @@ const App = () => {
   }
 
   return (
-    <PageShell
-      title={t("reports.master.title")}
-      subtitle={t("reports.master.subtitle")}
-      className={mounted ? "animate-fade-in" : ""}
-    >
+    <>
       {/* MODIFIED: Use min-w-0 to prevent flex child expansion beyond parent width AND enforce strict max-width */}
       <div className="flex-1 min-w-0 w-full max-w-full overflow-hidden mx-auto px-4 py-6 transition-colors duration-300">
         <div className="mb-6 w-full">
@@ -1844,7 +1840,7 @@ const App = () => {
           </div>
         </div>
       </div>
-    </PageShell>
+    </>
   );
 };
 
