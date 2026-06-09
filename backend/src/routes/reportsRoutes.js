@@ -45,6 +45,14 @@ router.post(
   reportsController.importProjectDataFromExcel,
 );
 
+// Bulk import activities from hierarchical Excel file
+router.post(
+  "/bulk-import-excel",
+  upload.excelImport(),
+  authorizePermissions(["manage_reports"]),
+  reportsController.bulkImportActivitiesExcel,
+);
+
 // Fetch all reports (for admin review) — now accessible to view_reports, but controller scopes results
 router.get(
   "/",

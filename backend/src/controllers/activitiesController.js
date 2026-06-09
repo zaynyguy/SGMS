@@ -610,7 +610,11 @@ exports.updateActivity = async (req, res) => {
 
           // 4. Recalculate PROGRESS percentage
           let newProgress = 0;
-          if (["Plus", "Minus"].includes(metricType)) {
+
+          // Completion override: if isDone=true, always 100%
+          if (updatedActivity.isDone === true) {
+            newProgress = 100;
+          } else if (["Plus", "Minus"].includes(metricType)) {
             newProgress =
               targetVal > 0
                 ? Math.min(

@@ -1,5 +1,7 @@
 const ExcelJS = require("exceljs");
 
+// ===== UTILITIES =====
+
 function normalizeHeader(header) {
   if (header === null || header === undefined) return "";
   const str = String(header).trim();
@@ -72,10 +74,173 @@ function getSheetByName(workbook, name) {
   );
 }
 
+// ===== EXPORT: Hierarchical Master Workbook =====
+
+function buildMasterWorkbook(masterJson) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "SGMS";
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet("Master Report");
+
+  // Define header style
+  const headerStyle = {
+    font: { bold: true, color: { argb: "FFFFFFFF" } },
+    fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF4472C4" } },
+    alignment: { horizontal: "center", vertical: "center", wrapText: true },
+    border: {
+      top: { style: "thin", color: { argb: "FF000000" } },
+      left: { style: "thin", color: { argb: "FF000000" } },
+      bottom: { style: "thin", color: { argb: "FF000000" } },
+      right: { style: "thin", color: { argb: "FF000000" } },
+    },
+  };
+
+  const hierarchyHeaderStyle = {
+    font: { bold: true, color: { argb: "FF000000" } },
+    fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFE7E6E6" } },
+    alignment: { horizontal: "left", vertical: "center" },
+    border: {
+      top: { style: "thin", color: { argb: "FF000000" } },
+      left: { style: "thin", color: { argb: "FF000000" } },
+      bottom: { style: "thin", color: { argb: "FF000000" } },
+      right: { style: "thin", color: { argb: "FF000000" } },
+    },
+  };
+
+  const normalStyle = {
+    alignment: { horizontal: "left", vertical: "center", wrapText: true },
+    border: {
+      top: { style: "thin", color: { argb: "FFD3D3D3" } },
+      left: { style: "thin", color: { argb: "FFD3D3D3" } },
+      bottom: { style: "thin", color: { argb: "FFD3D3D3" } },
+      right: { style: "thin", color: { argb: "FFD3D3D3" } },
+    },
+  };
+
+  // Set up columns
+  sheet.columns = [
+    { header: "Level", key: "level", width: 15 },
+    { header: "Title", key: "title", width: 40 },
+    { header: "Metric Type", key: "metricType", width: 15 },
+    { header: "Target", key: "target", width: 15 },
+    { header: "Current", key: "current", width: 15 },
+    { header: "Previous", key: "previous", width: 15 },
+    { header: "Progress %", key: "progress", width: 12 },
+    { header: "Status", key: "status", width: 15 },
+    { header: "Weight", key: "weight", width: 10 },
+    { header: "Due Date", key: "dueDate", width: 15 },
+    { header: "Notes", key: "notes", width: 30 },
+  ];
+
+  // Add header row
+  const headerRow = sheet.getRow(1);
+  headerRow.eachCell((cell) => {
+    Object.assign(cell, headerStyle);
+  });
+
+  let rowNum = 2;
+
+  // Process each goal
+  for (const goal of masterJson.goals || []) {
+    // Goal row
+    const goalRow = sheet.getRow(rowNum);
+    goalRow.values = {
+      level: "GOAL",
+      title: goal.title,
+      metricType: "",
+      target: "",
+      current: "",
+      previous: "",
+      progress: goal.progress,
+      status: goal.status,
+      weight: goal.weight,
+      dueDate: "",
+      notes: goal.description || "",
+    };
+    // Apply goal styling
+    goalRow.eachCell((cell) => {
+      Object.assign(cell, hierarchyHeaderStyle);
+    });
+    rowNum++;
+
+    // Process tasks in goal
+    for (const task of goal.tasks || []) {
+      const taskRow = sheet.getRow(rowNum);
+      taskRow.values = {
+        level: "  TASK",
+        title: task.title,
+        metricType: "",
+        target: "",
+        current: "",
+        previous: "",
+        progress: task.progress,
+        status: task.status,
+        weight: task.weight,
+        dueDate: task.dueDate || "",
+        notes: task.description || "",
+      };
+      // Apply task styling (slightly indented)
+      taskRow.eachCell((cell) => {
+        Object.assign(cell, hierarchyHeaderStyle);
+      });
+      rowNum++;
+
+      // Process activities in task
+      for (const activity of task.activities || []) {
+        const actRow = sheet.getRow(rowNum);
+
+        const targetVal = activity.targetMetric
+          ? Object.values(activity.targetMetric)[0]
+          : "";
+        const currentVal = activity.currentMetric
+          ? Object.values(activity.currentMetric)[0]
+          : "";
+        const previousVal = activity.previousMetric
+          ? Object.values(activity.previousMetric)[0]
+          : "";
+
+        actRow.values = {
+          level: "    ACTIVITY",
+          title: activity.title,
+          metricType: activity.metricType || "Plus",
+          target: targetVal,
+          current: currentVal,
+          previous: previousVal,
+          progress: activity.progress,
+          status: activity.status,
+          weight: activity.weight,
+          dueDate: activity.dueDate || "",
+          notes: activity.description || "",
+        };
+        // Apply activity styling (further indented)
+        actRow.eachCell((cell) => {
+          Object.assign(cell, normalStyle);
+        });
+        rowNum++;
+      }
+    }
+  }
+
+  // Freeze first row
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+
+  return workbook;
+}
+
+// ===== IMPORT: Parse hierarchical workbook with deduplication =====
+
 async function parseExcelWorkbook(filePath) {
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(filePath);
 
+  // Check for "Master Report" sheet (new hierarchical format)
+  const masterSheet = getSheetByName(workbook, "Master Report");
+  if (masterSheet) {
+    return parseHierarchicalSheet(masterSheet);
+  }
+
+  // Fall back to legacy flat format
   return {
     goals: getSheetByName(workbook, "Goals")
       ? parseWorksheet(getSheetByName(workbook, "Goals"))
@@ -92,115 +257,126 @@ async function parseExcelWorkbook(filePath) {
   };
 }
 
-function buildMasterWorkbook(masterJson) {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = "SGMS";
-  workbook.created = new Date();
+/**
+ * Parse hierarchical Master Report sheet and return structured data
+ * Also deduplicate by (title, rollNo) composite key
+ */
+function parseHierarchicalSheet(worksheet) {
+  const goals = [];
+  const goalMap = new Map(); // Key: goalTitle, Value: goal object
+  let currentGoal = null;
+  let currentTask = null;
 
-  const goalsSheet = workbook.addWorksheet("Goals");
-  goalsSheet.columns = [
-    { header: "goal_id", key: "id", width: 10 },
-    { header: "title", key: "title", width: 30 },
-    { header: "progress", key: "progress", width: 12 },
-    { header: "status", key: "status", width: 16 },
-    { header: "weight", key: "weight", width: 12 },
-  ];
+  worksheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return; // Skip header
 
-  const tasksSheet = workbook.addWorksheet("Tasks");
-  tasksSheet.columns = [
-    { header: "task_id", key: "id", width: 10 },
-    { header: "goal_id", key: "goalId", width: 10 },
-    { header: "title", key: "title", width: 30 },
-    { header: "progress", key: "progress", width: 12 },
-    { header: "status", key: "status", width: 16 },
-    { header: "weight", key: "weight", width: 12 },
-    { header: "assignee", key: "assignee", width: 20 },
-  ];
+    const level = row.getCell(1).value;
+    if (!level) return; // Skip empty rows
 
-  const activitiesSheet = workbook.addWorksheet("Activities");
-  activitiesSheet.columns = [
-    { header: "activity_id", key: "id", width: 10 },
-    { header: "task_id", key: "taskId", width: 10 },
-    { header: "title", key: "title", width: 30 },
-    { header: "description", key: "description", width: 40 },
-    { header: "status", key: "status", width: 16 },
-    { header: "metric_type", key: "metricType", width: 16 },
-    { header: "target_metric", key: "targetMetric", width: 30 },
-    { header: "current_metric", key: "currentMetric", width: 30 },
-    { header: "previous_metric", key: "previousMetric", width: 30 },
-    { header: "quarterly_goals", key: "quarterlyGoals", width: 30 },
-    { header: "weight", key: "weight", width: 12 },
-    { header: "is_done", key: "isDone", width: 10 },
-  ];
+    const levelStr = String(level).trim().toUpperCase();
+    const title = row.getCell(2).value;
+    if (!title) return;
 
-  const reportsSheet = workbook.addWorksheet("Reports");
-  reportsSheet.columns = [
-    { header: "report_id", key: "id", width: 10 },
-    { header: "activity_id", key: "activityId", width: 10 },
-    { header: "narrative", key: "narrative", width: 50 },
-    { header: "status", key: "status", width: 16 },
-    { header: "new_status", key: "newStatus", width: 16 },
-    { header: "metrics", key: "metrics", width: 40 },
-    { header: "created_at", key: "createdAt", width: 20 },
-  ];
-
-  for (const goal of masterJson.goals || []) {
-    goalsSheet.addRow({
-      id: goal.id,
-      title: goal.title,
-      progress: goal.progress,
-      status: goal.status,
-      weight: goal.weight,
-    });
-    for (const task of goal.tasks || []) {
-      tasksSheet.addRow({
-        id: task.id,
-        goalId: goal.id,
-        title: task.title,
-        progress: task.progress,
-        status: task.status,
-        weight: task.weight,
-        assignee: task.assignee,
-      });
-      for (const activity of task.activities || []) {
-        activitiesSheet.addRow({
-          id: activity.id,
-          taskId: task.id,
-          title: activity.title,
-          description: activity.description,
-          status: activity.status,
-          metricType: activity.metricType,
-          targetMetric: JSON.stringify(activity.targetMetric || {}),
-          currentMetric: JSON.stringify(activity.currentMetric || {}),
-          previousMetric: JSON.stringify(activity.previousMetric || {}),
-          quarterlyGoals: JSON.stringify(activity.quarterlyGoals || {}),
-          weight: activity.weight,
-          isDone: activity.isDone ? true : false,
-        });
-        for (const rep of activity.reports || []) {
-          reportsSheet.addRow({
-            id: rep.id,
-            activityId: activity.id,
-            narrative: rep.narrative,
-            status: rep.status,
-            newStatus: rep.new_status,
-            metrics: JSON.stringify(rep.metrics || {}),
-            createdAt: rep.createdAt,
-          });
-        }
+    if (levelStr === "GOAL") {
+      // Create new goal
+      const goalKey = String(title).trim().toLowerCase();
+      if (!goalMap.has(goalKey)) {
+        currentGoal = {
+          title: String(title).trim(),
+          description: row.getCell(11).value || "",
+          status: row.getCell(8).value || "Not Started",
+          weight: parseFloat(row.getCell(9).value) || 100,
+          tasks: [],
+        };
+        goalMap.set(goalKey, currentGoal);
+        goals.push(currentGoal);
+      } else {
+        currentGoal = goalMap.get(goalKey);
       }
+      currentTask = null;
+    } else if (levelStr.includes("TASK")) {
+      // Create new task in current goal
+      if (!currentGoal) return;
+
+      const taskKey = String(title).trim().toLowerCase();
+      let existingTask = currentGoal.tasks.find(
+        (t) => String(t.title).trim().toLowerCase() === taskKey,
+      );
+
+      if (!existingTask) {
+        existingTask = {
+          title: String(title).trim(),
+          description: row.getCell(11).value || "",
+          status: row.getCell(8).value || "To Do",
+          weight: parseFloat(row.getCell(9).value) || 0,
+          dueDate: row.getCell(10).value || null,
+          activities: [],
+        };
+        currentGoal.tasks.push(existingTask);
+      }
+      currentTask = existingTask;
+    } else if (levelStr.includes("ACTIVITY")) {
+      // Create new activity in current task
+      if (!currentTask) return;
+
+      const actKey = String(title).trim().toLowerCase();
+      let existingAct = currentTask.activities.find(
+        (a) => String(a.title).trim().toLowerCase() === actKey,
+      );
+
+      if (!existingAct) {
+        existingAct = {
+          title: String(title).trim(),
+          description: row.getCell(11).value || "",
+          metricType: row.getCell(3).value || "Plus",
+          targetMetric: parseMetricCell(row.getCell(4).value),
+          currentMetric: parseMetricCell(row.getCell(5).value),
+          previousMetric: parseMetricCell(row.getCell(6).value),
+          status: row.getCell(8).value || "To Do",
+          weight: parseFloat(row.getCell(9).value) || 0,
+          dueDate: row.getCell(10).value || null,
+          isDone: false,
+        };
+        currentTask.activities.push(existingAct);
+      }
+    }
+  });
+
+  return {
+    goals,
+    tasks: [], // Not used in hierarchical format
+    activities: [], // Not used in hierarchical format
+    reports: [],
+  };
+}
+
+/**
+ * Parse metric cell value (could be number, JSON string, or formula)
+ */
+function parseMetricCell(value) {
+  if (!value) return {};
+
+  if (typeof value === "number") {
+    return { value: value };
+  }
+
+  const str = String(value).trim();
+  if (str === "" || str === "0") return {};
+
+  // Try to parse as JSON
+  if (str.startsWith("{") || str.startsWith("[")) {
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      // Not JSON, treat as single value
+      const num = parseFloat(str);
+      return isNaN(num) ? {} : { value: num };
     }
   }
 
-  [goalsSheet, tasksSheet, activitiesSheet, reportsSheet].forEach((sheet) => {
-    sheet.eachRow((row, rowNumber) => {
-      row.eachCell((cell) => {
-        if (rowNumber === 1) cell.font = { bold: true };
-      });
-    });
-  });
-
-  return workbook;
+  // Try as number
+  const num = parseFloat(str);
+  return isNaN(num) ? {} : { value: num };
 }
 
 module.exports = {

@@ -66,21 +66,52 @@ const updateTask = createTask.keys({
 const createActivity = Joi.object({
   title: nonEmptyText().max(255).required(),
   description: trimmedText(),
-  metrics: Joi.object().unknown(true).default({}),
+  weight: Joi.number().positive().optional(),
   dueDate: Joi.date().iso().allow(null),
-});
+  targetMetric: Joi.object().unknown(true).allow(null),
+  previousMetric: Joi.object().unknown(true).allow(null),
+  currentMetric: Joi.object().unknown(true).allow(null),
+  quarterlyGoals: Joi.object().unknown(true).allow(null),
+  quarterlyRecords: Joi.object().unknown(true).allow(null),
+  metricType: Joi.string()
+    .valid("Plus", "Minus", "Increase", "Decrease", "Maintain")
+    .default("Plus"),
+  rollNo: Joi.number().integer().positive().allow(null),
+}).unknown(false);
 
-const updateActivity = createActivity.keys({
+const updateActivity = Joi.object({
+  title: nonEmptyText().max(255).optional(),
+  description: trimmedText(),
+  weight: Joi.number().positive().optional(),
   status: Joi.string().valid("To Do", "In Progress", "Done").optional(),
-});
+  isDone: Joi.boolean().optional(),
+  dueDate: Joi.date().iso().allow(null),
+  targetMetric: Joi.object().unknown(true).allow(null),
+  previousMetric: Joi.object().unknown(true).allow(null),
+  currentMetric: Joi.object().unknown(true).allow(null),
+  quarterlyGoals: Joi.object().unknown(true).allow(null),
+  quarterlyRecords: Joi.object().unknown(true).allow(null),
+  metricType: Joi.string()
+    .valid("Plus", "Minus", "Increase", "Decrease", "Maintain")
+    .optional(),
+  rollNo: Joi.number().integer().positive().allow(null),
+}).unknown(false);
 
 function validate(schema, pick = "body") {
   return (req, res, next) => {
     const src =
       pick === "params" ? req.params : pick === "query" ? req.query : req.body;
-    const { error, value } = schema.validate(src, { stripUnknown: true });
-    if (error)
-      return res.status(400).json({ message: error.details[0].message });
+    // Strict validation: reject unknown properties unless explicitly allowed
+    const options = {
+      stripUnknown: false,
+      abortEarly: false,
+      presence: "required",
+    };
+    const { error, value } = schema.validate(src, options);
+    if (error) {
+      const details = error.details.map((d) => d.message).join("; ");
+      return res.status(400).json({ message: `Validation error: ${details}` });
+    }
     if (pick === "params") req.params = value;
     else if (pick === "query") req.query = value;
     else req.body = value;

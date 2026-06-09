@@ -5,3 +5,4 @@ frontend/.env
 frontend/dist
 uploads/
 .DS_Store
+importexport/

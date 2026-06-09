@@ -1451,6 +1451,300 @@ exports.importProjectDataFromExcel = async (req, res) => {
   }
 };
 
+/**
+ * Bulk import activities from hierarchical Excel file
+ * POST /api/reports/bulk-import-excel
+ * - Parses hierarchical Excel format (Goal -> Task -> Activity)
+ * - Creates/updates activities with their metrics
+ * - Deduplicates by (title, goalId/taskId) composite key
+ * - Triggers progress recalculation via accumulate_metrics
+ * - Returns summary of imported/updated/skipped items
+ */
+exports.bulkImportActivitiesExcel = async (req, res) => {
+  const file = req.file;
+  if (!file) {
+    return res.status(400).json({ error: "Excel file is required." });
+  }
+
+  let parsedData;
+  try {
+    parsedData = await parseExcelWorkbook(file.path);
+  } catch (err) {
+    console.error("bulkImportActivitiesExcel: parse failed:", err);
+    return res.status(400).json({ error: "Invalid Excel file format." });
+  }
+
+  const { goals: parsedGoals } = parsedData;
+  if (!parsedGoals || parsedGoals.length === 0) {
+    return res.status(400).json({
+      error:
+        "Excel file must contain at least one Goal in the Master Report sheet.",
+    });
+  }
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    const summary = {
+      goals_created: 0,
+      goals_updated: 0,
+      tasks_created: 0,
+      tasks_updated: 0,
+      activities_created: 0,
+      activities_updated: 0,
+      metrics_updated: 0,
+      errors: [],
+    };
+
+    // Process each goal
+    for (const goalData of parsedGoals) {
+      let goalId = null;
+      const goalTitle = String(goalData.title).trim();
+      const groupId = goalData.groupId || null;
+
+      if (!goalTitle) continue;
+
+      try {
+        // Check if goal exists by title and groupId
+        const existingGoal = await client.query(
+          `SELECT id FROM "Goals" WHERE title = $1 AND COALESCE("groupId", 0) = COALESCE($2, 0) LIMIT 1`,
+          [goalTitle, groupId],
+        );
+
+        if (existingGoal.rows[0]) {
+          goalId = existingGoal.rows[0].id;
+          summary.goals_updated += 1;
+        } else {
+          // Create new goal
+          const newGoal = await client.query(
+            `INSERT INTO "Goals" (title, description, "groupId", status, weight, "createdAt", "updatedAt")
+             VALUES ($1, $2, $3, $4, COALESCE($5, 100), NOW(), NOW())
+             RETURNING id`,
+            [
+              goalTitle,
+              goalData.description || null,
+              groupId,
+              goalData.status || "Not Started",
+              goalData.weight,
+            ],
+          );
+          goalId = newGoal.rows[0].id;
+          summary.goals_created += 1;
+        }
+
+        // Process tasks in goal
+        for (const taskData of goalData.tasks || []) {
+          let taskId = null;
+          const taskTitle = String(taskData.title).trim();
+
+          if (!taskTitle || !goalId) continue;
+
+          try {
+            // Check if task exists
+            const existingTask = await client.query(
+              `SELECT id FROM "Tasks" WHERE title = $1 AND "goalId" = $2 LIMIT 1`,
+              [taskTitle, goalId],
+            );
+
+            if (existingTask.rows[0]) {
+              taskId = existingTask.rows[0].id;
+              summary.tasks_updated += 1;
+            } else {
+              // Create new task
+              const newTask = await client.query(
+                `INSERT INTO "Tasks" ("goalId", title, description, status, weight, "createdAt", "updatedAt")
+                 VALUES ($1, $2, $3, $4, COALESCE($5, 0), NOW(), NOW())
+                 RETURNING id`,
+                [
+                  goalId,
+                  taskTitle,
+                  taskData.description || null,
+                  taskData.status || "To Do",
+                  taskData.weight,
+                ],
+              );
+              taskId = newTask.rows[0].id;
+              summary.tasks_created += 1;
+            }
+
+            // Process activities in task
+            for (const actData of taskData.activities || []) {
+              let activityId = null;
+              const actTitle = String(actData.title).trim();
+
+              if (!actTitle || !taskId) continue;
+
+              try {
+                // Check if activity exists by (title, taskId)
+                const existingAct = await client.query(
+                  `SELECT id FROM "Activities" WHERE title = $1 AND "taskId" = $2 LIMIT 1`,
+                  [actTitle, taskId],
+                );
+
+                const targetMetricJson = parseMetricToJson(
+                  actData.targetMetric,
+                );
+                const previousMetricJson = parseMetricToJson(
+                  actData.previousMetric,
+                );
+                const currentMetricJson = parseMetricToJson(
+                  actData.currentMetric,
+                );
+
+                if (existingAct.rows[0]) {
+                  activityId = existingAct.rows[0].id;
+
+                  // Update existing activity
+                  await client.query(
+                    `UPDATE "Activities" 
+                     SET description = COALESCE($1, description),
+                         "metricType" = COALESCE($2, "metricType"),
+                         "targetMetric" = COALESCE($3, "targetMetric"),
+                         "previousMetric" = COALESCE($4, "previousMetric"),
+                         status = COALESCE($5, status),
+                         weight = COALESCE($6, weight),
+                         "updatedAt" = NOW()
+                     WHERE id = $7`,
+                    [
+                      actData.description || null,
+                      actData.metricType || "Plus",
+                      targetMetricJson,
+                      previousMetricJson,
+                      actData.status || "To Do",
+                      actData.weight,
+                      activityId,
+                    ],
+                  );
+                  summary.activities_updated += 1;
+                } else {
+                  // Create new activity
+                  const newAct = await client.query(
+                    `INSERT INTO "Activities" 
+                     ("taskId", title, description, status, weight, "metricType", "targetMetric", "previousMetric", "currentMetric", "isDone", "createdAt", "updatedAt")
+                     VALUES ($1, $2, $3, $4, COALESCE($5, 0), COALESCE($6, 'Plus'), $7, $8, $9, $10, NOW(), NOW())
+                     RETURNING id`,
+                    [
+                      taskId,
+                      actTitle,
+                      actData.description || null,
+                      actData.status || "To Do",
+                      actData.weight,
+                      actData.metricType || "Plus",
+                      targetMetricJson,
+                      previousMetricJson,
+                      currentMetricJson,
+                      actData.isDone === true,
+                    ],
+                  );
+                  activityId = newAct.rows[0].id;
+                  summary.activities_created += 1;
+                }
+
+                // If currentMetric or metricType provided, trigger progress recalculation
+                if (
+                  currentMetricJson &&
+                  Object.keys(currentMetricJson).length > 0
+                ) {
+                  await client.query(
+                    `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
+                    [activityId, currentMetricJson, req.user.id],
+                  );
+                  summary.metrics_updated += 1;
+                }
+              } catch (actErr) {
+                console.error(
+                  `Activity import error for "${actTitle}":`,
+                  actErr,
+                );
+                summary.errors.push(
+                  `Activity "${actTitle}": ${actErr.message}`,
+                );
+              }
+            }
+          } catch (taskErr) {
+            console.error(`Task import error for "${taskTitle}":`, taskErr);
+            summary.errors.push(`Task "${taskTitle}": ${taskErr.message}`);
+          }
+        }
+      } catch (goalErr) {
+        console.error(`Goal import error for "${goalTitle}":`, goalErr);
+        summary.errors.push(`Goal "${goalTitle}": ${goalErr.message}`);
+      }
+    }
+
+    await client.query("COMMIT");
+
+    // Log audit
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "BULK_IMPORT_ACTIVITIES",
+        entity: "Activity",
+        entityId: null,
+        details: {
+          file: file.originalname,
+          summary,
+        },
+        req,
+      });
+    } catch (auditErr) {
+      console.error("Audit log failed for bulk import:", auditErr);
+    }
+
+    return res.status(200).json({
+      message: "Bulk import completed successfully.",
+      summary,
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("bulkImportActivitiesExcel error:", err);
+    return res.status(500).json({
+      error: err.message || "Bulk import failed.",
+    });
+  } finally {
+    client.release();
+    // Clean up uploaded file
+    if (file && file.path) {
+      fs.unlink(file.path, (err) => {
+        if (err) console.error("Failed to delete uploaded file:", err);
+      });
+    }
+  }
+};
+
+/**
+ * Helper: Parse metric value to JSON object
+ * Supports: number, JSON string, or metric object
+ */
+function parseMetricToJson(value) {
+  if (!value) return null;
+
+  if (typeof value === "object") {
+    return value;
+  }
+
+  const str = String(value).trim();
+  if (!str || str === "0" || str === "") return null;
+
+  // Try JSON parse
+  if (str.startsWith("{") || str.startsWith("[")) {
+    try {
+      return JSON.parse(str);
+    } catch (e) {
+      // Not valid JSON
+    }
+  }
+
+  // Try number
+  const num = parseFloat(str);
+  if (!isNaN(num)) {
+    return { value: num };
+  }
+
+  return null;
+}
+
 /* Helper to find activity in master JSON */
 function findActivityInMaster(masterJson, activityId) {
   if (!masterJson || !masterJson.goals) return null;

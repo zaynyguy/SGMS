@@ -65,6 +65,17 @@ export const fetchReportingStatus = async () => {
   };
 };
 
+export const bulkImportActivitiesExcel = (file) => {
+  if (!(file instanceof File)) {
+    throw new Error("A File object is required for Excel import.");
+  }
+  const formData = new FormData();
+  formData.append("file", file);
+  return api("/api/reports/bulk-import-excel", "POST", formData, {
+    isFormData: true,
+  });
+};
+
 export default {
   submitReport,
   fetchReports,
@@ -74,4 +85,5 @@ export default {
   downloadMasterReportExcel,
   importProjectExcel,
   fetchReportingStatus,
+  bulkImportActivitiesExcel,
 };
