@@ -6,6 +6,7 @@ const { initSocket } = require("./services/socketService");
 const db = require("./db");
 const cookieParser = require("cookie-parser");
 const { scheduleMonthlySnapshots } = require("./jobs/monthlySnapshot");
+const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 const app = express();
 const server = http.createServer(app);
@@ -36,6 +37,7 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+app.use(require("./middleware/sanitizeInput").sanitizeInput);
 
 scheduleMonthlySnapshots({ schedule: "0 9 1 * *" });
 
@@ -60,6 +62,9 @@ app.use("/api/records", require("./routes/recordsRoutes"));
 app.get("/", (req, res) => {
   res.send("The API server is running...");
 });
+
+app.use(notFound);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
