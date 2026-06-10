@@ -19,6 +19,7 @@ import GroupManagementPage from "./pages/GroupsManagementPage";
 import ReportReviewPage from "./pages/ReportReviewPage";
 import MasterReportPage from "./pages/MasterReportPage";
 import ProjectManagement from "./pages/ProjectManagementPage";
+import BulkImportPage from "./pages/BulkImportPage";
 import AttachmentManager from "./pages/AttachmentPage";
 import NotificationsPanel from "./pages/NotificationPage";
 import ChatPage from "./pages/ChatPage";
@@ -109,6 +110,14 @@ function App() {
                   element={
                     <ProtectedRoute requiredPermission="view_gta">
                       <ProjectManagement />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/project/bulk-import"
+                  element={
+                    <ProtectedRoute requiredPermission="manage_reports">
+                      <BulkImportPage />
                     </ProtectedRoute>
                   }
                 />

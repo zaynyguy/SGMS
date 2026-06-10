@@ -506,6 +506,16 @@ exports.updateActivity = async (req, res) => {
       if (!r.rows || !r.rows[0]) throw new Error("Failed to update activity");
       const updatedActivity = r.rows[0];
 
+      // ADDED: If isDone was changed, recalculate progress cascade (Activity -> Task -> Goal)
+      const isDoneChanged = safeIsDone !== null && safeIsDone !== existing.isDone;
+      if (isDoneChanged) {
+        const metricForProgress = updatedActivity.currentMetric || {};
+        await client.query(
+          `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
+          [activityId, metricForProgress, req.user.id],
+        );
+      }
+
       // NEW: Handle quarterlyRecords if provided
       if (quarterlyRecords && typeof quarterlyRecords === "object") {
         // Get fiscal year from database helper function

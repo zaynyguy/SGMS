@@ -152,9 +152,12 @@ const Sidebar = ({ children, isOpen: mobileIsOpen, onToggle, onRequestClose }) =
     },
     (hasPermission("manage_gta") || hasPermission("view_gta")) && {
       key: "projects",
-      to: "/project",
       icon: <Target size={20} />,
       label: t("sidebar.menu.projectManagement"),
+      children: [
+        { to: "/project", label: t("sidebar.menu.projectManagement") || "Project Management", icon: <Target size={16} /> },
+        hasPermission("manage_reports") && { to: "/project/bulk-import", label: t("sidebar.menu.bulkImport") || "Bulk Import", icon: <FileText size={16} /> },
+      ].filter(Boolean),
     },
     (hasPermission("manage_reports")) && {
       key: "reports",

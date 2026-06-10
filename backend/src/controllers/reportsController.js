@@ -1594,35 +1594,49 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
 
                 if (existingAct.rows[0]) {
                   activityId = existingAct.rows[0].id;
+                  const existingActivityRecord = existingAct.rows[0];
 
-                  // Update existing activity
+                  // Update existing activity - now includes isDone to handle status changes
                   await client.query(
                     `UPDATE "Activities" 
                      SET description = COALESCE($1, description),
-                         "metricType" = COALESCE($2, "metricType"),
+                         "metricType" = COALESCE($2::metric_type, "metricType"),
                          "targetMetric" = COALESCE($3, "targetMetric"),
                          "previousMetric" = COALESCE($4, "previousMetric"),
                          status = COALESCE($5, status),
                          weight = COALESCE($6, weight),
+                         "isDone" = COALESCE($8, "isDone"),
                          "updatedAt" = NOW()
                      WHERE id = $7`,
                     [
                       actData.description || null,
-                      actData.metricType || "Plus",
+                      actData.metricType || null,
                       targetMetricJson,
                       previousMetricJson,
                       actData.status || "To Do",
                       actData.weight,
                       activityId,
+                      actData.isDone === true,
                     ],
                   );
                   summary.activities_updated += 1;
+                  
+                  // ALWAYS recalculate progress on any update (including isDone changes)
+                  // Use provided currentMetric if available, otherwise use existing
+                  const metricToUse = currentMetricJson || existingActivityRecord.currentMetric || {};
+                  if (Object.keys(metricToUse).length > 0) {
+                    await client.query(
+                      `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
+                      [activityId, metricToUse, req.user.id],
+                    );
+                    summary.metrics_updated += 1;
+                  }
                 } else {
                   // Create new activity
                   const newAct = await client.query(
                     `INSERT INTO "Activities" 
                      ("taskId", title, description, status, weight, "metricType", "targetMetric", "previousMetric", "currentMetric", "isDone", "createdAt", "updatedAt")
-                     VALUES ($1, $2, $3, $4, COALESCE($5, 0), COALESCE($6, 'Plus'), $7, $8, $9, $10, NOW(), NOW())
+                     VALUES ($1, $2, $3, $4, COALESCE($5, 0), COALESCE($6, 'Plus')::metric_type, $7, $8, $9, $10, NOW(), NOW())
                      RETURNING id`,
                     [
                       taskId,
@@ -1639,19 +1653,19 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
                   );
                   activityId = newAct.rows[0].id;
                   summary.activities_created += 1;
+                  
+                  // Recalculate progress for new activity
+                  if (currentMetricJson && Object.keys(currentMetricJson).length > 0) {
+                    await client.query(
+                      `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
+                      [activityId, currentMetricJson, req.user.id],
+                    );
+                    summary.metrics_updated += 1;
+                  }
                 }
 
-                // If currentMetric or metricType provided, trigger progress recalculation
-                if (
-                  currentMetricJson &&
-                  Object.keys(currentMetricJson).length > 0
-                ) {
-                  await client.query(
-                    `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
-                    [activityId, currentMetricJson, req.user.id],
-                  );
-                  summary.metrics_updated += 1;
-                }
+                // Note: Progress recalculation is now handled for both updates and creates above
+                // Removed old condition that only called accumulate_metrics when currentMetric was provided
               } catch (actErr) {
                 console.error(
                   `Activity import error for "${actTitle}":`,
