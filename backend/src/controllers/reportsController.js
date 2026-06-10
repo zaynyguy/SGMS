@@ -1620,10 +1620,13 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
                     ],
                   );
                   summary.activities_updated += 1;
-                  
+
                   // ALWAYS recalculate progress on any update (including isDone changes)
                   // Use provided currentMetric if available, otherwise use existing
-                  const metricToUse = currentMetricJson || existingActivityRecord.currentMetric || {};
+                  const metricToUse =
+                    currentMetricJson ||
+                    existingActivityRecord.currentMetric ||
+                    {};
                   if (Object.keys(metricToUse).length > 0) {
                     await client.query(
                       `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
@@ -1653,9 +1656,12 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
                   );
                   activityId = newAct.rows[0].id;
                   summary.activities_created += 1;
-                  
+
                   // Recalculate progress for new activity
-                  if (currentMetricJson && Object.keys(currentMetricJson).length > 0) {
+                  if (
+                    currentMetricJson &&
+                    Object.keys(currentMetricJson).length > 0
+                  ) {
                     await client.query(
                       `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
                       [activityId, currentMetricJson, req.user.id],

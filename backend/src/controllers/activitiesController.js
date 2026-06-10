@@ -507,7 +507,8 @@ exports.updateActivity = async (req, res) => {
       const updatedActivity = r.rows[0];
 
       // ADDED: If isDone was changed, recalculate progress cascade (Activity -> Task -> Goal)
-      const isDoneChanged = safeIsDone !== null && safeIsDone !== existing.isDone;
+      const isDoneChanged =
+        safeIsDone !== null && safeIsDone !== existing.isDone;
       if (isDoneChanged) {
         const metricForProgress = updatedActivity.currentMetric || {};
         await client.query(

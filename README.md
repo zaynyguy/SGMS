@@ -122,7 +122,8 @@ Useful file references
 ### Overview
 
 SGMS uses a **hierarchical structure** with cascading progress calculations:
-- **Goals** contain **Tasks** 
+
+- **Goals** contain **Tasks**
 - **Tasks** contain **Activities**
 - **Activities** have metrics that roll up to task progress
 - **Task** progress rolls up to **goal** progress
@@ -166,6 +167,7 @@ Goal Progress     = SUM(task.progress × task.weight) / SUM(task.weight)
 #### Completion Override
 
 When an activity is marked as **complete** (`isDone = true`):
+
 - Progress is **always 100%**, regardless of metrics
 - Used by admins for manual completion marking
 - Override takes precedence over calculated metrics
@@ -175,7 +177,9 @@ When an activity is marked as **complete** (`isDone = true`):
 ### Admin vs User Workflows
 
 #### Admin Capabilities
+
 Admins can:
+
 - Directly update activity status (To Do → In Progress → Complete)
 - Mark activities as complete (`isDone = true`)
 - Update metrics in the UI
@@ -184,7 +188,9 @@ Admins can:
 - Progress recalculates in real-time
 
 #### User Capabilities
+
 Regular users:
+
 - Submit progress via the **Report System** (not direct edits)
 - Submit quarterly metrics for activities
 - Cannot directly change activity status
@@ -219,6 +225,7 @@ Located under **Project Management → Bulk Import**
    - Progress automatically recalculates
 
 **File Format Requirements**:
+
 - Excel file (.xlsx or .xls)
 - Maximum 50MB
 - Must contain "Master Report" sheet
@@ -227,6 +234,7 @@ Located under **Project Management → Bulk Import**
 #### Import Logic
 
 When importing:
+
 1. **Existing Goals/Tasks**: Updates if found by name
 2. **New Goals/Tasks**: Creates new records
 3. **Existing Activities**: Updates metadata (description, weight, status, metrics, isDone)
@@ -239,21 +247,26 @@ When importing:
 ### Recent Fixes (June 2024)
 
 #### Fix 1: Activity Status Changes Now Update Progress
+
 **Problem**: Changing `isDone` to `true` didn't update task progress
 **Solution**: Added explicit `accumulate_metrics()` call when isDone changes in activity update endpoint
 **Files Modified**: [backend/src/controllers/activitiesController.js](backend/src/controllers/activitiesController.js)
 
 #### Fix 2: Import System Properly Updates Database
+
 **Problem**: Import only recalculated progress for new metrics, not for status/isDone changes
-**Solution**: 
+**Solution**:
+
 - Added `isDone` field to import update query
 - Always call `accumulate_metrics()` after activity updates
 - Ensures progress cascades for all changes
-**Files Modified**: [backend/src/controllers/reportsController.js](backend/src/controllers/reportsController.js)
+  **Files Modified**: [backend/src/controllers/reportsController.js](backend/src/controllers/reportsController.js)
 
 #### Fix 3: Progress Rollup Triggers
+
 **Status**: Verified via migrations 002-004
 **Migration Files**:
+
 - [002_fix_progress_rollup.sql](backend/src/scripts/migrations/002_fix_progress_rollup.sql)
 - [003_update_progress_logic.sql](backend/src/scripts/migrations/003_update_progress_logic.sql)
 - [004_fix_progress_rollup_triggers.sql](backend/src/scripts/migrations/004_fix_progress_rollup_triggers.sql)
@@ -263,6 +276,7 @@ When importing:
 ### Testing the Fixes
 
 #### Test 1: Direct Activity Update
+
 ```bash
 # 1. Create an activity
 POST /api/tasks/{taskId}/activities
@@ -285,6 +299,7 @@ GET /api/tasks/{taskId}
 ```
 
 #### Test 2: Bulk Import with Status Changes
+
 ```bash
 # 1. Download master report template
 GET /api/reports/master
@@ -311,6 +326,7 @@ GET /api/goals/{goalId}
 ```
 
 #### Test 3: Progress Cascade
+
 ```bash
 # 1. Update Activity: isDone=true → Activity.progress=100%
 # 2. Verify Task: task.progress recalculates from weighted activities
@@ -324,15 +340,18 @@ GET /api/goals/{goalId}
 The system uses PostgreSQL triggers for automatic progress recalculation:
 
 **Trigger**: `after_activities_change` (on Activities table)
+
 - Fires on: INSERT, UPDATE, DELETE
 - Action: Recalculates task progress using weighted average
 - Then: Updates parent goal progress
 
 **Function**: `trg_recalc_task_progress()`
+
 - Calculates: `SUM(activity.progress × activity.weight) / SUM(activity.weight)`
 - Updates: Task.progress and Task.status if progress ≥ 100%
 
 **Function**: `trg_recalc_goal_progress()`
+
 - Calculates: `SUM(task.progress × task.weight) / SUM(task.weight)`
 - Updates: Goal.progress and Goal.status if progress ≥ 100%
 
@@ -341,18 +360,22 @@ The system uses PostgreSQL triggers for automatic progress recalculation:
 ### Common Issues & Solutions
 
 **Issue**: Activity isDone changed but progress didn't update
+
 - **Solution**: Run migrations: `npm run migrate`
 - **Verification**: Check if trigger exists: `SELECT * FROM pg_trigger WHERE tgname = 'after_activities_change'`
 
 **Issue**: Bulk import shows "Unsupported file type"
+
 - **Solution**: Ensure file is Excel (.xlsx or .xls), not CSV
 - **Verification**: Check uploadMiddleware.js for allowed MIME types
 
 **Issue**: Import doesn't recalculate goal progress
+
 - **Solution**: Verify accumulate_metrics function exists: `SELECT * FROM pg_proc WHERE proname = 'accumulate_metrics'`
 - **Verification**: Run a test import and check for errors in console
 
 **Issue**: Weights don't add up correctly
+
 - **Error**: "Cannot set activity weight to X. Task total is Y..."
 - **Solution**: Ensure sum of all activity weights ≤ task weight
 - **Note**: Allow for floating point precision: 0.01 margin
@@ -364,11 +387,13 @@ The system uses PostgreSQL triggers for automatic progress recalculation:
 **Endpoint**: `POST /api/reports/bulk-import-excel`
 
 **Requirements**:
+
 - Authentication: Requires `manage_reports` permission
 - File: Multipart form data with field name "file"
 - Max size: 50MB
 
 **Request**:
+
 ```
 POST /api/reports/bulk-import-excel
 Content-Type: multipart/form-data
@@ -377,6 +402,7 @@ file: <xlsx file>
 ```
 
 **Response Success** (200):
+
 ```json
 {
   "message": "Excel data imported successfully.",
@@ -394,6 +420,7 @@ file: <xlsx file>
 ```
 
 **Response Error** (400/500):
+
 ```json
 {
   "error": "Excel file must contain at least one Goal in the Master Report sheet."
@@ -407,7 +434,7 @@ file: <xlsx file>
 - **Large Imports**: 100+ activities may take 30-60 seconds
 - **Progress Cascade**: Each activity update triggers 2 SQL updates (task, then goal)
 - **Weighted Calculations**: O(n) where n = number of children per node
-- **Recommendations**: 
+- **Recommendations**:
   - Batch imports during off-hours for large datasets
   - Monitor database query logs if imports exceed 2 minutes
 

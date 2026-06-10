@@ -2,9 +2,18 @@ import React, { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../context/AuthContext";
 import TopBar from "../components/layout/TopBar";
-import { Upload, Download, AlertCircle, CheckCircle, FileText } from "lucide-react";
+import {
+  Upload,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  FileText,
+} from "lucide-react";
 import Toast from "../components/common/Toast";
-import { bulkImportActivitiesExcel, downloadMasterReportExcel } from "../api/reports";
+import {
+  bulkImportActivitiesExcel,
+  downloadMasterReportExcel,
+} from "../api/reports";
 
 export default function BulkImportPage() {
   const { t } = useTranslation();
@@ -25,12 +34,18 @@ export default function BulkImportPage() {
       const url = window.URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `bulk-import-template-${new Date().toISOString().split("T")[0]}.xlsx`);
+      link.setAttribute(
+        "download",
+        `bulk-import-template-${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      setImportMessage(t("common.downloaded_successfully") || "Template downloaded successfully");
+      setImportMessage(
+        t("common.downloaded_successfully") ||
+          "Template downloaded successfully",
+      );
     } catch (err) {
       console.error("Download template error:", err);
       setImportError(err.message || "Failed to download template");
@@ -87,7 +102,10 @@ export default function BulkImportPage() {
       }
     } catch (err) {
       console.error("Bulk import error:", err);
-      setImportError(err.message || "Failed to import Excel file. Please check the format and try again.");
+      setImportError(
+        err.message ||
+          "Failed to import Excel file. Please check the format and try again.",
+      );
     } finally {
       setIsImporting(false);
     }
@@ -104,7 +122,8 @@ export default function BulkImportPage() {
             {t("bulk_import.title") || "Bulk Import"}
           </h1>
           <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
-            {t("bulk_import.description") || "Import Goals, Tasks, and Activities in bulk from an Excel file"}
+            {t("bulk_import.description") ||
+              "Import Goals, Tasks, and Activities in bulk from an Excel file"}
           </p>
         </div>
 
@@ -135,7 +154,9 @@ export default function BulkImportPage() {
             className="flex items-center gap-2 px-4 py-3 bg-[var(--primary)] dark:bg-blue-600 text-[var(--on-primary)] dark:text-white rounded-lg hover:bg-[color-mix(in_srgb,var(--primary),black_10%)] dark:hover:bg-blue-700 transition-colors disabled:opacity-60"
           >
             <Download className="h-5 w-5" />
-            {isDownloading ? (t("common.downloading") || "Downloading...") : (t("bulk_import.download_template") || "Download Template")}
+            {isDownloading
+              ? t("common.downloading") || "Downloading..."
+              : t("bulk_import.download_template") || "Download Template"}
           </button>
         </div>
 
@@ -174,10 +195,14 @@ export default function BulkImportPage() {
             </div>
             <div>
               <p className="text-lg font-semibold text-[var(--on-surface)] dark:text-white">
-                {isImporting ? (t("bulk_import.importing") || "Importing...") : (t("bulk_import.drop_or_click") || "Drop file here or click to browse")}
+                {isImporting
+                  ? t("bulk_import.importing") || "Importing..."
+                  : t("bulk_import.drop_or_click") ||
+                    "Drop file here or click to browse"}
               </p>
               <p className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">
-                {t("bulk_import.accept_formats") || "Excel files (.xlsx, .xls) up to 50MB"}
+                {t("bulk_import.accept_formats") ||
+                  "Excel files (.xlsx, .xls) up to 50MB"}
               </p>
             </div>
           </div>
@@ -194,8 +219,12 @@ export default function BulkImportPage() {
           <div className="mt-6 p-4 bg-[var(--error-container)] dark:bg-red-900/30 border border-[var(--error)] dark:border-red-700 rounded-lg flex gap-3">
             <AlertCircle className="h-5 w-5 text-[var(--on-error-container)] dark:text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold text-[var(--on-error-container)] dark:text-red-300 mb-1">{t("common.error") || "Error"}</p>
-              <p className="text-sm text-[var(--on-error-container)] dark:text-red-200">{importError}</p>
+              <p className="font-semibold text-[var(--on-error-container)] dark:text-red-300 mb-1">
+                {t("common.error") || "Error"}
+              </p>
+              <p className="text-sm text-[var(--on-error-container)] dark:text-red-200">
+                {importError}
+              </p>
             </div>
           </div>
         )}
@@ -205,19 +234,47 @@ export default function BulkImportPage() {
             <div className="flex gap-3">
               <CheckCircle className="h-5 w-5 text-[var(--on-success-container)] dark:text-green-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-[var(--on-success-container)] dark:text-green-300 mb-2">{importMessage}</p>
+                <p className="font-semibold text-[var(--on-success-container)] dark:text-green-300 mb-2">
+                  {importMessage}
+                </p>
 
                 {importSummary && (
                   <div className="text-sm text-[var(--on-success-container)] dark:text-green-200 space-y-1">
-                    {importSummary.goals_created > 0 && <p>✓ Created {importSummary.goals_created} goal(s)</p>}
-                    {importSummary.goals_updated > 0 && <p>✓ Updated {importSummary.goals_updated} goal(s)</p>}
-                    {importSummary.tasks_created > 0 && <p>✓ Created {importSummary.tasks_created} task(s)</p>}
-                    {importSummary.tasks_updated > 0 && <p>✓ Updated {importSummary.tasks_updated} task(s)</p>}
-                    {importSummary.activities_created > 0 && <p>✓ Created {importSummary.activities_created} activity/activities</p>}
-                    {importSummary.activities_updated > 0 && <p>✓ Updated {importSummary.activities_updated} activity/activities</p>}
-                    {importSummary.metrics_updated > 0 && <p>✓ Recalculated progress for {importSummary.metrics_updated} record(s)</p>}
+                    {importSummary.goals_created > 0 && (
+                      <p>✓ Created {importSummary.goals_created} goal(s)</p>
+                    )}
+                    {importSummary.goals_updated > 0 && (
+                      <p>✓ Updated {importSummary.goals_updated} goal(s)</p>
+                    )}
+                    {importSummary.tasks_created > 0 && (
+                      <p>✓ Created {importSummary.tasks_created} task(s)</p>
+                    )}
+                    {importSummary.tasks_updated > 0 && (
+                      <p>✓ Updated {importSummary.tasks_updated} task(s)</p>
+                    )}
+                    {importSummary.activities_created > 0 && (
+                      <p>
+                        ✓ Created {importSummary.activities_created}{" "}
+                        activity/activities
+                      </p>
+                    )}
+                    {importSummary.activities_updated > 0 && (
+                      <p>
+                        ✓ Updated {importSummary.activities_updated}{" "}
+                        activity/activities
+                      </p>
+                    )}
+                    {importSummary.metrics_updated > 0 && (
+                      <p>
+                        ✓ Recalculated progress for{" "}
+                        {importSummary.metrics_updated} record(s)
+                      </p>
+                    )}
                     {importSummary.errors?.length > 0 && (
-                      <p className="text-[var(--error)] dark:text-red-400 mt-2">⚠ {importSummary.errors.length} error(s) occurred during import</p>
+                      <p className="text-[var(--error)] dark:text-red-400 mt-2">
+                        ⚠ {importSummary.errors.length} error(s) occurred during
+                        import
+                      </p>
                     )}
                   </div>
                 )}
@@ -231,36 +288,62 @@ export default function BulkImportPage() {
           <div className="flex gap-3 mb-4">
             <FileText className="h-6 w-6 text-[var(--primary)] dark:text-blue-400 flex-shrink-0" />
             <h3 className="font-semibold text-[var(--on-surface)] dark:text-white">
-              {t("bulk_import.template_structure") || "Excel Template Structure"}
+              {t("bulk_import.template_structure") ||
+                "Excel Template Structure"}
             </h3>
           </div>
           <p className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400 mb-4">
-            The Excel file should contain a "Master Report" sheet with these columns:
+            The Excel file should contain a "Master Report" sheet with these
+            columns:
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="font-mono text-[var(--primary)] dark:text-blue-400">Goal Title</p>
-              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">Name of the goal</p>
+              <p className="font-mono text-[var(--primary)] dark:text-blue-400">
+                Goal Title
+              </p>
+              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                Name of the goal
+              </p>
             </div>
             <div>
-              <p className="font-mono text-[var(--primary)] dark:text-blue-400">Task Title</p>
-              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">Name of the task</p>
+              <p className="font-mono text-[var(--primary)] dark:text-blue-400">
+                Task Title
+              </p>
+              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                Name of the task
+              </p>
             </div>
             <div>
-              <p className="font-mono text-[var(--primary)] dark:text-blue-400">Activity Title</p>
-              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">Name of the activity</p>
+              <p className="font-mono text-[var(--primary)] dark:text-blue-400">
+                Activity Title
+              </p>
+              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                Name of the activity
+              </p>
             </div>
             <div>
-              <p className="font-mono text-[var(--primary)] dark:text-blue-400">metricType</p>
-              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">Plus, Minus, Increase, Decrease, Maintain</p>
+              <p className="font-mono text-[var(--primary)] dark:text-blue-400">
+                metricType
+              </p>
+              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                Plus, Minus, Increase, Decrease, Maintain
+              </p>
             </div>
             <div>
-              <p className="font-mono text-[var(--primary)] dark:text-blue-400">isDone</p>
-              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">true or false</p>
+              <p className="font-mono text-[var(--primary)] dark:text-blue-400">
+                isDone
+              </p>
+              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                true or false
+              </p>
             </div>
             <div>
-              <p className="font-mono text-[var(--primary)] dark:text-blue-400">status</p>
-              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">To Do, In Progress, Complete</p>
+              <p className="font-mono text-[var(--primary)] dark:text-blue-400">
+                status
+              </p>
+              <p className="text-[var(--on-surface-variant)] dark:text-gray-400">
+                To Do, In Progress, Complete
+              </p>
             </div>
           </div>
         </div>
