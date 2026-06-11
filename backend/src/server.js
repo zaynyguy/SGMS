@@ -53,6 +53,8 @@ app.use("/api/groups", require("./routes/groupsRoutes"));
 app.use("/api/user-groups", require("./routes/userGroupsRoutes"));
 app.use("/api/system-settings", require("./routes/systemSettingsRoutes"));
 app.use("/api/reports", require("./routes/reportsRoutes"));
+app.use("/api/import", require("./routes/bulkImport.routes"));
+app.use("/api/export", require("./routes/export.routes"));
 app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 app.use("/api/notifications", require("./routes/notificationsRoutes"));
 app.use("/api/audit", require("./routes/auditRoutes"));

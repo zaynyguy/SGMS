@@ -178,25 +178,28 @@ return res.status(500).json({ message: 'Failed to upload profile picture.' });
 
 // --- UPDATED FUNCTION ---
 exports.getProfilePicture = async (req, res) => {
-try {
-const { filename } = req.params;
-if (!filename || filename.includes("..") || filename.includes("/")) {
-return res.status(400).json({ error: "Invalid filename." });
-}
+  try {
+    const rawFilename = req.params.filename;
+    if (!rawFilename) {
+      return res.status(400).json({ error: "Invalid filename." });
+    }
 
-// UPLOAD_DIR is an absolute path from uploadMiddleware.js
-const fullPath = path.join(UPLOAD_DIR, filename);
+    const filename = path.basename(rawFilename);
+    if (!filename || filename.includes("..")) {
+      return res.status(400).json({ error: "Invalid filename." });
+    }
 
-// Use sync exists check, just like in attachmentsController
-if (fs.existsSync(fullPath)) {
-res.sendFile(fullPath);
-} else {
-console.warn(`Profile picture not found: ${fullPath}`);
-res.status(404).json({ error: "File not found." });
-}
-} catch (err) {
-console.error("Error serving profile picture:", err);
-res.status(500).json({ error: "Server error." });
-}
+    const fullPath = path.join(UPLOAD_DIR, filename);
+
+    if (fs.existsSync(fullPath)) {
+      return res.sendFile(fullPath);
+    }
+
+    console.warn(`Profile picture not found: ${fullPath}`);
+    return res.status(404).json({ error: "File not found." });
+  } catch (err) {
+    console.error("Error serving profile picture:", err);
+    return res.status(500).json({ error: "Server error." });
+  }
 };
 

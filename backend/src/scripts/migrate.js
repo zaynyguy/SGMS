@@ -77,6 +77,7 @@ async function run() {
 
   const client = await db.connect();
   try {
+    await ensureMigrationsTable(client);
     const applied = await getAppliedMigrations(client);
     const tableCount = await countUserTables(client);
 

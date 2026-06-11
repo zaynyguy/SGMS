@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const reportsController = require("../controllers/reportsController");
+const bulkImportController = require("../controllers/bulkImport.controller");
 const attachmentsController = require("../controllers/attachmentsController");
 const {
   authenticateJWT,
@@ -42,7 +43,7 @@ router.post(
   "/import",
   upload.single("file"),
   authorizePermissions(["manage_reports"]),
-  reportsController.importProjectDataFromExcel,
+  bulkImportController.executeImport,
 );
 
 // Bulk import activities from hierarchical Excel file
@@ -50,7 +51,7 @@ router.post(
   "/bulk-import-excel",
   upload.excelImport(),
   authorizePermissions(["manage_reports"]),
-  reportsController.bulkImportActivitiesExcel,
+  bulkImportController.executeImport,
 );
 
 // Fetch all reports (for admin review) — now accessible to view_reports, but controller scopes results

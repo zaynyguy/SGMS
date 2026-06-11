@@ -183,7 +183,7 @@ const Sidebar = ({
           label: t("sidebar.menu.projectManagement") || "Project Management",
           icon: <Target size={16} />,
         },
-        hasPermission("manage_reports") && {
+        hasPermission("manage_gta") && {
           to: "/project/bulk-import",
           label: t("sidebar.menu.bulkImport") || "Bulk Import",
           icon: <FileText size={16} />,

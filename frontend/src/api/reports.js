@@ -49,9 +49,24 @@ export const importProjectExcel = (file) => {
   }
   const formData = new FormData();
   formData.append("file", file);
-  return api("/api/reports/import", "POST", formData, {
+  return api("/api/import/execute", "POST", formData, {
     isFormData: true,
   });
+};
+
+export const bulkImportActivitiesExcel = (file) => {
+  if (!(file instanceof File)) {
+    throw new Error("A File object is required for Excel import.");
+  }
+  const formData = new FormData();
+  formData.append("file", file);
+  return api("/api/import/execute", "POST", formData, {
+    isFormData: true,
+  });
+};
+
+export const downloadImportTemplate = () => {
+  return rawFetch("/api/import/template", "GET");
 };
 
 export const fetchReportingStatus = async () => {
@@ -65,17 +80,6 @@ export const fetchReportingStatus = async () => {
   };
 };
 
-export const bulkImportActivitiesExcel = (file) => {
-  if (!(file instanceof File)) {
-    throw new Error("A File object is required for Excel import.");
-  }
-  const formData = new FormData();
-  formData.append("file", file);
-  return api("/api/reports/bulk-import-excel", "POST", formData, {
-    isFormData: true,
-  });
-};
-
 export default {
   submitReport,
   fetchReports,
@@ -83,6 +87,7 @@ export default {
   fetchReportById,
   fetchMasterReport,
   downloadMasterReportExcel,
+  downloadImportTemplate,
   importProjectExcel,
   fetchReportingStatus,
   bulkImportActivitiesExcel,

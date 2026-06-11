@@ -6,8 +6,15 @@ const os = require("os");
 const db = require("../db");
 require("dotenv").config();
 
-const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || "uploads");
-const TMP_DIR = path.resolve(process.env.TMP_DIR || os.tmpdir());
+const uploadDirEnv = process.env.UPLOAD_DIR || "uploads";
+const tmpDirEnv = process.env.TMP_DIR || os.tmpdir();
+
+const UPLOAD_DIR = path.isAbsolute(uploadDirEnv)
+  ? uploadDirEnv
+  : path.resolve(__dirname, "..", "..", uploadDirEnv);
+const TMP_DIR = path.isAbsolute(tmpDirEnv)
+  ? tmpDirEnv
+  : path.resolve(__dirname, "..", "..", tmpDirEnv);
 
 const DEFAULT_ALLOWED = [
   "image/png",

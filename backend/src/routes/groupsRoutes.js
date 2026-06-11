@@ -8,9 +8,8 @@ authorizePermissions,
 const { upload } = require("../middleware/uploadMiddleware");
 
 router.get(
-'/profile-picture/:filename',
-authenticateJWT,
-groupsController.getGroupProfilePicture
+  '/profile-picture/:filename',
+  groupsController.getGroupProfilePicture
 );
 
 router.use(authenticateJWT, authorizePermissions(["manage_access"]));

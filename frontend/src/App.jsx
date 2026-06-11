@@ -116,7 +116,7 @@ function App() {
                 <Route
                   path="/project/bulk-import"
                   element={
-                    <ProtectedRoute requiredPermission="manage_reports">
+                    <ProtectedRoute requiredPermission="manage_gta">
                       <BulkImportPage />
                     </ProtectedRoute>
                   }

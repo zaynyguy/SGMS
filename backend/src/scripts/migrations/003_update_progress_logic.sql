@@ -249,10 +249,7 @@ $$;
 
 -- Update Activity completion override handler
 -- When isDone is toggled to true, set progress to 100% and force parent recalculation
-CREATE OR REPLACE TRIGGER trg_activity_isdone_override
-BEFORE UPDATE ON "Activities"
-FOR EACH ROW
-AS $$
+CREATE OR REPLACE FUNCTION trg_activity_isdone_override() RETURNS trigger AS $$
 BEGIN
     -- If isDone is being set to true, force progress to 100%
     IF (NEW."isDone" = TRUE AND OLD."isDone" = FALSE) THEN

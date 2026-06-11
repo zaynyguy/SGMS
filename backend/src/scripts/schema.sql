@@ -511,7 +511,12 @@ BEGIN
 
   UPDATE "Tasks"
   SET progress = COALESCE(computed_progress,0),
-      status = CASE WHEN COALESCE(computed_progress,0) >= 100 THEN 'Done'::task_status ELSE status END
+      status = CASE
+        WHEN COALESCE(computed_progress, 0) >= 100 THEN 'Done'::task_status
+        WHEN status = 'Blocked' THEN 'Blocked'::task_status
+        WHEN COALESCE(computed_progress, 0) > 0 THEN 'In Progress'::task_status
+        ELSE 'To Do'::task_status
+      END
   WHERE id = v_task_id;
 
   IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
@@ -556,7 +561,12 @@ BEGIN
 
   UPDATE "Goals"
   SET progress = COALESCE(computed_goal_progress,0),
-      status = CASE WHEN COALESCE(computed_goal_progress,0) >= 100 THEN 'Completed'::goal_status ELSE status END
+      status = CASE
+        WHEN COALESCE(computed_goal_progress, 0) >= 100 THEN 'Completed'::goal_status
+        WHEN status = 'On Hold' THEN 'On Hold'::goal_status
+        WHEN COALESCE(computed_goal_progress, 0) > 0 THEN 'In Progress'::goal_status
+        ELSE 'Not Started'::goal_status
+      END
   WHERE id = v_goal_id;
 
   IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;

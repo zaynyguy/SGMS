@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "../context/AuthContext";
 import TopBar from "../components/layout/TopBar";
 import {
   Upload,
@@ -12,25 +11,30 @@ import {
 import Toast from "../components/common/Toast";
 import {
   bulkImportActivitiesExcel,
-  downloadMasterReportExcel,
+  downloadImportTemplate,
 } from "../api/reports";
 
 export default function BulkImportPage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const fileInputRef = useRef(null);
 
   const [isImporting, setIsImporting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [importMessage, setImportMessage] = useState(null);
   const [importError, setImportError] = useState(null);
+  const [importErrorDetails, setImportErrorDetails] = useState([]);
   const [importSummary, setImportSummary] = useState(null);
   const [dragActive, setDragActive] = useState(false);
 
   const handleDownloadTemplate = async () => {
     try {
       setIsDownloading(true);
-      const data = await downloadMasterReportExcel();
+      const res = await downloadImportTemplate();
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      const data = await res.blob();
       const url = window.URL.createObjectURL(data);
       const link = document.createElement("a");
       link.href = url;
@@ -88,6 +92,7 @@ export default function BulkImportPage() {
     setIsImporting(true);
     setImportMessage(null);
     setImportError(null);
+    setImportErrorDetails([]);
     setImportSummary(null);
 
     try {
@@ -102,10 +107,14 @@ export default function BulkImportPage() {
       }
     } catch (err) {
       console.error("Bulk import error:", err);
+      const details =
+        err.response?.errors || err.response?.validation?.errors || [];
       setImportError(
         err.message ||
           "Failed to import Excel file. Please check the format and try again.",
       );
+      setImportErrorDetails(Array.isArray(details) ? details : []);
+      setImportSummary(err.response?.summary || null);
     } finally {
       setIsImporting(false);
     }
@@ -216,15 +225,27 @@ export default function BulkImportPage() {
 
         {/* Messages */}
         {importError && (
-          <div className="mt-6 p-4 bg-[var(--error-container)] dark:bg-red-900/30 border border-[var(--error)] dark:border-red-700 rounded-lg flex gap-3">
-            <AlertCircle className="h-5 w-5 text-[var(--on-error-container)] dark:text-red-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-[var(--on-error-container)] dark:text-red-300 mb-1">
-                {t("common.error") || "Error"}
-              </p>
-              <p className="text-sm text-[var(--on-error-container)] dark:text-red-200">
-                {importError}
-              </p>
+          <div className="mt-6 p-4 bg-[var(--error-container)] dark:bg-red-900/30 border border-[var(--error)] dark:border-red-700 rounded-lg">
+            <div className="flex gap-3">
+              <AlertCircle className="h-5 w-5 text-[var(--on-error-container)] dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-[var(--on-error-container)] dark:text-red-300 mb-1">
+                  {t("common.error") || "Error"}
+                </p>
+                <p className="text-sm text-[var(--on-error-container)] dark:text-red-200">
+                  {importError}
+                </p>
+                {importErrorDetails.length > 0 && (
+                  <ul className="mt-2 text-sm text-[var(--on-error-container)] dark:text-red-200 list-disc list-inside space-y-1">
+                    {importErrorDetails.slice(0, 10).map((detail, idx) => (
+                      <li key={idx}>{typeof detail === 'string' ? detail : JSON.stringify(detail)}</li>
+                    ))}
+                    {importErrorDetails.length > 10 && (
+                      <li>...and {importErrorDetails.length - 10} more errors</li>
+                    )}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -293,8 +314,7 @@ export default function BulkImportPage() {
             </h3>
           </div>
           <p className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400 mb-4">
-            The Excel file should contain a "Master Report" sheet with these
-            columns:
+            The Excel file should contain separate sheets named "Goals", "Tasks", "Activities", and "Quarter1"–"Quarter4" with the matching import columns.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>

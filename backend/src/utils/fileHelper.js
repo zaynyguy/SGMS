@@ -1,8 +1,6 @@
-// Determine backend base URL for local uploads
-// e.g. http://localhost:5000 or https://yourdomain.com
-const BASE_URL =
-  process.env.PUBLIC_BACKEND_URL ||
-  `http://localhost:${process.env.PORT || 5000}`;
+const path = require("path");
+
+const PUBLIC_BACKEND_URL = process.env.PUBLIC_BACKEND_URL || "";
 
 /**
  * Prefixes a local filename with the correct API path.
@@ -15,20 +13,28 @@ exports.buildProfilePictureUrl = (filePath, type = "user") => {
   if (!filePath) {
     return null;
   }
-  // If it's already a full URL (like Cloudinary), return it directly.
+
   if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
     return filePath;
   }
 
-  // If it's a local file, build the full, absolute API URL.
-  // Normalize the stored path to avoid accidental leading slashes
-  // which produce URLs like "/api/users/profile-picture//uploads/..".
-  const normalized = String(filePath).replace(/^\/+/, "");
+  let normalized = String(filePath).replace(/^\/+/, "");
+  if (normalized.toLowerCase().startsWith("uploads/")) {
+    normalized = normalized.slice("uploads/".length);
+  }
+  normalized = path.basename(normalized);
+
   if (type === "user") {
-    return `${BASE_URL}/api/users/profile-picture/${normalized}`;
+    if (PUBLIC_BACKEND_URL) {
+      return `${PUBLIC_BACKEND_URL.replace(/\/+$/, "")}/api/users/profile-picture/${normalized}`;
+    }
+    return `/api/users/profile-picture/${normalized}`;
   }
   if (type === "group") {
-    return `${BASE_URL}/api/groups/profile-picture/${normalized}`;
+    if (PUBLIC_BACKEND_URL) {
+      return `${PUBLIC_BACKEND_URL.replace(/\/+$/, "")}/api/groups/profile-picture/${normalized}`;
+    }
+    return `/api/groups/profile-picture/${normalized}`;
   }
   return null;
 };

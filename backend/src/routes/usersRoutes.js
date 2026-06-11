@@ -15,7 +15,6 @@ const {
 
 router.get(
   "/profile-picture/:filename",
-  authenticateJWT,
   usersController.getProfilePicture,
 );
 

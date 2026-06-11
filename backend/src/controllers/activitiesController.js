@@ -58,6 +58,53 @@ function areWeightsEqual(a, b) {
   return Math.abs(a - b) < 1e-6;
 }
 
+async function refreshTaskAndGoalProgress(client, taskId) {
+  if (!taskId) return;
+
+  await client.query(
+    `WITH task_data AS (
+       SELECT COALESCE(ROUND(SUM(a."progress" * a.weight) / NULLIF(SUM(a.weight), 0))::int, 0) AS computed_progress
+       FROM "Activities" a
+       WHERE a."taskId" = $1
+     )
+     UPDATE "Tasks"
+     SET progress = task_data.computed_progress,
+         status = CASE
+           WHEN task_data.computed_progress >= 100 THEN 'Done'::task_status
+           WHEN status = 'Blocked' THEN 'Blocked'::task_status
+           WHEN task_data.computed_progress > 0 THEN 'In Progress'::task_status
+           ELSE 'To Do'::task_status
+         END,
+         "updatedAt" = NOW()
+     FROM task_data
+     WHERE id = $1`,
+    [taskId],
+  );
+
+  await client.query(
+    `WITH goal_data AS (
+       SELECT COALESCE(ROUND(SUM(t."progress" * t.weight) / NULLIF(SUM(t.weight), 0))::int, 0) AS computed_goal_progress,
+              g.id AS goal_id
+       FROM "Tasks" t
+       JOIN "Goals" g ON g.id = t."goalId"
+       WHERE t."goalId" = (SELECT "goalId" FROM "Tasks" WHERE id = $1)
+       GROUP BY g.id
+     )
+     UPDATE "Goals"
+     SET progress = goal_data.computed_goal_progress,
+         status = CASE
+           WHEN goal_data.computed_goal_progress >= 100 THEN 'Completed'::goal_status
+           WHEN status = 'On Hold' THEN 'On Hold'::goal_status
+           WHEN goal_data.computed_goal_progress > 0 THEN 'In Progress'::goal_status
+           ELSE 'Not Started'::goal_status
+         END,
+         "updatedAt" = NOW()
+     FROM goal_data
+     WHERE id = goal_data.goal_id`,
+    [taskId],
+  );
+}
+
 exports.getActivitiesByTask = async (req, res) => {
   const taskId = toIntOrNull(req.params.taskId);
   if (!taskId) return res.status(400).json({ message: "Invalid taskId" });
@@ -455,15 +502,28 @@ exports.updateActivity = async (req, res) => {
       const parsedPreviousMetric = safeParseJson(previousMetric);
       const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
 
-      const safeTitle = nullIfEmpty(title)
-        ? String(nullIfEmpty(title)).trim()
-        : null;
-      const safeDescription = nullIfEmpty(description)
-        ? String(nullIfEmpty(description)).trim()
-        : null;
-      const safeStatus = nullIfEmpty(status);
-      const safeDueDate = nullIfEmpty(dueDate);
-      const safeIsDone = isDone === undefined ? null : toBoolean(isDone);
+      const safeTitle = title === undefined
+        ? undefined
+        : nullIfEmpty(title)
+          ? String(nullIfEmpty(title)).trim()
+          : null;
+      const safeDescription = description === undefined
+        ? undefined
+        : nullIfEmpty(description)
+          ? String(nullIfEmpty(description)).trim()
+          : null;
+      const safeStatus = status === undefined ? undefined : nullIfEmpty(status);
+      const safeDueDate = dueDate === undefined ? undefined : nullIfEmpty(dueDate);
+      let safeIsDone = isDone === undefined ? null : toBoolean(isDone);
+
+      if (safeIsDone === null && safeStatus) {
+        const normalizedStatus = String(safeStatus).trim().toLowerCase();
+        if (normalizedStatus === "done" || normalizedStatus === "completed") {
+          safeIsDone = true;
+        } else {
+          safeIsDone = false;
+        }
+      }
 
       // Validate Metric Type
       const validTypes = ["Plus", "Minus", "Increase", "Decrease", "Maintain"];
@@ -478,20 +538,24 @@ exports.updateActivity = async (req, res) => {
       const r = await client.query(
         `UPDATE "Activities"
          SET "rollNo" = COALESCE($1, "rollNo"),
-             title=$2, description=$3, status=COALESCE($4, status),
-             "dueDate"=$5, "weight"=$6,
-             "targetMetric"=COALESCE($7, "targetMetric"),
-             "isDone"=COALESCE($8, "isDone"), "updatedAt"=NOW(),
-             "previousMetric"=COALESCE($10, "previousMetric"),
-             "quarterlyGoals"=COALESCE($11, "quarterlyGoals"),
-             "metricType"=COALESCE($12, "metricType")
+             title = COALESCE($2, title),
+             description = COALESCE($3, description),
+             status = COALESCE($4, status),
+             "dueDate" = COALESCE($5, "dueDate"),
+             "weight" = COALESCE($6::numeric, "weight"),
+             "targetMetric" = COALESCE($7, "targetMetric"),
+             "isDone" = COALESCE($8, "isDone"),
+             "updatedAt" = NOW(),
+             "previousMetric" = COALESCE($10, "previousMetric"),
+             "quarterlyGoals" = COALESCE($11, "quarterlyGoals"),
+             "metricType" = COALESCE($12, "metricType")
          WHERE id=$9
          RETURNING *`,
         [
           rn !== null ? rn : null,
-          safeTitle ?? null,
-          safeDescription ?? null,
-          safeStatus ?? null,
+          safeTitle,
+          safeDescription,
+          safeStatus,
           safeDueDate,
           newWeight,
           parsedTargetMetric ?? null,
@@ -499,12 +563,12 @@ exports.updateActivity = async (req, res) => {
           activityId,
           parsedPreviousMetric ?? null,
           parsedQuarterlyGoals ?? null,
-          safeMetricType, // $12
+          safeMetricType,
         ],
       );
 
       if (!r.rows || !r.rows[0]) throw new Error("Failed to update activity");
-      const updatedActivity = r.rows[0];
+      let updatedActivity = r.rows[0];
 
       // ADDED: If isDone was changed, recalculate progress cascade (Activity -> Task -> Goal)
       const isDoneChanged =
@@ -686,6 +750,10 @@ exports.updateActivity = async (req, res) => {
           console.error("Quarterly edit recalc failed (non-fatal):", recalcErr);
           // Continue transaction - records were saved, metric will update on next report
         }
+      }
+
+      if (updatedActivity.taskId) {
+        await refreshTaskAndGoalProgress(client, updatedActivity.taskId);
       }
 
       try {

@@ -1498,13 +1498,17 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
     };
 
     // Process each goal
-    for (const goalData of parsedGoals) {
+    for (let goalIndex = 0; goalIndex < parsedGoals.length; goalIndex += 1) {
+      const goalData = parsedGoals[goalIndex];
       let goalId = null;
       const goalTitle = String(goalData.title).trim();
       const groupId = goalData.groupId || null;
+      const goalWeight = toNumberOrNull(goalData.weight);
 
       if (!goalTitle) continue;
 
+      const goalSavepoint = `sp_goal_${goalIndex}`;
+      await client.query(`SAVEPOINT ${goalSavepoint}`);
       try {
         // Check if goal exists by title and groupId
         const existingGoal = await client.query(
@@ -1526,7 +1530,7 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
               goalData.description || null,
               groupId,
               goalData.status || "Not Started",
-              goalData.weight,
+              goalWeight,
             ],
           );
           goalId = newGoal.rows[0].id;
@@ -1534,12 +1538,16 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
         }
 
         // Process tasks in goal
-        for (const taskData of goalData.tasks || []) {
+        for (let taskIndex = 0; taskIndex < (goalData.tasks || []).length; taskIndex += 1) {
+          const taskData = goalData.tasks[taskIndex];
           let taskId = null;
           const taskTitle = String(taskData.title).trim();
+          const taskWeight = toNumberOrNull(taskData.weight);
 
           if (!taskTitle || !goalId) continue;
 
+          const taskSavepoint = `sp_task_${goalIndex}_${taskIndex}`;
+          await client.query(`SAVEPOINT ${taskSavepoint}`);
           try {
             // Check if task exists
             const existingTask = await client.query(
@@ -1554,14 +1562,14 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
               // Create new task
               const newTask = await client.query(
                 `INSERT INTO "Tasks" ("goalId", title, description, status, weight, "createdAt", "updatedAt")
-                 VALUES ($1, $2, $3, $4, COALESCE($5, 0), NOW(), NOW())
+                 VALUES ($1, $2, $3, $4, COALESCE($5::numeric, 0), NOW(), NOW())
                  RETURNING id`,
                 [
                   goalId,
                   taskTitle,
                   taskData.description || null,
                   taskData.status || "To Do",
-                  taskData.weight,
+                  taskWeight,
                 ],
               );
               taskId = newTask.rows[0].id;
@@ -1569,16 +1577,24 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
             }
 
             // Process activities in task
-            for (const actData of taskData.activities || []) {
+            for (
+              let actIndex = 0;
+              actIndex < (taskData.activities || []).length;
+              actIndex += 1
+            ) {
+              const actData = taskData.activities[actIndex];
               let activityId = null;
               const actTitle = String(actData.title).trim();
+              const activityWeight = toNumberOrNull(actData.weight);
 
               if (!actTitle || !taskId) continue;
 
+              const activitySavepoint = `sp_activity_${goalIndex}_${taskIndex}_${actIndex}`;
+              await client.query(`SAVEPOINT ${activitySavepoint}`);
               try {
                 // Check if activity exists by (title, taskId)
                 const existingAct = await client.query(
-                  `SELECT id FROM "Activities" WHERE title = $1 AND "taskId" = $2 LIMIT 1`,
+                  `SELECT id, "currentMetric" FROM "Activities" WHERE title = $1 AND "taskId" = $2 LIMIT 1`,
                   [actTitle, taskId],
                 );
 
@@ -1598,13 +1614,13 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
 
                   // Update existing activity - now includes isDone to handle status changes
                   await client.query(
-                    `UPDATE "Activities" 
+                    `UPDATE "Activities"
                      SET description = COALESCE($1, description),
                          "metricType" = COALESCE($2::metric_type, "metricType"),
                          "targetMetric" = COALESCE($3, "targetMetric"),
                          "previousMetric" = COALESCE($4, "previousMetric"),
                          status = COALESCE($5, status),
-                         weight = COALESCE($6, weight),
+                         weight = COALESCE($6::numeric, weight),
                          "isDone" = COALESCE($8, "isDone"),
                          "updatedAt" = NOW()
                      WHERE id = $7`,
@@ -1614,7 +1630,7 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
                       targetMetricJson,
                       previousMetricJson,
                       actData.status || "To Do",
-                      actData.weight,
+                      activityWeight,
                       activityId,
                       actData.isDone === true,
                     ],
@@ -1639,14 +1655,14 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
                   const newAct = await client.query(
                     `INSERT INTO "Activities" 
                      ("taskId", title, description, status, weight, "metricType", "targetMetric", "previousMetric", "currentMetric", "isDone", "createdAt", "updatedAt")
-                     VALUES ($1, $2, $3, $4, COALESCE($5, 0), COALESCE($6, 'Plus')::metric_type, $7, $8, $9, $10, NOW(), NOW())
+                     VALUES ($1, $2, $3, $4, COALESCE($5::numeric, 0), COALESCE($6, 'Plus')::metric_type, $7, $8, $9, $10, NOW(), NOW())
                      RETURNING id`,
                     [
                       taskId,
                       actTitle,
                       actData.description || null,
                       actData.status || "To Do",
-                      actData.weight,
+                      activityWeight,
                       actData.metricType || "Plus",
                       targetMetricJson,
                       previousMetricJson,
@@ -1672,7 +1688,14 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
 
                 // Note: Progress recalculation is now handled for both updates and creates above
                 // Removed old condition that only called accumulate_metrics when currentMetric was provided
+                await client.query(`RELEASE SAVEPOINT ${activitySavepoint}`).catch(() => {});
               } catch (actErr) {
+                await client
+                  .query(`ROLLBACK TO SAVEPOINT ${activitySavepoint}`)
+                  .catch(() => {});
+                await client
+                  .query(`RELEASE SAVEPOINT ${activitySavepoint}`)
+                  .catch(() => {});
                 console.error(
                   `Activity import error for "${actTitle}":`,
                   actErr,
@@ -1682,12 +1705,28 @@ exports.bulkImportActivitiesExcel = async (req, res) => {
                 );
               }
             }
+
+            await client.query(`RELEASE SAVEPOINT ${taskSavepoint}`).catch(() => {});
           } catch (taskErr) {
+            await client
+              .query(`ROLLBACK TO SAVEPOINT ${taskSavepoint}`)
+              .catch(() => {});
+            await client
+              .query(`RELEASE SAVEPOINT ${taskSavepoint}`)
+              .catch(() => {});
             console.error(`Task import error for "${taskTitle}":`, taskErr);
             summary.errors.push(`Task "${taskTitle}": ${taskErr.message}`);
           }
         }
+
+        await client.query(`RELEASE SAVEPOINT ${goalSavepoint}`).catch(() => {});
       } catch (goalErr) {
+        await client
+          .query(`ROLLBACK TO SAVEPOINT ${goalSavepoint}`)
+          .catch(() => {});
+        await client
+          .query(`RELEASE SAVEPOINT ${goalSavepoint}`)
+          .catch(() => {});
         console.error(`Goal import error for "${goalTitle}":`, goalErr);
         summary.errors.push(`Goal "${goalTitle}": ${goalErr.message}`);
       }
