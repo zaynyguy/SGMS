@@ -25,6 +25,51 @@ function safeParseJson(value) {
   }
 }
 
+function parseString(value) {
+  if (value === null || value === undefined) return null;
+  const text = String(value).trim();
+  return text === "" ? null : text;
+}
+
+function parseNumeric(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function parseBoolean(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "yes", "y", "t"].includes(normalized)) return true;
+  if (["false", "0", "no", "n", "f"].includes(normalized)) return false;
+  return null;
+}
+
+function normalizeStatus(value) {
+  const input = parseString(value);
+  if (!input) return null;
+  const normalized = input.toLowerCase();
+  if (["to do", "todo", "to-do"].includes(normalized)) return "To Do";
+  if (["in progress", "inprogress", "in-progress"].includes(normalized)) return "In Progress";
+  if (["done", "completed", "complete"].includes(normalized)) return "Done";
+  if (["not started", "notstarted", "not-started"].includes(normalized)) return "Not Started";
+  if (["on hold", "onhold", "on-hold"].includes(normalized)) return "On Hold";
+  return input;
+}
+
+function normalizeMetricType(value) {
+  const input = parseString(value);
+  if (!input) return null;
+  const normalized = input.toLowerCase();
+  if (["plus", "+"].includes(normalized)) return "Plus";
+  if (["minus", "-"].includes(normalized)) return "Minus";
+  if (["increase", "inc"].includes(normalized)) return "Increase";
+  if (["decrease", "dec"].includes(normalized)) return "Decrease";
+  if (["maintain", "stable"].includes(normalized)) return "Maintain";
+  return input;
+}
+
 const IMPORT_HISTORY_TABLE = "ImportHistory";
 
 function buildUploadPath(fileName) {
@@ -101,6 +146,23 @@ async function previewImport(req, res) {
   }
 }
 
+async function saveImportHistory(client, { fileName, originalName, uploadedBy, summary, status, errors }) {
+  const historyRes = await client.query(
+    `INSERT INTO "${IMPORT_HISTORY_TABLE}" (
+       "fileName", "originalName", "uploadedBy", "summary", "status", "errors"
+       ) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [
+      fileName,
+      originalName || null,
+      uploadedBy || null,
+      summary || {},
+      status,
+      JSON.stringify(errors || []),
+    ],
+  );
+  return historyRes.rows[0].id;
+}
+
 async function executeImport(req, res) {
   const uploadedFile = getUploadedImportFile(req);
   const requestedFileName = req.body.fileName ? path.basename(req.body.fileName) : null;
@@ -130,40 +192,44 @@ async function executeImport(req, res) {
   let importErrors = [];
 
   try {
+    await ensureImportHistoryTable(client);
+
     const parsed = await parseWorkbook(filePath);
     const validation = validateImportData(parsed);
     if (validation.errors.length) {
+      historyId = await saveImportHistory(client, {
+        fileName: fileNameToUse,
+        originalName: req.body.originalName || uploadedFile?.originalname || null,
+        uploadedBy: req.user?.id || null,
+        summary: validation.summary || {},
+        status: "failed",
+        errors: validation.errors,
+      });
       return res.status(400).json({
         message: "Validation failed.",
+        historyId,
         validation,
       });
     }
 
     const preview = await buildImportPreview(db, parsed);
 
-    await ensureImportHistoryTable(client);
     await client.query("BEGIN");
 
-    const importResult = await performImport(client, parsed, req.user.id);
+    const importResult = await performImport(client, parsed, req.user?.id);
     importSummary = importResult.summary;
     importErrors = importResult.errors;
 
     if (importErrors.length) {
       await client.query("ROLLBACK");
-      const historyRes = await client.query(
-        `INSERT INTO "${IMPORT_HISTORY_TABLE}" (
-            "fileName", "originalName", "uploadedBy", "summary", "status", "errors"
-          ) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-        [
-          fileNameToUse,
-          req.body.originalName || uploadedFile?.originalname || null,
-          req.user?.id || null,
-          importSummary,
-          "failed",
-          JSON.stringify(importErrors),
-        ],
-      );
-      historyId = historyRes.rows[0].id;
+      historyId = await saveImportHistory(client, {
+        fileName: fileNameToUse,
+        originalName: req.body.originalName || uploadedFile?.originalname || null,
+        uploadedBy: req.user?.id || null,
+        summary: importSummary,
+        status: "failed",
+        errors: importErrors,
+      });
       return res.status(400).json({
         message: "Import failed.",
         historyId,
@@ -174,20 +240,14 @@ async function executeImport(req, res) {
 
     await client.query("COMMIT");
 
-    const historyRes = await client.query(
-      `INSERT INTO "${IMPORT_HISTORY_TABLE}" (
-          "fileName", "originalName", "uploadedBy", "summary", "status", "errors"
-        ) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-      [
-        fileNameToUse,
-        req.body.originalName || uploadedFile?.originalname || null,
-        req.user?.id || null,
-        importSummary,
-        importErrors.length ? "failed" : "completed",
-        JSON.stringify(importErrors),
-      ],
-    );
-    historyId = historyRes.rows[0].id;
+    historyId = await saveImportHistory(client, {
+      fileName: fileNameToUse,
+      originalName: req.body.originalName || uploadedFile?.originalname || null,
+      uploadedBy: req.user?.id || null,
+      summary: importSummary,
+      status: "completed",
+      errors: importErrors,
+    });
 
     return res.json({
       message: "Import completed.",
@@ -199,7 +259,19 @@ async function executeImport(req, res) {
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
     console.error("executeImport error:", err);
-    return res.status(500).json({ error: err.message || "Import failed." });
+    try {
+      historyId = await saveImportHistory(client, {
+        fileName: fileNameToUse,
+        originalName: req.body.originalName || uploadedFile?.originalname || null,
+        uploadedBy: req.user?.id || null,
+        summary: importSummary || {},
+        status: "failed",
+        errors: [{ message: err.message || "Import failed." }],
+      });
+    } catch (historyErr) {
+      console.error("Failed to save import history after error:", historyErr);
+    }
+    return res.status(500).json({ error: err.message || "Import failed.", historyId });
   } finally {
     client.release();
     if (deleteAfterImport) {
@@ -380,10 +452,10 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
   }
 
   const values = {
-    title: row.goal_title || row.goal_name || null,
-    description: row.goal_description || row.description || null,
-    status: row.goal_status || "Not Started",
-    weight: Number(row.goal_weight) || null,
+    title: parseString(row.goal_title || row.goal_name || row.title || row.name),
+    description: parseString(row.goal_description || row.description),
+    status: normalizeStatus(row.goal_status),
+    weight: parseNumeric(row.goal_weight),
     startDate: row.goal_start_date || null,
     endDate: row.goal_end_date || null,
     groupId,
@@ -394,7 +466,7 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
       `UPDATE "Goals"
         SET title = COALESCE($1, title),
             description = COALESCE($2, description),
-            status = COALESCE($3, status),
+            status = COALESCE($3::goal_status, status),
             weight = COALESCE($4::numeric, weight),
             "startDate" = COALESCE($5, "startDate"),
             "endDate" = COALESCE($6, "endDate"),
@@ -424,7 +496,7 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
       values.title,
       values.description,
       values.groupId,
-      values.status,
+      values.status || "Not Started",
       values.weight,
       values.startDate,
       values.endDate,
@@ -475,10 +547,10 @@ async function upsertTask(client, row, goalId, taskLookup) {
   }
 
   const values = {
-    title: row.task_title || row.task_name || null,
-    description: row.task_description || row.description || null,
-    status: row.task_status || "To Do",
-    weight: Number(row.task_weight) || null,
+    title: parseString(row.task_title || row.task_name || row.title || row.name),
+    description: parseString(row.task_description || row.description),
+    status: normalizeStatus(row.task_status),
+    weight: parseNumeric(row.task_weight),
     dueDate: row.task_due_date || null,
     assigneeId: row.task_assignee_id || null,
     goalId,
@@ -489,7 +561,7 @@ async function upsertTask(client, row, goalId, taskLookup) {
       `UPDATE "Tasks"
          SET title = COALESCE($1, title),
              description = COALESCE($2, description),
-             status = COALESCE($3, status),
+             status = COALESCE($3::task_status, status),
              weight = COALESCE($4::numeric, weight),
              "dueDate" = COALESCE($5, "dueDate"),
              "assigneeId" = COALESCE($6, "assigneeId"),
@@ -517,7 +589,7 @@ async function upsertTask(client, row, goalId, taskLookup) {
       values.goalId,
       values.title,
       values.description,
-      values.status,
+      values.status || "To Do",
       values.weight,
       values.dueDate,
       values.assigneeId,
@@ -558,16 +630,25 @@ async function upsertActivity(client, row, taskId, activityLookup) {
     existingActivity = activityLookup.get(titleKey);
   }
 
+  const parsedStatus = normalizeStatus(row.activity_status);
+  const explicitIsDone = parseBoolean(row.activity_is_done);
   const values = {
-    title: row.activity_title || row.activity_name || null,
-    description: row.activity_description || row.description || null,
-    status: row.activity_status || "To Do",
-    weight: Number(row.activity_weight) || null,
+    title: parseString(row.activity_title || row.activity_name || row.title || row.name),
+    description: parseString(
+      row.activity_description || row.activity_desc || row.description || row.desc,
+    ),
+    status: parsedStatus,
+    weight: parseNumeric(row.activity_weight),
     dueDate: row.activity_due_date || null,
-    metricType: row.activity_metric_type || "Plus",
-    targetMetric: row.activity_target_metric || null,
-    currentMetric: row.activity_current_metric || null,
-    previousMetric: row.activity_previous_metric || null,
+    metricType: normalizeMetricType(
+      row.activity_metric_type || row.metric_type || row.metricType,
+    ),
+    targetMetric:
+      row.activity_target_metric || row.target_metric || row.targetMetric || null,
+    currentMetric:
+      row.activity_current_metric || row.current_metric || row.currentMetric || null,
+    previousMetric:
+      row.activity_previous_metric || row.previous_metric || row.previousMetric || null,
     quarterlyGoals: safeParseJson(
       row.activity_quarterly_goals ||
         row.activity_quarterlyGoals ||
@@ -576,27 +657,28 @@ async function upsertActivity(client, row, taskId, activityLookup) {
         null,
     ),
     isDone:
-      row.activity_is_done === true ||
-      String(row.activity_is_done).toLowerCase() === "true" ||
-      String(row.activity_status).trim().toLowerCase() === "done" ||
-      String(row.activity_status).trim().toLowerCase() === "completed",
+      explicitIsDone !== null
+        ? explicitIsDone
+        : parsedStatus === "Done"
+        ? true
+        : null,
     taskId,
   };
 
   if (existingActivity) {
     const updateRes = await client.query(
       `UPDATE "Activities"
-         SET title = COALESCE($1, title),
-             description = COALESCE($2, description),
-             status = COALESCE($3, status),
+         SET title = COALESCE($1::text, title),
+             description = COALESCE($2::text, description),
+             status = COALESCE($3::activity_status, status),
              weight = COALESCE($4::numeric, weight),
-             "dueDate" = COALESCE($5, "dueDate"),
-             "metricType" = COALESCE($6, "metricType"),
-             "targetMetric" = COALESCE($7, "targetMetric"),
-             "currentMetric" = COALESCE($8, "currentMetric"),
-             "previousMetric" = COALESCE($9, "previousMetric"),
-             "isDone" = COALESCE($10, "isDone"),
-             "quarterlyGoals" = COALESCE($11, "quarterlyGoals"),
+             "dueDate" = COALESCE($5::date, "dueDate"),
+             "metricType" = COALESCE($6::metric_type, "metricType"),
+             "targetMetric" = COALESCE($7::jsonb, "targetMetric"),
+             "currentMetric" = COALESCE($8::jsonb, "currentMetric"),
+             "previousMetric" = COALESCE($9::jsonb, "previousMetric"),
+             "isDone" = COALESCE($10::boolean, "isDone"),
+             "quarterlyGoals" = COALESCE($11::jsonb, "quarterlyGoals"),
              "updatedAt" = NOW()
        WHERE id = $12 RETURNING id`,
       [
@@ -620,20 +702,20 @@ async function upsertActivity(client, row, taskId, activityLookup) {
   const insertRes = await client.query(
     `INSERT INTO "Activities"
        ("taskId", title, description, status, weight, "dueDate", "metricType", "targetMetric", "currentMetric", "previousMetric", "isDone", "quarterlyGoals", "createdAt", "updatedAt")
-       VALUES ($1,$2,$3,$4,COALESCE($5::numeric,0),$6,COALESCE($7,'Plus'),$8,$9,$10,$11,$12,NOW(),NOW())
+       VALUES ($1,$2::text,$3::text,$4::activity_status,COALESCE($5::numeric,0),$6::date,COALESCE($7::metric_type,'Plus'),$8::jsonb,$9::jsonb,$10::jsonb,$11::boolean,$12::jsonb,NOW(),NOW())
        RETURNING id`,
     [
       values.taskId,
       values.title,
       values.description,
-      values.status,
+      values.status || "To Do",
       values.weight,
       values.dueDate,
-      values.metricType,
+      values.metricType || "Plus",
       values.targetMetric,
       values.currentMetric,
       values.previousMetric,
-      values.isDone,
+      values.isDone || false,
       values.quarterlyGoals,
     ],
   );

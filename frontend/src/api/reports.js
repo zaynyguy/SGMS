@@ -65,6 +65,25 @@ export const bulkImportActivitiesExcel = (file) => {
   });
 };
 
+export const fetchImportHistory = () => api("/api/import/history", "GET");
+
+export const downloadImportErrorReport = async (errors, format = "csv") => {
+  if (!Array.isArray(errors) || errors.length === 0) {
+    throw new Error("No errors provided to export.");
+  }
+  const res = await rawFetch("/api/import/errors/export", "POST", {
+    errors,
+    format,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(text || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.blob();
+};
+
 export const downloadImportTemplate = () => {
   return rawFetch("/api/import/template", "GET");
 };

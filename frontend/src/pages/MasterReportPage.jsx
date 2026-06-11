@@ -12,7 +12,6 @@ import {
 import {
   fetchMasterReport,
   downloadMasterReportExcel,
-  bulkImportActivitiesExcel,
 } from "../api/reports";
 import { useTranslation } from "react-i18next";
 import { fetchGroups } from "../api/groups";
@@ -105,12 +104,6 @@ const App = () => {
   ); // For print title
   const [allGroups, setAllGroups] = useState([]);
   const [groupLoadError, setGroupLoadError] = useState(null);
-
-  // Bulk import state
-  const [isImporting, setIsImporting] = useState(false);
-  const [importMessage, setImportMessage] = useState(null);
-  const [importError, setImportError] = useState(null);
-  const fileInputRef = useRef(null);
 
   // Animation state
   const [mounted, setMounted] = useState(false);
@@ -1344,38 +1337,6 @@ const App = () => {
     }, 400);
   }
 
-  async function handleBulkImport(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsImporting(true);
-    setImportMessage(null);
-    setImportError(null);
-
-    try {
-      const result = await bulkImportActivitiesExcel(file);
-      setImportMessage(
-        `✓ Import successful! ${JSON.stringify(result.summary)}`,
-      );
-
-      // Refresh the master report
-      setTimeout(() => {
-        handleFetch();
-      }, 1000);
-    } catch (err) {
-      console.error("Bulk import error:", err);
-      setImportError(
-        err.message ||
-          "Failed to import Excel file. Please check the format and try again.",
-      );
-    } finally {
-      setIsImporting(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  }
-
   return (
     <>
       {/* MODIFIED: Use min-w-0 to prevent flex child expansion beyond parent width AND enforce strict max-width */}
@@ -1440,16 +1401,6 @@ const App = () => {
                   {groupLoadError}
                 </div>
               )}
-              {importMessage && (
-                <div className="text-sm text-green-600 dark:text-green-400 mt-2 animate-pulse">
-                  {importMessage}
-                </div>
-              )}
-              {importError && (
-                <div className="text-sm text-red-600 dark:text-red-400 mt-2 animate-pulse">
-                  {importError}
-                </div>
-              )}
             </div>
 
             <div className="md:col-span-2 flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
@@ -1488,25 +1439,6 @@ const App = () => {
                 <Download className="h-4 w-4" />
                 {t("reports.master.downloadTemplate", "Download Template")}
               </Button>
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isImporting}
-                variant="secondary"
-                size="md"
-                className="w-full sm:w-auto disabled:opacity-60"
-              >
-                <Upload className="h-4 w-4" />
-                {isImporting
-                  ? t("reports.master.importing", "Importing...")
-                  : t("reports.master.bulkImport", "Bulk Import")}
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleBulkImport}
-                className="hidden"
-              />
             </div>
           </div>
 

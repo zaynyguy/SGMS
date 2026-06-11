@@ -12,6 +12,8 @@ import Toast from "../components/common/Toast";
 import {
   bulkImportActivitiesExcel,
   downloadImportTemplate,
+  fetchImportHistory,
+  downloadImportErrorReport,
 } from "../api/reports";
 
 export default function BulkImportPage() {
@@ -25,6 +27,10 @@ export default function BulkImportPage() {
   const [importErrorDetails, setImportErrorDetails] = useState([]);
   const [importSummary, setImportSummary] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [importHistory, setImportHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [errorReportLoading, setErrorReportLoading] = useState(false);
 
   const handleDownloadTemplate = async () => {
     try {
@@ -57,6 +63,60 @@ export default function BulkImportPage() {
       setIsDownloading(false);
     }
   };
+
+  const loadImportHistory = async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const data = await fetchImportHistory();
+      setImportHistory(Array.isArray(data.rows) ? data.rows : []);
+    } catch (err) {
+      console.error("Failed to load import history:", err);
+      setHistoryError(err.message || "Unable to load import history.");
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const downloadErrors = async (errors, fileNameSuffix = "import-errors") => {
+    if (!Array.isArray(errors) || errors.length === 0) return;
+    setErrorReportLoading(true);
+    try {
+      const blob = await downloadImportErrorReport(errors, "csv");
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `${fileNameSuffix}-${new Date().toISOString().split("T")[0]}.csv`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error report failed:", err);
+      setImportError(err.message || "Failed to download error report.");
+    } finally {
+      setErrorReportLoading(false);
+    }
+  };
+
+  const formatErrorDetail = (detail) => {
+    if (!detail) return "Unknown error";
+    if (typeof detail === "string") return detail;
+    if (typeof detail === "object") {
+      const rowText = detail.row ? `Row ${detail.row}: ` : "";
+      const typeText = detail.type ? `[${detail.type}] ` : "";
+      const messageText = detail.message || JSON.stringify(detail);
+      return `${rowText}${typeText}${messageText}`;
+    }
+    return String(detail);
+  };
+
+  React.useEffect(() => {
+    loadImportHistory();
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -98,8 +158,11 @@ export default function BulkImportPage() {
     try {
       const result = await bulkImportActivitiesExcel(file);
 
-      setImportMessage(t("common.import_successful") || "✓ Import successful!");
-      setImportSummary(result.summary);
+      setImportMessage(result.message || t("common.import_successful") || "✓ Import successful!");
+      setImportSummary(result.summary || null);
+      setImportError(null);
+      setImportErrorDetails([]);
+      await loadImportHistory();
 
       // Clear file input
       if (fileInputRef.current) {
@@ -110,7 +173,8 @@ export default function BulkImportPage() {
       const details =
         err.response?.errors || err.response?.validation?.errors || [];
       setImportError(
-        err.message ||
+        err.response?.message ||
+          err.message ||
           "Failed to import Excel file. Please check the format and try again.",
       );
       setImportErrorDetails(Array.isArray(details) ? details : []);
@@ -236,14 +300,24 @@ export default function BulkImportPage() {
                   {importError}
                 </p>
                 {importErrorDetails.length > 0 && (
-                  <ul className="mt-2 text-sm text-[var(--on-error-container)] dark:text-red-200 list-disc list-inside space-y-1">
-                    {importErrorDetails.slice(0, 10).map((detail, idx) => (
-                      <li key={idx}>{typeof detail === 'string' ? detail : JSON.stringify(detail)}</li>
-                    ))}
-                    {importErrorDetails.length > 10 && (
-                      <li>...and {importErrorDetails.length - 10} more errors</li>
-                    )}
-                  </ul>
+                  <>
+                    <ul className="mt-2 text-sm text-[var(--on-error-container)] dark:text-red-200 list-disc list-inside space-y-1">
+                      {importErrorDetails.slice(0, 10).map((detail, idx) => (
+                        <li key={idx}>{formatErrorDetail(detail)}</li>
+                      ))}
+                      {importErrorDetails.length > 10 && (
+                        <li>...and {importErrorDetails.length - 10} more errors</li>
+                      )}
+                    </ul>
+                    <button
+                      type="button"
+                      className="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white/10 text-[var(--on-error-container)] hover:bg-white/20"
+                      disabled={errorReportLoading}
+                      onClick={() => downloadErrors(importErrorDetails, "import-error-report")}
+                    >
+                      {errorReportLoading ? "Downloading..." : "Download error report"}
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -285,11 +359,11 @@ export default function BulkImportPage() {
                         activity/activities
                       </p>
                     )}
-                    {importSummary.metrics_updated > 0 && (
-                      <p>
-                        ✓ Recalculated progress for{" "}
-                        {importSummary.metrics_updated} record(s)
-                      </p>
+                    {importSummary.quarterly_records_created > 0 && (
+                      <p>✓ Created {importSummary.quarterly_records_created} quarterly record(s)</p>
+                    )}
+                    {importSummary.quarterly_records_updated > 0 && (
+                      <p>✓ Updated {importSummary.quarterly_records_updated} quarterly record(s)</p>
                     )}
                     {importSummary.errors?.length > 0 && (
                       <p className="text-[var(--error)] dark:text-red-400 mt-2">
@@ -366,6 +440,104 @@ export default function BulkImportPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Import History */}
+        <div className="mt-8 bg-[var(--surface-container-low)] dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-700 rounded-lg p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div>
+              <h3 className="font-semibold text-[var(--on-surface)] dark:text-white">
+                {t("bulk_import.history") || "Import History"}
+              </h3>
+              <p className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">
+                {t("bulk_import.history_description") ||
+                  "Recent import attempts, status, and error counts."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={loadImportHistory}
+              className="px-3 py-2 rounded-lg bg-[var(--primary)] dark:bg-blue-600 text-[var(--on-primary)] dark:text-white hover:bg-[color-mix(in_srgb,var(--primary),black_10%)] dark:hover:bg-blue-700 disabled:opacity-60"
+              disabled={historyLoading}
+            >
+              {historyLoading
+                ? t("common.loading") || "Loading..."
+                : t("bulk_import.refresh_history") || "Refresh history"}
+            </button>
+          </div>
+
+          {historyError ? (
+            <div className="rounded-lg bg-red-900/20 border border-red-700 p-4 text-sm text-red-100">
+              {historyError}
+            </div>
+          ) : historyLoading ? (
+            <div className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">
+              {t("common.loading") || "Loading history..."}
+            </div>
+          ) : importHistory.length === 0 ? (
+            <div className="text-sm text-[var(--on-surface-variant)] dark:text-gray-400">
+              {t("bulk_import.no_history") || "No import history available yet."}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left text-sm text-[var(--on-surface-variant)] dark:text-gray-400">
+                <thead>
+                  <tr>
+                    <th className="pb-3 font-semibold text-[var(--on-surface)] dark:text-white">File</th>
+                    <th className="pb-3 font-semibold text-[var(--on-surface)] dark:text-white">Date</th>
+                    <th className="pb-3 font-semibold text-[var(--on-surface)] dark:text-white">Status</th>
+                    <th className="pb-3 font-semibold text-[var(--on-surface)] dark:text-white">Summary</th>
+                    <th className="pb-3 font-semibold text-[var(--on-surface)] dark:text-white">Errors</th>
+                    <th className="pb-3 font-semibold text-[var(--on-surface)] dark:text-white">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importHistory.map((row) => (
+                    <tr key={row.id} className="border-t border-[var(--outline-variant)] dark:border-gray-700">
+                      <td className="py-3">{row.fileName || row.originalName || "—"}</td>
+                      <td className="py-3">
+                        {new Date(row.importDate).toLocaleString()}
+                      </td>
+                      <td className="py-3 capitalize">
+                        {row.status || "unknown"}
+                      </td>
+                      <td className="py-3">
+                        {row.summary ? (
+                          <div className="space-y-1">
+                            {row.summary.goals_created > 0 && <div>G:+{row.summary.goals_created}</div>}
+                            {row.summary.goals_updated > 0 && <div>G:~{row.summary.goals_updated}</div>}
+                            {row.summary.tasks_created > 0 && <div>T:+{row.summary.tasks_created}</div>}
+                            {row.summary.tasks_updated > 0 && <div>T:~{row.summary.tasks_updated}</div>}
+                            {row.summary.activities_created > 0 && <div>A:+{row.summary.activities_created}</div>}
+                            {row.summary.activities_updated > 0 && <div>A:~{row.summary.activities_updated}</div>}
+                            {row.summary.quarterly_records_created > 0 && <div>Q:+{row.summary.quarterly_records_created}</div>}
+                            {row.summary.quarterly_records_updated > 0 && <div>Q:~{row.summary.quarterly_records_updated}</div>}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="py-3">{Array.isArray(row.errors) ? row.errors.length : 0}</td>
+                      <td className="py-3">
+                        {Array.isArray(row.errors) && row.errors.length > 0 ? (
+                          <button
+                            type="button"
+                            className="px-3 py-1 rounded-md bg-white/10 text-[var(--on-surface)] hover:bg-white/20"
+                            onClick={() => downloadErrors(row.errors, `import-errors-${row.id}`)}
+                            disabled={errorReportLoading}
+                          >
+                            {errorReportLoading ? "Downloading..." : "Download"}
+                          </button>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
