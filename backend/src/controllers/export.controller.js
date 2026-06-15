@@ -1,5 +1,6 @@
 const db = require("../db");
 const { buildGoalsWorkbook, buildTasksWorkbook, buildActivitiesWorkbook, buildAnnualPlanWorkbook, buildReportWorkbook, buildCsvFromRows } = require("../helpers/exportGenerator");
+const { buildQuarterlyRecordsMap } = require("../helpers/quarterlyRecords");
 
 function acceptFormat(req) {
   const format = String(req.query.format || "xlsx").toLowerCase();
@@ -52,14 +53,33 @@ async function exportTasks(req, res) {
 async function exportActivities(req, res) {
   try {
     const { rows } = await db.query(`SELECT id, "taskId", title, description, status, "dueDate", "previousMetric", "targetMetric", "currentMetric", "quarterlyGoals", progress, weight, "isDone", "createdAt", "updatedAt" FROM "Activities" ORDER BY id`);
+    const fiscalRes = await db.query(`SELECT * FROM calc_fiscal_period(CURRENT_DATE)`);
+    const currentFiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+    const activityIds = rows.map((activity) => activity.id).filter(Boolean);
+    const quarterlyRecords = activityIds.length
+      ? (await db.query(
+          `SELECT "activityId", "quarter", "metricKey", "value" FROM "ActivityRecords" WHERE "activityId" = ANY($1) AND "fiscalYear" = $2 AND "quarter" IS NOT NULL`,
+          [activityIds, currentFiscalYear],
+        )).rows
+      : [];
+
+    const quarterlyMap = buildQuarterlyRecordsMap(rows, quarterlyRecords, null);
+    const rowsWithRecordColumns = rows.map((activity) => ({
+      ...activity,
+      q1_record: quarterlyMap[activity.id]?.q1 ?? null,
+      q2_record: quarterlyMap[activity.id]?.q2 ?? null,
+      q3_record: quarterlyMap[activity.id]?.q3 ?? null,
+      q4_record: quarterlyMap[activity.id]?.q4 ?? null,
+    }));
+
     const format = acceptFormat(req);
     if (format === "csv") {
-      const csv = buildCsvFromRows(rows, ["id", "taskId", "title", "description", "status", "dueDate", "previousMetric", "targetMetric", "currentMetric", "quarterlyGoals", "progress", "weight", "isDone", "createdAt", "updatedAt"]);
+      const csv = buildCsvFromRows(rowsWithRecordColumns, ["id", "taskId", "title", "description", "status", "dueDate", "previousMetric", "targetMetric", "currentMetric", "quarterlyGoals", "q1_record", "q2_record", "q3_record", "q4_record", "progress", "weight", "isDone", "createdAt", "updatedAt"]);
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", `attachment; filename="activities.csv"`);
       return res.send(csv);
     }
-    const workbook = buildActivitiesWorkbook(rows);
+    const workbook = buildActivitiesWorkbook(rowsWithRecordColumns);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="activities.xlsx"`);
     await workbook.xlsx.write(res);
@@ -75,6 +95,24 @@ async function exportAnnualPlan(req, res) {
     const goals = (await db.query(`SELECT id, title, description, "groupId", status, progress, weight, "startDate", "endDate" FROM "Goals" ORDER BY id`)).rows;
     const tasks = (await db.query(`SELECT id, "goalId", title, description, status, "assigneeId", "dueDate", progress, weight FROM "Tasks" ORDER BY id`)).rows;
     const activities = (await db.query(`SELECT id, "taskId", title, description, status, "dueDate", "previousMetric", "targetMetric", "currentMetric", "quarterlyGoals", progress, weight, "isDone" FROM "Activities" ORDER BY id`)).rows;
+    const fiscalRes = await db.query(`SELECT * FROM calc_fiscal_period(CURRENT_DATE)`);
+    const currentFiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+    const activityIds = activities.map((activity) => activity.id).filter(Boolean);
+    const quarterlyRecords = activityIds.length
+      ? (await db.query(
+          `SELECT "activityId", "quarter", "metricKey", "value" FROM "ActivityRecords" WHERE "activityId" = ANY($1) AND "fiscalYear" = $2 AND "quarter" IS NOT NULL`,
+          [activityIds, currentFiscalYear],
+        )).rows
+      : [];
+
+    const quarterlyMap = buildQuarterlyRecordsMap(activities, quarterlyRecords, null);
+    const activitiesWithRecordColumns = activities.map((activity) => ({
+      ...activity,
+      q1_record: quarterlyMap[activity.id]?.q1 ?? null,
+      q2_record: quarterlyMap[activity.id]?.q2 ?? null,
+      q3_record: quarterlyMap[activity.id]?.q3 ?? null,
+      q4_record: quarterlyMap[activity.id]?.q4 ?? null,
+    }));
     const format = acceptFormat(req);
     if (format === "csv") {
       const csv = buildCsvFromRows(goals, ["id", "title", "description", "groupId", "status", "progress", "weight", "startDate", "endDate"]);
@@ -82,7 +120,7 @@ async function exportAnnualPlan(req, res) {
       res.setHeader("Content-Disposition", `attachment; filename="annual-plan.csv"`);
       return res.send(csv);
     }
-    const workbook = buildAnnualPlanWorkbook(goals, tasks, activities);
+    const workbook = buildAnnualPlanWorkbook(goals, tasks, activitiesWithRecordColumns);
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="annual-plan.xlsx"`);
     await workbook.xlsx.write(res);

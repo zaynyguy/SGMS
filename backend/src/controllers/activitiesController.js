@@ -2,6 +2,7 @@
 const db = require("../db");
 const notificationService = require("../services/notificationService");
 const { logAudit } = require("../helpers/audit");
+const { buildQuarterlyRecordsMap } = require("../helpers/quarterlyRecords");
 
 const EPS = 1e-9;
 
@@ -174,24 +175,11 @@ exports.getActivitiesByTask = async (req, res) => {
         [activityIds, currentFiscalYear],
       );
 
-      // Group records by activity
-      const recordsByActivity = {};
-      for (const rec of recordsRes.rows) {
-        if (!recordsByActivity[rec.activityId]) {
-          recordsByActivity[rec.activityId] = {
-            q1: "",
-            q2: "",
-            q3: "",
-            q4: "",
-          };
-        }
-        const qKey = `q${rec.quarter}`;
-        recordsByActivity[rec.activityId][qKey] = rec.value;
-      }
+      const quarterlyRecordsMap = buildQuarterlyRecordsMap(rows, recordsRes.rows, "");
 
       // Attach to each activity
       for (const activity of rows) {
-        activity.quarterlyRecords = recordsByActivity[activity.id] || {
+        activity.quarterlyRecords = quarterlyRecordsMap[activity.id] || {
           q1: "",
           q2: "",
           q3: "",
@@ -222,6 +210,7 @@ exports.createActivity = async (req, res) => {
     previousMetric,
     rollNo,
     quarterlyGoals,
+    quarterlyRecords,
     metricType, // ADDED
   } = req.body;
 
@@ -286,6 +275,8 @@ exports.createActivity = async (req, res) => {
       // rollNo handling
       let insertRes;
       const rn = toIntOrNull(rollNo);
+      const parsedQuarterlyRecords = safeParseJson(quarterlyRecords);
+      const isRecordObject = parsedQuarterlyRecords && typeof parsedQuarterlyRecords === "object";
 
       if (rn !== null) {
         const dup = await client.query(
@@ -334,6 +325,40 @@ exports.createActivity = async (req, res) => {
             safeMetricType, // Insert metricType
           ],
         );
+      }
+
+      if (isRecordObject) {
+        const fiscalRes = await client.query(
+          `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`,
+        );
+        const fiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+        const metricKey = Object.keys(parsedTargetMetric || {})[0] || "value";
+
+        for (const [quarter, value] of Object.entries(parsedQuarterlyRecords)) {
+          const qNum = parseInt(String(quarter).replace(/^q/i, ""), 10);
+          const numVal = toNumberOrNull(value);
+          if (qNum >= 1 && qNum <= 4 && numVal !== null) {
+            await client.query(
+              `INSERT INTO "ActivityRecords"
+                ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")
+               VALUES ($1, $2, $3, NULL, $4, $5, 'manual', $6, $6)
+               ON CONFLICT ("activityId", "fiscalYear", "quarter", "metricKey") WHERE "quarter" IS NOT NULL
+               DO UPDATE SET
+                 "value" = EXCLUDED."value",
+                 "source" = 'manual',
+                 "updatedBy" = EXCLUDED."updatedBy",
+                 "updatedAt" = NOW()`,
+              [
+                insertRes.rows[0].id,
+                fiscalYear,
+                qNum,
+                metricKey,
+                numVal,
+                req.user.id,
+              ],
+            );
+          }
+        }
       }
 
       if (!insertRes.rows || !insertRes.rows[0])
@@ -502,6 +527,9 @@ exports.updateActivity = async (req, res) => {
       const parsedPreviousMetric = safeParseJson(previousMetric);
       const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
 
+      console.log('updateActivity payload', JSON.stringify(req.body));
+      console.log('updateActivity quarterlyRecords present', typeof quarterlyRecords !== 'undefined', quarterlyRecords);
+
       const safeTitle = title === undefined
         ? undefined
         : nullIfEmpty(title)
@@ -599,20 +627,29 @@ exports.updateActivity = async (req, res) => {
           const qNum = parseInt(quarter.replace("q", ""), 10);
 
           if (qNum >= 1 && qNum <= 4) {
-            // If value is null or empty string, treat it as a DELETE request
+            // If value is null or empty string, treat it as an explicit DELETE request.
+            // Remove any actual-record variants for this quarter, not just the current target metric.
             if (value === null || value === undefined || value === "") {
+              const deleteMetricKeys = [
+                metricKey,
+                `${metricKey}_actual`,
+                `quarterlyGoals_actual`,
+                `q${qNum}_actual`,
+              ];
+              console.log('delete ActivityRecords', { activityId, fiscalYear, quarter: qNum, deleteMetricKeys });
               await client.query(
-                `DELETE FROM "ActivityRecords" 
-                 WHERE "activityId" = $1 
-                   AND "fiscalYear" = $2 
-                   AND "quarter" = $3 
-                   AND "metricKey" = $4`,
-                [activityId, fiscalYear, qNum, metricKey],
+                `DELETE FROM "ActivityRecords"
+                 WHERE "activityId" = $1
+                   AND "fiscalYear" = $2
+                   AND "quarter" = $3
+                   AND "metricKey" = ANY($4)`,
+                [activityId, fiscalYear, qNum, deleteMetricKeys],
               );
             } else {
               // Otherwise UPSERT
               const numVal = toNumberOrNull(value);
               if (numVal !== null) {
+                console.log('upsert ActivityRecords', { activityId, fiscalYear, quarter: qNum, metricKey, value: numVal });
                 await client.query(
                   `INSERT INTO "ActivityRecords" 
                     ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")

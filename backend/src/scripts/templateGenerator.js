@@ -16,6 +16,10 @@ function formatJson(value) {
   return value;
 }
 
+function parseQuarterlyCellValue(value) {
+  return value === null || value === undefined || value === "" ? null : value;
+}
+
 function addRows(sheet, rows, converters) {
   for (const row of rows) {
     sheet.addRow(converters(row));
@@ -27,12 +31,6 @@ function buildTemplateWorkbook(existingData = {}) {
   const goalsSheet = workbook.addWorksheet("Goals");
   const tasksSheet = workbook.addWorksheet("Tasks");
   const activitiesSheet = workbook.addWorksheet("Activities");
-  const quarterSheets = [
-    workbook.addWorksheet("Quarter1"),
-    workbook.addWorksheet("Quarter2"),
-    workbook.addWorksheet("Quarter3"),
-    workbook.addWorksheet("Quarter4"),
-  ];
 
   const goalHeader = [
     "goal_id",
@@ -84,6 +82,8 @@ function buildTemplateWorkbook(existingData = {}) {
     "task_description",
     "goal_id",
     "goal_roll_no",
+    "goal_title",
+    "goal_group_name",
     "task_status",
     "task_weight",
     "task_due_date",
@@ -100,6 +100,8 @@ function buildTemplateWorkbook(existingData = {}) {
       task.task_description || null,
       task.goal_id || null,
       task.goal_roll_no || null,
+      task.goal_title || null,
+      task.goal_group_name || null,
       task.task_status || null,
       task.task_weight !== null && task.task_weight !== undefined ? task.task_weight : null,
       task.task_due_date || null,
@@ -113,6 +115,8 @@ function buildTemplateWorkbook(existingData = {}) {
       "Create customer retention campaign",
       null,
       null,
+      "Increase customer retention",
+      "Corporate",
       "To Do",
       5,
       "2025-03-31",
@@ -127,6 +131,8 @@ function buildTemplateWorkbook(existingData = {}) {
     "activity_description",
     "task_id",
     "task_roll_no",
+    "task_title",
+    "goal_id",
     "activity_status",
     "activity_weight",
     "activity_due_date",
@@ -135,29 +141,61 @@ function buildTemplateWorkbook(existingData = {}) {
     "activity_current_metric",
     "activity_previous_metric",
     "activity_is_done",
+    "q1_goal",
+    "q1_record",
+    "q2_goal",
+    "q2_record",
+    "q3_goal",
+    "q3_record",
+    "q4_goal",
+    "q4_record",
     "activity_quarterly_goals",
   ];
   activitiesSheet.addRow(activityHeader);
 
   const activities = Array.isArray(existingData.activities) ? existingData.activities : [];
+  const actualQuarterMap = new Map();
+  const quarters = Array.isArray(existingData.quarters) ? existingData.quarters : [];
+  for (const row of quarters) {
+    const activityId = row.activity_id || null;
+    const quarter = Number(row.quarter) || null;
+    if (!activityId || !quarter) continue;
+    const actualValue = row.actual ?? row.value;
+    if (actualValue !== null && actualValue !== undefined) {
+      actualQuarterMap.set(`${activityId}|q${quarter}`, actualValue);
+    }
+  }
   if (activities.length > 0) {
-    addRows(activitiesSheet, activities, (activity) => [
-      activity.activity_id || null,
-      activity.activity_roll_no || null,
-      activity.activity_title || null,
-      activity.activity_description || null,
-      activity.task_id || null,
-      activity.task_roll_no || null,
-      activity.activity_status || null,
-      activity.activity_weight !== null && activity.activity_weight !== undefined ? activity.activity_weight : null,
-      activity.activity_due_date || null,
-      activity.activity_metric_type || null,
-      formatJson(activity.activity_target_metric),
-      formatJson(activity.activity_current_metric),
-      formatJson(activity.activity_previous_metric),
-      activity.activity_is_done === true ? true : false,
-      formatJson(activity.activity_quarterly_goals || activity.quarterlyGoals),
-    ]);
+    addRows(activitiesSheet, activities, (activity) => {
+      const quarterlyGoals = activity.activity_quarterly_goals || activity.quarterlyGoals || {};
+      return [
+        activity.activity_id || null,
+        activity.activity_roll_no || null,
+        activity.activity_title || null,
+        activity.activity_description || null,
+        activity.task_id || null,
+        activity.task_roll_no || null,
+        activity.task_title || null,
+        activity.goal_id || null,
+        activity.activity_status || null,
+        activity.activity_weight !== null && activity.activity_weight !== undefined ? activity.activity_weight : null,
+        activity.activity_due_date || null,
+        activity.activity_metric_type || null,
+        formatJson(activity.activity_target_metric),
+        formatJson(activity.activity_current_metric),
+        formatJson(activity.activity_previous_metric),
+        activity.activity_is_done === true ? true : false,
+        parseQuarterlyCellValue(quarterlyGoals.q1),
+        parseQuarterlyCellValue(actualQuarterMap.get(`${activity.activity_id || ""}|q1`)),
+        parseQuarterlyCellValue(quarterlyGoals.q2),
+        parseQuarterlyCellValue(actualQuarterMap.get(`${activity.activity_id || ""}|q2`)),
+        parseQuarterlyCellValue(quarterlyGoals.q3),
+        parseQuarterlyCellValue(actualQuarterMap.get(`${activity.activity_id || ""}|q3`)),
+        parseQuarterlyCellValue(quarterlyGoals.q4),
+        parseQuarterlyCellValue(actualQuarterMap.get(`${activity.activity_id || ""}|q4`)),
+        formatJson(activity.activity_quarterly_goals || activity.quarterlyGoals),
+      ];
+    });
   } else {
     activitiesSheet.addRow([
       null,
@@ -166,75 +204,27 @@ function buildTemplateWorkbook(existingData = {}) {
       "Send weekly retention emails",
       null,
       null,
+      "Launch loyalty campaign",
+      null,
       "To Do",
       2.5,
-      "2025-02-15",
+      null,
       "Plus",
       JSON.stringify({ progress: 8 }),
       JSON.stringify({ progress: 0 }),
       JSON.stringify({ progress: 0 }),
       false,
+      10,
+      8,
+      12,
+      10,
+      15,
+      14,
+      20,
+      18,
       null,
     ]);
   }
-
-  const quarterHeader = [
-    "activity_id",
-    "activity_roll_no",
-    "activity_title",
-    "planned",
-    "actual",
-    "remark",
-    "metric_key",
-    "fiscal_year",
-  ];
-
-  const quarters = Array.isArray(existingData.quarters) ? existingData.quarters : [];
-  quarterSheets.forEach((sheet, index) => {
-    sheet.addRow(quarterHeader);
-    const quarterRows = quarters.filter((row) => Number(row.quarter) === index + 1);
-    if (quarterRows.length > 0) {
-      const grouped = new Map();
-      for (const row of quarterRows) {
-        const key = `${row.activity_id || ""}|${row.activity_roll_no || ""}|${row.metric_key || ""}|${row.fiscal_year || ""}`;
-        const existing = grouped.get(key) || {
-          activity_id: row.activity_id || null,
-          activity_roll_no: row.activity_roll_no || null,
-          activity_title: row.activity_title || null,
-          planned: null,
-          actual: null,
-          remark: null,
-          metric_key: row.metric_key || null,
-          fiscal_year: row.fiscal_year || null,
-        };
-        if (row.planned !== null && row.planned !== undefined) existing.planned = row.planned;
-        if (row.actual !== null && row.actual !== undefined) existing.actual = row.actual;
-        if (row.remark !== null && row.remark !== undefined) existing.remark = row.remark;
-        grouped.set(key, existing);
-      }
-      addRows(sheet, Array.from(grouped.values()), (row) => [
-        row.activity_id || null,
-        row.activity_roll_no || null,
-        row.activity_title || null,
-        row.planned !== null && row.planned !== undefined ? row.planned : null,
-        row.actual !== null && row.actual !== undefined ? row.actual : null,
-        row.remark || null,
-        row.metric_key || null,
-        row.fiscal_year || null,
-      ]);
-    } else {
-      sheet.addRow([
-        null,
-        null,
-        null,
-        10,
-        0,
-        `Plan for Q${index + 1}`,
-        "progress",
-        new Date().getFullYear(),
-      ]);
-    }
-  });
 
   return workbook;
 }

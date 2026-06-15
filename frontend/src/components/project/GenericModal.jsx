@@ -755,26 +755,36 @@ export default function GenericModal({
         return obj;
       };
 
-      // Helper to convert local.quarterlyRecords {q1: 5, q2: ""} to {"q1": 5, "q2": null} for deletion
-      const quarterlyRecordsToObject = (quarters) => {
+      // Helper to convert local.quarterlyRecords into a payload object.
+      // For create: only include numeric values.
+      // For edit: only include fields that changed or were explicitly cleared.
+      const quarterlyRecordsToObject = (quarters, original = {}) => {
         const obj = {};
-        if (quarters) {
-          ["q1", "q2", "q3", "q4"].forEach((q) => {
-            const val = quarters[q];
-            // If valid number, set it
-            if (
-              val !== "" &&
-              val !== null &&
-              val !== undefined &&
-              !isNaN(Number(val))
-            ) {
-              obj[q] = Number(val);
-            } else {
-              // Otherwise set to null to indicate removal
+        if (!quarters || typeof quarters !== "object") return obj;
+
+        const hasNumber = (value) =>
+          value !== "" && value !== null && value !== undefined && !Number.isNaN(Number(value));
+
+        ["q1", "q2", "q3", "q4"].forEach((q) => {
+          const rawLocal = quarters[q];
+          const rawOriginal = original[q];
+          const localHasNumber = hasNumber(rawLocal);
+          const originalHasNumber = hasNumber(rawOriginal);
+          const localValue = localHasNumber ? Number(rawLocal) : null;
+          const originalValue = originalHasNumber ? Number(rawOriginal) : null;
+
+          if (!originalHasNumber && localHasNumber) {
+            obj[q] = localValue;
+          } else if (originalHasNumber) {
+            if (localHasNumber && localValue !== originalValue) {
+              obj[q] = localValue;
+            } else if (!localHasNumber) {
+              // Explicit clear of an existing record
               obj[q] = null;
             }
-          });
-        }
+          }
+        });
+
         return obj;
       };
 
@@ -799,9 +809,14 @@ export default function GenericModal({
         const payload = { ...local };
         // MODIFIED: Convert all metric arrays to objects
         payload.quarterlyGoals = quarterlyGoalsToObject(local.quarterlyGoals);
-        payload.quarterlyRecords = quarterlyRecordsToObject(
+        const createdQuarterlyRecords = quarterlyRecordsToObject(
           local.quarterlyRecords,
-        ); // Use records-specific conversion
+        );
+        if (Object.keys(createdQuarterlyRecords).length > 0) {
+          payload.quarterlyRecords = createdQuarterlyRecords;
+        } else {
+          delete payload.quarterlyRecords;
+        }
         payload.targetMetric = metricsToObject(local.targetMetrics);
         payload.previousMetric = metricsToObject(local.previousMetrics);
         delete payload.targetMetrics;
@@ -842,9 +857,16 @@ export default function GenericModal({
         }
         // MODIFIED: Convert all metric arrays to objects
         payload.quarterlyGoals = quarterlyGoalsToObject(local.quarterlyGoals);
-        payload.quarterlyRecords = quarterlyRecordsToObject(
+        const originalQuarterlyRecords = modal.data?.quarterlyRecords || {};
+        const updatedQuarterlyRecords = quarterlyRecordsToObject(
           local.quarterlyRecords,
-        ); // Use records-specific conversion
+          originalQuarterlyRecords,
+        );
+        if (Object.keys(updatedQuarterlyRecords).length > 0) {
+          payload.quarterlyRecords = updatedQuarterlyRecords;
+        } else {
+          delete payload.quarterlyRecords;
+        }
         payload.targetMetric = metricsToObject(local.targetMetrics);
         payload.previousMetric = metricsToObject(local.previousMetrics);
         delete payload.targetMetrics;

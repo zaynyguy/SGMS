@@ -44,12 +44,14 @@ async function buildImportPreview(db, parsed) {
   function matchTask(row) {
     if (row.task_id) return taskMap.get(`id:${Number(row.task_id)}`);
     if (row.task_roll_no && row.goal_id) return taskMap.get(`rollno:${row.task_roll_no}|${Number(row.goal_id)}`);
+    if (row.task_roll_no) return taskMap.get(`rollno:${row.task_roll_no}`);
     return taskMap.get(`${normalize(row.task_title || row.task_name)}|${Number(row.goal_id) || 0}`);
   }
 
   function matchActivity(row) {
     if (row.activity_id) return activityMap.get(`id:${Number(row.activity_id)}`);
     if (row.activity_roll_no && row.task_id) return activityMap.get(`rollno:${row.activity_roll_no}|${Number(row.task_id)}`);
+    if (row.activity_roll_no) return activityMap.get(`rollno:${row.activity_roll_no}`);
     return activityMap.get(`${normalize(row.activity_title || row.activity_name)}|${Number(row.task_id) || 0}`);
   }
 

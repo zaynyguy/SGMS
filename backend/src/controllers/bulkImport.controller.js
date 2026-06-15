@@ -7,6 +7,7 @@ const { validateImportData } = require("../helpers/importValidator");
 const { buildImportPreview } = require("../helpers/importPreviewGenerator");
 const { buildErrorWorkbook, buildErrorCsv } = require("../helpers/importErrorReporter");
 const { buildTemplateWorkbook } = require("../scripts/templateGenerator");
+const { buildQuarterlyRecordsMap } = require("../helpers/quarterlyRecords");
 
 function safeParseJson(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -35,6 +36,34 @@ function parseNumeric(value) {
   if (value === null || value === undefined || value === "") return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
+}
+
+function parseQuarterlyGoalsFromActivityRow(row) {
+  const quarterlyGoals = {};
+  let hasAny = false;
+  for (let q = 1; q <= 4; q += 1) {
+    const value = parseNumeric(row[`q${q}_goal`]);
+    if (value !== null) {
+      quarterlyGoals[`q${q}`] = value;
+      hasAny = true;
+    }
+  }
+  return hasAny ? quarterlyGoals : null;
+}
+
+function mergeQuarterlyGoals(existingGoals, explicitGoals) {
+  const merged = {};
+  if (typeof existingGoals === "object" && existingGoals !== null) {
+    Object.assign(merged, existingGoals);
+  }
+  if (typeof explicitGoals === "object" && explicitGoals !== null) {
+    for (const [key, value] of Object.entries(explicitGoals)) {
+      if (value !== null && value !== undefined) {
+        merged[key] = value;
+      }
+    }
+  }
+  return Object.keys(merged).length ? merged : null;
 }
 
 function parseBoolean(value) {
@@ -384,8 +413,10 @@ async function loadExistingGroups(client) {
 function buildGoalLookup(goals) {
   const map = new Map();
   for (const goal of goals) {
-    const titleKey = `${String(goal.title).trim().toLowerCase()}|${goal.groupId || 0}`;
+    const title = String(goal.title).trim().toLowerCase();
+    const titleKey = `${title}|${goal.groupId || 0}`;
     map.set(titleKey, goal);
+    map.set(title, goal);
     if (goal.rollNo) {
       map.set(`rollno:${goal.rollNo}`, goal);
     }
@@ -397,8 +428,10 @@ function buildGoalLookup(goals) {
 function buildTaskLookup(tasks) {
   const map = new Map();
   for (const task of tasks) {
-    const titleKey = `${String(task.title).trim().toLowerCase()}|${task.goalId}`;
+    const title = String(task.title).trim().toLowerCase();
+    const titleKey = `${title}|${task.goalId}`;
     map.set(titleKey, task);
+    map.set(title, task);
     if (task.rollNo) {
       map.set(`rollno:${task.rollNo}|${task.goalId}`, task);
       map.set(`rollno:${task.rollNo}`, task);
@@ -411,8 +444,10 @@ function buildTaskLookup(tasks) {
 function buildActivityLookup(activities) {
   const map = new Map();
   for (const activity of activities) {
-    const titleKey = `${String(activity.title).trim().toLowerCase()}|${activity.taskId}`;
+    const title = String(activity.title).trim().toLowerCase();
+    const titleKey = `${title}|${activity.taskId}`;
     map.set(titleKey, activity);
+    map.set(title, activity);
     if (activity.rollNo) {
       map.set(`rollno:${activity.rollNo}|${activity.taskId}`, activity);
       map.set(`rollno:${activity.rollNo}`, activity);
@@ -436,13 +471,31 @@ function normalizeString(value) {
   return String(value).trim().toLowerCase();
 }
 
-async function upsertGoal(client, row, goalLookup, groupLookup) {
-  let groupId = null;
-  if (row.goal_group_id) groupId = Number(row.goal_group_id);
-  else if (row.goal_group_name) {
-    const group = groupLookup.get(normalizeString(row.goal_group_name));
-    groupId = group?.id || null;
+async function resolveGroupId(client, row, groupLookup) {
+  if (row.goal_group_id) {
+    const group = groupLookup.get(`id:${Number(row.goal_group_id)}`);
+    if (group) return group.id;
   }
+
+  if (!row.goal_group_name) return null;
+
+  const normalizedName = normalizeString(row.goal_group_name);
+  let group = groupLookup.get(normalizedName);
+  if (group) return group.id;
+
+  const insertRes = await client.query(
+    `INSERT INTO "Groups" (name, "createdAt", "updatedAt") VALUES ($1, NOW(), NOW()) RETURNING id`,
+    [parseString(row.goal_group_name)],
+  );
+  const id = insertRes.rows[0].id;
+  const savedGroup = { id, name: parseString(row.goal_group_name) };
+  groupLookup.set(normalizedName, savedGroup);
+  groupLookup.set(`id:${id}`, savedGroup);
+  return id;
+}
+
+async function upsertGoal(client, row, goalLookup, groupLookup) {
+  const groupId = await resolveGroupId(client, row, groupLookup);
 
   let existingGoal = null;
   if (row.goal_id) existingGoal = goalLookup.get(`id:${Number(row.goal_id)}`);
@@ -452,6 +505,7 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
   }
 
   const values = {
+    rollNo: parseNumeric(row.goal_roll_no),
     title: parseString(row.goal_title || row.goal_name || row.title || row.name),
     description: parseString(row.goal_description || row.description),
     status: normalizeStatus(row.goal_status),
@@ -464,16 +518,18 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
   if (existingGoal) {
     const updateRes = await client.query(
       `UPDATE "Goals"
-        SET title = COALESCE($1, title),
-            description = COALESCE($2, description),
-            status = COALESCE($3::goal_status, status),
-            weight = COALESCE($4::numeric, weight),
-            "startDate" = COALESCE($5, "startDate"),
-            "endDate" = COALESCE($6, "endDate"),
-            "groupId" = COALESCE($7, "groupId"),
+        SET "rollNo" = COALESCE($1, "rollNo"),
+            title = COALESCE($2, title),
+            description = COALESCE($3, description),
+            status = COALESCE($4::goal_status, status),
+            weight = COALESCE($5::numeric, weight),
+            "startDate" = COALESCE($6, "startDate"),
+            "endDate" = COALESCE($7, "endDate"),
+            "groupId" = COALESCE($8, "groupId"),
             "updatedAt" = NOW()
-       WHERE id = $8 RETURNING id`,
+       WHERE id = $9 RETURNING id, "rollNo", title, "groupId"`,
       [
+        values.rollNo,
         values.title,
         values.description,
         values.status,
@@ -484,15 +540,27 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
         existingGoal.id,
       ],
     );
-    return { id: updateRes.rows[0].id, action: "updated" };
+    const updatedGoal = {
+      id: updateRes.rows[0].id,
+      rollNo: updateRes.rows[0].rollNo,
+      title: updateRes.rows[0].title,
+      groupId: updateRes.rows[0].groupId,
+    };
+    const title = normalizeString(updatedGoal.title);
+    goalLookup.set(`id:${updatedGoal.id}`, updatedGoal);
+    if (updatedGoal.rollNo) goalLookup.set(`rollno:${updatedGoal.rollNo}`, updatedGoal);
+    goalLookup.set(`${title}|${updatedGoal.groupId || 0}`, updatedGoal);
+    goalLookup.set(title, updatedGoal);
+    return { id: updatedGoal.id, action: "updated" };
   }
 
   const insertRes = await client.query(
     `INSERT INTO "Goals"
-       (title, description, "groupId", status, weight, "startDate", "endDate", "createdAt", "updatedAt")
-       VALUES ($1,$2,$3,$4,COALESCE($5::numeric,100),$6,$7,NOW(),NOW())
+       ("rollNo", title, description, "groupId", status, weight, "startDate", "endDate", "createdAt", "updatedAt")
+       VALUES (COALESCE($1, nextval('goals_rollno_seq')),$2,$3,$4,$5,COALESCE($6::numeric,100),$7,$8,NOW(),NOW())
        RETURNING id`,
     [
+      values.rollNo,
       values.title,
       values.description,
       values.groupId,
@@ -502,14 +570,25 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
       values.endDate,
     ],
   );
-  const id = insertRes.rows[0].id;
-  const titleKey = `${normalizeString(values.title)}|${groupId || 0}`;
-  goalLookup.set(titleKey, { id, ...values, groupId });
-  return { id, action: "created" };
+  const rowGoal = {
+    id: insertRes.rows[0].id,
+    rollNo: values.rollNo,
+    title: values.title,
+    groupId,
+  };
+  const title = normalizeString(values.title);
+  goalLookup.set(`id:${rowGoal.id}`, rowGoal);
+  if (rowGoal.rollNo) goalLookup.set(`rollno:${rowGoal.rollNo}`, rowGoal);
+  goalLookup.set(`${title}|${groupId || 0}`, rowGoal);
+  goalLookup.set(title, rowGoal);
+  return { id: rowGoal.id, action: "created" };
 }
 
 async function resolveGoalIdForTask(client, row, goalLookup, groupLookup, goalIdByRow, goalsRows) {
-  if (row.goal_id) return Number(row.goal_id);
+  if (row.goal_id) {
+    const explicitGoal = goalLookup.get(`id:${Number(row.goal_id)}`);
+    if (explicitGoal) return explicitGoal.id;
+  }
 
   if (row.goal_roll_no) {
     const goal = goalLookup.get(`rollno:${row.goal_roll_no}`);
@@ -517,8 +596,11 @@ async function resolveGoalIdForTask(client, row, goalLookup, groupLookup, goalId
   }
 
   let groupId = null;
-  if (row.goal_group_id) groupId = Number(row.goal_group_id);
-  else if (row.goal_group_name) {
+  if (row.goal_group_id) {
+    const group = groupLookup.get(`id:${Number(row.goal_group_id)}`);
+    if (group) groupId = group.id;
+  }
+  if (groupId === null && row.goal_group_name) {
     const group = groupLookup.get(normalizeString(row.goal_group_name));
     groupId = group?.id || null;
   }
@@ -527,7 +609,6 @@ async function resolveGoalIdForTask(client, row, goalLookup, groupLookup, goalId
   const goal = goalLookup.get(titleKey);
   if (goal) return goal.id;
 
-  // fall back to row-level created goals from the same upload if the title matches
   for (const [rowIndex, id] of goalIdByRow.entries()) {
     const uploaded = goalsRows[rowIndex];
     if (normalizeString(uploaded.goal_title || uploaded.goal_name) === normalizeString(row.goal_title || row.goal_name)) {
@@ -541,12 +622,18 @@ async function resolveGoalIdForTask(client, row, goalLookup, groupLookup, goalId
 async function upsertTask(client, row, goalId, taskLookup) {
   let existingTask = null;
   if (row.task_id) existingTask = taskLookup.get(`id:${Number(row.task_id)}`);
+  if (!existingTask && row.task_roll_no) {
+    existingTask =
+      taskLookup.get(`rollno:${row.task_roll_no}|${goalId}`) ||
+      taskLookup.get(`rollno:${row.task_roll_no}`);
+  }
   if (!existingTask) {
     const titleKey = `${normalizeString(row.task_title || row.task_name)}|${goalId}`;
     existingTask = taskLookup.get(titleKey);
   }
 
   const values = {
+    rollNo: parseNumeric(row.task_roll_no),
     title: parseString(row.task_title || row.task_name || row.title || row.name),
     description: parseString(row.task_description || row.description),
     status: normalizeStatus(row.task_status),
@@ -559,15 +646,17 @@ async function upsertTask(client, row, goalId, taskLookup) {
   if (existingTask) {
     const updateRes = await client.query(
       `UPDATE "Tasks"
-         SET title = COALESCE($1, title),
-             description = COALESCE($2, description),
-             status = COALESCE($3::task_status, status),
-             weight = COALESCE($4::numeric, weight),
-             "dueDate" = COALESCE($5, "dueDate"),
-             "assigneeId" = COALESCE($6, "assigneeId"),
+         SET "rollNo" = COALESCE($1, "rollNo"),
+             title = COALESCE($2, title),
+             description = COALESCE($3, description),
+             status = COALESCE($4::task_status, status),
+             weight = COALESCE($5::numeric, weight),
+             "dueDate" = COALESCE($6, "dueDate"),
+             "assigneeId" = COALESCE($7, "assigneeId"),
              "updatedAt" = NOW()
-       WHERE id = $7 RETURNING id`,
+       WHERE id = $8 RETURNING id`,
       [
+        values.rollNo,
         values.title,
         values.description,
         values.status,
@@ -580,42 +669,111 @@ async function upsertTask(client, row, goalId, taskLookup) {
     return { id: updateRes.rows[0].id, action: "updated" };
   }
 
-  const insertRes = await client.query(
-    `INSERT INTO "Tasks"
-       ("goalId", title, description, status, weight, "dueDate", "assigneeId", "createdAt", "updatedAt")
-       VALUES ($1,$2,$3,$4,COALESCE($5::numeric,0),$6,$7,NOW(),NOW())
-       RETURNING id`,
-    [
-      values.goalId,
-      values.title,
-      values.description,
-      values.status || "To Do",
-      values.weight,
-      values.dueDate,
-      values.assigneeId,
-    ],
-  );
-  const id = insertRes.rows[0].id;
-  const titleKey = `${normalizeString(values.title)}|${goalId}`;
-  taskLookup.set(titleKey, { id, ...values });
-  return { id, action: "created" };
+  let insertRes;
+  try {
+    insertRes = await client.query(
+      `INSERT INTO "Tasks"
+         ("goalId", "rollNo", title, description, status, weight, "dueDate", "assigneeId", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3,$4,$5,COALESCE($6::numeric,0),$7,$8,NOW(),NOW())
+         RETURNING id`,
+      [
+        values.goalId,
+        values.rollNo,
+        values.title,
+        values.description,
+        values.status || "To Do",
+        values.weight,
+        values.dueDate,
+        values.assigneeId,
+      ],
+    );
+  } catch (err) {
+    if (err.code === "23505" && err.constraint === "ux_tasks_goal_roll" && values.rollNo) {
+      const existing = await client.query(
+        `SELECT id FROM "Tasks" WHERE "goalId" = $1 AND "rollNo" = $2 LIMIT 1`,
+        [values.goalId, values.rollNo],
+      );
+      if (existing.rows.length) {
+        const updateRes = await client.query(
+          `UPDATE "Tasks"
+             SET title = COALESCE($1, title),
+                 description = COALESCE($2, description),
+                 status = COALESCE($3::task_status, status),
+                 weight = COALESCE($4::numeric, weight),
+                 "dueDate" = COALESCE($5, "dueDate"),
+                 "assigneeId" = COALESCE($6, "assigneeId"),
+                 "updatedAt" = NOW()
+           WHERE id = $7 RETURNING id`,
+          [
+            values.title,
+            values.description,
+            values.status,
+            values.weight,
+            values.dueDate,
+            values.assigneeId,
+            existing.rows[0].id,
+          ],
+        );
+        const updatedId = updateRes.rows[0].id;
+        const rowTask = {
+          id: updatedId,
+          rollNo: values.rollNo,
+          title: values.title,
+          goalId,
+        };
+        const title = normalizeString(values.title);
+        taskLookup.set(`id:${rowTask.id}`, rowTask);
+        taskLookup.set(`${title}|${goalId}`, rowTask);
+        taskLookup.set(title, rowTask);
+        if (rowTask.rollNo) taskLookup.set(`rollno:${rowTask.rollNo}|${goalId}`, rowTask);
+        if (rowTask.rollNo) taskLookup.set(`rollno:${rowTask.rollNo}`, rowTask);
+        return { id: rowTask.id, action: "updated" };
+      }
+    }
+    throw err;
+  }
+
+  const rowTask = {
+    id: insertRes.rows[0].id,
+    rollNo: values.rollNo,
+    title: values.title,
+    goalId,
+  };
+  const title = normalizeString(values.title);
+  taskLookup.set(`id:${rowTask.id}`, rowTask);
+  taskLookup.set(`${title}|${goalId}`, rowTask);
+  taskLookup.set(title, rowTask);
+  if (rowTask.rollNo) taskLookup.set(`rollno:${rowTask.rollNo}|${goalId}`, rowTask);
+  if (rowTask.rollNo) taskLookup.set(`rollno:${rowTask.rollNo}`, rowTask);
+  return { id: rowTask.id, action: "created" };
 }
 
 async function resolveTaskIdForActivity(client, row, taskLookup, tasksRows) {
-  if (row.task_id) return Number(row.task_id);
+  if (row.task_id) {
+    const explicitTask = taskLookup.get(`id:${Number(row.task_id)}`);
+    if (explicitTask) return explicitTask.id;
+  }
+
   if (row.task_roll_no) {
     const task =
       taskLookup.get(`rollno:${row.task_roll_no}|${Number(row.goal_id) || 0}`) ||
       taskLookup.get(`rollno:${row.task_roll_no}`);
     if (task) return task.id;
   }
+
   const titleKey = `${normalizeString(row.task_title || row.task_name)}|${Number(row.goal_id) || 0}`;
-  const task = taskLookup.get(titleKey);
+  let task = taskLookup.get(titleKey);
   if (task) return task.id;
+
+  if (row.task_title || row.task_name) {
+    task = taskLookup.get(normalizeString(row.task_title || row.task_name));
+    if (task) return task.id;
+  }
 
   for (const taskRow of tasksRows) {
     if (normalizeString(taskRow.task_title || taskRow.task_name) === normalizeString(row.task_title || row.task_name)) {
-      return Number(taskRow.task_id || taskRow.taskId || null) || null;
+      const explicitId = Number(taskRow.task_id || taskRow.taskId || null);
+      if (explicitId && taskLookup.get(`id:${explicitId}`)) return explicitId;
     }
   }
 
@@ -625,6 +783,11 @@ async function resolveTaskIdForActivity(client, row, taskLookup, tasksRows) {
 async function upsertActivity(client, row, taskId, activityLookup) {
   let existingActivity = null;
   if (row.activity_id) existingActivity = activityLookup.get(`id:${Number(row.activity_id)}`);
+  if (!existingActivity && row.activity_roll_no) {
+    existingActivity =
+      activityLookup.get(`rollno:${row.activity_roll_no}|${taskId}`) ||
+      activityLookup.get(`rollno:${row.activity_roll_no}`);
+  }
   if (!existingActivity) {
     const titleKey = `${normalizeString(row.activity_title || row.activity_name)}|${taskId}`;
     existingActivity = activityLookup.get(titleKey);
@@ -633,6 +796,7 @@ async function upsertActivity(client, row, taskId, activityLookup) {
   const parsedStatus = normalizeStatus(row.activity_status);
   const explicitIsDone = parseBoolean(row.activity_is_done);
   const values = {
+    rollNo: parseNumeric(row.activity_roll_no),
     title: parseString(row.activity_title || row.activity_name || row.title || row.name),
     description: parseString(
       row.activity_description || row.activity_desc || row.description || row.desc,
@@ -644,17 +808,20 @@ async function upsertActivity(client, row, taskId, activityLookup) {
       row.activity_metric_type || row.metric_type || row.metricType,
     ),
     targetMetric:
-      row.activity_target_metric || row.target_metric || row.targetMetric || null,
+      row.activity_target_metric || row.target_metric || row.current_metric || row.currentMetric || null,
     currentMetric:
       row.activity_current_metric || row.current_metric || row.currentMetric || null,
     previousMetric:
       row.activity_previous_metric || row.previous_metric || row.previousMetric || null,
-    quarterlyGoals: safeParseJson(
-      row.activity_quarterly_goals ||
-        row.activity_quarterlyGoals ||
-        row.quarterly_goals ||
-        row.quarterlyGoals ||
-        null,
+    quarterlyGoals: mergeQuarterlyGoals(
+      safeParseJson(
+        row.activity_quarterly_goals ||
+          row.activity_quarterlyGoals ||
+          row.quarterly_goals ||
+          row.quarterlyGoals ||
+          null,
+      ),
+      parseQuarterlyGoalsFromActivityRow(row),
     ),
     isDone:
       explicitIsDone !== null
@@ -668,20 +835,22 @@ async function upsertActivity(client, row, taskId, activityLookup) {
   if (existingActivity) {
     const updateRes = await client.query(
       `UPDATE "Activities"
-         SET title = COALESCE($1::text, title),
-             description = COALESCE($2::text, description),
-             status = COALESCE($3::activity_status, status),
-             weight = COALESCE($4::numeric, weight),
-             "dueDate" = COALESCE($5::date, "dueDate"),
-             "metricType" = COALESCE($6::metric_type, "metricType"),
-             "targetMetric" = COALESCE($7::jsonb, "targetMetric"),
-             "currentMetric" = COALESCE($8::jsonb, "currentMetric"),
-             "previousMetric" = COALESCE($9::jsonb, "previousMetric"),
-             "isDone" = COALESCE($10::boolean, "isDone"),
-             "quarterlyGoals" = COALESCE($11::jsonb, "quarterlyGoals"),
+         SET "rollNo" = COALESCE($1, "rollNo"),
+             title = COALESCE($2::text, title),
+             description = COALESCE($3::text, description),
+             status = COALESCE($4::activity_status, status),
+             weight = COALESCE($5::numeric, weight),
+             "dueDate" = COALESCE($6::date, "dueDate"),
+             "metricType" = COALESCE($7::metric_type, "metricType"),
+             "targetMetric" = COALESCE($8::jsonb, "targetMetric"),
+             "currentMetric" = COALESCE($9::jsonb, "currentMetric"),
+             "previousMetric" = COALESCE($10::jsonb, "previousMetric"),
+             "isDone" = COALESCE($11::boolean, "isDone"),
+             "quarterlyGoals" = COALESCE($12::jsonb, "quarterlyGoals"),
              "updatedAt" = NOW()
-       WHERE id = $12 RETURNING id`,
+       WHERE id = $13 RETURNING id, "rollNo", title, "taskId"`,
       [
+        values.rollNo,
         values.title,
         values.description,
         values.status,
@@ -696,50 +865,137 @@ async function upsertActivity(client, row, taskId, activityLookup) {
         existingActivity.id,
       ],
     );
-    return { id: updateRes.rows[0].id, action: "updated" };
+    const updatedActivity = {
+      id: updateRes.rows[0].id,
+      rollNo: updateRes.rows[0].rollNo,
+      title: updateRes.rows[0].title,
+      taskId,
+    };
+    const title = normalizeString(updatedActivity.title);
+    activityLookup.set(`id:${updatedActivity.id}`, updatedActivity);
+    activityLookup.set(`${title}|${taskId}`, updatedActivity);
+    activityLookup.set(title, updatedActivity);
+    if (updatedActivity.rollNo) activityLookup.set(`rollno:${updatedActivity.rollNo}|${taskId}`, updatedActivity);
+    if (updatedActivity.rollNo) activityLookup.set(`rollno:${updatedActivity.rollNo}`, updatedActivity);
+    return { id: updatedActivity.id, action: "updated" };
   }
 
-  const insertRes = await client.query(
-    `INSERT INTO "Activities"
-       ("taskId", title, description, status, weight, "dueDate", "metricType", "targetMetric", "currentMetric", "previousMetric", "isDone", "quarterlyGoals", "createdAt", "updatedAt")
-       VALUES ($1,$2::text,$3::text,$4::activity_status,COALESCE($5::numeric,0),$6::date,COALESCE($7::metric_type,'Plus'),$8::jsonb,$9::jsonb,$10::jsonb,$11::boolean,$12::jsonb,NOW(),NOW())
-       RETURNING id`,
-    [
-      values.taskId,
-      values.title,
-      values.description,
-      values.status || "To Do",
-      values.weight,
-      values.dueDate,
-      values.metricType || "Plus",
-      values.targetMetric,
-      values.currentMetric,
-      values.previousMetric,
-      values.isDone || false,
-      values.quarterlyGoals,
-    ],
-  );
+  let insertRes;
+  try {
+    insertRes = await client.query(
+      `INSERT INTO "Activities"
+         ("taskId", "rollNo", title, description, status, weight, "dueDate", "metricType", "targetMetric", "currentMetric", "previousMetric", "isDone", "quarterlyGoals", "createdAt", "updatedAt")
+         VALUES ($1,$2,$3::text,$4::text,$5::activity_status,COALESCE($6::numeric,0),$7::date,COALESCE($8::metric_type,'Plus'),$9::jsonb,$10::jsonb,$11::jsonb,$12::boolean,$13::jsonb,NOW(),NOW())
+         RETURNING id`,
+      [
+        values.taskId,
+        values.rollNo,
+        values.title,
+        values.description,
+        values.status || "To Do",
+        values.weight,
+        values.dueDate,
+        values.metricType || "Plus",
+        values.targetMetric,
+        values.currentMetric,
+        values.previousMetric,
+        values.isDone || false,
+        values.quarterlyGoals,
+      ],
+    );
+  } catch (err) {
+    if (err.code === "23505" && err.constraint === "ux_activities_task_roll" && values.rollNo) {
+      const existing = await client.query(
+        `SELECT id FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2 LIMIT 1`,
+        [values.taskId, values.rollNo],
+      );
+      if (existing.rows.length) {
+        const updateRes = await client.query(
+          `UPDATE "Activities"
+             SET title = COALESCE($1::text, title),
+                 description = COALESCE($2::text, description),
+                 status = COALESCE($3::activity_status, status),
+                 weight = COALESCE($4::numeric, weight),
+                 "dueDate" = COALESCE($5::date, "dueDate"),
+                 "metricType" = COALESCE($6::metric_type, "metricType"),
+                 "targetMetric" = COALESCE($7::jsonb, "targetMetric"),
+                 "currentMetric" = COALESCE($8::jsonb, "currentMetric"),
+                 "previousMetric" = COALESCE($9::jsonb, "previousMetric"),
+                 "isDone" = COALESCE($10::boolean, "isDone"),
+                 "quarterlyGoals" = COALESCE($11::jsonb, "quarterlyGoals"),
+                 "updatedAt" = NOW()
+           WHERE id = $12 RETURNING id, "rollNo", title, "taskId"`,
+          [
+            values.title,
+            values.description,
+            values.status,
+            values.weight,
+            values.dueDate,
+            values.metricType,
+            values.targetMetric,
+            values.currentMetric,
+            values.previousMetric,
+            values.isDone,
+            values.quarterlyGoals,
+            existing.rows[0].id,
+          ],
+        );
+        const updatedActivity = {
+          id: updateRes.rows[0].id,
+          rollNo: updateRes.rows[0].rollNo,
+          title: updateRes.rows[0].title,
+          taskId,
+        };
+        const title = normalizeString(updatedActivity.title);
+        activityLookup.set(`id:${updatedActivity.id}`, updatedActivity);
+        activityLookup.set(`${title}|${taskId}`, updatedActivity);
+        activityLookup.set(title, updatedActivity);
+        if (updatedActivity.rollNo) activityLookup.set(`rollno:${updatedActivity.rollNo}|${taskId}`, updatedActivity);
+        if (updatedActivity.rollNo) activityLookup.set(`rollno:${updatedActivity.rollNo}`, updatedActivity);
+        return { id: updatedActivity.id, action: "updated" };
+      }
+    }
+    throw err;
+  }
+
   const id = insertRes.rows[0].id;
-  const titleKey = `${normalizeString(values.title)}|${taskId}`;
-  activityLookup.set(titleKey, { id, ...values });
+  const title = normalizeString(values.title);
+  const titleKey = `${title}|${taskId}`;
+  const activityRecord = { id, ...values, taskId };
+  activityLookup.set(`id:${id}`, activityRecord);
+  activityLookup.set(titleKey, activityRecord);
+  activityLookup.set(title, activityRecord);
+  if (values.rollNo) activityLookup.set(`rollno:${values.rollNo}|${taskId}`, activityRecord);
+  if (values.rollNo) activityLookup.set(`rollno:${values.rollNo}`, activityRecord);
   return { id, action: "created" };
 }
 
 async function resolveActivityIdForQuarter(client, row, activityLookup, activitiesRows) {
-  if (row.activity_id) return Number(row.activity_id);
+  if (row.activity_id) {
+    const explicitActivity = activityLookup.get(`id:${Number(row.activity_id)}`);
+    if (explicitActivity) return explicitActivity.id;
+  }
+
   if (row.activity_roll_no) {
     const activity =
       activityLookup.get(`rollno:${row.activity_roll_no}|${Number(row.task_id) || 0}`) ||
       activityLookup.get(`rollno:${row.activity_roll_no}`);
     if (activity) return activity.id;
   }
+
   const titleKey = `${normalizeString(row.activity_title || row.activity_name)}|${Number(row.task_id) || 0}`;
-  const found = activityLookup.get(titleKey);
+  let found = activityLookup.get(titleKey);
   if (found) return found.id;
+
+  if (row.activity_title || row.activity_name) {
+    found = activityLookup.get(normalizeString(row.activity_title || row.activity_name));
+    if (found) return found.id;
+  }
 
   for (const activityRow of activitiesRows) {
     if (normalizeString(activityRow.activity_title || activityRow.activity_name) === normalizeString(row.activity_title || row.activity_name)) {
-      return Number(activityRow.activity_id || activityRow.activityId || null) || null;
+      const explicitId = Number(activityRow.activity_id || activityRow.activityId || null);
+      if (explicitId && activityLookup.get(`id:${explicitId}`)) return explicitId;
     }
   }
 
@@ -777,7 +1033,7 @@ async function upsertQuarterlyRecord(client, row, activityId, userId) {
        VALUES ($1,$2,$3,$4,$5,'import',$6,$6,NOW(),NOW())
        ON CONFLICT ("activityId", "fiscalYear", quarter, "metricKey") WHERE "quarter" IS NOT NULL
        DO UPDATE SET value = EXCLUDED.value, source = EXCLUDED.source, "updatedBy" = EXCLUDED."updatedBy", "updatedAt" = NOW()`,
-      [activityId, fiscalYear, quarter, `${metricKey}_actual`, actual, userId],
+      [activityId, fiscalYear, quarter, metricKey, actual, userId],
     );
   }
 
@@ -834,8 +1090,11 @@ async function downloadTemplate(req, res) {
       `SELECT t.id AS task_id, t."rollNo" AS task_roll_no, t.title AS task_title,
               t.description AS task_description, t.status AS task_status,
               t.weight AS task_weight, t."dueDate" AS task_due_date,
-              t."assigneeId" AS task_assignee_id, t."goalId" AS goal_id
+              t."assigneeId" AS task_assignee_id, t."goalId" AS goal_id,
+              g.title AS goal_title, gr.name AS goal_group_name
        FROM "Tasks" t
+       LEFT JOIN "Goals" g ON t."goalId" = g.id
+       LEFT JOIN "Groups" gr ON g."groupId" = gr.id
        ORDER BY t.id`,
     );
 
@@ -845,67 +1104,62 @@ async function downloadTemplate(req, res) {
               a.weight AS activity_weight, a."dueDate" AS activity_due_date,
               a."metricType" AS activity_metric_type, a."targetMetric" AS activity_target_metric,
               a."currentMetric" AS activity_current_metric, a."previousMetric" AS activity_previous_metric,
-              a."isDone" AS activity_is_done, a."quarterlyGoals" AS activity_quarterly_goals, a."taskId" AS task_id
+              a."isDone" AS activity_is_done, a."quarterlyGoals" AS activity_quarterly_goals,
+              a."taskId" AS task_id, t.title AS task_title, t."rollNo" AS task_roll_no,
+              g.id AS goal_id, g.title AS goal_title, gr.name AS goal_group_name
        FROM "Activities" a
+       LEFT JOIN "Tasks" t ON a."taskId" = t.id
+       LEFT JOIN "Goals" g ON t."goalId" = g.id
+       LEFT JOIN "Groups" gr ON g."groupId" = gr.id
        ORDER BY a.id`,
     );
 
+    const fiscalRes = await db.query(`SELECT * FROM calc_fiscal_period(CURRENT_DATE)`);
+    const currentFiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
     const quartersRes = await db.query(
       `SELECT ar."activityId" AS activity_id, a.title AS activity_title, a."rollNo" AS activity_roll_no,
               ar."fiscalYear" AS fiscal_year, ar.quarter, ar."metricKey" AS metric_key,
               ar.value
        FROM "ActivityRecords" ar
        LEFT JOIN "Activities" a ON a.id = ar."activityId"
-       WHERE ar.quarter IS NOT NULL
+       WHERE ar.quarter IS NOT NULL AND ar."fiscalYear" = $1
        ORDER BY ar."activityId", ar.quarter, ar."metricKey"`,
+      [currentFiscalYear],
     );
 
     const activities = activitiesRes.rows.map((row) => ({
       ...row,
+      targetMetric: row.activity_target_metric || row.target_metric || null,
+      currentMetric: row.activity_current_metric || row.current_metric || null,
+      previousMetric: row.activity_previous_metric || row.previous_metric || null,
+      quarterlyGoals: row.activity_quarterly_goals || null,
       activity_quarterly_goals: safeParseJson(row.activity_quarterly_goals),
     }));
 
-    const activityQuarterlyGoalsRows = [];
-    const currentYear = new Date().getFullYear();
+    const quarterlyMap = buildQuarterlyRecordsMap(activities, quartersRes.rows, null);
 
+    const activityQuarterlyGoalsRows = [];
     for (const activity of activities) {
       const quarterlyGoals = activity.activity_quarterly_goals || safeParseJson(activity.quarterlyGoals);
-      if (quarterlyGoals && typeof quarterlyGoals === "object") {
-        for (const [key, value] of Object.entries(quarterlyGoals)) {
-          const match = /^q([1-4])$/i.exec(String(key).trim());
-          if (!match) continue;
-          activityQuarterlyGoalsRows.push({
-            activity_id: activity.activity_id || null,
-            activity_roll_no: activity.activity_roll_no || null,
-            activity_title: activity.activity_title || null,
-            planned: value,
-            actual: null,
-            remark: null,
-            metric_key: `Q${match[1]}`,
-            fiscal_year: currentYear,
-            quarter: Number(match[1]),
-          });
-        }
+      for (let quarter = 1; quarter <= 4; quarter += 1) {
+        const planned = quarterlyGoals && typeof quarterlyGoals === "object" ? quarterlyGoals[`q${quarter}`] : null;
+        const actual = quarterlyMap[activity.activity_id]?.[`q${quarter}`] ?? null;
+
+        activityQuarterlyGoalsRows.push({
+          activity_id: activity.activity_id || null,
+          activity_roll_no: activity.activity_roll_no || null,
+          activity_title: activity.activity_title || null,
+          fiscal_year: currentFiscalYear,
+          quarter,
+          metric_key: `quarterlyGoals`,
+          planned: planned !== undefined ? planned : null,
+          actual,
+          remark: null,
+        });
       }
     }
 
-    const quarters = quartersRes.rows
-      .map((row) => {
-        const key = String(row.metric_key || "");
-        const match = key.match(/_(planned|actual|remark)$/i);
-        const baseKey = match ? key.slice(0, -match[0].length) : key;
-        return {
-          activity_id: row.activity_id || null,
-          activity_roll_no: row.activity_roll_no || null,
-          fiscal_year: row.fiscal_year || null,
-          quarter: row.quarter || null,
-          metric_key: baseKey || null,
-          planned: match && match[1].toLowerCase() === "planned" ? row.value : null,
-          actual: match && match[1].toLowerCase() === "actual" ? row.value : null,
-          remark: match && match[1].toLowerCase() === "remark" ? row.value : null,
-        };
-      })
-      .concat(activityQuarterlyGoalsRows);
+    const quarters = activityQuarterlyGoalsRows;
 
     const workbook = buildTemplateWorkbook({
       goals: goalsRes.rows,
