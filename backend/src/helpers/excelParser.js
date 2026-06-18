@@ -11,11 +11,15 @@ function normalizeHeader(header) {
     .replace(/^_+|_+$/g, "_");
 }
 
+// Special marker for empty cells that are explicitly present in the workbook
+const EXPLICIT_EMPTY = Symbol("__EXPLICIT_EMPTY__");
+
 function parseCellValue(value) {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (trimmed === "") return null;
+    // Mark explicitly empty cells so we can distinguish from "not provided"
+    if (trimmed === "") return EXPLICIT_EMPTY;
     return trimmed;
   }
   if (typeof value === "number" || typeof value === "boolean") return value;
@@ -104,19 +108,47 @@ function getMetricKeyFromActivityRow(row) {
 function buildQuarterRowsFromActivities(rows) {
   const currentYear = new Date().getFullYear();
   const quarterRows = [];
+
+  function getQuarterValue(row, quarter, fields) {
+    for (const field of fields) {
+      const value = row[`q${quarter}_${field}`];
+      if (
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ""
+      ) {
+        return parseNumeric(value);
+      }
+    }
+    return null;
+  }
+
+  function getQuarterRemark(row, quarter) {
+    const value =
+      row[`q${quarter}_remark`] ??
+      row[`q${quarter}_remarks`] ??
+      row[`q${quarter}_note`] ??
+      row[`q${quarter}_notes`];
+    if (value === undefined || value === null) return null;
+    const normalized = String(value).trim();
+    return normalized === "" ? null : normalized;
+  }
+
   for (const row of Array.isArray(rows) ? rows : []) {
     const metricKey = getMetricKeyFromActivityRow(row) || "quarterlyGoals";
     for (let quarter = 1; quarter <= 4; quarter += 1) {
-      const actual = parseNumeric(row[`q${quarter}_record`]);
-      if (actual === null) continue;
+      const planned = getQuarterValue(row, quarter, ["goal", "planned"]);
+      const actual = getQuarterValue(row, quarter, ["record", "actual"]);
+      const remark = getQuarterRemark(row, quarter);
+      if (planned === null && actual === null && remark === null) continue;
       quarterRows.push({
         ...row,
         quarter,
         fiscal_year: Number(row.fiscal_year || currentYear) || currentYear,
         metric_key: metricKey,
-        planned: null,
+        planned,
         actual,
-        remark: null,
+        remark,
         sheetName: "Activities",
       });
     }
@@ -129,7 +161,16 @@ function mergeQuarterRows(activityRows, sheetRows) {
   const seen = new Set();
 
   function rowKey(row) {
-    return [row.activity_id || "", row.activity_roll_no || "", row.activity_title || "", row.activity_name || "", row.quarter || "", String(row.metric_key || "").trim().toLowerCase()].join("|");
+    return [
+      row.activity_id || "",
+      row.activity_roll_no || "",
+      row.activity_title || "",
+      row.activity_name || "",
+      row.quarter || "",
+      String(row.metric_key || "")
+        .trim()
+        .toLowerCase(),
+    ].join("|");
   }
 
   for (const row of Array.isArray(activityRows) ? activityRows : []) {
@@ -152,9 +193,7 @@ function getSheetByName(workbook, name) {
   const sheet = workbook.getWorksheet(name);
   if (sheet) return sheet;
   const lowerName = name.toLowerCase();
-  return workbook.worksheets.find(
-    (ws) => ws.name.toLowerCase() === lowerName,
-  );
+  return workbook.worksheets.find((ws) => ws.name.toLowerCase() === lowerName);
 }
 
 function parseQuarterRows(worksheet, quarter) {
@@ -195,4 +234,7 @@ module.exports = {
   parseWorkbook,
   parseWorksheet,
   normalizeHeader,
+  getMetricKeyFromActivityRow,
+  buildQuarterRowsFromActivities,
+  EXPLICIT_EMPTY,
 };

@@ -1,6 +1,20 @@
 -- Migration: Fix progress rollup logic in accumulate_metrics
 -- Updates accumulate_metrics to recalculate task and goal progress after activity update
 
+
+CREATE OR REPLACE FUNCTION safe_numeric(value TEXT) RETURNS NUMERIC LANGUAGE plpgsql AS $$
+BEGIN
+  IF value IS NULL OR trim(value) = '' THEN
+    RETURN NULL;
+  END IF;
+  BEGIN
+    RETURN value::numeric;
+  EXCEPTION WHEN invalid_text_representation THEN
+    RETURN NULL;
+  END;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION accumulate_metrics(
     p_activity_id INT,
     p_metrics JSONB,
@@ -48,9 +62,9 @@ BEGIN
 
         FOR k IN SELECT jsonb_object_keys(p_metrics) LOOP
             BEGIN
-                key_val := (p_metrics ->> k)::numeric;
+                key_val := safe_numeric(p_metrics ->> k);
                 IF key_val IS NOT NULL THEN
-                    val_current := COALESCE((v_current ->> k)::numeric, 0);
+                    val_current := COALESCE(safe_numeric(v_current ->> k), 0);
                     v_current := jsonb_set(v_current, ARRAY[k], to_jsonb(val_current + key_val));
                 END IF;
             EXCEPTION WHEN others THEN END;
@@ -60,12 +74,12 @@ BEGIN
         sum_target := 0;
 
         FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-            val_current := (v_current ->> k)::numeric;
+            val_current := safe_numeric(v_current ->> k);
             sum_current := sum_current + COALESCE(val_current, 0);
         END LOOP;
 
         FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-            val_target := (v_target ->> k)::numeric;
+            val_target := safe_numeric(v_target ->> k);
             sum_target := sum_target + COALESCE(val_target, 0);
         END LOOP;
 
@@ -84,15 +98,15 @@ BEGIN
         val_prev := 0;
 
         FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-            sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
+            sum_current := sum_current + COALESCE(safe_numeric(v_current ->> k), 0);
         END LOOP;
 
         FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-            sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
+            sum_target := sum_target + COALESCE(safe_numeric(v_target ->> k), 0);
         END LOOP;
 
         FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
-            val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
+            val_prev := val_prev + COALESCE(safe_numeric(v_prev ->> k), 0);
         END LOOP;
 
         IF (sum_target - val_prev) > 0 THEN
@@ -111,13 +125,13 @@ BEGIN
         val_prev := 0;
 
         FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-            sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
+            sum_current := sum_current + COALESCE(safe_numeric(v_current ->> k), 0);
         END LOOP;
         FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-            sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
+            sum_target := sum_target + COALESCE(safe_numeric(v_target ->> k), 0);
         END LOOP;
         FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
-            val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
+            val_prev := val_prev + COALESCE(safe_numeric(v_prev ->> k), 0);
         END LOOP;
 
         IF (val_prev - sum_target) > 0 THEN

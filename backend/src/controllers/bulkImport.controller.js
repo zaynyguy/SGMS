@@ -2,12 +2,22 @@ const fs = require("fs");
 const path = require("path");
 const db = require("../db");
 const { UPLOAD_DIR } = require("../middleware/uploadMiddleware");
-const { parseWorkbook } = require("../helpers/excelParser");
+const {
+  parseWorkbook,
+  getMetricKeyFromActivityRow,
+  EXPLICIT_EMPTY,
+} = require("../helpers/excelParser");
 const { validateImportData } = require("../helpers/importValidator");
 const { buildImportPreview } = require("../helpers/importPreviewGenerator");
-const { buildErrorWorkbook, buildErrorCsv } = require("../helpers/importErrorReporter");
+const {
+  buildErrorWorkbook,
+  buildErrorCsv,
+} = require("../helpers/importErrorReporter");
 const { buildTemplateWorkbook } = require("../scripts/templateGenerator");
-const { buildQuarterlyRecordsMap } = require("../helpers/quarterlyRecords");
+const {
+  buildQuarterlyRecordsMap,
+  getPrimaryMetricKey,
+} = require("../helpers/quarterlyRecords");
 
 function safeParseJson(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -26,14 +36,29 @@ function safeParseJson(value) {
   }
 }
 
-function parseString(value) {
-  if (value === null || value === undefined) return null;
+// Helper: Parse string value, distinguishing between "not provided" and "explicitly empty"
+// Returns: { value: string|null, isExplicitEmpty: boolean }
+function parseStringWithEmptyMarker(value) {
+  if (value === EXPLICIT_EMPTY) {
+    return { value: null, isExplicitEmpty: true };
+  }
+  if (value === null || value === undefined) {
+    return { value: null, isExplicitEmpty: false };
+  }
   const text = String(value).trim();
-  return text === "" ? null : text;
+  return text === ""
+    ? { value: null, isExplicitEmpty: false }
+    : { value: text, isExplicitEmpty: false };
+}
+
+function parseString(value) {
+  const parsed = parseStringWithEmptyMarker(value);
+  return parsed.value;
 }
 
 function parseNumeric(value) {
   if (value === null || value === undefined || value === "") return null;
+  if (value === EXPLICIT_EMPTY) return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
 }
@@ -42,13 +67,53 @@ function parseQuarterlyGoalsFromActivityRow(row) {
   const quarterlyGoals = {};
   let hasAny = false;
   for (let q = 1; q <= 4; q += 1) {
-    const value = parseNumeric(row[`q${q}_goal`]);
+    const value = parseNumeric(row[`q${q}_goal`] ?? row[`activity_q${q}_goal`]);
     if (value !== null) {
       quarterlyGoals[`q${q}`] = value;
       hasAny = true;
     }
   }
   return hasAny ? quarterlyGoals : null;
+}
+
+function parseQuarterlyRecordsFromActivityRow(row) {
+  const quarterlyRecords = {};
+  let hasAny = false;
+  for (let q = 1; q <= 4; q += 1) {
+    const rawValue =
+      row[`q${q}_record`] ??
+      row[`q${q}_actual`] ??
+      row[`activity_q${q}_record`] ??
+      row[`activity_q${q}_actual`];
+    if (
+      rawValue === null ||
+      rawValue === undefined ||
+      String(rawValue).trim() === ""
+    ) {
+      console.log(
+        `[DEBUG parseQuarterlyRecordsFromActivityRow] q${q}: no value (null/undefined/empty)`,
+      );
+      continue;
+    }
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) {
+      console.log(
+        `[DEBUG parseQuarterlyRecordsFromActivityRow] q${q}: invalid number - rawValue=${rawValue}, Number(rawValue)=${value}`,
+      );
+      continue;
+    }
+    quarterlyRecords[`q${q}`] = value;
+    console.log(
+      `[DEBUG parseQuarterlyRecordsFromActivityRow] q${q}: found value=${value}`,
+    );
+    hasAny = true;
+  }
+  const result = hasAny ? quarterlyRecords : null;
+  console.log(
+    "[DEBUG parseQuarterlyRecordsFromActivityRow] final result:",
+    result,
+  );
+  return result;
 }
 
 function mergeQuarterlyGoals(existingGoals, explicitGoals) {
@@ -80,9 +145,11 @@ function normalizeStatus(value) {
   if (!input) return null;
   const normalized = input.toLowerCase();
   if (["to do", "todo", "to-do"].includes(normalized)) return "To Do";
-  if (["in progress", "inprogress", "in-progress"].includes(normalized)) return "In Progress";
+  if (["in progress", "inprogress", "in-progress"].includes(normalized))
+    return "In Progress";
   if (["done", "completed", "complete"].includes(normalized)) return "Done";
-  if (["not started", "notstarted", "not-started"].includes(normalized)) return "Not Started";
+  if (["not started", "notstarted", "not-started"].includes(normalized))
+    return "Not Started";
   if (["on hold", "onhold", "on-hold"].includes(normalized)) return "On Hold";
   return input;
 }
@@ -109,10 +176,18 @@ function getUploadedImportFile(req) {
   if (req.file) return req.file;
   if (req.files) {
     if (Array.isArray(req.files) && req.files.length > 0) return req.files[0];
-    if (req.files.file && Array.isArray(req.files.file) && req.files.file.length > 0)
+    if (
+      req.files.file &&
+      Array.isArray(req.files.file) &&
+      req.files.file.length > 0
+    )
       return req.files.file[0];
     const firstKey = Object.keys(req.files)[0];
-    if (firstKey && Array.isArray(req.files[firstKey]) && req.files[firstKey].length > 0)
+    if (
+      firstKey &&
+      Array.isArray(req.files[firstKey]) &&
+      req.files[firstKey].length > 0
+    )
       return req.files[firstKey][0];
   }
   return null;
@@ -153,8 +228,8 @@ async function previewImport(req, res) {
     const filePath = uploadedFile
       ? uploadedFile.path
       : req.body.fileName
-      ? buildUploadPath(req.body.fileName)
-      : null;
+        ? buildUploadPath(req.body.fileName)
+        : null;
 
     if (!filePath || !fs.existsSync(filePath)) {
       return res.status(400).json({ error: "Uploaded file not found." });
@@ -171,11 +246,16 @@ async function previewImport(req, res) {
     });
   } catch (err) {
     console.error("previewImport error:", err);
-    return res.status(500).json({ error: err.message || "Failed to preview import." });
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to preview import." });
   }
 }
 
-async function saveImportHistory(client, { fileName, originalName, uploadedBy, summary, status, errors }) {
+async function saveImportHistory(
+  client,
+  { fileName, originalName, uploadedBy, summary, status, errors },
+) {
   const historyRes = await client.query(
     `INSERT INTO "${IMPORT_HISTORY_TABLE}" (
        "fileName", "originalName", "uploadedBy", "summary", "status", "errors"
@@ -194,7 +274,9 @@ async function saveImportHistory(client, { fileName, originalName, uploadedBy, s
 
 async function executeImport(req, res) {
   const uploadedFile = getUploadedImportFile(req);
-  const requestedFileName = req.body.fileName ? path.basename(req.body.fileName) : null;
+  const requestedFileName = req.body.fileName
+    ? path.basename(req.body.fileName)
+    : null;
   const deleteAfterImport =
     typeof req.body.deleteAfterImport === "undefined"
       ? true
@@ -204,8 +286,8 @@ async function executeImport(req, res) {
   const filePath = uploadedFile
     ? uploadedFile.path
     : requestedFileName
-    ? buildUploadPath(requestedFileName)
-    : null;
+      ? buildUploadPath(requestedFileName)
+      : null;
 
   if (!filePath) {
     return res.status(400).json({ error: "file or fileName is required." });
@@ -228,7 +310,8 @@ async function executeImport(req, res) {
     if (validation.errors.length) {
       historyId = await saveImportHistory(client, {
         fileName: fileNameToUse,
-        originalName: req.body.originalName || uploadedFile?.originalname || null,
+        originalName:
+          req.body.originalName || uploadedFile?.originalname || null,
         uploadedBy: req.user?.id || null,
         summary: validation.summary || {},
         status: "failed",
@@ -253,7 +336,8 @@ async function executeImport(req, res) {
       await client.query("ROLLBACK");
       historyId = await saveImportHistory(client, {
         fileName: fileNameToUse,
-        originalName: req.body.originalName || uploadedFile?.originalname || null,
+        originalName:
+          req.body.originalName || uploadedFile?.originalname || null,
         uploadedBy: req.user?.id || null,
         summary: importSummary,
         status: "failed",
@@ -291,7 +375,8 @@ async function executeImport(req, res) {
     try {
       historyId = await saveImportHistory(client, {
         fileName: fileNameToUse,
-        originalName: req.body.originalName || uploadedFile?.originalname || null,
+        originalName:
+          req.body.originalName || uploadedFile?.originalname || null,
         uploadedBy: req.user?.id || null,
         summary: importSummary || {},
         status: "failed",
@@ -300,7 +385,9 @@ async function executeImport(req, res) {
     } catch (historyErr) {
       console.error("Failed to save import history after error:", historyErr);
     }
-    return res.status(500).json({ error: err.message || "Import failed.", historyId });
+    return res
+      .status(500)
+      .json({ error: err.message || "Import failed.", historyId });
   } finally {
     client.release();
     if (deleteAfterImport) {
@@ -338,52 +425,105 @@ async function performImport(client, parsed, userId) {
   for (let index = 0; index < parsed.goals.length; index += 1) {
     const row = parsed.goals[index];
     try {
-      const { id, action } = await upsertGoal(client, row, goalLookup, groupLookup);
+      const { id, action } = await upsertGoal(
+        client,
+        row,
+        goalLookup,
+        groupLookup,
+      );
       goalIdByRow.set(index, id);
       if (action === "created") results.goals_created += 1;
       else if (action === "updated") results.goals_updated += 1;
     } catch (err) {
-      results.errors.push({ row: index + 2, type: "goal", message: err.message });
+      results.errors.push({
+        row: index + 2,
+        type: "goal",
+        message: err.message,
+      });
     }
   }
 
   for (let index = 0; index < parsed.tasks.length; index += 1) {
     const row = parsed.tasks[index];
     try {
-      const goalId = await resolveGoalIdForTask(client, row, goalLookup, groupLookup, goalIdByRow, parsed.goals);
+      const goalId = await resolveGoalIdForTask(
+        client,
+        row,
+        goalLookup,
+        groupLookup,
+        goalIdByRow,
+        parsed.goals,
+      );
       const { id, action } = await upsertTask(client, row, goalId, taskLookup);
       taskIdByRow.set(index, id);
       if (action === "created") results.tasks_created += 1;
       else if (action === "updated") results.tasks_updated += 1;
     } catch (err) {
-      results.errors.push({ row: index + 2, type: "task", message: err.message });
+      results.errors.push({
+        row: index + 2,
+        type: "task",
+        message: err.message,
+      });
     }
   }
 
   for (let index = 0; index < parsed.activities.length; index += 1) {
     const row = parsed.activities[index];
     try {
-      const taskId = await resolveTaskIdForActivity(client, row, taskLookup, parsed.tasks);
-      const { action } = await upsertActivity(client, row, taskId, activityLookup);
+      const taskId = await resolveTaskIdForActivity(
+        client,
+        row,
+        taskLookup,
+        parsed.tasks,
+      );
+      const { action } = await upsertActivity(
+        client,
+        row,
+        taskId,
+        activityLookup,
+        userId,
+      );
       if (action === "created") results.activities_created += 1;
       else if (action === "updated") results.activities_updated += 1;
     } catch (err) {
-      results.errors.push({ row: index + 2, type: "activity", message: err.message });
+      results.errors.push({
+        row: index + 2,
+        type: "activity",
+        message: err.message,
+      });
     }
   }
 
   for (const quarterRow of parsed.quarters) {
     try {
-      const activityId = await resolveActivityIdForQuarter(client, quarterRow, activityLookup, parsed.activities);
+      const activityId = await resolveActivityIdForQuarter(
+        client,
+        quarterRow,
+        activityLookup,
+        parsed.activities,
+      );
       if (!activityId) {
-        results.errors.push({ row: quarterRow.rowNumber, type: "quarter", message: "Activity could not be resolved." });
+        results.errors.push({
+          row: quarterRow.rowNumber,
+          type: "quarter",
+          message: "Activity could not be resolved.",
+        });
         continue;
       }
-      const { action } = await upsertQuarterlyRecord(client, quarterRow, activityId, userId);
+      const { action } = await upsertQuarterlyRecord(
+        client,
+        quarterRow,
+        activityId,
+        userId,
+      );
       if (action === "created") results.quarterly_records_created += 1;
       else if (action === "updated") results.quarterly_records_updated += 1;
     } catch (err) {
-      results.errors.push({ row: quarterRow.rowNumber, type: "quarter", message: err.message });
+      results.errors.push({
+        row: quarterRow.rowNumber,
+        type: "quarter",
+        message: err.message,
+      });
     }
   }
 
@@ -391,17 +531,23 @@ async function performImport(client, parsed, userId) {
 }
 
 async function loadExistingGoals(client) {
-  const { rows } = await client.query(`SELECT id, title, "groupId", "rollNo" FROM "Goals"`);
+  const { rows } = await client.query(
+    `SELECT id, title, "groupId", "rollNo" FROM "Goals"`,
+  );
   return rows;
 }
 
 async function loadExistingTasks(client) {
-  const { rows } = await client.query(`SELECT id, title, "goalId", "rollNo" FROM "Tasks"`);
+  const { rows } = await client.query(
+    `SELECT id, title, "goalId", "rollNo" FROM "Tasks"`,
+  );
   return rows;
 }
 
 async function loadExistingActivities(client) {
-  const { rows } = await client.query(`SELECT id, title, "taskId", "rollNo" FROM "Activities"`);
+  const { rows } = await client.query(
+    `SELECT id, title, "taskId", "rollNo" FROM "Activities"`,
+  );
   return rows;
 }
 
@@ -506,7 +652,9 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
 
   const values = {
     rollNo: parseNumeric(row.goal_roll_no),
-    title: parseString(row.goal_title || row.goal_name || row.title || row.name),
+    title: parseString(
+      row.goal_title || row.goal_name || row.title || row.name,
+    ),
     description: parseString(row.goal_description || row.description),
     status: normalizeStatus(row.goal_status),
     weight: parseNumeric(row.goal_weight),
@@ -548,7 +696,8 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
     };
     const title = normalizeString(updatedGoal.title);
     goalLookup.set(`id:${updatedGoal.id}`, updatedGoal);
-    if (updatedGoal.rollNo) goalLookup.set(`rollno:${updatedGoal.rollNo}`, updatedGoal);
+    if (updatedGoal.rollNo)
+      goalLookup.set(`rollno:${updatedGoal.rollNo}`, updatedGoal);
     goalLookup.set(`${title}|${updatedGoal.groupId || 0}`, updatedGoal);
     goalLookup.set(title, updatedGoal);
     return { id: updatedGoal.id, action: "updated" };
@@ -584,7 +733,14 @@ async function upsertGoal(client, row, goalLookup, groupLookup) {
   return { id: rowGoal.id, action: "created" };
 }
 
-async function resolveGoalIdForTask(client, row, goalLookup, groupLookup, goalIdByRow, goalsRows) {
+async function resolveGoalIdForTask(
+  client,
+  row,
+  goalLookup,
+  groupLookup,
+  goalIdByRow,
+  goalsRows,
+) {
   if (row.goal_id) {
     const explicitGoal = goalLookup.get(`id:${Number(row.goal_id)}`);
     if (explicitGoal) return explicitGoal.id;
@@ -611,7 +767,10 @@ async function resolveGoalIdForTask(client, row, goalLookup, groupLookup, goalId
 
   for (const [rowIndex, id] of goalIdByRow.entries()) {
     const uploaded = goalsRows[rowIndex];
-    if (normalizeString(uploaded.goal_title || uploaded.goal_name) === normalizeString(row.goal_title || row.goal_name)) {
+    if (
+      normalizeString(uploaded.goal_title || uploaded.goal_name) ===
+      normalizeString(row.goal_title || row.goal_name)
+    ) {
       return id;
     }
   }
@@ -634,7 +793,9 @@ async function upsertTask(client, row, goalId, taskLookup) {
 
   const values = {
     rollNo: parseNumeric(row.task_roll_no),
-    title: parseString(row.task_title || row.task_name || row.title || row.name),
+    title: parseString(
+      row.task_title || row.task_name || row.title || row.name,
+    ),
     description: parseString(row.task_description || row.description),
     status: normalizeStatus(row.task_status),
     weight: parseNumeric(row.task_weight),
@@ -688,7 +849,11 @@ async function upsertTask(client, row, goalId, taskLookup) {
       ],
     );
   } catch (err) {
-    if (err.code === "23505" && err.constraint === "ux_tasks_goal_roll" && values.rollNo) {
+    if (
+      err.code === "23505" &&
+      err.constraint === "ux_tasks_goal_roll" &&
+      values.rollNo
+    ) {
       const existing = await client.query(
         `SELECT id FROM "Tasks" WHERE "goalId" = $1 AND "rollNo" = $2 LIMIT 1`,
         [values.goalId, values.rollNo],
@@ -725,7 +890,8 @@ async function upsertTask(client, row, goalId, taskLookup) {
         taskLookup.set(`id:${rowTask.id}`, rowTask);
         taskLookup.set(`${title}|${goalId}`, rowTask);
         taskLookup.set(title, rowTask);
-        if (rowTask.rollNo) taskLookup.set(`rollno:${rowTask.rollNo}|${goalId}`, rowTask);
+        if (rowTask.rollNo)
+          taskLookup.set(`rollno:${rowTask.rollNo}|${goalId}`, rowTask);
         if (rowTask.rollNo) taskLookup.set(`rollno:${rowTask.rollNo}`, rowTask);
         return { id: rowTask.id, action: "updated" };
       }
@@ -743,7 +909,8 @@ async function upsertTask(client, row, goalId, taskLookup) {
   taskLookup.set(`id:${rowTask.id}`, rowTask);
   taskLookup.set(`${title}|${goalId}`, rowTask);
   taskLookup.set(title, rowTask);
-  if (rowTask.rollNo) taskLookup.set(`rollno:${rowTask.rollNo}|${goalId}`, rowTask);
+  if (rowTask.rollNo)
+    taskLookup.set(`rollno:${rowTask.rollNo}|${goalId}`, rowTask);
   if (rowTask.rollNo) taskLookup.set(`rollno:${rowTask.rollNo}`, rowTask);
   return { id: rowTask.id, action: "created" };
 }
@@ -756,8 +923,9 @@ async function resolveTaskIdForActivity(client, row, taskLookup, tasksRows) {
 
   if (row.task_roll_no) {
     const task =
-      taskLookup.get(`rollno:${row.task_roll_no}|${Number(row.goal_id) || 0}`) ||
-      taskLookup.get(`rollno:${row.task_roll_no}`);
+      taskLookup.get(
+        `rollno:${row.task_roll_no}|${Number(row.goal_id) || 0}`,
+      ) || taskLookup.get(`rollno:${row.task_roll_no}`);
     if (task) return task.id;
   }
 
@@ -771,7 +939,10 @@ async function resolveTaskIdForActivity(client, row, taskLookup, tasksRows) {
   }
 
   for (const taskRow of tasksRows) {
-    if (normalizeString(taskRow.task_title || taskRow.task_name) === normalizeString(row.task_title || row.task_name)) {
+    if (
+      normalizeString(taskRow.task_title || taskRow.task_name) ===
+      normalizeString(row.task_title || row.task_name)
+    ) {
       const explicitId = Number(taskRow.task_id || taskRow.taskId || null);
       if (explicitId && taskLookup.get(`id:${explicitId}`)) return explicitId;
     }
@@ -780,9 +951,10 @@ async function resolveTaskIdForActivity(client, row, taskLookup, tasksRows) {
   throw new Error("Unable to resolve parent Task for Activity.");
 }
 
-async function upsertActivity(client, row, taskId, activityLookup) {
+async function upsertActivity(client, row, taskId, activityLookup, userId) {
   let existingActivity = null;
-  if (row.activity_id) existingActivity = activityLookup.get(`id:${Number(row.activity_id)}`);
+  if (row.activity_id)
+    existingActivity = activityLookup.get(`id:${Number(row.activity_id)}`);
   if (!existingActivity && row.activity_roll_no) {
     existingActivity =
       activityLookup.get(`rollno:${row.activity_roll_no}|${taskId}`) ||
@@ -795,12 +967,24 @@ async function upsertActivity(client, row, taskId, activityLookup) {
 
   const parsedStatus = normalizeStatus(row.activity_status);
   const explicitIsDone = parseBoolean(row.activity_is_done);
+
+  // Parse title and description with empty-cell detection
+  const titleParsed = parseStringWithEmptyMarker(
+    row.activity_title || row.activity_name || row.title || row.name,
+  );
+  const descParsed = parseStringWithEmptyMarker(
+    row.activity_description ||
+      row.activity_desc ||
+      row.description ||
+      row.desc,
+  );
+
   const values = {
     rollNo: parseNumeric(row.activity_roll_no),
-    title: parseString(row.activity_title || row.activity_name || row.title || row.name),
-    description: parseString(
-      row.activity_description || row.activity_desc || row.description || row.desc,
-    ),
+    title: titleParsed.value,
+    titleIsExplicitEmpty: titleParsed.isExplicitEmpty,
+    description: descParsed.value,
+    descriptionIsExplicitEmpty: descParsed.isExplicitEmpty,
     status: parsedStatus,
     weight: parseNumeric(row.activity_weight),
     dueDate: row.activity_due_date || null,
@@ -808,11 +992,21 @@ async function upsertActivity(client, row, taskId, activityLookup) {
       row.activity_metric_type || row.metric_type || row.metricType,
     ),
     targetMetric:
-      row.activity_target_metric || row.target_metric || row.current_metric || row.currentMetric || null,
+      row.activity_target_metric ||
+      row.target_metric ||
+      row.current_metric ||
+      row.currentMetric ||
+      null,
     currentMetric:
-      row.activity_current_metric || row.current_metric || row.currentMetric || null,
+      row.activity_current_metric ||
+      row.current_metric ||
+      row.currentMetric ||
+      null,
     previousMetric:
-      row.activity_previous_metric || row.previous_metric || row.previousMetric || null,
+      row.activity_previous_metric ||
+      row.previous_metric ||
+      row.previousMetric ||
+      null,
     quarterlyGoals: mergeQuarterlyGoals(
       safeParseJson(
         row.activity_quarterly_goals ||
@@ -823,21 +1017,89 @@ async function upsertActivity(client, row, taskId, activityLookup) {
       ),
       parseQuarterlyGoalsFromActivityRow(row),
     ),
+    quarterlyRecords: parseQuarterlyRecordsFromActivityRow(row),
     isDone:
       explicitIsDone !== null
         ? explicitIsDone
         : parsedStatus === "Done"
-        ? true
-        : null,
+          ? true
+          : null,
     taskId,
   };
 
+  console.log(
+    "[DEBUG upsertActivity] Incoming row:",
+    JSON.stringify({
+      activity_id: row.activity_id,
+      activity_title: row.activity_title,
+      activity_description: row.activity_description,
+      activity_target_metric: row.activity_target_metric,
+      q1_record: row.q1_record,
+      q2_record: row.q2_record,
+      q3_record: row.q3_record,
+      q4_record: row.q4_record,
+    }),
+  );
+  console.log(
+    "[DEBUG upsertActivity] Parsed values.title:",
+    values.title,
+    "| titleIsExplicitEmpty:",
+    values.titleIsExplicitEmpty,
+  );
+  console.log(
+    "[DEBUG upsertActivity] Parsed values.description:",
+    values.description,
+    "| descIsExplicitEmpty:",
+    values.descriptionIsExplicitEmpty,
+  );
+  console.log(
+    "[DEBUG upsertActivity] Parsed values.quarterlyRecords:",
+    values.quarterlyRecords,
+  );
+  console.log("[DEBUG upsertActivity] Parsed values.isDone:", values.isDone);
+  console.log(
+    "[DEBUG upsertActivity] Existing activity:",
+    existingActivity
+      ? {
+          id: existingActivity.id,
+          title: existingActivity.title,
+          isDone: existingActivity.isDone,
+        }
+      : "none (will create)",
+  );
+
   if (existingActivity) {
+    console.log(
+      "[DEBUG upsertActivity] UPDATE: activity_id =",
+      existingActivity.id,
+      "| title param =",
+      values.title,
+      "| titleIsExplicitEmpty:",
+      values.titleIsExplicitEmpty,
+      "| desc param =",
+      values.description,
+      "| descIsExplicitEmpty:",
+      values.descriptionIsExplicitEmpty,
+    );
+
+    // Detect if isDone is changing
+    const isDoneChanged =
+      values.isDone !== null && values.isDone !== existingActivity.isDone;
+    console.log(
+      "[DEBUG upsertActivity] isDone changed?",
+      isDoneChanged,
+      "(existing:",
+      existingActivity.isDone,
+      ", new:",
+      values.isDone,
+      ")",
+    );
+
     const updateRes = await client.query(
       `UPDATE "Activities"
          SET "rollNo" = COALESCE($1, "rollNo"),
-             title = COALESCE($2::text, title),
-             description = COALESCE($3::text, description),
+             title = CASE WHEN $14::boolean THEN $2::text ELSE COALESCE($2::text, title) END,
+             description = CASE WHEN $15::boolean THEN $3::text ELSE COALESCE($3::text, description) END,
              status = COALESCE($4::activity_status, status),
              weight = COALESCE($5::numeric, weight),
              "dueDate" = COALESCE($6::date, "dueDate"),
@@ -848,7 +1110,7 @@ async function upsertActivity(client, row, taskId, activityLookup) {
              "isDone" = COALESCE($11::boolean, "isDone"),
              "quarterlyGoals" = COALESCE($12::jsonb, "quarterlyGoals"),
              "updatedAt" = NOW()
-       WHERE id = $13 RETURNING id, "rollNo", title, "taskId"`,
+       WHERE id = $13 RETURNING *`,
       [
         values.rollNo,
         values.title,
@@ -863,21 +1125,73 @@ async function upsertActivity(client, row, taskId, activityLookup) {
         values.isDone,
         values.quarterlyGoals,
         existingActivity.id,
+        values.titleIsExplicitEmpty,
+        values.descriptionIsExplicitEmpty,
       ],
     );
-    const updatedActivity = {
-      id: updateRes.rows[0].id,
-      rollNo: updateRes.rows[0].rollNo,
-      title: updateRes.rows[0].title,
+    const updatedActivity = updateRes.rows[0];
+    console.log(
+      "[DEBUG upsertActivity] UPDATE result: title returned =",
+      updatedActivity.title,
+      "| isDone returned =",
+      updatedActivity.isDone,
+    );
+
+    const activityId = updatedActivity.id;
+
+    // Apply quarterly records and recalculate progress
+    if (values.quarterlyRecords) {
+      console.log(
+        "[DEBUG upsertActivity] Calling applyActivityQuarterlyRecords with:",
+        values.quarterlyRecords,
+      );
+      await applyActivityQuarterlyRecords(
+        client,
+        activityId,
+        values.quarterlyRecords,
+        userId,
+      );
+    }
+
+    // Trigger progress cascade if isDone changed
+    if (isDoneChanged) {
+      console.log(
+        "[DEBUG upsertActivity] isDone changed, triggering accumulate_metrics",
+      );
+      const metricForProgress = updatedActivity.currentMetric || {};
+      await client.query(
+        `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
+        [activityId, metricForProgress, userId],
+      );
+    }
+
+    // Always refresh task and goal progress after activity update
+    if (updatedActivity.taskId) {
+      console.log(
+        "[DEBUG upsertActivity] Calling refreshTaskAndGoalProgress for taskId:",
+        updatedActivity.taskId,
+      );
+      await refreshTaskAndGoalProgress(client, updatedActivity.taskId);
+    }
+
+    const title = normalizeString(updatedActivity.title);
+    const resultActivity = {
+      id: updatedActivity.id,
+      rollNo: updatedActivity.rollNo,
+      title: updatedActivity.title,
       taskId,
     };
-    const title = normalizeString(updatedActivity.title);
-    activityLookup.set(`id:${updatedActivity.id}`, updatedActivity);
-    activityLookup.set(`${title}|${taskId}`, updatedActivity);
-    activityLookup.set(title, updatedActivity);
-    if (updatedActivity.rollNo) activityLookup.set(`rollno:${updatedActivity.rollNo}|${taskId}`, updatedActivity);
-    if (updatedActivity.rollNo) activityLookup.set(`rollno:${updatedActivity.rollNo}`, updatedActivity);
-    return { id: updatedActivity.id, action: "updated" };
+    activityLookup.set(`id:${resultActivity.id}`, resultActivity);
+    activityLookup.set(`${title}|${taskId}`, resultActivity);
+    activityLookup.set(title, resultActivity);
+    if (resultActivity.rollNo)
+      activityLookup.set(
+        `rollno:${resultActivity.rollNo}|${taskId}`,
+        resultActivity,
+      );
+    if (resultActivity.rollNo)
+      activityLookup.set(`rollno:${resultActivity.rollNo}`, resultActivity);
+    return { id: resultActivity.id, action: "updated" };
   }
 
   let insertRes;
@@ -904,16 +1218,38 @@ async function upsertActivity(client, row, taskId, activityLookup) {
       ],
     );
   } catch (err) {
-    if (err.code === "23505" && err.constraint === "ux_activities_task_roll" && values.rollNo) {
+    if (
+      err.code === "23505" &&
+      err.constraint === "ux_activities_task_roll" &&
+      values.rollNo
+    ) {
       const existing = await client.query(
         `SELECT id FROM "Activities" WHERE "taskId" = $1 AND "rollNo" = $2 LIMIT 1`,
         [values.taskId, values.rollNo],
       );
       if (existing.rows.length) {
+        // Detect if isDone is changing
+        const existingActivityRes = await client.query(
+          `SELECT "isDone" FROM "Activities" WHERE id = $1`,
+          [existing.rows[0].id],
+        );
+        const existingIsDone = existingActivityRes.rows[0]?.isDone || false;
+        const isDoneChanged =
+          values.isDone !== null && values.isDone !== existingIsDone;
+        console.log(
+          "[DEBUG upsertActivity-duplicate] isDone changed?",
+          isDoneChanged,
+          "(existing:",
+          existingIsDone,
+          ", new:",
+          values.isDone,
+          ")",
+        );
+
         const updateRes = await client.query(
           `UPDATE "Activities"
-             SET title = COALESCE($1::text, title),
-                 description = COALESCE($2::text, description),
+             SET title = CASE WHEN $13::boolean THEN $1::text ELSE COALESCE($1::text, title) END,
+                 description = CASE WHEN $14::boolean THEN $2::text ELSE COALESCE($2::text, description) END,
                  status = COALESCE($3::activity_status, status),
                  weight = COALESCE($4::numeric, weight),
                  "dueDate" = COALESCE($5::date, "dueDate"),
@@ -924,7 +1260,7 @@ async function upsertActivity(client, row, taskId, activityLookup) {
                  "isDone" = COALESCE($10::boolean, "isDone"),
                  "quarterlyGoals" = COALESCE($11::jsonb, "quarterlyGoals"),
                  "updatedAt" = NOW()
-           WHERE id = $12 RETURNING id, "rollNo", title, "taskId"`,
+           WHERE id = $12 RETURNING *`,
           [
             values.title,
             values.description,
@@ -938,48 +1274,357 @@ async function upsertActivity(client, row, taskId, activityLookup) {
             values.isDone,
             values.quarterlyGoals,
             existing.rows[0].id,
+            values.titleIsExplicitEmpty,
+            values.descriptionIsExplicitEmpty,
           ],
         );
-        const updatedActivity = {
-          id: updateRes.rows[0].id,
-          rollNo: updateRes.rows[0].rollNo,
-          title: updateRes.rows[0].title,
+        const updatedActivity = updateRes.rows[0];
+        const activityId = updatedActivity.id;
+
+        // Apply quarterly records and recalculate progress
+        if (values.quarterlyRecords) {
+          console.log(
+            "[DEBUG upsertActivity-duplicate] Calling applyActivityQuarterlyRecords with:",
+            values.quarterlyRecords,
+          );
+          await applyActivityQuarterlyRecords(
+            client,
+            activityId,
+            values.quarterlyRecords,
+            userId,
+          );
+        }
+
+        // Trigger progress cascade if isDone changed
+        if (isDoneChanged) {
+          console.log(
+            "[DEBUG upsertActivity-duplicate] isDone changed, triggering accumulate_metrics",
+          );
+          const metricForProgress = updatedActivity.currentMetric || {};
+          await client.query(
+            `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
+            [activityId, metricForProgress, userId],
+          );
+        }
+
+        // Always refresh task and goal progress after activity update
+        if (updatedActivity.taskId) {
+          console.log(
+            "[DEBUG upsertActivity-duplicate] Calling refreshTaskAndGoalProgress for taskId:",
+            updatedActivity.taskId,
+          );
+          await refreshTaskAndGoalProgress(client, updatedActivity.taskId);
+        }
+
+        const title = normalizeString(updatedActivity.title);
+        const resultActivity = {
+          id: updatedActivity.id,
+          rollNo: updatedActivity.rollNo,
+          title: updatedActivity.title,
           taskId,
         };
-        const title = normalizeString(updatedActivity.title);
-        activityLookup.set(`id:${updatedActivity.id}`, updatedActivity);
-        activityLookup.set(`${title}|${taskId}`, updatedActivity);
-        activityLookup.set(title, updatedActivity);
-        if (updatedActivity.rollNo) activityLookup.set(`rollno:${updatedActivity.rollNo}|${taskId}`, updatedActivity);
-        if (updatedActivity.rollNo) activityLookup.set(`rollno:${updatedActivity.rollNo}`, updatedActivity);
-        return { id: updatedActivity.id, action: "updated" };
+        activityLookup.set(`id:${resultActivity.id}`, resultActivity);
+        activityLookup.set(`${title}|${taskId}`, resultActivity);
+        activityLookup.set(title, resultActivity);
+        if (resultActivity.rollNo)
+          activityLookup.set(
+            `rollno:${resultActivity.rollNo}|${taskId}`,
+            resultActivity,
+          );
+        if (resultActivity.rollNo)
+          activityLookup.set(`rollno:${resultActivity.rollNo}`, resultActivity);
+        return { id: resultActivity.id, action: "updated" };
       }
     }
     throw err;
   }
 
   const id = insertRes.rows[0].id;
+  if (values.quarterlyRecords) {
+    console.log(
+      "[DEBUG upsertActivity-create] Calling applyActivityQuarterlyRecords with:",
+      values.quarterlyRecords,
+    );
+    await applyActivityQuarterlyRecords(
+      client,
+      id,
+      values.quarterlyRecords,
+      userId,
+    );
+  }
+  // Always refresh task and goal progress after activity creation
+  if (taskId) {
+    console.log(
+      "[DEBUG upsertActivity-create] Calling refreshTaskAndGoalProgress for taskId:",
+      taskId,
+    );
+    await refreshTaskAndGoalProgress(client, taskId);
+  }
   const title = normalizeString(values.title);
   const titleKey = `${title}|${taskId}`;
   const activityRecord = { id, ...values, taskId };
   activityLookup.set(`id:${id}`, activityRecord);
   activityLookup.set(titleKey, activityRecord);
   activityLookup.set(title, activityRecord);
-  if (values.rollNo) activityLookup.set(`rollno:${values.rollNo}|${taskId}`, activityRecord);
-  if (values.rollNo) activityLookup.set(`rollno:${values.rollNo}`, activityRecord);
+  if (values.rollNo)
+    activityLookup.set(`rollno:${values.rollNo}|${taskId}`, activityRecord);
+  if (values.rollNo)
+    activityLookup.set(`rollno:${values.rollNo}`, activityRecord);
   return { id, action: "created" };
 }
 
-async function resolveActivityIdForQuarter(client, row, activityLookup, activitiesRows) {
+async function applyActivityQuarterlyRecords(
+  client,
+  activityId,
+  quarterlyRecords,
+  userId,
+) {
+  if (!quarterlyRecords || typeof quarterlyRecords !== "object") {
+    console.log(
+      "[DEBUG applyActivityQuarterlyRecords] No quarterlyRecords provided",
+    );
+    return;
+  }
+
+  console.log(
+    "[DEBUG applyActivityQuarterlyRecords] Starting for activityId:",
+    activityId,
+    "with records:",
+    quarterlyRecords,
+  );
+
+  const activityRes = await client.query(
+    `SELECT "targetMetric", "metricType", "previousMetric" FROM "Activities" WHERE id = $1`,
+    [activityId],
+  );
+  if (!activityRes.rows.length) {
+    throw new Error("Activity not found for quarterly record import.");
+  }
+
+  const activity = activityRes.rows[0];
+  const targetMetric = activity.targetMetric || activity.target_metric || {};
+  const parsedTargetMetric =
+    typeof targetMetric === "string"
+      ? safeParseJson(targetMetric)
+      : targetMetric;
+  const metricKey = Object.keys(parsedTargetMetric || {})[0] || "value";
+  const metricType = activity.metricType || "Plus";
+  const previousMetric =
+    activity.previousMetric || activity.previous_metric || {};
+
+  console.log(
+    "[DEBUG applyActivityQuarterlyRecords] Activity found: metricKey =",
+    metricKey,
+    "| metricType =",
+    metricType,
+  );
+
+  const fiscalRes = await client.query(
+    `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`,
+  );
+  const fiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+
+  console.log("[DEBUG applyActivityQuarterlyRecords] Fiscal year:", fiscalYear);
+
+  for (const [quarter, value] of Object.entries(quarterlyRecords)) {
+    const qNum = parseInt(String(quarter).replace(/^q/i, ""), 10);
+    if (qNum < 1 || qNum > 4) continue;
+    if (value === null || value === undefined || String(value).trim() === "") {
+      console.log(
+        `[DEBUG applyActivityQuarterlyRecords] Skipping q${qNum}: value is null/empty`,
+      );
+      continue;
+    }
+    const numVal = Number(value);
+    if (!Number.isFinite(numVal)) {
+      console.log(
+        `[DEBUG applyActivityQuarterlyRecords] Skipping q${qNum}: not a number (value=${value}, numVal=${numVal})`,
+      );
+      continue;
+    }
+
+    console.log(
+      `[DEBUG applyActivityQuarterlyRecords] Upserting q${qNum}: value=${numVal}`,
+    );
+
+    await client.query(
+      `INSERT INTO "ActivityRecords"
+         ("activityId", "fiscalYear", quarter, "metricKey", value, source, "createdBy", "updatedBy", "createdAt", "updatedAt")
+       VALUES ($1,$2,$3,$4,$5,'import',$6,$6,NOW(),NOW())
+       ON CONFLICT ("activityId", "fiscalYear", quarter, "metricKey") WHERE "quarter" IS NOT NULL
+       DO UPDATE SET value = EXCLUDED.value, source = EXCLUDED.source, "updatedBy" = EXCLUDED."updatedBy", "updatedAt" = NOW()`,
+      [activityId, fiscalYear, qNum, metricKey, numVal, userId],
+    );
+  }
+
+  const recordsRes = await client.query(
+    `SELECT "quarter", "value"
+       FROM "ActivityRecords"
+       WHERE "activityId" = $1
+         AND "fiscalYear" = $2
+         AND "quarter" IS NOT NULL
+         AND "metricKey" = $3
+       ORDER BY "quarter"`,
+    [activityId, fiscalYear, metricKey],
+  );
+
+  const rows = recordsRes.rows || [];
+  let recalculatedValue = 0;
+  if (metricType === "Plus" || metricType === "Minus") {
+    recalculatedValue = rows.reduce((sum, rec) => {
+      const num = Number(rec.value);
+      return sum + (Number.isFinite(num) ? num : 0);
+    }, 0);
+  } else {
+    if (rows.length > 0) {
+      const lastValue = Number(rows[rows.length - 1].value);
+      recalculatedValue = Number.isFinite(lastValue) ? lastValue : 0;
+    }
+  }
+
+  console.log(
+    "[DEBUG applyActivityQuarterlyRecords] Recalculated value:",
+    recalculatedValue,
+  );
+
+  const targetVal = Number(
+    (parsedTargetMetric && parsedTargetMetric[metricKey]) ?? null,
+  );
+  const previousVal = Number(
+    (previousMetric && previousMetric[metricKey]) ?? null,
+  );
+  const safeTarget = Number.isFinite(targetVal) ? targetVal : 0;
+  const safePrevious = Number.isFinite(previousVal) ? previousVal : 0;
+
+  let newProgress = 0;
+  if (metricType === "Plus" || metricType === "Minus") {
+    newProgress =
+      safeTarget > 0
+        ? Math.min(100, Math.round((recalculatedValue / safeTarget) * 100))
+        : recalculatedValue > 0
+          ? 100
+          : 0;
+  } else if (metricType === "Increase") {
+    const diffTarget = safeTarget - safePrevious;
+    newProgress =
+      diffTarget > 0
+        ? Math.min(
+            100,
+            Math.max(
+              0,
+              Math.round(
+                ((recalculatedValue - safePrevious) / diffTarget) * 100,
+              ),
+            ),
+          )
+        : 100;
+  } else if (metricType === "Decrease") {
+    const diffTarget = safePrevious - safeTarget;
+    newProgress =
+      diffTarget > 0
+        ? Math.min(
+            100,
+            Math.max(
+              0,
+              Math.round(
+                ((safePrevious - recalculatedValue) / diffTarget) * 100,
+              ),
+            ),
+          )
+        : 100;
+  } else if (metricType === "Maintain") {
+    newProgress = 100;
+  }
+
+  console.log(
+    "[DEBUG applyActivityQuarterlyRecords] Updating activity: currentMetric =",
+    { [metricKey]: recalculatedValue },
+    "| progress =",
+    newProgress,
+  );
+
+  const newCurrentMetric = { [metricKey]: recalculatedValue };
+  await client.query(
+    `UPDATE "Activities"
+       SET "currentMetric" = $1, "progress" = $2, "updatedAt" = NOW()
+       WHERE id = $3`,
+    [newCurrentMetric, newProgress, activityId],
+  );
+}
+
+// Helper function to refresh task and goal progress after activity changes
+async function refreshTaskAndGoalProgress(client, taskId) {
+  if (!taskId) return;
+
+  console.log(
+    "[DEBUG refreshTaskAndGoalProgress] Refreshing progress for taskId:",
+    taskId,
+  );
+
+  await client.query(
+    `WITH task_data AS (
+       SELECT COALESCE(ROUND(SUM(a."progress" * a.weight) / NULLIF(SUM(a.weight), 0))::int, 0) AS computed_progress
+       FROM "Activities" a
+       WHERE a."taskId" = $1
+     )
+     UPDATE "Tasks"
+     SET progress = task_data.computed_progress,
+         status = CASE
+           WHEN task_data.computed_progress >= 100 THEN 'Done'::task_status
+           WHEN status = 'Blocked' THEN 'Blocked'::task_status
+           WHEN task_data.computed_progress > 0 THEN 'In Progress'::task_status
+           ELSE 'To Do'::task_status
+         END,
+         "updatedAt" = NOW()
+     FROM task_data
+     WHERE id = $1`,
+    [taskId],
+  );
+
+  await client.query(
+    `WITH goal_data AS (
+       SELECT COALESCE(ROUND(SUM(t."progress" * t.weight) / NULLIF(SUM(t.weight), 0))::int, 0) AS computed_goal_progress,
+              g.id AS goal_id
+       FROM "Tasks" t
+       JOIN "Goals" g ON g.id = t."goalId"
+       WHERE t."goalId" = (SELECT "goalId" FROM "Tasks" WHERE id = $1)
+       GROUP BY g.id
+     )
+     UPDATE "Goals"
+     SET progress = goal_data.computed_goal_progress,
+         status = CASE
+           WHEN goal_data.computed_goal_progress >= 100 THEN 'Completed'::goal_status
+           WHEN status = 'On Hold' THEN 'On Hold'::goal_status
+           WHEN goal_data.computed_goal_progress > 0 THEN 'In Progress'::goal_status
+           ELSE 'Not Started'::goal_status
+         END,
+         "updatedAt" = NOW()
+     FROM goal_data
+     WHERE id = goal_data.goal_id`,
+    [taskId],
+  );
+
+  console.log("[DEBUG refreshTaskAndGoalProgress] Complete");
+}
+
+async function resolveActivityIdForQuarter(
+  client,
+  row,
+  activityLookup,
+  activitiesRows,
+) {
   if (row.activity_id) {
-    const explicitActivity = activityLookup.get(`id:${Number(row.activity_id)}`);
+    const explicitActivity = activityLookup.get(
+      `id:${Number(row.activity_id)}`,
+    );
     if (explicitActivity) return explicitActivity.id;
   }
 
   if (row.activity_roll_no) {
     const activity =
-      activityLookup.get(`rollno:${row.activity_roll_no}|${Number(row.task_id) || 0}`) ||
-      activityLookup.get(`rollno:${row.activity_roll_no}`);
+      activityLookup.get(
+        `rollno:${row.activity_roll_no}|${Number(row.task_id) || 0}`,
+      ) || activityLookup.get(`rollno:${row.activity_roll_no}`);
     if (activity) return activity.id;
   }
 
@@ -988,14 +1633,23 @@ async function resolveActivityIdForQuarter(client, row, activityLookup, activiti
   if (found) return found.id;
 
   if (row.activity_title || row.activity_name) {
-    found = activityLookup.get(normalizeString(row.activity_title || row.activity_name));
+    found = activityLookup.get(
+      normalizeString(row.activity_title || row.activity_name),
+    );
     if (found) return found.id;
   }
 
   for (const activityRow of activitiesRows) {
-    if (normalizeString(activityRow.activity_title || activityRow.activity_name) === normalizeString(row.activity_title || row.activity_name)) {
-      const explicitId = Number(activityRow.activity_id || activityRow.activityId || null);
-      if (explicitId && activityLookup.get(`id:${explicitId}`)) return explicitId;
+    if (
+      normalizeString(
+        activityRow.activity_title || activityRow.activity_name,
+      ) === normalizeString(row.activity_title || row.activity_name)
+    ) {
+      const explicitId = Number(
+        activityRow.activity_id || activityRow.activityId || null,
+      );
+      if (explicitId && activityLookup.get(`id:${explicitId}`))
+        return explicitId;
     }
   }
 
@@ -1010,10 +1664,36 @@ async function resolveActivityIdForQuarter(client, row, activityLookup, activiti
 async function upsertQuarterlyRecord(client, row, activityId, userId) {
   const quarter = Number(row.quarter);
   const fiscalYear = Number(row.fiscal_year || new Date().getFullYear());
-  const metricKey = row.metric_key || (row.sheetName ? `Q${quarter}` : "quarter_update");
-  const planned = Number(row.planned);
-  const actual = Number(row.actual);
-  const remark = row.remark || null;
+  const activityRes = await client.query(
+    `SELECT "targetMetric" FROM "Activities" WHERE id = $1 LIMIT 1`,
+    [activityId],
+  );
+  const activity = activityRes.rows[0] || {};
+  const activityMetricKey = getPrimaryMetricKey(activity);
+  const rowMetricKey = row.metric_key ? String(row.metric_key).trim() : null;
+  const metricKey =
+    rowMetricKey ||
+    activityMetricKey ||
+    getMetricKeyFromActivityRow(row) ||
+    "quarterlyGoals";
+  const planned =
+    row.planned === null ||
+    row.planned === undefined ||
+    String(row.planned).trim() === ""
+      ? null
+      : Number(row.planned);
+  const actual =
+    row.actual === null ||
+    row.actual === undefined ||
+    String(row.actual).trim() === ""
+      ? null
+      : Number(row.actual);
+  const remark =
+    row.remark === null ||
+    row.remark === undefined ||
+    String(row.remark).trim() === ""
+      ? null
+      : String(row.remark).trim();
 
   if (Number.isFinite(planned)) {
     await client.query(
@@ -1022,7 +1702,14 @@ async function upsertQuarterlyRecord(client, row, activityId, userId) {
        VALUES ($1,$2,$3,$4,$5,'import',$6,$6,NOW(),NOW())
        ON CONFLICT ("activityId", "fiscalYear", quarter, "metricKey") WHERE "quarter" IS NOT NULL
        DO UPDATE SET value = EXCLUDED.value, source = EXCLUDED.source, "updatedBy" = EXCLUDED."updatedBy", "updatedAt" = NOW()`,
-      [activityId, fiscalYear, quarter, `${metricKey}_planned`, planned, userId],
+      [
+        activityId,
+        fiscalYear,
+        quarter,
+        `${metricKey}_planned`,
+        planned,
+        userId,
+      ],
     );
   }
 
@@ -1053,23 +1740,33 @@ async function upsertQuarterlyRecord(client, row, activityId, userId) {
 
 async function getImportHistory(req, res) {
   try {
-    const { rows } = await db.query(`SELECT * FROM "${IMPORT_HISTORY_TABLE}" ORDER BY "importDate" DESC LIMIT 100`);
+    const { rows } = await db.query(
+      `SELECT * FROM "${IMPORT_HISTORY_TABLE}" ORDER BY "importDate" DESC LIMIT 100`,
+    );
     return res.json({ rows });
   } catch (err) {
     console.error("getImportHistory error:", err);
-    return res.status(500).json({ error: err.message || "Failed to load import history." });
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to load import history." });
   }
 }
 
 async function getImportHistoryById(req, res) {
   try {
     const { id } = req.params;
-    const { rows } = await db.query(`SELECT * FROM "${IMPORT_HISTORY_TABLE}" WHERE id = $1`, [id]);
-    if (!rows[0]) return res.status(404).json({ error: "Import history not found." });
+    const { rows } = await db.query(
+      `SELECT * FROM "${IMPORT_HISTORY_TABLE}" WHERE id = $1`,
+      [id],
+    );
+    if (!rows[0])
+      return res.status(404).json({ error: "Import history not found." });
     return res.json(rows[0]);
   } catch (err) {
     console.error("getImportHistoryById error:", err);
-    return res.status(500).json({ error: err.message || "Failed to load history record." });
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to load history record." });
   }
 }
 
@@ -1114,8 +1811,16 @@ async function downloadTemplate(req, res) {
        ORDER BY a.id`,
     );
 
-    const fiscalRes = await db.query(`SELECT * FROM calc_fiscal_period(CURRENT_DATE)`);
-    const currentFiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+    const fiscalRes = await db.query(
+      `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`,
+    );
+    const currentFiscalYear =
+      fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+    console.log(
+      "[DEBUG downloadTemplate] Current fiscal year:",
+      currentFiscalYear,
+    );
+
     const quartersRes = await db.query(
       `SELECT ar."activityId" AS activity_id, a.title AS activity_title, a."rollNo" AS activity_roll_no,
               ar."fiscalYear" AS fiscal_year, ar.quarter, ar."metricKey" AS metric_key,
@@ -1127,23 +1832,55 @@ async function downloadTemplate(req, res) {
       [currentFiscalYear],
     );
 
+    console.log(
+      "[DEBUG downloadTemplate] Found",
+      quartersRes.rows.length,
+      "quarterly records",
+    );
+    console.log(
+      "[DEBUG downloadTemplate] Sample quarters (first 5):",
+      quartersRes.rows.slice(0, 5),
+    );
+
     const activities = activitiesRes.rows.map((row) => ({
       ...row,
       targetMetric: row.activity_target_metric || row.target_metric || null,
       currentMetric: row.activity_current_metric || row.current_metric || null,
-      previousMetric: row.activity_previous_metric || row.previous_metric || null,
+      previousMetric:
+        row.activity_previous_metric || row.previous_metric || null,
       quarterlyGoals: row.activity_quarterly_goals || null,
       activity_quarterly_goals: safeParseJson(row.activity_quarterly_goals),
     }));
 
-    const quarterlyMap = buildQuarterlyRecordsMap(activities, quartersRes.rows, null);
+    const quarterlyMap = buildQuarterlyRecordsMap(
+      activities,
+      quartersRes.rows,
+      null,
+    );
+    console.log(
+      "[DEBUG downloadTemplate] quarterlyMap keys:",
+      Object.keys(quarterlyMap).slice(0, 10),
+    );
+    console.log(
+      "[DEBUG downloadTemplate] Sample quarterlyMap entry:",
+      Object.entries(quarterlyMap)
+        .slice(0, 3)
+        .map(([k, v]) => ({ activityId: k, data: v })),
+    );
 
     const activityQuarterlyGoalsRows = [];
     for (const activity of activities) {
-      const quarterlyGoals = activity.activity_quarterly_goals || safeParseJson(activity.quarterlyGoals);
+      const quarterlyGoals =
+        activity.activity_quarterly_goals ||
+        safeParseJson(activity.quarterlyGoals);
+      const metricKey = getPrimaryMetricKey(activity) || "quarterlyGoals";
       for (let quarter = 1; quarter <= 4; quarter += 1) {
-        const planned = quarterlyGoals && typeof quarterlyGoals === "object" ? quarterlyGoals[`q${quarter}`] : null;
-        const actual = quarterlyMap[activity.activity_id]?.[`q${quarter}`] ?? null;
+        const planned =
+          quarterlyGoals && typeof quarterlyGoals === "object"
+            ? quarterlyGoals[`q${quarter}`]
+            : null;
+        const actual =
+          quarterlyMap[activity.activity_id]?.[`q${quarter}`] ?? null;
 
         activityQuarterlyGoalsRows.push({
           activity_id: activity.activity_id || null,
@@ -1151,13 +1888,23 @@ async function downloadTemplate(req, res) {
           activity_title: activity.activity_title || null,
           fiscal_year: currentFiscalYear,
           quarter,
-          metric_key: `quarterlyGoals`,
+          metric_key: metricKey,
           planned: planned !== undefined ? planned : null,
           actual,
           remark: null,
         });
       }
     }
+
+    console.log(
+      "[DEBUG downloadTemplate] Generated",
+      activityQuarterlyGoalsRows.length,
+      "quarterly goals rows",
+    );
+    console.log(
+      "[DEBUG downloadTemplate] Sample rows with actual values:",
+      activityQuarterlyGoalsRows.filter((r) => r.actual !== null).slice(0, 5),
+    );
 
     const quarters = activityQuarterlyGoalsRows;
 
@@ -1168,13 +1915,21 @@ async function downloadTemplate(req, res) {
       quarters,
     });
 
-    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-    res.setHeader("Content-Disposition", `attachment; filename="bulk-import-template.xlsx"`);
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="bulk-import-template.xlsx"`,
+    );
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
     console.error("downloadTemplate error:", err);
-    return res.status(500).json({ error: err.message || "Failed to generate template." });
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to generate template." });
   }
 }
 
@@ -1187,19 +1942,30 @@ async function downloadErrorReport(req, res) {
 
     if (format === "xlsx") {
       const workbook = buildErrorWorkbook(errors);
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename="import-errors.xlsx"`);
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="import-errors.xlsx"`,
+      );
       await workbook.xlsx.write(res);
       res.end();
     } else {
       const csv = buildErrorCsv(errors);
       res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", `attachment; filename="import-errors.csv"`);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="import-errors.csv"`,
+      );
       res.send(csv);
     }
   } catch (err) {
     console.error("downloadErrorReport error:", err);
-    return res.status(500).json({ error: err.message || "Failed to generate error report." });
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to generate error report." });
   }
 }
 
@@ -1211,4 +1977,11 @@ module.exports = {
   getImportHistoryById,
   downloadTemplate,
   downloadErrorReport,
+  // Exposed for tests
+  performImport,
+  upsertGoal,
+  upsertTask,
+  upsertActivity,
+  upsertQuarterlyRecord,
+  applyActivityQuarterlyRecords,
 };
