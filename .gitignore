@@ -1,1 +1,8 @@
 .env
+backend/.env
+frontend/.env
+**/node_modules
+frontend/dist
+uploads/
+.DS_Store
+importexport/

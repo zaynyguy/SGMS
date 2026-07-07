@@ -7,11 +7,18 @@ import {
   ChevronRight,
   Moon,
   Sun,
+  Upload,
 } from "lucide-react";
-import { fetchMasterReport } from "../api/reports";
+import {
+  fetchMasterReport,
+  downloadMasterReportExcel,
+} from "../api/reports";
 import { useTranslation } from "react-i18next";
 import { fetchGroups } from "../api/groups";
+import { useTheme } from "../context/ThemeContext";
 import TopBar from "../components/layout/TopBar";
+import PageShell from "../components/ui/PageShell";
+import Button from "../components/ui/Button";
 
 /* -------------------------
  * Master Report page wrapper with Material Design 3
@@ -29,87 +36,7 @@ import TopBar from "../components/layout/TopBar";
 const App = () => {
   const { t } = useTranslation();
 
-  // Dark mode state
-  const [darkMode, setDarkMode] = useState(false);
-
-  // Material Design 3 color system - light theme
-  const lightColors = {
-    primary: "#10B981", // Green 40
-    onPrimary: "#FFFFFF",
-    primaryContainer: "#BBF7D0", // Light green container
-    onPrimaryContainer: "#047857", // Dark green text on container
-    secondary: "#4F7AE6",
-    onSecondary: "#FFFFFF",
-    secondaryContainer: "#DBE6FD",
-    onSecondaryContainer: "#0B2962",
-    tertiary: "#9333EA",
-    onTertiary: "#FFFFFF",
-    tertiaryContainer: "#E9D7FD",
-    onTertiaryContainer: "#381E72",
-    error: "#B3261E",
-    onError: "#FFFFFF",
-    errorContainer: "#F9DEDC",
-    onErrorContainer: "#410E0B",
-    background: "#FFFFFF",
-    onBackground: "#111827",
-    surface: "#FFFFFF",
-    onSurface: "#111827",
-    surfaceVariant: "#EEF2F7",
-    onSurfaceVariant: "#444C45",
-    outline: "#737B73",
-    outlineVariant: "#C2C9C2",
-    shadow: "#000000",
-    scrim: "#000000",
-    inverseSurface: "#313033",
-    inverseOnSurface: "#F4EFF4",
-    inversePrimary: "#99F6E4",
-    surfaceContainerLowest: "#FFFFFF",
-    surfaceContainerLow: "#F8FAFB",
-    surfaceContainer: "#F4F6F8",
-    surfaceContainerHigh: "#EEF2F7",
-    surfaceContainerHighest: "#EEF2F7",
-  };
-
-  // Material Design 3 color system - dark theme
-  const darkColors = {
-    primary: "#4ADE80", // Lighter green for dark mode
-    onPrimary: "#002115",
-    primaryContainer: "#003925",
-    onPrimaryContainer: "#BBF7D0",
-    secondary: "#B6C9FF",
-    onSecondary: "#1E307D",
-    secondaryContainer: "#354796",
-    onSecondaryContainer: "#DBE6FD",
-    tertiary: "#D0BCFF",
-    onTertiary: "#4F308B",
-    tertiaryContainer: "#6745A3",
-    onTertiaryContainer: "#E9D7FD",
-    error: "#FFB4AB",
-    onError: "#690005",
-    errorContainer: "#93000A",
-    onErrorContainer: "#FFDAD6",
-    background: "#1A1C19",
-    onBackground: "#E1E3DD",
-    surface: "#1A1C19",
-    onSurface: "#E1E3DD",
-    surfaceVariant: "#444C45",
-    onSurfaceVariant: "#C2C9C2",
-    outline: "#8C948D",
-    outlineVariant: "#444C45",
-    shadow: "#000000",
-    scrim: "#000000",
-    inverseSurface: "#E1E3DD",
-    inverseOnSurface: "#1A1C19",
-    inversePrimary: "#006D5B",
-    surfaceContainerLowest: "#222421",
-    surfaceContainerLow: "#2D2F2C",
-    surfaceContainer: "#313330",
-    surfaceContainerHigh: "#3B3D3A",
-    surfaceContainerHighest: "#454744",
-  };
-
-  // Select colors based on dark mode
-  const m3Colors = darkMode ? darkColors : lightColors;
+  const { dark: darkMode } = useTheme();
 
   const [groupId, setGroupId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -184,14 +111,6 @@ const App = () => {
   useEffect(() => {
     requestAnimationFrame(() => setMounted(true));
     return () => setMounted(false);
-  }, []);
-
-  // Try to respect system preference initially
-  useEffect(() => {
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
-    setDarkMode(prefersDark);
   }, []);
 
   // --- EFFECT TO FETCH GROUPS ---
@@ -827,10 +746,17 @@ const App = () => {
             flex-shrink: 0;
             margin-left: 20px;
           }
-          .logo-img {
-            height: 60px;
-            width: auto;
-            object-fit: contain;
+          .brand-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.16);
+            color: #fff;
+            font-size: 0.875rem;
+            letter-spacing: 0.08em;
+            font-weight: 700;
           }
           /* --- Footer --- */
           footer {
@@ -1137,7 +1063,7 @@ const App = () => {
         <header>
           <h1>${escapeHtml(title)}</h1>
           <div class="logo-container">
-            <img src="/src/assets/logo.png" alt="Logo" class="logo-img">
+            <div class="brand-pill">SGMS</div>
           </div>
         </header>
         <section>
@@ -1187,6 +1113,30 @@ const App = () => {
         </footer>
       </body>
     </html>`;
+  }
+
+  async function exportExcel() {
+    if (!master) return alert(t("reports.master.loadFirstAlert"));
+    try {
+      const blob = await downloadMasterReportExcel(groupId || undefined);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `master_report_${granularity}_${groupId || "all"}.xlsx`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert(
+        err?.message ||
+          t(
+            "reports.master.downloadExcelFailed",
+            "Failed to download Excel report.",
+          ),
+      );
+    }
   }
 
   function exportCSV() {
@@ -1388,142 +1338,9 @@ const App = () => {
   }
 
   return (
-    <div
-      className={`min-h-screen bg-[var(--onprimary)] dark:bg-gray-900 font-sans transition-colors duration-300 ${
-        mounted ? "animate-fade-in" : ""
-      }`}
-      style={{
-        "--primary": m3Colors.primary,
-        "--on-primary": m3Colors.onPrimary,
-        "--primary-container": m3Colors.primaryContainer,
-        "--on-primary-container": m3Colors.onPrimaryContainer,
-        "--secondary": m3Colors.secondary,
-        "--on-secondary": m3Colors.onSecondary,
-        "--secondary-container": m3Colors.secondaryContainer,
-        "--on-secondary-container": m3Colors.onSecondaryContainer,
-        "--tertiary": m3Colors.tertiary,
-        "--on-tertiary": m3Colors.onTertiary,
-        "--tertiary-container": m3Colors.tertiaryContainer,
-        "--on-tertiary-container": m3Colors.onTertiaryContainer,
-        "--error": m3Colors.error,
-        "--on-error": m3Colors.onError,
-        "--error-container": m3Colors.errorContainer,
-        "--on-error-container": m3Colors.onErrorContainer,
-        "--background": m3Colors.background,
-        "--on-background": m3Colors.onBackground,
-        "--surface": m3Colors.surface,
-        "--on-surface": m3Colors.onSurface,
-        "--surface-variant": m3Colors.surfaceVariant,
-        "--on-surface-variant": m3Colors.onSurfaceVariant,
-        "--outline": m3Colors.outline,
-        "--outline-variant": m3Colors.outlineVariant,
-        "--shadow": m3Colors.shadow,
-        "--scrim": m3Colors.scrim,
-        "--inverse-surface": m3Colors.inverseSurface,
-        "--inverse-on-surface": m3Colors.inverseOnSurface,
-        "--inverse-primary": m3Colors.inversePrimary,
-        "--surface-container-lowest": m3Colors.surfaceContainerLowest,
-        "--surface-container-low": m3Colors.surfaceContainerLow,
-        "--surface-container": m3Colors.surfaceContainer,
-        "--surface-container-high": m3Colors.surfaceContainerHigh,
-        "--surface-container-highest": m3Colors.surfaceContainerHighest,
-      }}
-    >
-      <style>{`
-          :root {
-            --primary: ${m3Colors.primary};
-            --on-primary: ${m3Colors.onPrimary};
-            --primary-container: ${m3Colors.primaryContainer};
-            --on-primary-container: ${m3Colors.onPrimaryContainer};
-            --secondary: ${m3Colors.secondary};
-            --on-secondary: ${m3Colors.onSecondary};
-            --secondary-container: ${m3Colors.secondaryContainer};
-            --on-secondary-container: ${m3Colors.onSecondaryContainer};
-            --tertiary: ${m3Colors.tertiary};
-            --on-tertiary: ${m3Colors.onTertiary};
-            --tertiary-container: ${m3Colors.tertiaryContainer};
-            --on-tertiary-container: ${m3Colors.onTertiaryContainer};
-            --error: ${m3Colors.error};
-            --on-error: ${m3Colors.onError};
-            --error-container: ${m3Colors.errorContainer};
-            --on-error-container: ${m3Colors.onErrorContainer};
-            --background: ${m3Colors.background};
-            --on-background: ${m3Colors.onBackground};
-            --surface: ${m3Colors.surface};
-            --on-surface: ${m3Colors.onSurface};
-            --surface-variant: ${m3Colors.surfaceVariant};
-            --on-surface-variant: ${m3Colors.onSurfaceVariant};
-            --outline: ${m3Colors.outline};
-            --outline-variant: ${m3Colors.outlineVariant};
-            --shadow: ${m3Colors.shadow};
-            --scrim: ${m3Colors.scrim};
-            --inverse-surface: ${m3Colors.inverseSurface};
-            --inverse-on-surface: ${m3Colors.inverseOnSurface};
-            --inverse-primary: ${m3Colors.inversePrimary};
-            --surface-container-lowest: ${m3Colors.surfaceContainerLowest};
-            "--surface-container-low": ${m3Colors.surfaceContainerLow};
-            "--surface-container": ${m3Colors.surfaceContainer};
-            "--surface-container-high": ${m3Colors.surfaceContainerHigh};
-            "--surface-container-highest": ${m3Colors.surfaceContainerHighest};
-          }
-          @keyframes fade-in {
-            from {
-              opacity: 0;
-              transform: translateY(8px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .animate-fade-in {
-             animation: fade-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          }
-          @keyframes material-in {
-            from {
-              opacity: 0;
-              transform: translateY(16px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          @keyframes slideInUp {
-             from {
-               opacity: 0;
-               transform: translateY(16px);
-             }
-             to {
-               opacity: 1;
-               transform: translateY(0);
-             }
-          }
-          .animate-slide-in-up {
-             animation: slideInUp 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          }
-          .surface-elevation-1 {
-             box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
-             border: 1px solid var(--outline-variant);
-          }
-          .surface-elevation-2 {
-             box-shadow: 0 2px 6px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.06);
-             border: 1px solid var(--outline-variant);
-          }
-          .surface-elevation-3 {
-             box-shadow: 0 4px 12px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08);
-             border: 1px solid var(--outline-variant);
-          }
-          .transition-shadow {
-            transition: box-shadow 0.3s ease;
-          }
-          .hover\\:shadow-md:hover {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          }
-      `}</style>
-
+    <>
       {/* MODIFIED: Use min-w-0 to prevent flex child expansion beyond parent width AND enforce strict max-width */}
-      <div className="flex-1 min-w-0 w-full max-w-full overflow-hidden mx-auto px-4 py-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+      <div className="flex-1 min-w-0 w-full max-w-full overflow-hidden mx-auto px-4 py-6 transition-colors duration-300">
         <div className="mb-6 w-full">
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-300 dark:border-gray-800 shadow-2xl px-4 py-4">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1587,10 +1404,12 @@ const App = () => {
             </div>
 
             <div className="md:col-span-2 flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
-              <button
+              <Button
                 onClick={handleFetch}
                 disabled={loading}
-                className="px-4 py-2.5 bg-green-400 dark:bg-green-700 text-green-900 dark:text-green-200 rounded-full shadow-md flex items-center justify-center gap-2 hover:bg-green-300 dark:hover:bg-green-600 transition-all duration-300 surface-elevation-1 disabled:opacity-60"
+                variant="primary"
+                size="md"
+                className="w-full sm:w-auto disabled:opacity-60"
               >
                 {loading ? (
                   <Loader
@@ -1601,21 +1420,25 @@ const App = () => {
                 ) : (
                   t("reports.master.loadButton")
                 )}
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={exportPDF}
-                className="px-4 py-2.5 bg-blue-600 dark:bg-blue-900 text-[var(--on-secondary-container)] dark:text-blue-200 rounded-full hover:bg-blue-300 dark:hover:bg-blue-800 transition-all duration-300 surface-elevation-1 flex items-center justify-center gap-2"
+                variant="secondary"
+                size="md"
+                className="w-full sm:w-auto"
               >
                 <Printer className="h-4 w-4" />
                 {t("reports.master.exportPDF")}
-              </button>
-              <button
-                onClick={exportCSV}
-                className="px-4 py-2.5 bg-purple-600 dark:bg-purple-900 text-[var(--on-tertiary-container)] dark:text-purple-200 rounded-full hover:bg-purple-300 dark:hover:bg-purple-800 transition-all duration-300 surface-elevation-1 flex items-center justify-center gap-2"
+              </Button>
+              <Button
+                onClick={exportExcel}
+                variant="secondary"
+                size="md"
+                className="w-full sm:w-auto"
               >
                 <Download className="h-4 w-4" />
-                {t("reports.master.exportCSV")}
-              </button>
+                {t("reports.master.downloadTemplate", "Download Template")}
+              </Button>
             </div>
           </div>
 
@@ -2012,36 +1835,13 @@ const App = () => {
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
 /* -------------------------
  * Helper Components
  * ------------------------- */
-const MetricSection = ({ title, metrics, t, darkMode = false }) => (
-  <div
-    className={`p-3 rounded-lg ${
-      darkMode
-        ? "bg-gray-200 dark:bg-gray-600 border-gray-600"
-        : "bg-[var(--surface-container-lowest)] border-[var(--outline-variant)]"
-    } border`}
-  >
-    <div
-      className={`text-sm font-medium mb-1 ${
-        darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
-      }`}
-    >
-      {title}:
-    </div>
-    <div
-      className={`${darkMode ? "text-gray-300" : "text-gray-600"} text-base`}
-    >
-      {metrics ? <MetricsDisplay metrics={metrics} darkMode={darkMode} /> : "-"}
-    </div>
-  </div>
-);
-
 const MetricsDisplay = ({ metrics, darkMode = false }) => {
   if (!metrics) return "-";
   let obj = null;
@@ -2126,6 +1926,29 @@ const MetricsDisplay = ({ metrics, darkMode = false }) => {
     </div>
   );
 };
+
+const MetricSection = ({ title, metrics, t, darkMode = false }) => (
+  <div
+    className={`p-3 rounded-lg ${
+      darkMode
+        ? "bg-gray-200 dark:bg-gray-600 border-gray-600"
+        : "bg-[var(--surface-container-lowest)] border-[var(--outline-variant)]"
+    } border`}
+  >
+    <div
+      className={`text-sm font-medium mb-1 ${
+        darkMode ? "text-gray-400" : "text-[var(--on-surface-variant)]"
+      }`}
+    >
+      {title}:
+    </div>
+    <div
+      className={`${darkMode ? "text-gray-300" : "text-gray-600"} text-base`}
+    >
+      {metrics ? <MetricsDisplay metrics={metrics} darkMode={darkMode} /> : "-"}
+    </div>
+  </div>
+);
 
 /* -------------------------
  * Master report helpers & table row

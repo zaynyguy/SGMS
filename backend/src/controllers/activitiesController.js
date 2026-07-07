@@ -2,6 +2,7 @@
 const db = require("../db");
 const notificationService = require("../services/notificationService");
 const { logAudit } = require("../helpers/audit");
+const { buildQuarterlyRecordsMap } = require("../helpers/quarterlyRecords");
 
 const EPS = 1e-9;
 
@@ -56,6 +57,53 @@ function roundToTwo(num) {
 
 function areWeightsEqual(a, b) {
   return Math.abs(a - b) < 1e-6;
+}
+
+async function refreshTaskAndGoalProgress(client, taskId) {
+  if (!taskId) return;
+
+  await client.query(
+    `WITH task_data AS (
+       SELECT COALESCE(ROUND(SUM(a."progress" * a.weight) / NULLIF(SUM(a.weight), 0))::int, 0) AS computed_progress
+       FROM "Activities" a
+       WHERE a."taskId" = $1
+     )
+     UPDATE "Tasks"
+     SET progress = task_data.computed_progress,
+         status = CASE
+           WHEN task_data.computed_progress >= 100 THEN 'Done'::task_status
+           WHEN status = 'Blocked' THEN 'Blocked'::task_status
+           WHEN task_data.computed_progress > 0 THEN 'In Progress'::task_status
+           ELSE 'To Do'::task_status
+         END,
+         "updatedAt" = NOW()
+     FROM task_data
+     WHERE id = $1`,
+    [taskId],
+  );
+
+  await client.query(
+    `WITH goal_data AS (
+       SELECT COALESCE(ROUND(SUM(t."progress" * t.weight) / NULLIF(SUM(t.weight), 0))::int, 0) AS computed_goal_progress,
+              g.id AS goal_id
+       FROM "Tasks" t
+       JOIN "Goals" g ON g.id = t."goalId"
+       WHERE t."goalId" = (SELECT "goalId" FROM "Tasks" WHERE id = $1)
+       GROUP BY g.id
+     )
+     UPDATE "Goals"
+     SET progress = goal_data.computed_goal_progress,
+         status = CASE
+           WHEN goal_data.computed_goal_progress >= 100 THEN 'Completed'::goal_status
+           WHEN status = 'On Hold' THEN 'On Hold'::goal_status
+           WHEN goal_data.computed_goal_progress > 0 THEN 'In Progress'::goal_status
+           ELSE 'Not Started'::goal_status
+         END,
+         "updatedAt" = NOW()
+     FROM goal_data
+     WHERE id = goal_data.goal_id`,
+    [taskId],
+  );
 }
 
 exports.getActivitiesByTask = async (req, res) => {
@@ -127,24 +175,11 @@ exports.getActivitiesByTask = async (req, res) => {
         [activityIds, currentFiscalYear],
       );
 
-      // Group records by activity
-      const recordsByActivity = {};
-      for (const rec of recordsRes.rows) {
-        if (!recordsByActivity[rec.activityId]) {
-          recordsByActivity[rec.activityId] = {
-            q1: "",
-            q2: "",
-            q3: "",
-            q4: "",
-          };
-        }
-        const qKey = `q${rec.quarter}`;
-        recordsByActivity[rec.activityId][qKey] = rec.value;
-      }
+      const quarterlyRecordsMap = buildQuarterlyRecordsMap(rows, recordsRes.rows, "");
 
       // Attach to each activity
       for (const activity of rows) {
-        activity.quarterlyRecords = recordsByActivity[activity.id] || {
+        activity.quarterlyRecords = quarterlyRecordsMap[activity.id] || {
           q1: "",
           q2: "",
           q3: "",
@@ -175,6 +210,7 @@ exports.createActivity = async (req, res) => {
     previousMetric,
     rollNo,
     quarterlyGoals,
+    quarterlyRecords,
     metricType, // ADDED
   } = req.body;
 
@@ -239,6 +275,8 @@ exports.createActivity = async (req, res) => {
       // rollNo handling
       let insertRes;
       const rn = toIntOrNull(rollNo);
+      const parsedQuarterlyRecords = safeParseJson(quarterlyRecords);
+      const isRecordObject = parsedQuarterlyRecords && typeof parsedQuarterlyRecords === "object";
 
       if (rn !== null) {
         const dup = await client.query(
@@ -287,6 +325,40 @@ exports.createActivity = async (req, res) => {
             safeMetricType, // Insert metricType
           ],
         );
+      }
+
+      if (isRecordObject) {
+        const fiscalRes = await client.query(
+          `SELECT * FROM calc_fiscal_period(CURRENT_DATE)`,
+        );
+        const fiscalYear = fiscalRes.rows[0]?.fiscal_year || new Date().getFullYear();
+        const metricKey = Object.keys(parsedTargetMetric || {})[0] || "value";
+
+        for (const [quarter, value] of Object.entries(parsedQuarterlyRecords)) {
+          const qNum = parseInt(String(quarter).replace(/^q/i, ""), 10);
+          const numVal = toNumberOrNull(value);
+          if (qNum >= 1 && qNum <= 4 && numVal !== null) {
+            await client.query(
+              `INSERT INTO "ActivityRecords"
+                ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")
+               VALUES ($1, $2, $3, NULL, $4, $5, 'manual', $6, $6)
+               ON CONFLICT ("activityId", "fiscalYear", "quarter", "metricKey") WHERE "quarter" IS NOT NULL
+               DO UPDATE SET
+                 "value" = EXCLUDED."value",
+                 "source" = 'manual',
+                 "updatedBy" = EXCLUDED."updatedBy",
+                 "updatedAt" = NOW()`,
+              [
+                insertRes.rows[0].id,
+                fiscalYear,
+                qNum,
+                metricKey,
+                numVal,
+                req.user.id,
+              ],
+            );
+          }
+        }
       }
 
       if (!insertRes.rows || !insertRes.rows[0])
@@ -455,15 +527,31 @@ exports.updateActivity = async (req, res) => {
       const parsedPreviousMetric = safeParseJson(previousMetric);
       const parsedQuarterlyGoals = safeParseJson(quarterlyGoals);
 
-      const safeTitle = nullIfEmpty(title)
-        ? String(nullIfEmpty(title)).trim()
-        : null;
-      const safeDescription = nullIfEmpty(description)
-        ? String(nullIfEmpty(description)).trim()
-        : null;
-      const safeStatus = nullIfEmpty(status);
-      const safeDueDate = nullIfEmpty(dueDate);
-      const safeIsDone = isDone === undefined ? null : toBoolean(isDone);
+      console.log('updateActivity payload', JSON.stringify(req.body));
+      console.log('updateActivity quarterlyRecords present', typeof quarterlyRecords !== 'undefined', quarterlyRecords);
+
+      const safeTitle = title === undefined
+        ? undefined
+        : nullIfEmpty(title)
+          ? String(nullIfEmpty(title)).trim()
+          : null;
+      const safeDescription = description === undefined
+        ? undefined
+        : nullIfEmpty(description)
+          ? String(nullIfEmpty(description)).trim()
+          : null;
+      const safeStatus = status === undefined ? undefined : nullIfEmpty(status);
+      const safeDueDate = dueDate === undefined ? undefined : nullIfEmpty(dueDate);
+      let safeIsDone = isDone === undefined ? null : toBoolean(isDone);
+
+      if (safeIsDone === null && safeStatus) {
+        const normalizedStatus = String(safeStatus).trim().toLowerCase();
+        if (normalizedStatus === "done" || normalizedStatus === "completed") {
+          safeIsDone = true;
+        } else {
+          safeIsDone = false;
+        }
+      }
 
       // Validate Metric Type
       const validTypes = ["Plus", "Minus", "Increase", "Decrease", "Maintain"];
@@ -478,20 +566,24 @@ exports.updateActivity = async (req, res) => {
       const r = await client.query(
         `UPDATE "Activities"
          SET "rollNo" = COALESCE($1, "rollNo"),
-             title=$2, description=$3, status=COALESCE($4, status),
-             "dueDate"=$5, "weight"=$6,
-             "targetMetric"=COALESCE($7, "targetMetric"),
-             "isDone"=COALESCE($8, "isDone"), "updatedAt"=NOW(),
-             "previousMetric"=COALESCE($10, "previousMetric"),
-             "quarterlyGoals"=COALESCE($11, "quarterlyGoals"),
-             "metricType"=COALESCE($12, "metricType")
+             title = COALESCE($2, title),
+             description = COALESCE($3, description),
+             status = COALESCE($4, status),
+             "dueDate" = COALESCE($5, "dueDate"),
+             "weight" = COALESCE($6::numeric, "weight"),
+             "targetMetric" = COALESCE($7, "targetMetric"),
+             "isDone" = COALESCE($8, "isDone"),
+             "updatedAt" = NOW(),
+             "previousMetric" = COALESCE($10, "previousMetric"),
+             "quarterlyGoals" = COALESCE($11, "quarterlyGoals"),
+             "metricType" = COALESCE($12, "metricType")
          WHERE id=$9
          RETURNING *`,
         [
           rn !== null ? rn : null,
-          safeTitle ?? null,
-          safeDescription ?? null,
-          safeStatus ?? null,
+          safeTitle,
+          safeDescription,
+          safeStatus,
           safeDueDate,
           newWeight,
           parsedTargetMetric ?? null,
@@ -499,12 +591,23 @@ exports.updateActivity = async (req, res) => {
           activityId,
           parsedPreviousMetric ?? null,
           parsedQuarterlyGoals ?? null,
-          safeMetricType, // $12
+          safeMetricType,
         ],
       );
 
       if (!r.rows || !r.rows[0]) throw new Error("Failed to update activity");
-      const updatedActivity = r.rows[0];
+      let updatedActivity = r.rows[0];
+
+      // ADDED: If isDone was changed, recalculate progress cascade (Activity -> Task -> Goal)
+      const isDoneChanged =
+        safeIsDone !== null && safeIsDone !== existing.isDone;
+      if (isDoneChanged) {
+        const metricForProgress = updatedActivity.currentMetric || {};
+        await client.query(
+          `SELECT accumulate_metrics($1::int, $2::jsonb, $3::int, NULL)`,
+          [activityId, metricForProgress, req.user.id],
+        );
+      }
 
       // NEW: Handle quarterlyRecords if provided
       if (quarterlyRecords && typeof quarterlyRecords === "object") {
@@ -524,20 +627,29 @@ exports.updateActivity = async (req, res) => {
           const qNum = parseInt(quarter.replace("q", ""), 10);
 
           if (qNum >= 1 && qNum <= 4) {
-            // If value is null or empty string, treat it as a DELETE request
+            // If value is null or empty string, treat it as an explicit DELETE request.
+            // Remove any actual-record variants for this quarter, not just the current target metric.
             if (value === null || value === undefined || value === "") {
+              const deleteMetricKeys = [
+                metricKey,
+                `${metricKey}_actual`,
+                `quarterlyGoals_actual`,
+                `q${qNum}_actual`,
+              ];
+              console.log('delete ActivityRecords', { activityId, fiscalYear, quarter: qNum, deleteMetricKeys });
               await client.query(
-                `DELETE FROM "ActivityRecords" 
-                 WHERE "activityId" = $1 
-                   AND "fiscalYear" = $2 
-                   AND "quarter" = $3 
-                   AND "metricKey" = $4`,
-                [activityId, fiscalYear, qNum, metricKey],
+                `DELETE FROM "ActivityRecords"
+                 WHERE "activityId" = $1
+                   AND "fiscalYear" = $2
+                   AND "quarter" = $3
+                   AND "metricKey" = ANY($4)`,
+                [activityId, fiscalYear, qNum, deleteMetricKeys],
               );
             } else {
               // Otherwise UPSERT
               const numVal = toNumberOrNull(value);
               if (numVal !== null) {
+                console.log('upsert ActivityRecords', { activityId, fiscalYear, quarter: qNum, metricKey, value: numVal });
                 await client.query(
                   `INSERT INTO "ActivityRecords" 
                     ("activityId", "fiscalYear", "quarter", "month", "metricKey", "value", "source", "updatedBy", "createdBy")
@@ -610,7 +722,11 @@ exports.updateActivity = async (req, res) => {
 
           // 4. Recalculate PROGRESS percentage
           let newProgress = 0;
-          if (["Plus", "Minus"].includes(metricType)) {
+
+          // Completion override: if isDone=true, always 100%
+          if (updatedActivity.isDone === true) {
+            newProgress = 100;
+          } else if (["Plus", "Minus"].includes(metricType)) {
             newProgress =
               targetVal > 0
                 ? Math.min(
@@ -671,6 +787,10 @@ exports.updateActivity = async (req, res) => {
           console.error("Quarterly edit recalc failed (non-fatal):", recalcErr);
           // Continue transaction - records were saved, metric will update on next report
         }
+      }
+
+      if (updatedActivity.taskId) {
+        await refreshTaskAndGoalProgress(client, updatedActivity.taskId);
       }
 
       try {

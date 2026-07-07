@@ -10,16 +10,19 @@ const icons = {
   error: <XCircle className="text-white w-5 h-5" />,
 };
 
-const Toast = ({ message, type = "create", onClose }) => {
+const Toast = ({ message, type = "create", onClose, duration = 5000 }) => {
   const [show, setShow] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShow(false);
-      if (onClose) onClose();
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
+    if (duration > 0) {
+      const timer = setTimeout(() => {
+        setShow(false);
+        if (onClose) onClose();
+      }, duration);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [duration, onClose]);
 
   if (!show) return null;
 

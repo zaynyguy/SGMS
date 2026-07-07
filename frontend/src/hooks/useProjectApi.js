@@ -198,6 +198,12 @@ export default function useProjectApi({ initialPage = 1, initialSize = 20 } = {}
     } catch {
       copy.quarterlyGoals = copy.quarterlyGoals ?? {};
     }
+    try {
+      const qr = safeParseJson(copy.quarterlyRecords ?? copy.quarterly_records ?? copy.quarterlyRecords);
+      copy.quarterlyRecords = qr === null ? {} : qr;
+    } catch {
+      copy.quarterlyRecords = copy.quarterlyRecords ?? {};
+    }
     return copy;
   };
 

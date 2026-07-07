@@ -92,6 +92,13 @@ BEGIN
   END IF;
 END$$;
 
+CREATE TABLE IF NOT EXISTS "Migrations" (
+  "id" SERIAL PRIMARY KEY,
+  "filename" VARCHAR(255) NOT NULL UNIQUE,
+  "applied_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  "checksum" VARCHAR(255)
+);
+
 CREATE TABLE IF NOT EXISTS "Roles" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(255) NOT NULL UNIQUE,
@@ -361,6 +368,13 @@ CREATE INDEX IF NOT EXISTS idx_activityrecords_activity ON "ActivityRecords"("ac
 CREATE INDEX IF NOT EXISTS idx_activityrecords_fiscalyear ON "ActivityRecords"("fiscalYear");
 CREATE INDEX IF NOT EXISTS idx_activityrecords_quarter ON "ActivityRecords"("quarter");
 
+-- Function to update updatedAt
+CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
+BEGIN
+  NEW."updatedAt" = NOW();
+  RETURN NEW;
+END; $$ LANGUAGE plpgsql;
+
 -- Trigger to update updatedAt
 DO $$
 BEGIN
@@ -368,12 +382,6 @@ BEGIN
     CREATE TRIGGER set_updatedAt_ActivityRecords BEFORE UPDATE ON "ActivityRecords" FOR EACH ROW EXECUTE FUNCTION update_updatedAt_column();
   END IF;
 END$$;
-
-CREATE OR REPLACE FUNCTION update_updatedAt_column() RETURNS TRIGGER AS $$
-BEGIN
-  NEW."updatedAt" = NOW();
-  RETURN NEW;
-END; $$ LANGUAGE plpgsql;
 
 
 CREATE TABLE IF NOT EXISTS "ChatConversations" (
@@ -503,7 +511,12 @@ BEGIN
 
   UPDATE "Tasks"
   SET progress = COALESCE(computed_progress,0),
-      status = CASE WHEN COALESCE(computed_progress,0) >= 100 THEN 'Done'::task_status ELSE status END
+      status = CASE
+        WHEN COALESCE(computed_progress, 0) >= 100 THEN 'Done'::task_status
+        WHEN status = 'Blocked' THEN 'Blocked'::task_status
+        WHEN COALESCE(computed_progress, 0) > 0 THEN 'In Progress'::task_status
+        ELSE 'To Do'::task_status
+      END
   WHERE id = v_task_id;
 
   IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
@@ -548,7 +561,12 @@ BEGIN
 
   UPDATE "Goals"
   SET progress = COALESCE(computed_goal_progress,0),
-      status = CASE WHEN COALESCE(computed_goal_progress,0) >= 100 THEN 'Completed'::goal_status ELSE status END
+      status = CASE
+        WHEN COALESCE(computed_goal_progress, 0) >= 100 THEN 'Completed'::goal_status
+        WHEN status = 'On Hold' THEN 'On Hold'::goal_status
+        WHEN COALESCE(computed_goal_progress, 0) > 0 THEN 'In Progress'::goal_status
+        ELSE 'Not Started'::goal_status
+      END
   WHERE id = v_goal_id;
 
   IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
@@ -625,6 +643,20 @@ END;
 $$;
 
 -- Updated accumulate_metrics function that also writes to ActivityRecords
+
+CREATE OR REPLACE FUNCTION safe_numeric(value TEXT) RETURNS NUMERIC LANGUAGE plpgsql AS $$
+BEGIN
+  IF value IS NULL OR trim(value) = '' THEN
+    RETURN NULL;
+  END IF;
+  BEGIN
+    RETURN value::numeric;
+  EXCEPTION WHEN invalid_text_representation THEN
+    RETURN NULL;
+  END;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION accumulate_metrics(
     p_activity_id INT,
     p_metrics JSONB,
@@ -673,9 +705,9 @@ BEGIN
 
         FOR k IN SELECT jsonb_object_keys(p_metrics) LOOP
             BEGIN
-                key_val := (p_metrics ->> k)::numeric;
+                key_val := safe_numeric(p_metrics ->> k);
                 IF key_val IS NOT NULL THEN
-                    val_current := COALESCE((v_current ->> k)::numeric, 0);
+                    val_current := COALESCE(safe_numeric(v_current ->> k), 0);
                     v_current := jsonb_set(v_current, ARRAY[k], to_jsonb(val_current + key_val));
                 END IF;
             EXCEPTION WHEN others THEN END;
@@ -685,12 +717,12 @@ BEGIN
         sum_target := 0;
 
         FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-            val_current := (v_current ->> k)::numeric;
+            val_current := safe_numeric(v_current ->> k);
             sum_current := sum_current + COALESCE(val_current, 0);
         END LOOP;
 
         FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-            val_target := (v_target ->> k)::numeric;
+            val_target := safe_numeric(v_target ->> k);
             sum_target := sum_target + COALESCE(val_target, 0);
         END LOOP;
 
@@ -709,15 +741,15 @@ BEGIN
         val_prev := 0;
 
         FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-            sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
+            sum_current := sum_current + COALESCE(safe_numeric(v_current ->> k), 0);
         END LOOP;
         
         FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-            sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
+            sum_target := sum_target + COALESCE(safe_numeric(v_target ->> k), 0);
         END LOOP;
         
         FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
-            val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
+            val_prev := val_prev + COALESCE(safe_numeric(v_prev ->> k), 0);
         END LOOP;
 
         IF (sum_target - val_prev) > 0 THEN
@@ -736,13 +768,13 @@ BEGIN
         val_prev := 0;
 
         FOR k IN SELECT jsonb_object_keys(v_current) LOOP
-            sum_current := sum_current + COALESCE((v_current ->> k)::numeric, 0);
+            sum_current := sum_current + COALESCE(safe_numeric(v_current ->> k), 0);
         END LOOP;
         FOR k IN SELECT jsonb_object_keys(v_target) LOOP
-            sum_target := sum_target + COALESCE((v_target ->> k)::numeric, 0);
+            sum_target := sum_target + COALESCE(safe_numeric(v_target ->> k), 0);
         END LOOP;
         FOR k IN SELECT jsonb_object_keys(v_prev) LOOP
-            val_prev := val_prev + COALESCE((v_prev ->> k)::numeric, 0);
+            val_prev := val_prev + COALESCE(safe_numeric(v_prev ->> k), 0);
         END LOOP;
 
         IF (val_prev - sum_target) > 0 THEN
@@ -781,7 +813,7 @@ BEGIN
     -- Insert/update quarterly record for each metric key
     FOR k IN SELECT jsonb_object_keys(p_metrics) LOOP
         BEGIN
-            key_val := (p_metrics ->> k)::numeric;
+            key_val := safe_numeric(p_metrics ->> k);
             IF key_val IS NOT NULL THEN
                 -- Upsert quarterly record
                 INSERT INTO "ActivityRecords" 

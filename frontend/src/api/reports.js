@@ -1,4 +1,4 @@
-import { api } from "./auth";
+import { api, rawFetch } from "./auth";
 
 export const submitReport = (activityId, formData) => {
   if (!activityId) throw new Error("activityId required");
@@ -29,6 +29,65 @@ export const fetchMasterReport = (groupId) => {
   return api(`/api/reports/master-report${qs}`, "GET");
 };
 
+export const downloadMasterReportExcel = async (groupId) => {
+  const qs = groupId
+    ? `?groupId=${encodeURIComponent(groupId)}&format=excel`
+    : "?format=excel";
+  const res = await rawFetch(`/api/reports/master-report${qs}`, "GET");
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(text || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.blob();
+};
+
+export const importProjectExcel = (file) => {
+  if (!(file instanceof File)) {
+    throw new Error("A File object is required for Excel import.");
+  }
+  const formData = new FormData();
+  formData.append("file", file);
+  return api("/api/import/execute", "POST", formData, {
+    isFormData: true,
+  });
+};
+
+export const bulkImportActivitiesExcel = (file) => {
+  if (!(file instanceof File)) {
+    throw new Error("A File object is required for Excel import.");
+  }
+  const formData = new FormData();
+  formData.append("file", file);
+  return api("/api/import/execute", "POST", formData, {
+    isFormData: true,
+  });
+};
+
+export const fetchImportHistory = () => api("/api/import/history", "GET");
+
+export const downloadImportErrorReport = async (errors, format = "csv") => {
+  if (!Array.isArray(errors) || errors.length === 0) {
+    throw new Error("No errors provided to export.");
+  }
+  const res = await rawFetch("/api/import/errors/export", "POST", {
+    errors,
+    format,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    const err = new Error(text || `HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.blob();
+};
+
+export const downloadImportTemplate = () => {
+  return rawFetch("/api/import/template", "GET");
+};
+
 export const fetchReportingStatus = async () => {
   const data = await api("/api/reports/reporting-status", "GET");
   return {
@@ -46,5 +105,9 @@ export default {
   reviewReport,
   fetchReportById,
   fetchMasterReport,
+  downloadMasterReportExcel,
+  downloadImportTemplate,
+  importProjectExcel,
   fetchReportingStatus,
+  bulkImportActivitiesExcel,
 };

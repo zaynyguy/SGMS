@@ -210,7 +210,7 @@ const App = () => {
     return createPortal(content, document.body);
   };
 
-  const Card = ({ title, children, onClick, className = "", ariaLabel, headerActions }) => {
+  const Card = ({ title, children, onClick, className = "", ariaLabel, headerActions, customStyles }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [isPressed, setIsPressed] = useState(false);
     const clickable = Boolean(onClick);
@@ -235,7 +235,8 @@ const App = () => {
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         aria-label={ariaLabel || title}
-        className={`text-left p-4 rounded-2xl bg-[var(--surface-container-low)] dark:bg-gray-800 transition-all duration-300 ${
+        
+        className={`text-left p-4 rounded-2xl ${customStyles} dark:bg-gray-800 transition-all duration-300 ${
           clickable ? `cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 ${
             isHovered ? 'surface-elevation-2' : 'surface-elevation-3'
           } ${isPressed ? 'scale-95' : ''}` : ""
@@ -1174,7 +1175,8 @@ const App = () => {
           {/* KPI cards */}
           <div className="lg:col-span-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Goals Card */}
-              <Card title={<div className="flex items-center gap-2">
+              <Card 
+                title={<div className="flex items-center gap-2">
                               <Trophy className="h-8 w-8 p-[4px] text-[var(--on-primary-container)] dark:text-indigo-200 bg-[var(--primary-container)] dark:bg-indigo-900 rounded-lg" />
                               {t("dashboard.cards.goals.title")}
                             </div>

@@ -1,32 +1,60 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
-const fs = require("fs");
 const db = require("../db");
 const bcrypt = require("bcrypt");
 
-function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+async function upsertRole(client, name) {
+  const { rows } = await client.query(
+    `INSERT INTO "Roles" (name, description, "createdAt", "updatedAt")
+     VALUES ($1, $2, NOW(), NOW())
+     ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, "updatedAt" = NOW()
+     RETURNING id`,
+    [name, `${name} role`],
+  );
+  return rows[0].id;
 }
 
-async function findSchema() {
-  const candidates = [
-    path.join(__dirname, "..", "db", "schema.sql"),
-    path.join(__dirname, "..", "schema.sql"),
-    path.join(__dirname, "schema.sql"),
-  ];
-  for (const p of candidates)
-    if (fs.existsSync(p)) return fs.readFileSync(p, "utf8");
-  throw new Error("schema.sql not found.");
+async function upsertPermission(client, name) {
+  const { rows } = await client.query(
+    `INSERT INTO "Permissions" (name, description, "createdAt", "updatedAt")
+     VALUES ($1, $2, NOW(), NOW())
+     ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, "updatedAt" = NOW()
+     RETURNING id`,
+    [name, `${name} permission`],
+  );
+  return rows[0].id;
 }
-async function findData() {
-  const candidates = [
-    path.join(__dirname, "..", "db", "data.sql"),
-    path.join(__dirname, "..", "data.sql"),
-    path.join(__dirname, "data.sql"),
-  ];
-  for (const p of candidates)
-    if (fs.existsSync(p)) return fs.readFileSync(p, "utf8");
-  throw new Error("schema.sql not found.");
+
+async function upsertRolePermission(client, roleId, permissionId) {
+  await client.query(
+    `INSERT INTO "RolePermissions" ("roleId", "permissionId", "createdAt", "updatedAt")
+     VALUES ($1, $2, NOW(), NOW())
+     ON CONFLICT ("roleId", "permissionId") DO NOTHING`,
+    [roleId, permissionId],
+  );
+}
+
+async function upsertUser(client, username, name, passwordHash, roleId) {
+  await client.query(
+    `INSERT INTO "Users" (username, name, password, "roleId", "profilePicture", "language", token_version, "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, $5, 'en', 0, NOW(), NOW())
+     ON CONFLICT (username) DO UPDATE SET
+       name = EXCLUDED.name,
+       password = EXCLUDED.password,
+       "roleId" = EXCLUDED."roleId",
+       "profilePicture" = EXCLUDED."profilePicture",
+       "updatedAt" = NOW()`,
+    [username, name, passwordHash, roleId, "/uploads/admin.png"],
+  );
+}
+
+async function upsertSystemSetting(client, key, value, description) {
+  await client.query(
+    `INSERT INTO "SystemSettings" (key, value, description, "createdAt", "updatedAt")
+     VALUES ($1, $2::jsonb, $3, NOW(), NOW())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description, "updatedAt" = NOW()`,
+    [key, JSON.stringify(value), description],
+  );
 }
 
 async function run() {
@@ -34,22 +62,13 @@ async function run() {
   try {
     await client.query("BEGIN");
 
-    const schemaSql = await findSchema();
-    await client.query(schemaSql);
-
-    // --- Roles ---
     const roleNames = ["Admin", "Manager", "User"];
     const roleIds = {};
-    for (const r of roleNames) {
-      const { rows } = await client.query(
-        `INSERT INTO "Roles"(name, description) VALUES ($1, $2) RETURNING id`,
-        [r, `${r} role`]
-      );
-      roleIds[r] = rows[0].id;
+    for (const role of roleNames) {
+      roleIds[role] = await upsertRole(client, role);
     }
 
-    // --- Permissions ---
-    const perms = [
+    const permissions = [
       "manage_gta",
       "view_gta",
       "submit_reports",
@@ -63,29 +82,22 @@ async function run() {
       "manage_attachments",
       "manage_access",
     ];
-    const permIds = {};
-    for (const p of perms) {
-      const { rows } = await client.query(
-        `INSERT INTO "Permissions"(name, description) VALUES ($1, $2) RETURNING id`,
-        [p, `${p} permission`]
-      );
-      permIds[p] = rows[0].id;
+    const permissionIds = {};
+    for (const permission of permissions) {
+      permissionIds[permission] = await upsertPermission(client, permission);
     }
 
-    async function grant(roleName, arr) {
-      const rId = roleIds[roleName];
-      if (!rId) return;
-      for (const name of arr) {
-        const pid = permIds[name];
-        if (!pid) continue;
-        await client.query(
-          `INSERT INTO "RolePermissions"("roleId","permissionId") VALUES ($1,$2) ON CONFLICT DO NOTHING`,
-          [rId, pid]
-        );
+    async function grant(roleName, permissionNames) {
+      const roleId = roleIds[roleName];
+      if (!roleId) return;
+      for (const permissionName of permissionNames) {
+        const permissionId = permissionIds[permissionName];
+        if (!permissionId) continue;
+        await upsertRolePermission(client, roleId, permissionId);
       }
     }
 
-    await grant("Admin", perms);
+    await grant("Admin", permissions);
     await grant("Manager", [
       "manage_gta",
       "view_gta",
@@ -95,25 +107,17 @@ async function run() {
     ]);
     await grant("User", ["view_reports", "view_gta", "view_dashboard"]);
 
-    // --- Admin user ---
     const adminUser = process.env.ADMIN_USERNAME || "admin";
     const adminPass = process.env.ADMIN_PASSWORD || "admin123";
-    const adminHash = await bcrypt.hash(adminPass, 10);
-    const { rows: arows } = await client.query(
-      `INSERT INTO "Users"(username, name, password, "roleId", "profilePicture")
-       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [
-        adminUser,
-        "System Admin",
-        adminHash,
-        roleIds["Admin"],
-        "/uploads/admin.png",
-      ]
+    const passwordHash = await bcrypt.hash(adminPass, 10);
+    await upsertUser(
+      client,
+      adminUser,
+      "System Admin",
+      passwordHash,
+      roleIds.Admin,
     );
 
-
-
-    // --- System settings ---
     const settings = [
       {
         key: "max_attachment_size_mb",
@@ -137,22 +141,21 @@ async function run() {
       },
     ];
 
-    for (const s of settings) {
-      await client.query(
-        `INSERT INTO "SystemSettings"(key, value, description) VALUES ($1,$2::jsonb,$3)
-        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, description = EXCLUDED.description`,
-        [s.key, JSON.stringify(s.value), s.description]
+    for (const setting of settings) {
+      await upsertSystemSetting(
+        client,
+        setting.key,
+        setting.value,
+        setting.description,
       );
     }
-
-    // const dataSql = await findData();
-    // await client.query(dataSql);
 
     await client.query("COMMIT");
     console.log("Seeding completed successfully!");
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Error seeding DB:", err);
+    process.exitCode = 1;
   } finally {
     client.release();
   }

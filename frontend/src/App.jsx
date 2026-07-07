@@ -19,6 +19,7 @@ import GroupManagementPage from "./pages/GroupsManagementPage";
 import ReportReviewPage from "./pages/ReportReviewPage";
 import MasterReportPage from "./pages/MasterReportPage";
 import ProjectManagement from "./pages/ProjectManagementPage";
+import BulkImportPage from "./pages/BulkImportPage";
 import AttachmentManager from "./pages/AttachmentPage";
 import NotificationsPanel from "./pages/NotificationPage";
 import ChatPage from "./pages/ChatPage";
@@ -113,6 +114,14 @@ function App() {
                   }
                 />
                 <Route
+                  path="/project/bulk-import"
+                  element={
+                    <ProtectedRoute requiredPermission="manage_gta">
+                      <BulkImportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/attachment"
                   element={
                     <ProtectedRoute requiredPermission="manage_attachments">
@@ -129,7 +138,6 @@ function App() {
                   }
                 />
               </Route>
-              
 
               {/* Add a 404 Not Found page here if you want */}
             </Routes>

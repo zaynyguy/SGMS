@@ -6,8 +6,15 @@ const os = require("os");
 const db = require("../db");
 require("dotenv").config();
 
-const UPLOAD_DIR = path.resolve(process.env.UPLOAD_DIR || "uploads");
-const TMP_DIR = path.resolve(process.env.TMP_DIR || os.tmpdir());
+const uploadDirEnv = process.env.UPLOAD_DIR || "uploads";
+const tmpDirEnv = process.env.TMP_DIR || os.tmpdir();
+
+const UPLOAD_DIR = path.isAbsolute(uploadDirEnv)
+  ? uploadDirEnv
+  : path.resolve(__dirname, "..", "..", uploadDirEnv);
+const TMP_DIR = path.isAbsolute(tmpDirEnv)
+  ? tmpDirEnv
+  : path.resolve(__dirname, "..", "..", tmpDirEnv);
 
 const DEFAULT_ALLOWED = [
   "image/png",
@@ -85,7 +92,7 @@ async function readSystemUploadSettings() {
         "max_attachment_size_mb",
         "allowed_attachment_types",
         "allowed_mimetypes",
-      ]
+      ],
     );
     for (const row of q.rows) {
       const key = row.key;
@@ -278,6 +285,53 @@ const upload = {
       } catch (err) {
         return next(err);
       }
+    };
+  },
+  excelImport: function () {
+    // Dedicated handler for Excel files (xlsx, xls) - used for bulk import
+    return function (req, res, next) {
+      const excelMimes = [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-excel.sheet.macroEnabled.12",
+        "application/zip", // Some browsers send xlsx as zip
+        "application/x-zip-compressed",
+      ];
+
+      const fileFilter = (req, file, cb) => {
+        if (excelMimes.includes(file.mimetype)) {
+          return cb(null, true);
+        }
+        // Allow by file extension as fallback
+        const ext = path.extname(file.originalname).toLowerCase();
+        if ([".xlsx", ".xls"].includes(ext)) {
+          return cb(null, true);
+        }
+        return cb(
+          new Error(
+            `Unsupported file type: ${file.mimetype}. Expected Excel file (.xlsx or .xls).`,
+          ),
+          false,
+        );
+      };
+
+      const instance = multer({
+        storage,
+        fileFilter,
+        limits: { fileSize: 50 * 1024 * 1024 }, // 50MB for Excel
+      });
+
+      const handler = instance.single("file");
+      handler(req, res, function (err) {
+        if (err) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            err.status = 413;
+            err.message = "File too large. Max size is 50 MB.";
+          }
+          return next(err);
+        }
+        return next();
+      });
     };
   },
 };
