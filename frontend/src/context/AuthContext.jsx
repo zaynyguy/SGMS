@@ -1,4 +1,10 @@
-import React, { createContext, useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  createContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
   loginUser as apiLoginUser,
@@ -47,7 +53,7 @@ function persistUserToStorage(userObj) {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(
-    () => localStorage.getItem("authToken") || null
+    () => localStorage.getItem("authToken") || null,
   );
   const [loading, setLoading] = useState(true);
   const { i18n } = useTranslation();
@@ -82,14 +88,18 @@ export const AuthProvider = ({ children }) => {
         refreshTimerRef.current = null;
       }
       if (token) {
-        const parts = String(token).split('.');
+        const parts = String(token).split(".");
         if (parts.length === 3) {
           try {
-            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            const payload = JSON.parse(
+              atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+            );
             const exp = payload && payload.exp ? Number(payload.exp) : null;
             if (exp) {
               const nowSec = Math.floor(Date.now() / 1000);
-              const buffer = Number(process.env.VITE_TOKEN_REFRESH_BUFFER_SEC || 60);
+              const buffer = Number(
+                process.env.VITE_TOKEN_REFRESH_BUFFER_SEC || 60,
+              );
               const msUntil = (exp - nowSec - buffer) * 1000;
               if (msUntil > 0) {
                 refreshTimerRef.current = setTimeout(() => {
@@ -110,14 +120,17 @@ export const AuthProvider = ({ children }) => {
 
   const fetchMe = useCallback(async (accessToken) => {
     try {
-      const resp = await fetch(`${EFFECTIVE_API_URL}${normalizeUrl("/api/auth/me")}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      const resp = await fetch(
+        `${EFFECTIVE_API_URL}${normalizeUrl("/api/auth/me")}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          credentials: "include",
         },
-        credentials: "include",
-      });
+      );
       if (!resp.ok) return null;
       const d = await resp.json();
       return d;
@@ -160,7 +173,7 @@ export const AuthProvider = ({ children }) => {
 
       return { token: newToken, user: safeUser };
     },
-    [fetchMe, i18n]
+    [fetchMe, i18n],
   );
 
   const logout = useCallback(async () => {
@@ -171,7 +184,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     if (refreshTimerRef.current) {
-      try { clearTimeout(refreshTimerRef.current); } catch (_) {}
+      try {
+        clearTimeout(refreshTimerRef.current);
+      } catch (_) {}
       refreshTimerRef.current = null;
     }
     // Abort any in-flight requests
@@ -248,16 +263,21 @@ export const AuthProvider = ({ children }) => {
             clearTimeout(refreshTimerRef.current);
             refreshTimerRef.current = null;
           }
-          const newToken = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
+          const newToken =
+            window.__ACCESS_TOKEN || localStorage.getItem("authToken");
           if (newToken) {
-            const parts = String(newToken).split('.');
+            const parts = String(newToken).split(".");
             if (parts.length === 3) {
               try {
-                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                const payload = JSON.parse(
+                  atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+                );
                 const exp = payload && payload.exp ? Number(payload.exp) : null;
                 if (exp) {
                   const nowSec = Math.floor(Date.now() / 1000);
-                  const buffer = Number(process.env.VITE_TOKEN_REFRESH_BUFFER_SEC || 60);
+                  const buffer = Number(
+                    process.env.VITE_TOKEN_REFRESH_BUFFER_SEC || 60,
+                  );
                   const msUntil = (exp - nowSec - buffer) * 1000;
                   if (msUntil > 0) {
                     refreshTimerRef.current = setTimeout(() => {
@@ -305,12 +325,15 @@ export const AuthProvider = ({ children }) => {
           return res;
         }
         // rebuild headers with new token and retry
-        const newAccess = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
+        const newAccess =
+          window.__ACCESS_TOKEN || localStorage.getItem("authToken");
         const retryHeaders = { ...(options.headers || {}) };
         if (newAccess) retryHeaders["Authorization"] = `Bearer ${newAccess}`;
 
         // Abort the original controller and remove it
-        try { controller.abort(); } catch (_) {}
+        try {
+          controller.abort();
+        } catch (_) {}
         pendingControllersRef.current.delete(controller);
 
         const retryController = new AbortController();
@@ -333,7 +356,7 @@ export const AuthProvider = ({ children }) => {
       pendingControllersRef.current.delete(controller);
       return res;
     },
-    [tryRefresh]
+    [tryRefresh],
   );
 
   const updateUser = useCallback(
@@ -360,7 +383,7 @@ export const AuthProvider = ({ children }) => {
 
       if (merged?.language) i18n.changeLanguage(merged.language);
     },
-    [i18n]
+    [i18n],
   );
 
   const value = {

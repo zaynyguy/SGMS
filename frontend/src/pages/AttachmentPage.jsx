@@ -16,7 +16,11 @@ import {
   ChevronUp,
   AlertTriangle,
 } from "lucide-react";
-import { fetchAttachments, deleteAttachment, downloadAttachment } from "../api/attachments";
+import {
+  fetchAttachments,
+  deleteAttachment,
+  downloadAttachment,
+} from "../api/attachments";
 import TopBar from "../components/layout/TopBar";
 import Toast from "../components/common/Toast";
 import AuthenticatedImage from "../components/common/AuthenticatedImage";
@@ -25,17 +29,32 @@ import AuthenticatedImage from "../components/common/AuthenticatedImage";
 const formatDate = (d) => {
   if (!d) return "—";
   try {
-    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(d));
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(d));
   } catch {
     return d;
   }
 };
 
 function IconForType({ fileType }) {
-  if (!fileType) return <File className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />;
-  if (fileType.includes("image")) return <ImgIcon className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />;
-  if (fileType.includes("pdf")) return <FileText className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />;
-  return <File className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />;
+  if (!fileType)
+    return (
+      <File className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />
+    );
+  if (fileType.includes("image"))
+    return (
+      <ImgIcon className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />
+    );
+  if (fileType.includes("pdf"))
+    return (
+      <FileText className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />
+    );
+  return (
+    <File className="h-4 w-4 transition-all duration-300 ease-in-out transform hover:scale-110" />
+  );
 }
 
 /* --------------------
@@ -86,7 +105,7 @@ function ModalPortal({ children, onClose, ariaLabel }) {
         {children}
       </div>
     </div>,
-    elRef.current
+    elRef.current,
   );
 }
 
@@ -102,8 +121,13 @@ function ImagePreviewModal({ src, name, onClose, t }) {
   if (!src) return null;
 
   return (
-    <ModalPortal onClose={onClose} ariaLabel={t("attachments.preview") || "Preview"}>
-      <div className={`rounded-2xl overflow-hidden shadow-xl transform transition-all duration-300 ease-out ${isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
+    <ModalPortal
+      onClose={onClose}
+      ariaLabel={t("attachments.preview") || "Preview"}
+    >
+      <div
+        className={`rounded-2xl overflow-hidden shadow-xl transform transition-all duration-300 ease-out ${isVisible ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+      >
         <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--outline-variant)] dark:border-gray-700 transition-colors duration-200">
           <div className="text-sm font-medium text-[var(--on-surface)] dark:text-white truncate max-w-[60vw] transition-colors duration-200">
             {name}
@@ -127,8 +151,15 @@ function ImagePreviewModal({ src, name, onClose, t }) {
           >
             <div className="flex flex-col items-center justify-center p-8 text-center animate-pulse">
               <AlertTriangle className="w-10 h-10 text-[var(--primary-container)] dark:text-green-500 mb-3 transition-transform duration-300 ease-in-out transform hover:scale-110" />
-              <p className="font-semibold text-sm text-[var(--on-surface)] dark:text-white">{t("attachments.previewErrorTitle", "Cannot load preview")}</p>
-              <p className="text-xs mt-1 text-[var(--on-surface-variant)] dark:text-gray-400">{t("attachments.previewErrorSubtitle", "The file may be corrupt or inaccessible.")}</p>
+              <p className="font-semibold text-sm text-[var(--on-surface)] dark:text-white">
+                {t("attachments.previewErrorTitle", "Cannot load preview")}
+              </p>
+              <p className="text-xs mt-1 text-[var(--on-surface-variant)] dark:text-gray-400">
+                {t(
+                  "attachments.previewErrorSubtitle",
+                  "The file may be corrupt or inaccessible.",
+                )}
+              </p>
             </div>
           </AuthenticatedImage>
         </div>
@@ -138,7 +169,17 @@ function ImagePreviewModal({ src, name, onClose, t }) {
 }
 
 /* ConfirmModal: uses ModalPortal for consistent positioning and ESC/backdrop behavior */
-function ConfirmModal({ open, title, message, onCancel, onConfirm, loading, confirmLabel = "Delete", cancelLabel = "Cancel", t }) {
+function ConfirmModal({
+  open,
+  title,
+  message,
+  onCancel,
+  onConfirm,
+  loading,
+  confirmLabel = "Delete",
+  cancelLabel = "Cancel",
+  t,
+}) {
   const [isVisible, setIsVisible] = useState(false);
   useEffect(() => {
     if (open) {
@@ -152,13 +193,19 @@ function ConfirmModal({ open, title, message, onCancel, onConfirm, loading, conf
 
   return (
     <ModalPortal onClose={onCancel} ariaLabel={title}>
-      <div className={`p-5 rounded-2xl w-full max-w-sm transform transition-all duration-300 ease-out ${isVisible ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 translate-y-4'} shadow-xl border border-[var(--outline-variant)] dark:border-gray-700`}>
+      <div
+        className={`p-5 rounded-2xl w-full max-w-sm transform transition-all duration-300 ease-out ${isVisible ? "scale-100 opacity-100 translate-y-0" : "scale-95 opacity-0 translate-y-4"} shadow-xl border border-[var(--outline-variant)] dark:border-gray-700`}
+      >
         <div className="text-center">
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-[var(--error-container)] dark:bg-red-900 mb-3 transition-all duration-300 ease-in-out transform hover:scale-110">
             <Trash2 className="h-6 w-6 text-[var(--on-error-container)] dark:text-red-300 transition-transform duration-300" />
           </div>
-          <h3 className="mt-2 text-lg font-semibold text-[var(--on-surface)] dark:text-white transition-colors duration-200">{title}</h3>
-          <p className="mt-2 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 transition-colors duration-200">{message}</p>
+          <h3 className="mt-2 text-lg font-semibold text-[var(--on-surface)] dark:text-white transition-colors duration-200">
+            {title}
+          </h3>
+          <p className="mt-2 text-sm text-[var(--on-surface-variant)] dark:text-gray-400 transition-colors duration-200">
+            {message}
+          </p>
         </div>
         <div className="mt-6 flex flex-col sm:flex-row gap-3">
           <button
@@ -180,7 +227,9 @@ function ConfirmModal({ open, title, message, onCancel, onConfirm, loading, conf
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-[var(--on-error)] dark:border-white border-t-transparent"></div>
                 <span>{t("attachments.deleting")}</span>
               </div>
-            ) : confirmLabel}
+            ) : (
+              confirmLabel
+            )}
           </button>
         </div>
       </div>
@@ -211,7 +260,9 @@ const BreadcrumbRow = ({ at, t }) => {
               {p.label}
             </span>
             {i < pieces.length - 1 && (
-              <span className="text-[var(--on-surface-variant)] dark:text-gray-500 text-xs transition-colors duration-200">/</span>
+              <span className="text-[var(--on-surface-variant)] dark:text-gray-500 text-xs transition-colors duration-200">
+                /
+              </span>
             )}
           </React.Fragment>
         ))}
@@ -262,7 +313,7 @@ const App = ({ reportId }) => {
     surfaceContainer: "#F4F6F8",
     surfaceContainerHigh: "#EEF2F7",
     surfaceContainerHighest: "#EEF2F7",
-  }; 
+  };
 
   // Material Design 3 color system - dark theme
   const darkColors = {
@@ -341,7 +392,7 @@ const App = ({ reportId }) => {
     setError(null);
     try {
       const data = await fetchAttachments(reportId);
-      const items = Array.isArray(data) ? data : data?.rows ?? [];
+      const items = Array.isArray(data) ? data : (data?.rows ?? []);
       setAttachments(items);
     } catch (err) {
       console.error("Error loading attachments:", err);
@@ -361,7 +412,10 @@ const App = ({ reportId }) => {
       if (res.url && !res.blob) {
         const w = window.open(res.url, "_blank");
         if (!w) window.location.href = res.url;
-        showToast(t("attachments.toasts.downloadStarted") || "Download started", "read");
+        showToast(
+          t("attachments.toasts.downloadStarted") || "Download started",
+          "read",
+        );
         return;
       }
       const { blob, filename } = res;
@@ -375,7 +429,10 @@ const App = ({ reportId }) => {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1500);
-      showToast(t("attachments.toasts.downloadStarted") || "Download started", "read");
+      showToast(
+        t("attachments.toasts.downloadStarted") || "Download started",
+        "read",
+      );
     } catch (err) {
       console.error("Download error:", err);
       const msg = err?.message || t("attachments.messages.downloadFailed");
@@ -414,14 +471,17 @@ const App = ({ reportId }) => {
   };
 
   const toggleExpand = (id) => {
-    setExpandedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setExpandedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
   };
 
   const openPreview = (at) => {
     const API_URL = import.meta.env.VITE_API_URL || "";
     const resolveApiBase = (value) => {
       if (!value) return "";
-      if (value.startsWith("http://") || value.startsWith("https://")) return value;
+      if (value.startsWith("http://") || value.startsWith("https://"))
+        return value;
       return `http://${value}`;
     };
     const EFFECTIVE_API_URL = resolveApiBase(API_URL || "");
@@ -431,7 +491,9 @@ const App = ({ reportId }) => {
   };
 
   const filtered = useMemo(() => {
-    const q = String(searchTerm || "").trim().toLowerCase();
+    const q = String(searchTerm || "")
+      .trim()
+      .toLowerCase();
     if (!q) return attachments;
     return attachments.filter((a) => {
       const name = String(a.fileName || "").toLowerCase();
@@ -453,10 +515,12 @@ const App = ({ reportId }) => {
     });
   }, [attachments, searchTerm]);
 
-  const shortContext = (at) => at.activityTitle || at.taskTitle || at.goalTitle || at.groupName || "";
+  const shortContext = (at) =>
+    at.activityTitle || at.taskTitle || at.goalTitle || at.groupName || "";
 
   return (
-    <div className={`min-h-screen bg-slate-100 dark:bg-gray-900 font-sans transition-colors duration-300 ${mounted ? 'animate-fade-in' : ''}`}
+    <div
+      className={`min-h-screen bg-slate-100 dark:bg-gray-900 font-sans transition-colors duration-300 ${mounted ? "animate-fade-in" : ""}`}
       style={{
         "--primary": m3Colors.primary,
         "--on-primary": m3Colors.onPrimary,
@@ -566,40 +630,40 @@ const App = ({ reportId }) => {
               </div>
             </div>
             {/* Search Bar with Material 3 styling */}
-        <div className="flex items-center gap-3 mt-4">
-          <div className="relative flex-1 min-w-0">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-[var(--on-surface-variant)] dark:text-gray-400 transition-colors duration-300" />
+            <div className="flex items-center gap-3 mt-4">
+              <div className="relative flex-1 min-w-0">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-[var(--on-surface-variant)] dark:text-gray-400 transition-colors duration-300" />
+                </div>
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={t("attachments.searchPlaceholder")}
+                  className="pl-10 pr-10 py-2.5 text-sm w-full rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white transition-all duration-300 ease-in-out focus:bg-[var(--surface-container)] dark:focus:bg-gray-600"
+                  aria-label={t("attachments.searchAria")}
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-200 ease-in-out transform hover:scale-110"
+                    aria-label={t("attachments.clearSearchAria")}
+                  >
+                    <X className="h-4 w-4 transition-transform duration-200" />
+                  </button>
+                )}
+              </div>
             </div>
-            <input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t("attachments.searchPlaceholder")}
-              className="pl-10 pr-10 py-2.5 text-sm w-full rounded-xl border border-[var(--outline-variant)] dark:border-gray-600 bg-[var(--surface-container-low)] dark:bg-gray-700 text-[var(--on-surface)] dark:text-white transition-all duration-300 ease-in-out focus:bg-[var(--surface-container)] dark:focus:bg-gray-600"
-              aria-label={t("attachments.searchAria")}
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-[var(--on-surface-variant)] dark:text-gray-400 hover:bg-[var(--surface-container)] dark:hover:bg-gray-600 transition-all duration-200 ease-in-out transform hover:scale-110"
-                aria-label={t("attachments.clearSearchAria")}
-              >
-                <X className="h-4 w-4 transition-transform duration-200" />
-              </button>
-            )}
           </div>
         </div>
-          </div>
-        </div>
-
-        
 
         {/* Main Content Card with Material 3 elevation */}
         <div className="bg-[var(--surface-container-low)] dark:bg-gray-800 rounded-xl border border-[var(--outline-variant)] dark:border-gray-700 shadow-2xl overflow-hidden">
           {loading ? (
             <div className="p-8 flex flex-col items-center justify-center min-h-[440px]">
               <Loader2 className="animate-spin h-8 w-8 text-[var(--primary)] dark:text-green-500 mb-3 transition-colors duration-300" />
-              <p className="text-base font-medium text-[var(--on-surface-variant)] dark:text-gray-400 transition-colors duration-300">{t("attachments.loading")}</p>
+              <p className="text-base font-medium text-[var(--on-surface-variant)] dark:text-gray-400 transition-colors duration-300">
+                {t("attachments.loading")}
+              </p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-8 text-center transition-all duration-300">
@@ -644,9 +708,14 @@ const App = ({ reportId }) => {
                         <tr
                           key={at.id}
                           className={`hover:bg-[var(--surface-container)] dark:hover:bg-gray-700 transition-all duration-300 ease-in-out transform hover:scale-[1.005] align-top ${
-                            index % 2 === 0 ? 'bg-[var(--surface-container-low)] dark:bg-gray-800' : 'bg-[var(--surface-container)] dark:bg-gray-700'
+                            index % 2 === 0
+                              ? "bg-[var(--surface-container-low)] dark:bg-gray-800"
+                              : "bg-[var(--surface-container)] dark:bg-gray-700"
                           }`}
-                          style={{ animation: `material-in 0.4s ease-out forwards`, animationDelay: `${index * 0.05}s` }}
+                          style={{
+                            animation: `material-in 0.4s ease-out forwards`,
+                            animationDelay: `${index * 0.05}s`,
+                          }}
                         >
                           <td className="px-4 py-4 align-top">
                             <div className="flex items-center gap-3 min-w-0">
@@ -656,9 +725,13 @@ const App = ({ reportId }) => {
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-2">
                                   <div
-                                    className={`font-medium text-[var(--on-surface)] dark:text-white truncate ${String(at.fileType || "").includes("image") ? 'cursor-pointer hover:text-[var(--primary)] dark:hover:text-green-400' : ''}`}
+                                    className={`font-medium text-[var(--on-surface)] dark:text-white truncate ${String(at.fileType || "").includes("image") ? "cursor-pointer hover:text-[var(--primary)] dark:hover:text-green-400" : ""}`}
                                     title={at.fileName}
-                                    onClick={() => String(at.fileType || "").includes("image") && openPreview(at)}
+                                    onClick={() =>
+                                      String(at.fileType || "").includes(
+                                        "image",
+                                      ) && openPreview(at)
+                                    }
                                   >
                                     {at.fileName}
                                   </div>
@@ -750,7 +823,10 @@ const App = ({ reportId }) => {
                     <div
                       key={at.id}
                       className="bg-[var(--surface-container-low)] dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-700 rounded-xl p-4 shadow-sm flex flex-col justify-between transition-all duration-500 ease-in-out transform hover:scale-[1.015] hover:shadow-md"
-                      style={{ animation: `material-in 0.4s ease-out forwards`, animationDelay: `${index * 0.06}s` }}
+                      style={{
+                        animation: `material-in 0.4s ease-out forwards`,
+                        animationDelay: `${index * 0.06}s`,
+                      }}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0 text-[var(--primary)] dark:text-green-400">
@@ -761,9 +837,12 @@ const App = ({ reportId }) => {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between">
                             <div
-                              className={`text-sm font-medium text-[var(--on-surface)] dark:text-white truncate ${String(at.fileType || "").includes("image") ? 'cursor-pointer hover:text-[var(--primary)] dark:hover:text-green-400' : ''}`}
+                              className={`text-sm font-medium text-[var(--on-surface)] dark:text-white truncate ${String(at.fileType || "").includes("image") ? "cursor-pointer hover:text-[var(--primary)] dark:hover:text-green-400" : ""}`}
                               title={at.fileName}
-                              onClick={() => String(at.fileType || "").includes("image") && openPreview(at)}
+                              onClick={() =>
+                                String(at.fileType || "").includes("image") &&
+                                openPreview(at)
+                              }
                             >
                               {at.fileName}
                             </div>
@@ -838,7 +917,10 @@ const App = ({ reportId }) => {
                     <div
                       key={at.id}
                       className="bg-[var(--surface-container-low)] dark:bg-gray-800 border border-[var(--outline-variant)] dark:border-gray-700 rounded-xl p-3 shadow-sm transition-all duration-500 ease-in-out transform hover:scale-[1.01] hover:shadow-sm"
-                      style={{ animation: `material-in 0.4s ease-out forwards`, animationDelay: `${index * 0.04}s` }}
+                      style={{
+                        animation: `material-in 0.4s ease-out forwards`,
+                        animationDelay: `${index * 0.04}s`,
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <div className="text-[var(--primary)] dark:text-green-400">
@@ -849,9 +931,12 @@ const App = ({ reportId }) => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <div
-                              className={`text-sm font-medium text-[var(--on-surface)] dark:text-white truncate ${String(at.fileType || "").includes("image") ? 'cursor-pointer hover:text-[var(--primary)] dark:hover:text-green-400' : ''}`}
+                              className={`text-sm font-medium text-[var(--on-surface)] dark:text-white truncate ${String(at.fileType || "").includes("image") ? "cursor-pointer hover:text-[var(--primary)] dark:hover:text-green-400" : ""}`}
                               title={at.fileName}
-                              onClick={() => String(at.fileType || "").includes("image") && openPreview(at)}
+                              onClick={() =>
+                                String(at.fileType || "").includes("image") &&
+                                openPreview(at)
+                              }
                             >
                               {at.fileName}
                             </div>
@@ -922,14 +1007,27 @@ const App = ({ reportId }) => {
         </div>
 
         {/* Preview & Confirm modals (now portal-based) */}
-        <ImagePreviewModal src={preview?.src} name={preview?.name} onClose={() => setPreview(null)} t={t} />
+        <ImagePreviewModal
+          src={preview?.src}
+          name={preview?.name}
+          onClose={() => setPreview(null)}
+          t={t}
+        />
         <ConfirmModal
           open={confirmOpen}
           title={t("attachments.deleteConfirmTitle") || "Delete attachment"}
           message={
-            toDelete ? (t("attachments.deleteConfirmMessage", { name: toDelete.fileName }) || `Delete "${toDelete.fileName}"?`) : (t("attachments.deleteConfirmMessageGeneric") || "Delete this attachment?")
+            toDelete
+              ? t("attachments.deleteConfirmMessage", {
+                  name: toDelete.fileName,
+                }) || `Delete "${toDelete.fileName}"?`
+              : t("attachments.deleteConfirmMessageGeneric") ||
+                "Delete this attachment?"
           }
-          onCancel={() => { setConfirmOpen(false); setToDelete(null); }}
+          onCancel={() => {
+            setConfirmOpen(false);
+            setToDelete(null);
+          }}
           onConfirm={performDelete}
           loading={Boolean(deleting)}
           confirmLabel={t("attachments.delete") || "Delete"}
@@ -943,11 +1041,15 @@ const App = ({ reportId }) => {
             <div className="z-50 pointer-events-none">
               <div className="fixed inset-x-0 bottom-0 p-4 md:inset-auto md:right-4 md:bottom-4">
                 <div className="pointer-events-auto">
-                  <Toast message={toast.message ?? toast.text} type={toast.type} onClose={handleToastClose} />
+                  <Toast
+                    message={toast.message ?? toast.text}
+                    type={toast.type}
+                    onClose={handleToastClose}
+                  />
                 </div>
               </div>
             </div>,
-            document.body
+            document.body,
           )}
       </div>
     </div>

@@ -8,7 +8,8 @@ export const initSocket = (userId) => {
   const ENDPOINT = import.meta.env.VITE_API_URL || "";
   const resolveEndpoint = (value) => {
     if (!value) return "";
-    if (value.startsWith("http://") || value.startsWith("https://")) return value;
+    if (value.startsWith("http://") || value.startsWith("https://"))
+      return value;
     return `http://${value}`;
   };
   const EFFECTIVE_ENDPOINT = resolveEndpoint(ENDPOINT || "");
@@ -16,13 +17,13 @@ export const initSocket = (userId) => {
 
   socket = io(finalEndpoint, {
     withCredentials: true,
-    transports: ["websocket"], 
+    transports: ["websocket"],
     autoConnect: true,
   });
 
   socket.on("connect", () => {
     console.log("Connected to Real-time Server");
-    // This tells the backend to put this connection in a "room" 
+    // This tells the backend to put this connection in a "room"
     // specifically for this user so they get their own messages.
     if (userId) {
       socket.emit("join", userId);

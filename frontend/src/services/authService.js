@@ -14,11 +14,14 @@ const normalizeUrl = (url) => {
 export const authService = {
   async login(credentials) {
     try {
-      const response = await fetch(`${EFFECTIVE_API_BASE}${normalizeUrl("/api/auth/login")}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-      });
+      const response = await fetch(
+        `${EFFECTIVE_API_BASE}${normalizeUrl("/api/auth/login")}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+        },
+      );
 
       // Handle non-JSON responses
       const contentType = response.headers.get("content-type");

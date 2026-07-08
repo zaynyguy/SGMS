@@ -13,7 +13,10 @@ const normalizeUrl = (url) => {
 };
 
 export const api = async (url, method = "GET", data = null, options = {}) => {
-  const token = (typeof window !== "undefined" && window.__ACCESS_TOKEN) ? window.__ACCESS_TOKEN : localStorage.getItem("authToken");
+  const token =
+    typeof window !== "undefined" && window.__ACCESS_TOKEN
+      ? window.__ACCESS_TOKEN
+      : localStorage.getItem("authToken");
 
   const headers = {
     "Content-Type": "application/json",
@@ -23,12 +26,13 @@ export const api = async (url, method = "GET", data = null, options = {}) => {
   const fetchOptions = {
     method,
     headers,
-    credentials: "include", 
+    credentials: "include",
     ...(data && { body: JSON.stringify(data) }),
   };
 
-
-  const full = url.startsWith("http") ? url : `${EFFECTIVE_API_URL}${normalizeUrl(url)}`;
+  const full = url.startsWith("http")
+    ? url
+    : `${EFFECTIVE_API_URL}${normalizeUrl(url)}`;
 
   const res = await fetch(full, fetchOptions);
   if (!res.ok) {

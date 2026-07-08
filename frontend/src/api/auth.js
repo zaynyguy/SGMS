@@ -20,11 +20,14 @@ async function _tryRefresh() {
   _isRefreshing = true;
   _refreshPromise = (async () => {
     try {
-      const resp = await fetch(`${EFFECTIVE_API_URL}${normalizeUrl("/api/auth/refresh")}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
+      const resp = await fetch(
+        `${EFFECTIVE_API_URL}${normalizeUrl("/api/auth/refresh")}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        },
+      );
       if (!resp.ok) {
         // Clear tokens on refresh failure
         window.__ACCESS_TOKEN = null;
@@ -56,7 +59,10 @@ async function _doFetch(fullUrl, fetchOptions) {
   fetchOptions = { credentials: "include", ...fetchOptions };
   const token = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
   if (token) {
-    fetchOptions.headers = { ...(fetchOptions.headers || {}), Authorization: `Bearer ${token}` };
+    fetchOptions.headers = {
+      ...(fetchOptions.headers || {}),
+      Authorization: `Bearer ${token}`,
+    };
   }
   let res = await fetch(fullUrl, fetchOptions);
   if (res.status !== 401) return res;
@@ -76,7 +82,9 @@ export async function api(endpoint, method = "GET", body = null, options = {}) {
   const headers = { Accept: "application/json", ...(options.headers || {}) };
   const init = { method, headers };
   if (body != null) {
-    const isFormData = Boolean(options.isFormData) || (typeof FormData !== "undefined" && body instanceof FormData);
+    const isFormData =
+      Boolean(options.isFormData) ||
+      (typeof FormData !== "undefined" && body instanceof FormData);
     if (isFormData) {
       init.body = body;
     } else {
@@ -93,7 +101,7 @@ export async function api(endpoint, method = "GET", body = null, options = {}) {
     data = text || null;
   }
   if (!res.ok) {
-    const err = new Error((data?.message || data?.error) || `HTTP ${res.status}`);
+    const err = new Error(data?.message || data?.error || `HTTP ${res.status}`);
     err.status = res.status;
     err.response = data;
     err.isAuthError = res.status === 401;
@@ -108,12 +116,19 @@ export async function api(endpoint, method = "GET", body = null, options = {}) {
   return data;
 }
 
-export async function rawFetch(endpoint, method = "GET", body = null, options = {}) {
+export async function rawFetch(
+  endpoint,
+  method = "GET",
+  body = null,
+  options = {},
+) {
   const url = endpoint.startsWith("http") ? endpoint : `${API_URL}${endpoint}`;
   const headers = { Accept: "application/json", ...(options.headers || {}) };
   const init = { method, headers };
   if (body != null) {
-    const isFormData = Boolean(options.isFormData) || (typeof FormData !== "undefined" && body instanceof FormData);
+    const isFormData =
+      Boolean(options.isFormData) ||
+      (typeof FormData !== "undefined" && body instanceof FormData);
     if (isFormData) init.body = body;
     else {
       init.headers["Content-Type"] = "application/json";
@@ -123,7 +138,8 @@ export async function rawFetch(endpoint, method = "GET", body = null, options = 
   return _doFetch(url, init);
 }
 
-export const loginUser = (username, password) => api("/api/auth/login", "POST", { username, password });
+export const loginUser = (username, password) =>
+  api("/api/auth/login", "POST", { username, password });
 export const refreshToken = () => api("/api/auth/refresh", "POST", null); // ✅ This is correct
 export const logoutUser = async () => {
   try {

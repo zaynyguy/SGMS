@@ -7,7 +7,9 @@ const resolveSocketUrl = (value) => {
   return `http://${value}`;
 };
 const EFFECTIVE_SOCKET_URL = resolveSocketUrl(SOCKET_URL || "");
-const finalSocketUrl = EFFECTIVE_SOCKET_URL || (typeof window !== "undefined" ? window.location.origin : "");
+const finalSocketUrl =
+  EFFECTIVE_SOCKET_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "");
 
 let socket = null;
 let currentUserId = null;
