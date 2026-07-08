@@ -38,9 +38,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./backend/src:/app/src
       - ./backend/uploads:/app/uploads
-      - /app/node_modules
     command: >
       sh -c "
         echo 'Waiting for Postgres...';
