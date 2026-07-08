@@ -1,6 +1,13 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const SOCKET_URL = import.meta.env.VITE_API_URL || "";
+const resolveSocketUrl = (value) => {
+  if (!value) return "";
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  return `http://${value}`;
+};
+const EFFECTIVE_SOCKET_URL = resolveSocketUrl(SOCKET_URL || "");
+const finalSocketUrl = EFFECTIVE_SOCKET_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
 let socket = null;
 let currentUserId = null;
@@ -26,7 +33,7 @@ export function initNotificationsSocket(userId, onNewNotification) {
 
   const token = window.__ACCESS_TOKEN || localStorage.getItem("authToken");
 
-  socket = io(SOCKET_URL, {
+  socket = io(finalSocketUrl, {
     // don't autoConnect so we can attach listeners before connecting
     autoConnect: false,
     withCredentials: true,

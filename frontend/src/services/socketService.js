@@ -5,10 +5,16 @@ let socket = null;
 export const initSocket = (userId) => {
   if (socket) return socket;
 
-  // Use your environment variable or fallback to localhost
-  const ENDPOINT = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const ENDPOINT = import.meta.env.VITE_API_URL || "";
+  const resolveEndpoint = (value) => {
+    if (!value) return "";
+    if (value.startsWith("http://") || value.startsWith("https://")) return value;
+    return `http://${value}`;
+  };
+  const EFFECTIVE_ENDPOINT = resolveEndpoint(ENDPOINT || "");
+  const finalEndpoint = EFFECTIVE_ENDPOINT || window.location.origin;
 
-  socket = io(ENDPOINT, {
+  socket = io(finalEndpoint, {
     withCredentials: true,
     transports: ["websocket"], 
     autoConnect: true,

@@ -1,5 +1,16 @@
 // src/api/api.js
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || "";
+const resolveApiBase = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `http://${url}`;
+};
+const EFFECTIVE_API_URL = resolveApiBase(API_URL || "");
+const normalizeUrl = (url) => {
+  if (!url) return "/";
+  if (url.startsWith("http")) return url;
+  return url.startsWith("/") ? url : `/${url}`;
+};
 
 export const api = async (url, method = "GET", data = null, options = {}) => {
   const token = (typeof window !== "undefined" && window.__ACCESS_TOKEN) ? window.__ACCESS_TOKEN : localStorage.getItem("authToken");
@@ -17,7 +28,7 @@ export const api = async (url, method = "GET", data = null, options = {}) => {
   };
 
 
-  const full = url.startsWith("http") ? url : `${API_URL}${url}`;
+  const full = url.startsWith("http") ? url : `${EFFECTIVE_API_URL}${normalizeUrl(url)}`;
 
   const res = await fetch(full, fetchOptions);
   if (!res.ok) {

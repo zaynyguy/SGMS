@@ -418,8 +418,15 @@ const App = ({ reportId }) => {
   };
 
   const openPreview = (at) => {
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-    const src = `${API_URL}/api/reports/attachments/${encodeURIComponent(at.id)}/download`;
+    const API_URL = import.meta.env.VITE_API_URL || "";
+    const resolveApiBase = (value) => {
+      if (!value) return "";
+      if (value.startsWith("http://") || value.startsWith("https://")) return value;
+      return `http://${value}`;
+    };
+    const EFFECTIVE_API_URL = resolveApiBase(API_URL || "");
+    const base = EFFECTIVE_API_URL || window.location.origin;
+    const src = `${base}/api/reports/attachments/${encodeURIComponent(at.id)}/download`;
     setPreview({ src, name: at.fileName });
   };
 

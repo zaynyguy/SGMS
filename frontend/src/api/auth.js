@@ -1,5 +1,16 @@
 // src/api/auth.js
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL || "";
+const resolveApiBase = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `http://${url}`;
+};
+const EFFECTIVE_API_URL = resolveApiBase(API_URL || "");
+const normalizeUrl = (url) => {
+  if (!url) return "/";
+  if (url.startsWith("http")) return url;
+  return url.startsWith("/") ? url : `/${url}`;
+};
 
 let _isRefreshing = false;
 let _refreshPromise = null;
@@ -9,7 +20,7 @@ async function _tryRefresh() {
   _isRefreshing = true;
   _refreshPromise = (async () => {
     try {
-      const resp = await fetch(`${API_URL}/api/auth/refresh`, {
+      const resp = await fetch(`${EFFECTIVE_API_URL}${normalizeUrl("/api/auth/refresh")}`, {
         method: "POST",
         credentials: "include",
         headers: { Accept: "application/json" },

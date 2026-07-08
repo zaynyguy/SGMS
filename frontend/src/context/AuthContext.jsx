@@ -7,6 +7,17 @@ import {
 import { initSocket, disconnectSocket } from "../services/socketService";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
+const resolveApiBase = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `http://${url}`;
+};
+const EFFECTIVE_API_URL = resolveApiBase(API_URL || "");
+const normalizeUrl = (url) => {
+  if (!url) return "/";
+  if (url.startsWith("http")) return url;
+  return url.startsWith("/") ? url : `/${url}`;
+};
 const AuthContext = createContext(null);
 
 function normalizeStoredUserRaw() {
@@ -99,7 +110,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchMe = useCallback(async (accessToken) => {
     try {
-      const resp = await fetch(`${API_URL}/api/auth/me`, {
+      const resp = await fetch(`${EFFECTIVE_API_URL}${normalizeUrl("/api/auth/me")}`, {
         method: "GET",
         headers: {
           Accept: "application/json",
