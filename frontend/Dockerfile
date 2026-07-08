@@ -1,12 +1,11 @@
 
 FROM node:20-alpine AS build
-# RUN addgroup app && adduser -S -G app app
-# USER app
 WORKDIR /app
+ARG VITE_API_URL
+ARG VITE_API_PROXY_URL
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_API_PROXY_URL=${VITE_API_PROXY_URL}
 COPY package*.json ./
-# USER root
-# RUN chown -R app:app .
-# USER app
 RUN npm ci
 COPY . .
 EXPOSE 5173
